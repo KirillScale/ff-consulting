@@ -14,10 +14,12 @@ const CSTATS=[{id:"idea",label:"Идея",color:C.t2},{id:"progress",label:"В �
 const STAGES_DEFAULT=[{id:"new",label:"Новый",color:C.a},{id:"contact",label:"Взаимодействовали",color:"#8B5CF6"},{id:"call",label:"Созвон",color:C.y},{id:"closed",label:"Закрыт",color:C.g},{id:"rejected",label:"Отказ",color:C.r}];
 const SRCS=["Instagram","Telegram","YouTube","Сайт","Рекомендация","Реклама","Другое"];
 const TASK_STATUS=[{id:"todo",label:"Не начата",color:C.t2},{id:"inprogress",label:"В процессе",color:C.y},{id:"done",label:"Выполнена",color:C.g}];
+const CALL_GOALS=["Созвон с командой","Созвон с лидом","Созвон с клиентом","Своя цель"];
 const NAV=[
   {id:"dashboard",label:"Dashboard",ic:"M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"},
   {id:"strategy",label:"Стратегия роста",ic:"M5 3l3.057 7.134L2 16h5.5L12 21l4.5-5H22l-6.057-5.866L19 3l-7 4-7-4z",glow:true},
   {id:"crm",label:"CRM",ic:"M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"},
+  {id:"calls",label:"Созвоны",ic:"M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"},
   {id:"content",label:"Контент-план",ic:"M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"},
   {id:"media",label:"Медийность",ic:"M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"},
   {id:"ads",label:"Реклама",ic:"M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"},
@@ -216,13 +218,14 @@ export default function App() {
           {page === "dashboard" && <DashPage userId={user.id} name={userName} onNav={setPage}/>}
           {page === "strategy" && <StrategyPage userId={user.id}/>}
           {page === "crm" && <CrmPage userId={user.id}/>}
+          {page === "calls" && <CallsPage userId={user.id}/>}
           {page === "content" && <ContentPage userId={user.id}/>}
           {page === "pnl" && <PnlPage userId={user.id}/>}
           {page === "media" && <MediaPage userId={user.id}/>}
           {page === "ads" && <AdsPage userId={user.id}/>}
           {page === "calc" && <CalcPage/>}
           {page === "tools" && <ToolsPage/>}
-          {!["dashboard","strategy","crm","content","pnl","media","ads","calc","tools"].includes(page) && nav && <Placeholder title={nav.label} ic={nav.ic}/>}
+          {!["dashboard","strategy","crm","calls","content","pnl","media","ads","calc","tools"].includes(page) && nav && <Placeholder title={nav.label} ic={nav.ic}/>}
         </div>
       </div>
     </div>
@@ -230,31 +233,148 @@ export default function App() {
 }
 
 /* ============ DASHBOARD ============ */
+function DonutChart({done,total,size=140}:{done:number,total:number,size?:number}){
+  const[hover,setHover]=useState<string|null>(null);
+  const r=54,cx=size/2,cy=size/2,stroke=16;
+  const circ=2*Math.PI*r;
+  const pct=total>0?Math.round(done/total*100):0;
+  const doneFrac=total>0?done/total:0;
+  return <div style={{position:"relative",display:"inline-flex",alignItems:"center",justifyContent:"center"}}>
+    <svg width={size} height={size} style={{transform:"rotate(-90deg)"}}>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke={C.bd} strokeWidth={stroke}/>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke={C.a} strokeWidth={stroke}
+        strokeDasharray={circ} strokeDashoffset={circ*(1-doneFrac)} strokeLinecap="round"
+        style={{transition:"stroke-dashoffset 0.6s ease"}}
+        onMouseEnter={()=>setHover("done")} onMouseLeave={()=>setHover(null)}/>
+      {done<total&&<circle cx={cx} cy={cy} r={r} fill="none" stroke={C.bd} strokeWidth={stroke}
+        strokeDasharray={`${circ*(1-doneFrac)} ${circ*doneFrac}`}
+        strokeDashoffset={-circ*doneFrac} strokeLinecap="round"
+        onMouseEnter={()=>setHover("todo")} onMouseLeave={()=>setHover(null)}/>}
+    </svg>
+    <div style={{position:"absolute",textAlign:"center",pointerEvents:"none"}}>
+      {hover==="done"?<><div style={{fontSize:13,fontWeight:700,color:C.a}}>Выполнено</div><div style={{fontSize:12,color:C.t2}}>{done} из {total}</div></>
+      :hover==="todo"?<><div style={{fontSize:13,fontWeight:700,color:C.t2}}>Осталось</div><div style={{fontSize:12,color:C.t2}}>{total-done} из {total}</div></>
+      :<><div style={{fontSize:22,fontWeight:800,color:C.a}}>{pct}%</div><div style={{fontSize:10,color:C.t2,marginTop:1}}>выполнено</div></>}
+    </div>
+  </div>;
+}
+
 function DashPage({userId,name,onNav}:{userId:string,name:string,onNav:(p:string)=>void}){
   const leads = useTable("leads", userId);
   const pnl = useTable("pnl", userId);
   const kanban = useTable("kanban", userId);
+  const goalTasks = useTable("goal_tasks", userId);
   const content = useTable("content", userId);
+  const calls = useTable("calls", userId);
+  const media = useTable("media", userId);
   const td = today();
   const cm = td.substring(0,7);
-  const todayTasks = kanban.data.filter(t=>t.date===td&&t.status!=="done"&&t.type!=="delegate");
-  const cI = pnl.data.filter(t=>t.type==="income"&&t.date?.startsWith(cm)).reduce((s:number,t:any)=>s+(t.amount||0),0);
-  const cE = pnl.data.filter(t=>t.type==="expense"&&t.date?.startsWith(cm)).reduce((s:number,t:any)=>s+(t.amount||0),0);
+
+  const todayTasks = kanban.data.filter((t:any)=>t.date===td&&t.type!=="delegate");
+  const todayGoalTasks = goalTasks.data.filter((t:any)=>t.date===td&&t.type!=="delegate");
+  const allTodayTasks = [...todayTasks, ...todayGoalTasks];
+  const doneTodayTasks = allTodayTasks.filter((t:any)=>t.status==="done"||t.done);
+
+  const cI = pnl.data.filter((t:any)=>t.type==="income"&&t.date?.startsWith(cm)).reduce((s:number,t:any)=>s+(t.amount||0),0);
+  const cE = pnl.data.filter((t:any)=>t.type==="expense"&&t.date?.startsWith(cm)).reduce((s:number,t:any)=>s+(t.amount||0),0);
   const cP = cI-cE;
+
+  const latestMedia = useMemo(()=>{
+    const sorted=[...media.data].sort((a:any,b:any)=>b.date?.localeCompare(a.date));
+    return sorted[0]||null;
+  },[media.data]);
+
+  const upcomingCalls = useMemo(()=>{
+    return calls.data
+      .filter((c:any)=>c.date >= td)
+      .sort((a:any,b:any)=>a.date===b.date?a.time_start.localeCompare(b.time_start):a.date.localeCompare(b.date))
+      .slice(0,5);
+  },[calls.data, td]);
+
+  const minsUntilCall = (c:any) => {
+    const now = new Date();
+    const [h,m] = c.time_start.split(":").map(Number);
+    const callTime = new Date(c.date);
+    callTime.setHours(h, m, 0, 0);
+    return Math.round((callTime.getTime() - now.getTime()) / 60000);
+  };
+
+  const callLabel = (c:any) => c.goal === "Своя цель" ? (c.custom_goal || "Созвон") : c.goal;
 
   return <>
     <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:"32px 36px",marginBottom:24,color:"#fff"}}>
       <div style={{fontSize:24,fontWeight:700,marginBottom:6}}>{getGreeting()}, {name}</div>
       <div style={{fontSize:14,opacity:0.7}}>Сегодня {fmtDate(new Date())}</div>
     </div>
+
+    {/* Stat cards */}
     <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16,marginBottom:24}}>
-      {[{l:"Задачи",v:todayTasks.length,c:C.a},{l:"Лиды",v:leads.data.length,c:C.g},{l:"Публикации",v:content.data.filter((x:any)=>x.status==="published").length,c:C.y},{l:"Прибыль",v:(cP>=0?"+":"")+fmt$(cP)+" ₽",c:cP>=0?C.g:C.r}].map((s,i)=><Card key={i} style={{padding:"22px 24px"}}><div style={{fontSize:28,fontWeight:700,marginBottom:4}}>{s.v}</div><div style={{fontSize:13,color:C.t2}}>{s.l}</div></Card>)}
+      {[{l:"Задачи",v:todayTasks.filter((t:any)=>t.status!=="done").length,c:C.a},{l:"Лиды",v:leads.data.length,c:C.g},{l:"Публикации",v:content.data.filter((x:any)=>x.status==="published").length,c:C.y},{l:"Прибыль",v:(cP>=0?"+":"")+fmt$(cP)+" ₽",c:cP>=0?C.g:C.r}].map((s,i)=><Card key={i} style={{padding:"22px 24px"}}><div style={{fontSize:28,fontWeight:700,marginBottom:4}}>{s.v}</div><div style={{fontSize:13,color:C.t2}}>{s.l}</div></Card>)}
     </div>
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+
+    {/* NEW: donut + media summary */}
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:24}}>
+      {/* Donut */}
+      <Card>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}>
+          <span style={{fontSize:16,fontWeight:600}}>Прогресс задач сегодня</span>
+          <button onClick={()=>onNav("strategy")} style={{fontSize:13,color:C.a,background:"none",border:"none",cursor:"pointer"}}>Стратегия</button>
+        </div>
+        {allTodayTasks.length===0
+          ? <div style={{padding:"32px 0",textAlign:"center",color:C.t2,fontSize:14}}>На сегодня задач нет</div>
+          : <div style={{display:"flex",alignItems:"center",gap:24}}>
+              <DonutChart done={doneTodayTasks.length} total={allTodayTasks.length}/>
+              <div style={{display:"flex",flexDirection:"column",gap:10,flex:1}}>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <div style={{width:10,height:10,borderRadius:3,background:C.a}}/>
+                  <span style={{fontSize:13,color:C.t2}}>Выполнено</span>
+                  <span style={{fontSize:15,fontWeight:700,marginLeft:"auto"}}>{doneTodayTasks.length}</span>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <div style={{width:10,height:10,borderRadius:3,background:C.bd}}/>
+                  <span style={{fontSize:13,color:C.t2}}>Осталось</span>
+                  <span style={{fontSize:15,fontWeight:700,marginLeft:"auto"}}>{allTodayTasks.length-doneTodayTasks.length}</span>
+                </div>
+                <div style={{height:1,background:C.bd,margin:"2px 0"}}/>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:13,color:C.t2}}>Всего</span>
+                  <span style={{fontSize:15,fontWeight:700,marginLeft:"auto"}}>{allTodayTasks.length}</span>
+                </div>
+              </div>
+            </div>
+        }
+      </Card>
+
+      {/* Media summary */}
+      <Card style={{cursor:"pointer"}} onClick={()=>onNav("media")}>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}>
+          <span style={{fontSize:16,fontWeight:600}}>Медийность</span>
+          <span style={{fontSize:12,color:C.a}}>Подробнее →</span>
+        </div>
+        {!latestMedia
+          ? <div style={{padding:"32px 0",textAlign:"center",color:C.t2,fontSize:14}}>Нет данных. Добавь в разделе Медийность.</div>
+          : <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              <div style={{fontSize:11,color:C.t2,marginBottom:4}}>Последнее обновление: {latestMedia.date}</div>
+              {[
+                {label:"Instagram",key:"ig",color:C.pk,icon:"📸"},
+                {label:"YouTube",key:"yt",color:C.r,icon:"▶️"},
+                {label:"Telegram",key:"tg",color:C.a,icon:"✈️"},
+              ].map(p=><div key={p.key} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",background:C.bg,borderRadius:10,border:"1px solid "+C.bd}}>
+                <span style={{fontSize:18}}>{p.icon}</span>
+                <span style={{fontSize:14,flex:1,fontWeight:500}}>{p.label}</span>
+                <span style={{fontSize:18,fontWeight:800,color:p.color}}>{fmt$(latestMedia[p.key]||0)}</span>
+              </div>)}
+            </div>
+        }
+      </Card>
+    </div>
+
+    {/* Tasks + P&L */}
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
       <Card>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}><span style={{fontSize:16,fontWeight:600}}>Задачи сегодня</span><button onClick={()=>onNav("strategy")} style={{fontSize:13,color:C.a,background:"none",border:"none",cursor:"pointer"}}>Стратегия</button></div>
-        {todayTasks.length===0?<div style={{padding:"24px 0",textAlign:"center",color:C.t2,fontSize:14}}>Нет задач</div>:
-        <div style={{display:"flex",flexDirection:"column",gap:8}}>{todayTasks.slice(0,5).map((t:any)=><div key={t.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",background:C.bg,borderRadius:10,borderLeft:"3px solid "+(t.type==="biz"?C.a:C.y)}}><span style={{fontSize:14,flex:1}}>{t.text}</span><Tag label={tsLbl(t.status||"todo")} color={tsCol(t.status||"todo")}/><span style={{fontSize:11,color:C.t2}}>{t.mins}м</span></div>)}</div>}
+        {todayTasks.filter((t:any)=>t.status!=="done").length===0?<div style={{padding:"24px 0",textAlign:"center",color:C.t2,fontSize:14}}>Нет задач</div>:
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>{todayTasks.filter((t:any)=>t.status!=="done").slice(0,5).map((t:any)=><div key={t.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",background:C.bg,borderRadius:10,borderLeft:"3px solid "+(t.type==="biz"?C.a:C.y)}}><span style={{fontSize:14,flex:1}}>{t.text}</span><Tag label={tsLbl(t.status||"todo")} color={tsCol(t.status||"todo")}/><span style={{fontSize:11,color:C.t2}}>{t.mins}м</span></div>)}</div>}
       </Card>
       <Card>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}><span style={{fontSize:16,fontWeight:600}}>P&L (месяц)</span><button onClick={()=>onNav("pnl")} style={{fontSize:13,color:C.a,background:"none",border:"none",cursor:"pointer"}}>Подробнее</button></div>
@@ -265,6 +385,37 @@ function DashPage({userId,name,onNav}:{userId:string,name:string,onNav:(p:string
         </div>
       </Card>
     </div>
+
+    {/* Calls */}
+    <Card>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}>
+        <span style={{fontSize:16,fontWeight:600}}>Созвоны</span>
+        <button onClick={()=>onNav("calls")} style={{fontSize:13,color:C.a,background:"none",border:"none",cursor:"pointer"}}>Все созвоны</button>
+      </div>
+      {upcomingCalls.length===0
+        ? <div style={{padding:"24px 0",textAlign:"center",color:C.t2,fontSize:14}}>Созвоны не запланированы</div>
+        : <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {upcomingCalls.map((c:any)=>{
+              const isToday = c.date === td;
+              const mins = isToday ? minsUntilCall(c) : null;
+              const isPast = mins !== null && mins < 0;
+              const isImminentOrNow = mins !== null && mins >= 0;
+              return <div key={c.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",background:isToday?"#FFF7ED":C.bg,borderRadius:10,borderLeft:"3px solid "+(isToday?C.y:C.a)}}>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:14,fontWeight:600,display:"flex",alignItems:"center",gap:8}}>
+                    {isToday&&<span style={{color:C.y,fontSize:16}}>!</span>}
+                    {callLabel(c)}
+                  </div>
+                  <div style={{fontSize:12,color:C.t2,marginTop:2}}>{c.date} в {c.time_start}{c.time_end?" - "+c.time_end:""}</div>
+                </div>
+                {isToday && isImminentOrNow && <span style={{fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:C.y+"22",color:C.y,whiteSpace:"nowrap"}}>Созвон сегодня через {mins} мин</span>}
+                {isToday && isPast && <span style={{fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:C.r+"18",color:C.r}}>Сегодня</span>}
+                {!isToday && <span style={{fontSize:11,color:C.t2}}>{c.date}</span>}
+              </div>;
+            })}
+          </div>
+      }
+    </Card>
   </>;
 }
 
@@ -753,20 +904,181 @@ function PnlPage({userId}:{userId:string}){
 }
 
 /* ============ MEDIA ============ */
+function LineChart({data,color,label,width=280,height=120}:{data:number[],color:string,label:string,width?:number,height?:number}){
+  const[hoverIdx,setHoverIdx]=useState<number|null>(null);
+  if(data.length<2)return <div style={{height,display:"flex",alignItems:"center",justifyContent:"center",color:C.t2,fontSize:12}}>Мало данных</div>;
+  const pad={t:10,r:10,b:24,l:40};
+  const W=width-pad.l-pad.r, H=height-pad.t-pad.b;
+  const min=Math.min(...data), max=Math.max(...data);
+  const range=max-min||1;
+  const pts=data.map((v,i)=>({x:pad.l+i/(data.length-1)*W, y:pad.t+H-(v-min)/range*H, v}));
+  const path="M"+pts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" L");
+  const area=path+` L${pts[pts.length-1].x.toFixed(1)},${(pad.t+H).toFixed(1)} L${pts[0].x.toFixed(1)},${(pad.t+H).toFixed(1)} Z`;
+  return <svg width={width} height={height} style={{overflow:"visible"}}>
+    {[0,0.5,1].map(f=>{
+      const y=pad.t+H*(1-f);
+      const v=min+range*f;
+      return <g key={f}>
+        <line x1={pad.l} x2={pad.l+W} y1={y} y2={y} stroke={C.bd} strokeWidth="1"/>
+        <text x={pad.l-4} y={y+4} textAnchor="end" fontSize="9" fill={C.t2}>{v>=1000?(v/1000).toFixed(0)+"к":Math.round(v)}</text>
+      </g>;
+    })}
+    <path d={area} fill={color} fillOpacity="0.08"/>
+    <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    {pts.map((p,i)=><circle key={i} cx={p.x} cy={p.y} r={hoverIdx===i?5:3} fill={color} stroke="#fff" strokeWidth="1.5"
+      style={{cursor:"pointer"}} onMouseEnter={()=>setHoverIdx(i)} onMouseLeave={()=>setHoverIdx(null)}/>)}
+    {hoverIdx!==null&&<g>
+      <rect x={pts[hoverIdx].x-28} y={pts[hoverIdx].y-26} width={56} height={18} rx={4} fill={C.dk} opacity="0.9"/>
+      <text x={pts[hoverIdx].x} y={pts[hoverIdx].y-13} textAnchor="middle" fontSize="10" fill="#fff" fontWeight="600">{fmt$(pts[hoverIdx].v)}</text>
+    </g>}
+  </svg>;
+}
+
+function BarChart({data,labels,color,width=280,height=120}:{data:number[],labels:string[],color:string,width?:number,height?:number}){
+  const[hoverIdx,setHoverIdx]=useState<number|null>(null);
+  if(!data.length)return <div style={{height,display:"flex",alignItems:"center",justifyContent:"center",color:C.t2,fontSize:12}}>Нет данных</div>;
+  const pad={t:10,r:8,b:24,l:40};
+  const W=width-pad.l-pad.r, H=height-pad.t-pad.b;
+  const max=Math.max(...data,1);
+  const bw=Math.max(4,W/data.length*0.6);
+  const gap=W/data.length;
+  return <svg width={width} height={height} style={{overflow:"visible"}}>
+    {[0,0.5,1].map(f=>{
+      const y=pad.t+H*(1-f);
+      const v=max*f;
+      return <g key={f}>
+        <line x1={pad.l} x2={pad.l+W} y1={y} y2={y} stroke={C.bd} strokeWidth="1"/>
+        <text x={pad.l-4} y={y+4} textAnchor="end" fontSize="9" fill={C.t2}>{v>=1000?(v/1000).toFixed(0)+"к":Math.round(v)}</text>
+      </g>;
+    })}
+    {data.map((v,i)=>{
+      const bh=Math.max(2,(v/max)*H);
+      const x=pad.l+gap*i+gap/2-bw/2;
+      const y=pad.t+H-bh;
+      return <g key={i}>
+        <rect x={x} y={y} width={bw} height={bh} rx={3} fill={hoverIdx===i?color:color+"bb"}
+          style={{cursor:"pointer"}} onMouseEnter={()=>setHoverIdx(i)} onMouseLeave={()=>setHoverIdx(null)}/>
+        {labels[i]&&<text x={x+bw/2} y={pad.t+H+14} textAnchor="middle" fontSize="9" fill={C.t2}>{labels[i]}</text>}
+        {hoverIdx===i&&<g>
+          <rect x={x+bw/2-28} y={y-22} width={56} height={18} rx={4} fill={C.dk} opacity="0.9"/>
+          <text x={x+bw/2} y={y-9} textAnchor="middle" fontSize="10" fill="#fff" fontWeight="600">{fmt$(v)}</text>
+        </g>}
+      </g>;
+    })}
+  </svg>;
+}
+
 function MediaPage({userId}:{userId:string}){
   const{data,add,remove}=useTable("media",userId);
   const[show,setShow]=useState(false);
+  const[period,setPeriod]=useState<"week"|"month"|"year"|"all">("month");
   const[f,sF]=useState({date:today(),ig:0,yt:0,tg:0,oth:0,ig_story:0,tg_story:0});
   const sub=async()=>{await add(f);sF({date:today(),ig:0,yt:0,tg:0,oth:0,ig_story:0,tg_story:0});setShow(false);};
+
   const sorted=useMemo(()=>[...data].sort((a:any,b:any)=>a.date?.localeCompare(b.date)),[data]);
+
+  const filtered=useMemo(()=>{
+    const now=new Date();
+    const cutoff=new Date(now);
+    if(period==="week") cutoff.setDate(now.getDate()-7);
+    else if(period==="month") cutoff.setMonth(now.getMonth()-1);
+    else if(period==="year") cutoff.setFullYear(now.getFullYear()-1);
+    else return sorted;
+    const cutStr=ds(cutoff);
+    return sorted.filter((d:any)=>d.date>=cutStr);
+  },[sorted,period]);
+
+  const latest=sorted[sorted.length-1]||null;
+  const prev=sorted[sorted.length-2]||null;
+
+  const delta=(key:string)=>{
+    if(!latest||!prev)return null;
+    const d=(latest[key]||0)-(prev[key]||0);
+    return d;
+  };
+
+  const PERIODS=[{id:"week",label:"Неделя"},{id:"month",label:"Месяц"},{id:"year",label:"Год"},{id:"all",label:"Всё время"}];
+  const chartW=260;
+
   return <>
-    <div style={{display:"flex",justifyContent:"space-between",marginBottom:20}}><div style={{fontSize:18,fontWeight:600}}>Аналитика медийности</div><Btn onClick={()=>setShow(!show)}>+ Данные</Btn></div>
-    {show&&<Card style={{marginBottom:20}}><div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>
-      <div style={{gridColumn:"1/-1"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Дата</label><input type="date" value={f.date} onChange={e=>sF({...f,date:e.target.value})} style={iS}/></div>
-      {([["ig","Instagram"],["yt","YouTube"],["tg","Telegram"],["oth","Другие"]] as const).map(([k,l])=><div key={k}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>{l}</label><input type="number" value={(f as any)[k]} onChange={e=>sF({...f,[k]:+e.target.value})} style={iS}/></div>)}
-      {([["ig_story","Stories IG"],["tg_story","Stories TG"]] as const).map(([k,l])=><div key={k} style={{gridColumn:"span 2"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>{l}</label><input type="number" value={(f as any)[k]} onChange={e=>sF({...f,[k]:+e.target.value})} style={iS}/></div>)}
-    </div><div style={{display:"flex",gap:10,marginTop:16}}><Btn onClick={sub}>Добавить</Btn><Btn primary={false} onClick={()=>setShow(false)}>Отмена</Btn></div></Card>}
-    <Card style={{padding:0,overflow:"hidden"}}>{sorted.length===0?<div style={{padding:"48px",textAlign:"center",color:C.t2}}>Добавь данные</div>:<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:14}}><thead><tr style={{borderBottom:"2px solid "+C.bd}}>{["Дата","IG","YT","TG","Другие","Stories IG","Stories TG",""].map((h,i)=><th key={i} style={{padding:"12px 14px",textAlign:"left",fontSize:12,fontWeight:600,color:C.t2}}>{h}</th>)}</tr></thead><tbody>{sorted.map((d:any)=><tr key={d.id} style={{borderBottom:"1px solid "+C.bd}}><td style={{padding:"12px 14px"}}>{d.date}</td><td style={{padding:"12px 14px",color:C.pk,fontWeight:600}}>{d.ig}</td><td style={{padding:"12px 14px",color:C.r,fontWeight:600}}>{d.yt}</td><td style={{padding:"12px 14px",color:C.a,fontWeight:600}}>{d.tg}</td><td style={{padding:"12px 14px"}}>{d.oth}</td><td style={{padding:"12px 14px"}}>{d.ig_story}</td><td style={{padding:"12px 14px"}}>{d.tg_story}</td><td style={{padding:"12px 8px"}}><button onClick={()=>remove(d.id)} style={{width:28,height:28,borderRadius:6,border:"none",background:C.bg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><I path="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" size={12} color={C.r} sw={2}/></button></td></tr>)}</tbody></table></div>}</Card>
+    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:"24px 32px",marginBottom:24,color:"#fff",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+      <div><div style={{fontSize:20,fontWeight:700}}>Медийность</div><div style={{fontSize:13,opacity:0.6,marginTop:4}}>Динамика аудитории и охватов</div></div>
+      <Btn onClick={()=>setShow(!show)} style={{background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.25)"}}>+ Данные</Btn>
+    </div>
+
+    {/* Latest stats */}
+    {latest&&<div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16,marginBottom:24}}>
+      {[{l:"Instagram",key:"ig",c:C.pk},{l:"YouTube",key:"yt",c:C.r},{l:"Telegram",key:"tg",c:C.a},{l:"Другие",key:"oth",c:C.t2}].map(p=>{
+        const d=delta(p.key);
+        return <Card key={p.key} style={{padding:"20px 24px"}}>
+          <div style={{fontSize:24,fontWeight:700,color:p.c}}>{fmt$(latest[p.key]||0)}</div>
+          <div style={{fontSize:13,color:C.t2,marginTop:4}}>{p.l}</div>
+          {d!==null&&<div style={{fontSize:11,marginTop:6,color:d>=0?C.g:C.r,fontWeight:600}}>{d>=0?"+":""}{fmt$(d)} с прошлого раза</div>}
+        </Card>;
+      })}
+    </div>}
+
+    {/* Period selector */}
+    <div style={{display:"flex",gap:4,marginBottom:20}}>
+      {PERIODS.map(p=><button key={p.id} onClick={()=>setPeriod(p.id as any)} style={{padding:"7px 16px",borderRadius:8,border:"1px solid "+(period===p.id?C.a:C.bd),background:period===p.id?C.a:"transparent",color:period===p.id?"#fff":C.t2,fontSize:13,fontWeight:period===p.id?600:400,cursor:"pointer"}}>{p.label}</button>)}
+    </div>
+
+    {show&&<Card style={{marginBottom:20}}>
+      <div style={{fontSize:14,fontWeight:600,marginBottom:14}}>Добавить данные</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>
+        <div style={{gridColumn:"1/-1"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Дата</label><input type="date" value={f.date} onChange={e=>sF({...f,date:e.target.value})} style={iS}/></div>
+        {([["ig","Instagram (подписчики)"],["yt","YouTube (подписчики)"],["tg","Telegram (подписчики)"],["oth","Другие"]] as const).map(([k,l])=><div key={k}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>{l}</label><input type="number" value={(f as any)[k]} onChange={e=>sF({...f,[k]:+e.target.value})} style={iS}/></div>)}
+        {([["ig_story","Охват Stories IG"],["tg_story","Охват Telegram"]] as const).map(([k,l])=><div key={k} style={{gridColumn:"span 2"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>{l}</label><input type="number" value={(f as any)[k]} onChange={e=>sF({...f,[k]:+e.target.value})} style={iS}/></div>)}
+      </div>
+      <div style={{display:"flex",gap:10,marginTop:16}}><Btn onClick={sub}>Сохранить</Btn><Btn primary={false} onClick={()=>setShow(false)}>Отмена</Btn></div>
+    </Card>}
+
+    {filtered.length<2
+      ? <Card style={{padding:"48px",textAlign:"center"}}><div style={{color:C.t2,fontSize:14}}>Добавь минимум 2 записи для построения графиков</div></Card>
+      : <>
+        {/* Audience growth */}
+        <div style={{marginBottom:8,fontSize:16,fontWeight:700}}>Рост аудитории</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16,marginBottom:24}}>
+          {[{l:"Instagram",key:"ig",c:C.pk},{l:"YouTube",key:"yt",c:C.r},{l:"Telegram",key:"tg",c:C.a}].map(p=><Card key={p.key} style={{padding:"16px 20px"}}>
+            <div style={{fontSize:13,fontWeight:600,color:p.c,marginBottom:12}}>{p.l}</div>
+            <LineChart data={filtered.map((d:any)=>d[p.key]||0)} color={p.c} label={p.l} width={chartW} height={130}/>
+          </Card>)}
+        </div>
+
+        {/* Reach */}
+        <div style={{marginBottom:8,fontSize:16,fontWeight:700}}>Охваты</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:24}}>
+          {[{l:"Stories Instagram",key:"ig_story",c:C.pk},{l:"Telegram",key:"tg_story",c:C.a}].map(p=>{
+            const labels=filtered.map((d:any)=>d.date?.substring(5)||"");
+            return <Card key={p.key} style={{padding:"16px 20px"}}>
+              <div style={{fontSize:13,fontWeight:600,color:p.c,marginBottom:12}}>{p.l}</div>
+              <BarChart data={filtered.map((d:any)=>d[p.key]||0)} labels={labels} color={p.c} width={chartW} height={130}/>
+            </Card>;
+          })}
+        </div>
+      </>
+    }
+
+    {/* Data table */}
+    <div style={{fontSize:16,fontWeight:700,marginBottom:12}}>История данных</div>
+    <Card style={{padding:0,overflow:"hidden"}}>
+      {sorted.length===0
+        ? <div style={{padding:"48px",textAlign:"center",color:C.t2}}>Добавь первые данные</div>
+        : <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:14}}>
+            <thead><tr style={{borderBottom:"2px solid "+C.bd}}>{["Дата","IG","YT","TG","Другие","Stories IG","Stories TG",""].map((h,i)=><th key={i} style={{padding:"12px 14px",textAlign:"left",fontSize:12,fontWeight:600,color:C.t2}}>{h}</th>)}</tr></thead>
+            <tbody>{[...sorted].reverse().map((d:any)=><tr key={d.id} style={{borderBottom:"1px solid "+C.bd}}>
+              <td style={{padding:"12px 14px",fontWeight:500}}>{d.date}</td>
+              <td style={{padding:"12px 14px",color:C.pk,fontWeight:600}}>{fmt$(d.ig)}</td>
+              <td style={{padding:"12px 14px",color:C.r,fontWeight:600}}>{fmt$(d.yt)}</td>
+              <td style={{padding:"12px 14px",color:C.a,fontWeight:600}}>{fmt$(d.tg)}</td>
+              <td style={{padding:"12px 14px"}}>{d.oth}</td>
+              <td style={{padding:"12px 14px"}}>{d.ig_story}</td>
+              <td style={{padding:"12px 14px"}}>{d.tg_story}</td>
+              <td style={{padding:"12px 8px"}}><button onClick={()=>remove(d.id)} style={{width:28,height:28,borderRadius:6,border:"none",background:C.bg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><I path="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" size={12} color={C.r} sw={2}/></button></td>
+            </tr>)}</tbody>
+          </table></div>
+      }
+    </Card>
   </>;
 }
 
@@ -826,6 +1138,134 @@ function AdsPage({userId}:{userId:string}){
         <td style={{padding:"12px 8px"}}><button onClick={()=>remove(c.id)} style={{width:28,height:28,borderRadius:6,border:"none",background:C.bg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><I path="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" size={12} color={C.r} sw={2}/></button></td>
       </tr>;
     })}</tbody></table></div>}</Card>
+  </>;
+}
+
+/* ============ CALLS ============ */
+function CallsPage({userId}:{userId:string}){
+  const{data:calls,add,remove}=useTable("calls",userId);
+  const[calDate,setCalDate]=useState(()=>new Date());
+  const[modal,setModal]=useState(false);
+  const[f,sF]=useState({date:today(),time_start:"10:00",time_end:"11:00",goal:"Созвон с лидом",custom_goal:""});
+  const td=today();
+
+  const HOURS=Array.from({length:17},(_, i)=>i+7); // 07:00 - 23:00
+
+  const calDateStr=ds(calDate);
+  const daysCalls=calls.filter((c:any)=>c.date===calDateStr).sort((a:any,b:any)=>a.time_start.localeCompare(b.time_start));
+
+  const sub=async()=>{
+    if(!f.time_start)return;
+    if(f.goal==="Своя цель"&&!f.custom_goal.trim())return;
+    await add({...f,custom_goal:f.goal==="Своя цель"?f.custom_goal:""});
+    sF({date:calDateStr,time_start:"10:00",time_end:"11:00",goal:"Созвон с лидом",custom_goal:""});
+    setModal(false);
+  };
+
+  const callLabel=(c:any)=>c.goal==="Своя цель"?(c.custom_goal||"Созвон"):c.goal;
+  const goalColor=(g:string)=>g==="Созвон с лидом"?C.y:g==="Созвон с клиентом"?C.g:g==="Созвон с командой"?C.a:C.pk;
+
+  const timeToY=(t:string)=>{
+    const[h,m]=t.split(":").map(Number);
+    return((h-7)*60+m);
+  };
+  const SLOT_H=60; // px per hour
+
+  const changeDay=(delta:number)=>{
+    const d=new Date(calDate);
+    d.setDate(d.getDate()+delta);
+    setCalDate(d);
+    sF(f=>({...f,date:ds(d)}));
+  };
+
+  const upcomingAll=calls
+    .filter((c:any)=>c.date>=td)
+    .sort((a:any,b:any)=>a.date===b.date?a.time_start.localeCompare(b.time_start):a.date.localeCompare(b.date));
+
+  return <>
+    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:"24px 32px",marginBottom:24,color:"#fff",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+      <div>
+        <div style={{fontSize:20,fontWeight:700}}>Созвоны</div>
+        <div style={{fontSize:13,opacity:0.6,marginTop:4}}>Запланировано: {upcomingAll.length}</div>
+      </div>
+      <Btn onClick={()=>{sF({date:calDateStr,time_start:"10:00",time_end:"11:00",goal:"Созвон с лидом",custom_goal:""});setModal(true);}} style={{background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.25)"}}>+ Созвон</Btn>
+    </div>
+
+    {modal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={e=>{if(e.target===e.currentTarget)setModal(false);}}>
+      <div style={{background:C.w,borderRadius:20,padding:32,width:440,boxShadow:"0 24px 80px rgba(0,0,0,0.2)"}}>
+        <div style={{fontSize:18,fontWeight:700,marginBottom:20}}>Новый созвон</div>
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Дата</label><input type="date" value={f.date} onChange={e=>sF({...f,date:e.target.value})} style={iS}/></div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Начало</label><input type="time" value={f.time_start} onChange={e=>sF({...f,time_start:e.target.value})} style={iS}/></div>
+            <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Конец</label><input type="time" value={f.time_end} onChange={e=>sF({...f,time_end:e.target.value})} style={iS}/></div>
+          </div>
+          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Цель</label>
+            <select value={f.goal} onChange={e=>sF({...f,goal:e.target.value})} style={iS}>
+              {CALL_GOALS.map(g=><option key={g}>{g}</option>)}
+            </select>
+          </div>
+          {f.goal==="Своя цель"&&<div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Название</label><input placeholder="Введи цель..." value={f.custom_goal} onChange={e=>sF({...f,custom_goal:e.target.value})} style={iS}/></div>}
+        </div>
+        <div style={{display:"flex",gap:10,marginTop:20}}>
+          <Btn onClick={sub} disabled={f.goal==="Своя цель"&&!f.custom_goal.trim()}>Создать</Btn>
+          <Btn primary={false} onClick={()=>setModal(false)}>Отмена</Btn>
+        </div>
+      </div>
+    </div>}
+
+    <div style={{display:"grid",gridTemplateColumns:"1fr 320px",gap:20}}>
+      {/* Calendar */}
+      <Card style={{padding:0,overflow:"hidden"}}>
+        <div style={{padding:"16px 20px",borderBottom:"1px solid "+C.bd,display:"flex",alignItems:"center",gap:12}}>
+          <button onClick={()=>changeDay(-1)} style={{width:32,height:32,border:"1px solid "+C.bd,borderRadius:8,background:C.bg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg></button>
+          <span style={{flex:1,textAlign:"center",fontSize:15,fontWeight:600}}>{calDate.getDate()} {MR[calDate.getMonth()]} {calDate.getFullYear()}, {["Вс","Пн","Вт","Ср","Чт","Пт","Сб"][calDate.getDay()]}</span>
+          <button onClick={()=>changeDay(1)} style={{width:32,height:32,border:"1px solid "+C.bd,borderRadius:8,background:C.bg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg></button>
+          <button onClick={()=>{setCalDate(new Date());sF(f=>({...f,date:today()}));}} style={{padding:"6px 12px",fontSize:12,border:"1px solid "+C.bd,borderRadius:8,background:calDateStr===td?C.a:C.bg,color:calDateStr===td?"#fff":C.t2,cursor:"pointer",fontWeight:500}}>Сегодня</button>
+        </div>
+        <div style={{overflowY:"auto",maxHeight:600,padding:"0 0 16px"}}>
+          <div style={{position:"relative",paddingLeft:60}}>
+            {HOURS.map(h=><div key={h} style={{height:SLOT_H,borderTop:"1px solid "+C.bd,position:"relative",cursor:"pointer"}} onClick={()=>{sF(f=>({...f,date:calDateStr,time_start:String(h).padStart(2,"0")+":00",time_end:String(h+1).padStart(2,"0")+":00"}));setModal(true);}}>
+              <span style={{position:"absolute",left:-52,top:-9,fontSize:11,color:C.t2,fontWeight:500,width:44,textAlign:"right"}}>{String(h).padStart(2,"0")}:00</span>
+              <div style={{position:"absolute",left:0,right:8,top:0,bottom:0,borderRadius:6,background:"transparent",transition:"background 0.15s"}} onMouseEnter={e=>(e.currentTarget.style.background=C.a+"08")} onMouseLeave={e=>(e.currentTarget.style.background="transparent")}/>
+            </div>)}
+            {daysCalls.map((c:any)=>{
+              const top=timeToY(c.time_start);
+              const bot=c.time_end?timeToY(c.time_end):top+60;
+              const h=Math.max(bot-top,40);
+              const gc=goalColor(c.goal);
+              return<div key={c.id} style={{position:"absolute",left:4,right:12,top:top,height:h,background:gc+"18",border:"2px solid "+gc,borderRadius:8,padding:"6px 10px",boxSizing:"border-box",overflow:"hidden",cursor:"default",zIndex:10}}>
+                <div style={{fontSize:12,fontWeight:700,color:gc}}>{callLabel(c)}</div>
+                <div style={{fontSize:11,color:C.t2}}>{c.time_start}{c.time_end?" - "+c.time_end:""}</div>
+                <button onClick={()=>remove(c.id)} style={{position:"absolute",top:4,right:4,width:18,height:18,border:"none",background:"transparent",cursor:"pointer",color:C.t2,fontSize:13,lineHeight:1}}>×</button>
+              </div>;
+            })}
+          </div>
+        </div>
+      </Card>
+
+      {/* Sidebar: upcoming */}
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        <Card style={{padding:16}}>
+          <div style={{fontSize:14,fontWeight:600,marginBottom:12,color:C.t2}}>Ближайшие созвоны</div>
+          {upcomingAll.length===0
+            ? <div style={{fontSize:13,color:C.t2,textAlign:"center",padding:"16px 0"}}>Созвоны не запланированы</div>
+            : upcomingAll.slice(0,8).map((c:any)=>{
+                const isToday=c.date===td;
+                const gc=goalColor(c.goal);
+                return<div key={c.id} style={{display:"flex",gap:10,alignItems:"flex-start",padding:"10px 0",borderBottom:"1px solid "+C.bd}}>
+                  <div style={{width:4,height:36,borderRadius:2,background:gc,marginTop:2,flexShrink:0}}/>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:13,fontWeight:600}}>{callLabel(c)}</div>
+                    <div style={{fontSize:11,color:C.t2,marginTop:2}}>{isToday?"Сегодня":c.date} в {c.time_start}</div>
+                  </div>
+                  {isToday&&<span style={{fontSize:10,fontWeight:700,color:C.y}}>!</span>}
+                </div>;
+              })
+          }
+        </Card>
+      </div>
+    </div>
   </>;
 }
 
