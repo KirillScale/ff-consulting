@@ -346,7 +346,7 @@ function DashPage({userId,name,onNav}:{userId:string,name:string,onNav:(p:string
       </Card>
 
       {/* Media summary */}
-      <Card style={{cursor:"pointer"}} onClick={()=>onNav("media")}>
+      <div onClick={()=>onNav("media")} style={{cursor:"pointer",background:C.w,borderRadius:16,padding:24,boxShadow:C.sh}}>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}>
           <span style={{fontSize:16,fontWeight:600}}>Медийность</span>
           <span style={{fontSize:12,color:C.a}}>Подробнее →</span>
@@ -366,7 +366,7 @@ function DashPage({userId,name,onNav}:{userId:string,name:string,onNav:(p:string
               </div>)}
             </div>
         }
-      </Card>
+      </div>
     </div>
 
     {/* Tasks + P&L */}
