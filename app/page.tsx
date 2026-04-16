@@ -272,7 +272,9 @@ function DashPage({userId,name,onNav}:{userId:string,name:string,onNav:(p:string
 
   const todayTasks = kanban.data.filter((t:any)=>t.date===td&&t.type!=="delegate");
   const todayGoalTasks = goalTasks.data.filter((t:any)=>t.date===td&&t.type!=="delegate");
-  const allTodayTasks = [...todayTasks, ...todayGoalTasks];
+  const seenTexts = new Set(todayTasks.map((t:any)=>t.text?.trim().toLowerCase()));
+  const uniqueGoalTasks = todayGoalTasks.filter((t:any)=>!seenTexts.has(t.text?.trim().toLowerCase()));
+  const allTodayTasks = [...todayTasks, ...uniqueGoalTasks];
   const doneTodayTasks = allTodayTasks.filter((t:any)=>t.status==="done"||t.done);
 
   const cI = pnl.data.filter((t:any)=>t.type==="income"&&t.date?.startsWith(cm)).reduce((s:number,t:any)=>s+(t.amount||0),0);
