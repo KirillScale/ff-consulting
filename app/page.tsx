@@ -1,65 +1,626 @@
-import Image from "next/image";
+"use client";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
 
-export default function Home() {
+/* ============ CONSTANTS ============ */
+const C = {
+  bg:"#F5F7FA",w:"#FFFFFF",a:"#2563EB",ah:"#1D4ED8",dk:"#0F1E40",da:"#1E3A5F",
+  t1:"#111827",t2:"#6B7280",bd:"#E5E7EB",g:"#10B981",r:"#EF4444",y:"#F59E0B",
+  sh:"0 2px 12px rgba(0,0,0,0.06)",ib:"#F9FAFB",pk:"#EC4899",lb:"#06B6D4"
+};
+const PLATS=[{id:"instagram",label:"Instagram",color:C.pk},{id:"telegram",label:"Telegram",color:C.a},{id:"youtube",label:"YouTube",color:C.r},{id:"vk",label:"VK",color:C.lb},{id:"other",label:"Другое",color:C.t2}];
+const CTYPES=["Пост","Reels","Stories","Текст","Видео","Другое"];
+const CSTATS=[{id:"idea",label:"Идея",color:C.t2},{id:"progress",label:"В работе",color:C.y},{id:"ready",label:"Готово",color:C.a},{id:"published",label:"Опубликовано",color:C.g}];
+const STAGES=[{id:"new",label:"Новый",color:C.a},{id:"contact",label:"Контакт",color:"#8B5CF6"},{id:"negotiation",label:"Переговоры",color:C.y},{id:"closed",label:"Закрыт",color:C.g},{id:"rejected",label:"Отказ",color:C.r}];
+const SRCS=["Instagram","Telegram","YouTube","Сайт","Рекомендация","Реклама","Другое"];
+const NAV=[
+  {id:"dashboard",label:"Dashboard",ic:"M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"},
+  {id:"strategy",label:"Стратегия роста",ic:"M5 3l3.057 7.134L2 16h5.5L12 21l4.5-5H22l-6.057-5.866L19 3l-7 4-7-4z",glow:true},
+  {id:"crm",label:"CRM",ic:"M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"},
+  {id:"content",label:"Контент-план",ic:"M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"},
+  {id:"media",label:"Медийность",ic:"M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"},
+  {id:"ads",label:"Реклама",ic:"M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"},
+  {id:"pnl",label:"P&L",ic:"M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"},
+  {id:"calc",label:"Калькулятор",ic:"M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"},
+  {id:"tools",label:"Инструменты",ic:"M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"},
+];
+const WD=["Воскресенье","Понедельник","Вторник","Среда","Четверг","Пятница","Суббота"];
+const MR=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+const MS=["Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"];
+const QUOTES=["Никто не придёт и не спасёт тебя. Либо ты встаёшь и делаешь, либо остаёшься там где ты есть.","Дисциплина - это выбор между тем чего ты хочешь сейчас и тем чего ты хочешь больше всего.","Ленивый человек всегда найдёт причину. Работающий человек всегда найдёт способ.","Боль временна. Результат остаётся. Выбирай что важнее.","Пока ты думаешь - кто-то делает. Пока ты делаешь - кто-то уже обогнал.","Жалобы - это налог который платят неудачники. Перестань платить.","Каждое утро ты выбираешь: строить своё или строить чужое. Третьего нет.","Никто не запомнит как ты устал. Все запомнят что ты сделал.","Успех - это не случайность. Это результат решений которые ты принимаешь каждый день.","Деньги не приходят к тем кто их ждёт. Они приходят к тем кто за ними идёт.","Мотивация приходит и уходит. Система остаётся. Строй систему.","Через год ты пожалеешь только об одном - что не начал сегодня."];
+
+/* ============ HELPERS ============ */
+const fmtDate = (d:Date) => WD[d.getDay()]+", "+d.getDate()+" "+MR[d.getMonth()]+" "+d.getFullYear();
+const ds = (d:Date) => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const today = () => ds(new Date());
+const pCol = (p:string) => (PLATS.find(x=>x.id===p)||{color:C.t2}).color;
+const pLbl = (p:string) => (PLATS.find(x=>x.id===p)||{label:p}).label;
+const csCol = (s:string) => (CSTATS.find(x=>x.id===s)||{color:C.t2}).color;
+const csLbl = (s:string) => (CSTATS.find(x=>x.id===s)||{label:s}).label;
+const stCol = (s:string) => (STAGES.find(x=>x.id===s)||{color:C.t2}).color;
+const stLbl = (s:string) => (STAGES.find(x=>x.id===s)||{label:s}).label;
+const fmt$ = (n:number) => n.toLocaleString("ru-RU");
+
+const I = ({path,size=20,color="currentColor",sw=1.5}:{path:string,size?:number,color?:string,sw?:number}) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round"><path d={path}/></svg>
+);
+const iS:React.CSSProperties = {width:"100%",padding:"11px 14px",border:"1px solid "+C.bd,borderRadius:10,fontSize:14,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box",fontFamily:"'Montserrat',sans-serif"};
+const Logo = ({s=22}:{s?:number}) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={C.a} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="22" x2="12" y2="15.5"/><polyline points="22 8.5 12 15.5 2 8.5"/></svg>;
+const Brand = ({size="md"}:{size?:string}) => {
+  const sz:any={sm:{f:12,sub:8,gap:1},md:{f:15,sub:9,gap:2},lg:{f:20,sub:11,gap:3}};
+  const s=sz[size]||sz.md;
+  return <div style={{display:"flex",flexDirection:"column",alignItems:"center",lineHeight:1.2}}><span style={{fontSize:s.f,fontWeight:800,color:"#fff",letterSpacing:2}}>FF CONSULTING</span><span style={{fontSize:s.sub,fontWeight:300,color:"rgba(255,255,255,0.6)",letterSpacing:1.5,marginTop:s.gap}}>by Kirill Scales</span></div>;
+};
+const Btn = ({children,onClick,primary=true,style:sx}:{children:React.ReactNode,onClick?:()=>void,primary?:boolean,style?:React.CSSProperties}) => <button onClick={onClick} style={{padding:"10px 20px",background:primary?C.a:C.bg,color:primary?"#fff":C.t2,border:primary?"none":"1px solid "+C.bd,borderRadius:10,fontSize:14,fontWeight:600,cursor:"pointer",...sx}}>{children}</button>;
+const Tag = ({label,color}:{label:string,color:string}) => <span style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:6,background:color+"18",color}}>{label}</span>;
+const Card = ({children,style:sx}:{children:React.ReactNode,style?:React.CSSProperties}) => <div style={{background:C.w,borderRadius:16,padding:24,boxShadow:C.sh,...sx}}>{children}</div>;
+
+/* ============ SUPABASE DATA HOOK ============ */
+function useTable(table:string, userId:string|null) {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    if (!userId) return;
+    const { data: rows } = await supabase.from(table).select("*").eq("user_id", userId).order("created_at", { ascending: false });
+    setData(rows || []);
+    setLoading(false);
+  }, [table, userId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const add = async (row: any) => {
+    const { data: inserted } = await supabase.from(table).insert({ ...row, user_id: userId }).select().single();
+    if (inserted) setData(prev => [inserted, ...prev]);
+    return inserted;
+  };
+
+  const update = async (id: string, updates: any) => {
+    await supabase.from(table).update(updates).eq("id", id);
+    setData(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
+  };
+
+  const remove = async (id: string) => {
+    await supabase.from(table).delete().eq("id", id);
+    setData(prev => prev.filter(r => r.id !== id));
+  };
+
+  return { data, loading, add, update, remove, reload: load, setData };
+}
+
+/* ============ AUTH ============ */
+function Auth({ onLogin }: { onLogin: (u: any) => void }) {
+  const [email, setEmail] = useState("");
+  const [pw, setPw] = useState("");
+  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const login = async () => {
+    setErr(""); setLoading(true);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password: pw });
+    setLoading(false);
+    if (error) return setErr("Неверный email или пароль");
+    if (data.user) onLogin(data.user);
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div style={{minHeight:"100vh",background:`linear-gradient(135deg,${C.dk},${C.da},${C.a})`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Montserrat',sans-serif",padding:20}}>
+      <div style={{background:C.w,borderRadius:24,padding:"48px 40px",width:"100%",maxWidth:420,boxShadow:"0 24px 80px rgba(0,0,0,0.25)"}}>
+        <div style={{textAlign:"center",marginBottom:36}}>
+          <div style={{display:"inline-flex",alignItems:"center",gap:10,background:C.dk,padding:"14px 28px",borderRadius:12}}>
+            <Logo/><Brand size="lg"/>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div style={{fontSize:16,fontWeight:600,textAlign:"center",marginBottom:24,color:C.t1}}>Вход в платформу</div>
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          <input placeholder="Email" type="email" value={email} onChange={e=>setEmail(e.target.value)} style={iS}/>
+          <input placeholder="Пароль" type="password" value={pw} onChange={e=>setPw(e.target.value)} style={iS} onKeyDown={e=>e.key==="Enter"&&login()}/>
+          {err&&<div style={{background:"#FEF2F2",color:C.r,padding:"10px 14px",borderRadius:10,fontSize:13,fontWeight:500}}>{err}</div>}
+          <Btn onClick={login} style={{width:"100%",padding:"14px 0",fontSize:15,marginTop:8,opacity:loading?0.6:1}}>
+            {loading?"Вход...":"Войти"}
+          </Btn>
         </div>
-      </main>
+      </div>
     </div>
   );
+}
+
+/* ============ SIDEBAR ============ */
+function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onLogout:()=>void}){
+  const[c,sC]=useState(false);
+  return(
+    <div style={{width:c?72:252,minHeight:"100vh",background:C.dk,display:"flex",flexDirection:"column",transition:"width 0.3s",position:"fixed",left:0,top:0,zIndex:100,overflowX:"hidden"}}>
+      <div style={{padding:c?"24px 0":"24px 20px",display:"flex",alignItems:"center",gap:10,justifyContent:c?"center":"flex-start",borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
+        <Logo s={24}/>{!c&&<Brand size="sm"/>}
+      </div>
+      <nav style={{flex:1,padding:"12px 10px",display:"flex",flexDirection:"column",gap:2}}>
+        {NAV.map(n=>{const a=active===n.id;const gl=(n as any).glow&&!a;return<button key={n.id} onClick={()=>onNav(n.id)} title={c?n.label:undefined} style={{display:"flex",alignItems:"center",gap:12,padding:c?"12px 0":"11px 14px",justifyContent:c?"center":"flex-start",border:gl?"1px solid rgba(37,99,235,0.4)":"none",borderRadius:10,cursor:"pointer",background:a?C.a:gl?"rgba(37,99,235,0.1)":"transparent",color:"#fff",fontSize:13.5,fontWeight:a?600:gl?600:400,whiteSpace:"nowrap",overflow:"hidden",boxShadow:gl?"0 0 12px rgba(37,99,235,0.3)":"none"}}><I path={n.ic} size={18} color={a?"#fff":gl?"#60a5fa":"rgba(255,255,255,0.6)"}/>{!c&&n.label}</button>})}
+      </nav>
+      <div style={{padding:"16px 10px",borderTop:"1px solid rgba(255,255,255,0.08)"}}>
+        <button onClick={()=>sC(!c)} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"10px 14px",justifyContent:c?"center":"flex-start",border:"none",borderRadius:10,cursor:"pointer",background:"rgba(255,255,255,0.05)",color:"rgba(255,255,255,0.5)",fontSize:13}}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">{c?<polyline points="9 18 15 12 9 6"/>:<polyline points="15 18 9 12 15 6"/>}</svg>{!c&&"Свернуть"}
+        </button>
+        <button onClick={onLogout} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"10px 14px",marginTop:4,justifyContent:c?"center":"flex-start",border:"none",borderRadius:10,cursor:"pointer",background:"transparent",color:"rgba(255,255,255,0.4)",fontSize:13}}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>{!c&&"Выйти"}
+        </button>
+      </div>
+    </div>
+  );
+}
+const Head=({name}:{name:string})=><div style={{height:64,background:C.w,borderBottom:"1px solid "+C.bd,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 32px",position:"sticky",top:0,zIndex:50}}><div style={{fontSize:15,fontWeight:600}}>Привет, {name}</div><div style={{display:"inline-flex",alignItems:"center",gap:10,background:C.dk,padding:"8px 20px",borderRadius:10}}><Logo s={16}/><div style={{display:"flex",flexDirection:"column",lineHeight:1.15}}><span style={{color:"#fff",fontSize:11,fontWeight:800,letterSpacing:1.5}}>FF CONSULTING</span><span style={{color:"rgba(255,255,255,0.5)",fontSize:8,fontWeight:300,letterSpacing:1}}>by Kirill Scales</span></div></div><div style={{fontSize:14,color:C.t2}}>{fmtDate(new Date())}</div></div>;
+
+const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"calc(100vh - 180px)",gap:20}}><div style={{width:80,height:80,borderRadius:20,background:C.a+"18",display:"flex",alignItems:"center",justifyContent:"center"}}><I path={ic} size={36} color={C.a} sw={1.2}/></div><div style={{fontSize:22,fontWeight:700}}>{title}</div><Card style={{padding:"12px 24px"}}><span style={{fontSize:14,color:C.t2}}>Раздел скоро будет доступен</span></Card></div>;
+
+/* ============ MAIN APP ============ */
+export default function App() {
+  const [user, setUser] = useState<any>(null);
+  const [page, setPage] = useState("dashboard");
+  const [loading, setLoading] = useState(true);
+  const [userName, setUserName] = useState("User");
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser(session.user);
+        loadName(session.user.id);
+      }
+      setLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+        loadName(session.user.id);
+      } else {
+        setUser(null);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const loadName = async (uid: string) => {
+    const { data } = await supabase.from("profiles").select("name").eq("id", uid).single();
+    if (data?.name) setUserName(data.name);
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setPage("dashboard");
+  };
+
+  if (loading) return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.bg,fontFamily:"'Montserrat',sans-serif"}}><div style={{fontSize:18,color:C.t2}}>Загрузка...</div></div>;
+
+  if (!user) return <Auth onLogin={(u) => { setUser(u); loadName(u.id); }} />;
+
+  const nav = NAV.find(n => n.id === page);
+
+  return (
+    <div style={{fontFamily:"'Montserrat',-apple-system,BlinkMacSystemFont,sans-serif",background:C.bg,minHeight:"100vh",color:C.t1}}>
+      <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+      <Side active={page} onNav={setPage} onLogout={logout}/>
+      <div style={{marginLeft:252,minHeight:"100vh"}}>
+        <Head name={userName}/>
+        <div style={{padding:"28px 32px"}}>
+          {page === "dashboard" && <DashPage userId={user.id} name={userName} onNav={setPage}/>}
+          {page === "strategy" && <StrategyPage userId={user.id}/>}
+          {page === "crm" && <CrmPage userId={user.id}/>}
+          {page === "content" && <ContentPage userId={user.id}/>}
+          {page === "pnl" && <PnlPage userId={user.id}/>}
+          {page === "media" && <MediaPage userId={user.id}/>}
+          {page === "ads" && <AdsPage userId={user.id}/>}
+          {page === "calc" && <CalcPage/>}
+          {page === "tools" && <ToolsPage/>}
+          {!["dashboard","strategy","crm","content","pnl","media","ads","calc","tools"].includes(page) && nav && <Placeholder title={nav.label} ic={nav.ic}/>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============ DASHBOARD ============ */
+function DashPage({userId,name,onNav}:{userId:string,name:string,onNav:(p:string)=>void}){
+  const leads = useTable("leads", userId);
+  const pnl = useTable("pnl", userId);
+  const kanban = useTable("kanban", userId);
+  const content = useTable("content", userId);
+  const td = today();
+  const cm = td.substring(0,7);
+  const todayTasks = kanban.data.filter(t=>t.date===td&&!t.done&&t.type!=="delegate");
+  const cI = pnl.data.filter(t=>t.type==="income"&&t.date?.startsWith(cm)).reduce((s:number,t:any)=>s+(t.amount||0),0);
+  const cE = pnl.data.filter(t=>t.type==="expense"&&t.date?.startsWith(cm)).reduce((s:number,t:any)=>s+(t.amount||0),0);
+  const cP = cI-cE;
+
+  return <>
+    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:"32px 36px",marginBottom:24,color:"#fff"}}>
+      <div style={{fontSize:24,fontWeight:700,marginBottom:6}}>Привет, {name}</div>
+      <div style={{fontSize:14,opacity:0.7}}>Сегодня {fmtDate(new Date())}</div>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16,marginBottom:24}}>
+      {[{l:"Задачи",v:todayTasks.length,c:C.a},{l:"Лиды",v:leads.data.length,c:C.g},{l:"Публикации",v:content.data.filter((x:any)=>x.status==="published").length,c:C.y},{l:"Прибыль",v:(cP>=0?"+":"")+fmt$(cP)+" ₽",c:cP>=0?C.g:C.r}].map((s,i)=><Card key={i} style={{padding:"22px 24px"}}><div style={{fontSize:28,fontWeight:700,marginBottom:4}}>{s.v}</div><div style={{fontSize:13,color:C.t2}}>{s.l}</div></Card>)}
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+      <Card><div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}><span style={{fontSize:16,fontWeight:600}}>Задачи сегодня</span><button onClick={()=>onNav("strategy")} style={{fontSize:13,color:C.a,background:"none",border:"none",cursor:"pointer"}}>Стратегия</button></div>
+        {todayTasks.length===0?<div style={{padding:"24px 0",textAlign:"center",color:C.t2,fontSize:14}}>Нет задач</div>:
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>{todayTasks.slice(0,5).map((t:any)=><div key={t.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",background:C.bg,borderRadius:10,borderLeft:"3px solid "+(t.type==="biz"?C.a:C.y)}}><span style={{fontSize:14,flex:1}}>{t.text}</span><span style={{fontSize:11,color:C.t2}}>{t.mins}м</span></div>)}</div>}
+      </Card>
+      <Card><div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}><span style={{fontSize:16,fontWeight:600}}>P&L (месяц)</span><button onClick={()=>onNav("pnl")} style={{fontSize:13,color:C.a,background:"none",border:"none",cursor:"pointer"}}>Подробнее</button></div>
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          <div style={{display:"flex",justifyContent:"space-between",padding:"10px 14px",background:C.bg,borderRadius:10}}><span>Доходы</span><span style={{fontWeight:600,color:C.g}}>{fmt$(cI)} ₽</span></div>
+          <div style={{display:"flex",justifyContent:"space-between",padding:"10px 14px",background:C.bg,borderRadius:10}}><span>Расходы</span><span style={{fontWeight:600,color:C.r}}>{fmt$(cE)} ₽</span></div>
+          <div style={{display:"flex",justifyContent:"space-between",padding:"10px 14px",background:cP>=0?"#F0FDF4":"#FEF2F2",borderRadius:10}}><span style={{fontWeight:600}}>Прибыль</span><span style={{fontWeight:700,color:cP>=0?C.g:C.r}}>{(cP>=0?"+":"")+fmt$(cP)} ₽</span></div>
+        </div>
+      </Card>
+    </div>
+  </>;
+}
+
+/* ============ STRATEGY ============ */
+function StrategyPage({userId}:{userId:string}){
+  const kanban = useTable("kanban", userId);
+  const goals = useTable("goals", userId);
+  const goalTasks = useTable("goal_tasks", userId);
+  const[showTF,setShowTF]=useState<string|null>(null);
+  const[tf,sTf]=useState({text:"",mins:30,type:"biz"});
+  const[tfErr,setTfErr]=useState("");
+  const[showGF,setShowGF]=useState(false);
+  const[gf,sGf]=useState({name:"",deadline:"",color:C.a});
+  const[openGoal,setOpenGoal]=useState<string|null>(null);
+  const[showGTF,setShowGTF]=useState<string|null>(null);
+  const[gtf,sGtf]=useState({text:"",mins:30,type:"biz",date:""});
+  const[scroll,setScroll]=useState(0);
+  const[quote]=useState(()=>QUOTES[Math.floor(Math.random()*QUOTES.length)]);
+
+  const days=useMemo(()=>{const d=[];for(let i=0;i<7;i++){const dt=new Date();dt.setDate(dt.getDate()+i);d.push(ds(dt));}return d;},[]);
+  const td=today();
+  const WDS=["Вс","Пн","Вт","Ср","Чт","Пт","Сб"];
+  const TYPES=[{id:"biz",label:"Бизнес",c:C.a},{id:"other",label:"Другое",c:C.y},{id:"delegate",label:"Делегировано",c:C.t2}];
+  const typeLabel=(t:string)=>(TYPES.find(x=>x.id===t)||{label:t}).label;
+  const typeColor=(t:string)=>(TYPES.find(x=>x.id===t)||{c:C.t2}).c;
+
+  const tasksForDay=(d:string)=>{
+    const manual=kanban.data.filter((t:any)=>t.date===d);
+    const fromGoals=goalTasks.data.filter((t:any)=>t.date===d).map((t:any)=>({...t,fromGoal:true,goalColor:goals.data.find((g:any)=>g.id===t.goal_id)?.color||C.a}));
+    return[...manual,...fromGoals];
+  };
+
+  const addTask=async(d:string)=>{
+    setTfErr("");
+    if(!tf.text.trim()){setTfErr("Введи задачу");return;}
+    if(tf.mins<30){setTfErr("Минимум 30 минут");return;}
+    await kanban.add({text:tf.text,mins:tf.mins,type:tf.type,date:d,done:false});
+    sTf({text:"",mins:30,type:"biz"});setShowTF(null);
+  };
+
+  const dayStats=(d:string)=>{
+    const tasks=tasksForDay(d);
+    const biz=tasks.filter((t:any)=>t.type==="biz");
+    const oth=tasks.filter((t:any)=>t.type==="other");
+    const del=tasks.filter((t:any)=>t.type==="delegate");
+    const totalMins=tasks.filter((t:any)=>t.type!=="delegate").reduce((s:number,t:any)=>s+(t.mins||0),0);
+    return{tasks,biz,oth,del,totalMins,overload:totalMins>480,
+      bizDone:biz.filter((t:any)=>t.done).length,bizTotal:biz.length,
+      othDone:oth.filter((t:any)=>t.done).length,othTotal:oth.length,
+      delDone:del.filter((t:any)=>t.done).length,delTotal:del.length,
+      allDone:tasks.filter((t:any)=>t.type!=="delegate").length>0&&tasks.filter((t:any)=>t.type!=="delegate").every((t:any)=>t.done)};
+  };
+
+  const toggleTask=async(t:any)=>{
+    if(t.fromGoal){await goalTasks.update(t.id,{done:!t.done});}
+    else{await kanban.update(t.id,{done:!t.done});}
+  };
+
+  // Advice
+  const advice=useMemo(()=>{
+    const tasks=tasksForDay(td);
+    const active=tasks.filter((t:any)=>t.type!=="delegate");
+    const done=active.filter((t:any)=>t.done).length;
+    const undone=active.length-done;
+    const pct=active.length?done/active.length:0;
+    const hr=new Date().getHours();
+    const st=dayStats(td);
+    if(active.length===0)return{icon:"\uD83D\uDCA1",text:"Сегодня нет задач. Хороший день для стратегии."};
+    if(done===active.length)return{icon:"\u2705",text:"Все задачи выполнены!"};
+    if(hr>=18&&undone>0)return{icon:"\u23F0",text:`Уже ${hr}:00, осталось ${undone} задач.`};
+    if(st.overload)return{icon:"\u26A0\uFE0F",text:`Перегруз: ${st.totalMins} мин. Делегируй часть.`};
+    if(pct<0.3)return{icon:"\uD83D\uDCA1",text:"Не откладывай задачи на вечер."};
+    if(pct>=0.7)return{icon:"\uD83D\uDD25",text:`Отличный темп! Осталось ${undone} задач.`};
+    return{icon:"\uD83D\uDCA1",text:quote};
+  },[kanban.data,goalTasks.data,td]);
+
+  const addGoal=async()=>{
+    if(!gf.name.trim())return;
+    await goals.add({name:gf.name,deadline:gf.deadline||null,color:gf.color});
+    sGf({name:"",deadline:"",color:C.a});setShowGF(false);
+  };
+
+  const addGoalTask=async(goalId:string)=>{
+    setTfErr("");
+    if(!gtf.text.trim()){setTfErr("Введи задачу");return;}
+    if(gtf.mins<30){setTfErr("Минимум 30 минут");return;}
+    await goalTasks.add({goal_id:goalId,text:gtf.text,mins:gtf.mins,type:gtf.type,date:gtf.date||null,done:false});
+    sGtf({text:"",mins:30,type:"biz",date:""});setShowGTF(null);
+  };
+
+  const goalProgress=(gid:string)=>{
+    const tasks=goalTasks.data.filter((t:any)=>t.goal_id===gid&&t.type!=="delegate");
+    if(!tasks.length)return 0;
+    return Math.round(tasks.filter((t:any)=>t.done).length/tasks.length*100);
+  };
+  const prgColor=(p:number)=>p<30?C.r:p<50?"#F97316":p<70?C.y:p<90?"#84CC16":"#16A34A";
+
+  const visibleDays=days.slice(scroll,scroll+4);
+
+  return <>
+    {/* Kanban */}
+    <div style={{marginBottom:20}}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}>
+        <div style={{fontSize:18,fontWeight:700}}>Задачи на 7 дней</div>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={()=>setScroll(Math.max(0,scroll-1))} disabled={scroll===0} style={{width:36,height:36,borderRadius:10,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:scroll===0?0.3:1}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg></button>
+          <button onClick={()=>setScroll(Math.min(3,scroll+1))} disabled={scroll>=3} style={{width:36,height:36,borderRadius:10,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:scroll>=3?0.3:1}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg></button>
+        </div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>
+        {visibleDays.map(d=>{const st=dayStats(d);const isT=d===td;const isPast=d<td;const dt=new Date(d);
+          const bc=isT?C.a:st.allDone?C.g:isPast&&!st.allDone&&st.tasks.length>0?C.r:"transparent";
+          return<div key={d} style={{background:C.w,borderRadius:16,boxShadow:C.sh,border:"2px solid "+bc,display:"flex",flexDirection:"column",minHeight:300}}>
+            <div style={{padding:"14px 16px",borderBottom:"1px solid "+C.bd,display:"flex",justifyContent:"space-between",background:isT?"rgba(37,99,235,0.04)":"transparent"}}>
+              <div><div style={{fontSize:20,fontWeight:700,color:isT?C.a:C.t1}}>{dt.getDate()}</div><div style={{fontSize:11,color:C.t2}}>{WDS[dt.getDay()]}, {MR[dt.getMonth()].substring(0,3)}</div></div>
+              {st.overload&&<span style={{fontSize:10,color:C.r,fontWeight:600}}>{"\u26A0\uFE0F"} Перегруз</span>}
+            </div>
+            <div style={{flex:1,padding:"10px 12px",overflowY:"auto",display:"flex",flexDirection:"column",gap:6}}>
+              {st.tasks.length===0&&<div style={{textAlign:"center",color:C.t2,fontSize:12,padding:"20px 0"}}>Нет задач</div>}
+              {st.tasks.map((t:any)=><div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:8,background:t.done?"#F0FDF4":C.bg,borderLeft:"3px solid "+typeColor(t.type)}}>
+                <button onClick={()=>toggleTask(t)} style={{width:20,height:20,minWidth:20,borderRadius:6,border:"2px solid "+(t.done?C.g:C.bd),background:t.done?C.g:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  {t.done&&<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
+                </button>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:12,fontWeight:500,textDecoration:t.done?"line-through":"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.text}</div>
+                  <div style={{display:"flex",gap:6,marginTop:2}}><span style={{fontSize:10,color:C.t2}}>{t.mins}м</span>{t.fromGoal&&<span style={{fontSize:10,color:t.goalColor}}>{"\u2605"}</span>}</div>
+                </div>
+                {!t.fromGoal&&<button onClick={()=>kanban.remove(t.id)} style={{width:16,height:16,border:"none",background:"transparent",cursor:"pointer",color:C.t2,fontSize:11}}>{"\u00D7"}</button>}
+              </div>)}
+              {showTF===d?<div style={{marginTop:6}}>
+                <input placeholder="Задача" value={tf.text} onChange={e=>sTf({...tf,text:e.target.value})} style={{...iS,padding:"8px 10px",fontSize:12,marginBottom:6}}/>
+                <div style={{display:"flex",gap:6,marginBottom:6}}>
+                  <input type="number" value={tf.mins} onChange={e=>sTf({...tf,mins:+e.target.value})} min={30} max={480} step={5} style={{...iS,width:70,padding:"6px 8px",fontSize:12}}/>
+                  <select value={tf.type} onChange={e=>sTf({...tf,type:e.target.value})} style={{...iS,flex:1,padding:"6px 8px",fontSize:12}}>{TYPES.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}</select>
+                </div>
+                {tfErr&&<div style={{fontSize:11,color:C.r,marginBottom:4}}>{tfErr}</div>}
+                <div style={{display:"flex",gap:6}}><button onClick={()=>addTask(d)} style={{flex:1,padding:"6px",background:C.a,color:"#fff",border:"none",borderRadius:6,fontSize:12,cursor:"pointer"}}>+</button><button onClick={()=>setShowTF(null)} style={{padding:"6px 10px",background:C.bg,border:"1px solid "+C.bd,borderRadius:6,fontSize:12,cursor:"pointer"}}>{"\u00D7"}</button></div>
+              </div>:<button onClick={()=>setShowTF(d)} style={{marginTop:6,width:"100%",padding:"6px",background:C.bg,border:"1px dashed "+C.bd,borderRadius:8,fontSize:12,color:C.t2,cursor:"pointer"}}>+ Задача</button>}
+            </div>
+            {st.overload&&<div style={{padding:"8px 12px",background:"#FEF2F2",fontSize:11,color:C.r}}>{st.totalMins} мин запланировано</div>}
+            <div style={{padding:"10px 12px",borderTop:"1px solid "+C.bd,display:"flex",gap:8}}>
+              {[{l:"Б",d:st.bizDone,t:st.bizTotal,c:C.a},{l:"Д",d:st.othDone,t:st.othTotal,c:C.y},{l:"Дл",d:st.delDone,t:st.delTotal,c:C.t2}].map((b,i)=><div key={i} style={{flex:1}}><div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:C.t2,marginBottom:3}}><span>{b.l}</span><span>{b.d}/{b.t}</span></div><div style={{height:4,background:C.bg,borderRadius:2,overflow:"hidden"}}><div style={{width:b.t?b.d/b.t*100+"%":"0%",height:"100%",background:b.c,borderRadius:2}}/></div></div>)}
+            </div>
+          </div>})}
+      </div>
+    </div>
+
+    {/* Advice */}
+    <div style={{background:C.w,borderRadius:12,padding:"14px 20px",boxShadow:C.sh,marginBottom:24,display:"flex",alignItems:"center",gap:12}}>
+      <span style={{fontSize:20}}>{advice.icon}</span>
+      <span style={{fontSize:14,lineHeight:1.5}}>{advice.text}</span>
+    </div>
+
+    {/* Goals */}
+    <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}>
+      <div style={{fontSize:18,fontWeight:700}}>Цели и достижения</div>
+      <Btn onClick={()=>setShowGF(!showGF)}>+ Цель</Btn>
+    </div>
+    {showGF&&<Card style={{marginBottom:20}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14}}>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Название</label><input value={gf.name} onChange={e=>sGf({...gf,name:e.target.value})} style={iS}/></div>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Дедлайн</label><input type="date" value={gf.deadline} onChange={e=>sGf({...gf,deadline:e.target.value})} style={iS}/></div>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Цвет</label><div style={{display:"flex",gap:6,marginTop:4}}>{[C.a,"#8B5CF6",C.g,C.r,C.y,C.pk].map(c=><button key={c} onClick={()=>sGf({...gf,color:c})} style={{width:28,height:28,borderRadius:8,background:c,border:gf.color===c?"3px solid "+C.t1:"3px solid transparent",cursor:"pointer"}}/>)}</div></div>
+    </div><div style={{display:"flex",gap:10,marginTop:16}}><Btn onClick={addGoal}>Создать</Btn><Btn primary={false} onClick={()=>setShowGF(false)}>Отмена</Btn></div></Card>}
+    {goals.data.length===0&&!showGF&&<Card style={{padding:"48px",textAlign:"center"}}><span style={{color:C.t2,fontSize:14}}>Создай первую цель</span></Card>}
+    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16}}>
+      {goals.data.map((g:any)=>{const p=goalProgress(g.id);const gTasks=goalTasks.data.filter((t:any)=>t.goal_id===g.id);return<Card key={g.id} style={{padding:0,overflow:"hidden",borderTop:"4px solid "+g.color}}>
+        <div style={{padding:"18px 20px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
+            <div style={{fontSize:16,fontWeight:700,flex:1}}>{g.name}</div>
+            <button onClick={()=>goals.remove(g.id)} style={{width:24,height:24,borderRadius:6,border:"none",background:C.bg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><I path="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" size={10} color={C.r} sw={2}/></button>
+          </div>
+          {g.deadline&&<div style={{fontSize:12,color:C.t2,marginBottom:8}}>Дедлайн: {g.deadline}</div>}
+          <div style={{height:8,background:C.bg,borderRadius:4,overflow:"hidden",marginBottom:6}}><div style={{width:p+"%",height:"100%",background:prgColor(p),borderRadius:4}}/></div>
+          <div style={{fontSize:12,color:C.t2}}>{gTasks.filter((t:any)=>t.done&&t.type!=="delegate").length} из {gTasks.filter((t:any)=>t.type!=="delegate").length} ({p}%)</div>
+        </div>
+        <div style={{borderTop:"1px solid "+C.bd}}>
+          <button onClick={()=>setOpenGoal(openGoal===g.id?null:g.id)} style={{width:"100%",padding:"12px 20px",background:"none",border:"none",cursor:"pointer",display:"flex",justifyContent:"space-between",fontSize:13,fontWeight:500,color:C.a}}>
+            <span>{openGoal===g.id?"Скрыть":"План"} ({gTasks.length})</span>
+          </button>
+          {openGoal===g.id&&<div style={{padding:"0 16px 16px"}}>
+            {gTasks.map((t:any)=><div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:8,background:t.done?"#F0FDF4":C.bg,marginBottom:6,borderLeft:"3px solid "+typeColor(t.type)}}>
+              <button onClick={()=>goalTasks.update(t.id,{done:!t.done})} style={{width:18,height:18,minWidth:18,borderRadius:5,border:"2px solid "+(t.done?C.g:C.bd),background:t.done?C.g:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>{t.done&&<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}</button>
+              <div style={{flex:1}}><div style={{fontSize:13,textDecoration:t.done?"line-through":"none"}}>{t.text}</div><div style={{fontSize:10,color:C.t2}}>{t.mins}м {t.date?`| ${t.date.substring(5)}`:""}</div></div>
+              <input type="date" value={t.date||""} onChange={e=>goalTasks.update(t.id,{date:e.target.value||null})} style={{width:120,padding:"4px 6px",border:"1px solid "+C.bd,borderRadius:6,fontSize:11,background:C.ib}}/>
+              <button onClick={()=>goalTasks.remove(t.id)} style={{border:"none",background:"transparent",cursor:"pointer",color:C.t2,fontSize:12}}>{"\u00D7"}</button>
+            </div>)}
+            {showGTF===g.id?<div style={{marginTop:8,padding:12,background:C.bg,borderRadius:10}}>
+              <input placeholder="Задача" value={gtf.text} onChange={e=>sGtf({...gtf,text:e.target.value})} style={{...iS,padding:"8px 10px",fontSize:12,marginBottom:6}}/>
+              <div style={{display:"flex",gap:6,marginBottom:6}}>
+                <input type="number" value={gtf.mins} onChange={e=>sGtf({...gtf,mins:+e.target.value})} min={30} max={480} step={5} style={{...iS,width:70,padding:"6px 8px",fontSize:12}}/>
+                <select value={gtf.type} onChange={e=>sGtf({...gtf,type:e.target.value})} style={{...iS,flex:1,padding:"6px 8px",fontSize:12}}>{TYPES.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}</select>
+                <input type="date" value={gtf.date} onChange={e=>sGtf({...gtf,date:e.target.value})} style={{...iS,width:130,padding:"6px 8px",fontSize:12}}/>
+              </div>
+              {tfErr&&<div style={{fontSize:11,color:C.r,marginBottom:4}}>{tfErr}</div>}
+              <div style={{display:"flex",gap:6}}><button onClick={()=>addGoalTask(g.id)} style={{flex:1,padding:"6px",background:C.a,color:"#fff",border:"none",borderRadius:6,fontSize:12,cursor:"pointer"}}>Добавить</button><button onClick={()=>setShowGTF(null)} style={{padding:"6px 10px",background:C.w,border:"1px solid "+C.bd,borderRadius:6,fontSize:12,cursor:"pointer"}}>Отмена</button></div>
+            </div>:<button onClick={()=>{setShowGTF(g.id);sGtf({text:"",mins:30,type:"biz",date:""});}} style={{width:"100%",padding:"8px",background:"none",border:"1px dashed "+C.bd,borderRadius:8,fontSize:12,color:C.t2,cursor:"pointer",marginTop:4}}>+ Задача</button>}
+          </div>}
+        </div>
+      </Card>})}
+    </div>
+  </>;
+}
+
+/* ============ CRM ============ */
+function CrmPage({userId}:{userId:string}){
+  const{data:leads,add,update,remove}=useTable("leads",userId);
+  const[view,setView]=useState("table");
+  const[search,setSearch]=useState("");
+  const[show,setShow]=useState(false);
+  const[f,sF]=useState({name:"",contact:"",source:"Instagram",status:"new",note:"",deal:"",pains:"",desires:"",history:""});
+  const found=useMemo(()=>{if(!search)return leads;const q=search.toLowerCase();return leads.filter((l:any)=>l.name.toLowerCase().includes(q)||(l.contact||"").toLowerCase().includes(q));},[leads,search]);
+  const sub=async()=>{if(!f.name.trim())return;await add({...f,deal:f.deal?+f.deal:null});sF({name:"",contact:"",source:"Instagram",status:"new",note:"",deal:"",pains:"",desires:"",history:""});setShow(false);};
+  const totalD=leads.filter((l:any)=>l.status==="closed"&&l.deal).reduce((s:number,l:any)=>s+(l.deal||0),0);
+  return <>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16,marginBottom:24}}>
+      {[{l:"Всего",v:leads.length,c:C.a},{l:"В работе",v:leads.filter((l:any)=>!["closed","rejected"].includes(l.status)).length,c:C.y},{l:"Закрыто",v:leads.filter((l:any)=>l.status==="closed").length,c:C.g},{l:"Сделки",v:fmt$(totalD)+" ₽",c:C.dk}].map((s,i)=><Card key={i} style={{padding:"20px 24px"}}><div style={{fontSize:26,fontWeight:700,color:s.c}}>{s.v}</div><div style={{fontSize:13,color:C.t2,marginTop:4}}>{s.l}</div></Card>)}
+    </div>
+    <div style={{display:"flex",justifyContent:"space-between",marginBottom:20,gap:12}}>
+      <div style={{display:"flex",gap:8}}><input placeholder="Поиск" value={search} onChange={e=>setSearch(e.target.value)} style={{...iS,width:220,padding:"9px 14px",fontSize:13}}/></div>
+      <Btn onClick={()=>setShow(!show)}>+ Лид</Btn>
+    </div>
+    {show&&<Card style={{marginBottom:20}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14}}>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Имя</label><input value={f.name} onChange={e=>sF({...f,name:e.target.value})} style={iS}/></div>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Контакт</label><input value={f.contact} onChange={e=>sF({...f,contact:e.target.value})} style={iS}/></div>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Источник</label><select value={f.source} onChange={e=>sF({...f,source:e.target.value})} style={iS}>{SRCS.map(s=><option key={s}>{s}</option>)}</select></div>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Статус</label><select value={f.status} onChange={e=>sF({...f,status:e.target.value})} style={iS}>{STAGES.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Сделка</label><input type="number" value={f.deal} onChange={e=>sF({...f,deal:e.target.value})} style={iS}/></div>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Заметка</label><input value={f.note} onChange={e=>sF({...f,note:e.target.value})} style={iS}/></div>
+    </div><div style={{display:"flex",gap:10,marginTop:16}}><Btn onClick={sub}>Добавить</Btn><Btn primary={false} onClick={()=>setShow(false)}>Отмена</Btn></div></Card>}
+    <Card style={{padding:0,overflow:"hidden"}}>{found.length===0?<div style={{padding:"48px",textAlign:"center",color:C.t2}}>Нет лидов</div>:<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:14}}><thead><tr style={{borderBottom:"2px solid "+C.bd}}>{["Имя","Контакт","Источник","Статус","Сделка",""].map((h,i)=><th key={i} style={{padding:"14px 16px",textAlign:"left",fontSize:12,fontWeight:600,color:C.t2,textTransform:"uppercase"}}>{h}</th>)}</tr></thead><tbody>{found.map((l:any)=><tr key={l.id} style={{borderBottom:"1px solid "+C.bd}}><td style={{padding:"14px 16px",fontWeight:600}}>{l.name}</td><td style={{padding:"14px 16px",color:C.t2}}>{l.contact||"-"}</td><td style={{padding:"14px 16px"}}>{l.source}</td><td style={{padding:"14px 16px"}}><Tag label={stLbl(l.status)} color={stCol(l.status)}/></td><td style={{padding:"14px 16px"}}>{l.deal?fmt$(l.deal)+" ₽":"-"}</td><td style={{padding:"14px 8px"}}><button onClick={()=>remove(l.id)} style={{width:28,height:28,borderRadius:6,border:"none",background:C.bg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><I path="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" size={12} color={C.r} sw={2}/></button></td></tr>)}</tbody></table></div>}</Card>
+  </>;
+}
+
+/* ============ CONTENT ============ */
+function ContentPage({userId}:{userId:string}){
+  const{data:items,add,update,remove}=useTable("content",userId);
+  const[show,setShow]=useState(false);
+  const[f,sF]=useState({platform:"instagram",type:"Пост",topic:"",status:"idea",date:today(),link:""});
+  const sub=async()=>{if(!f.topic.trim())return;await add(f);sF({platform:"instagram",type:"Пост",topic:"",status:"idea",date:today(),link:""});setShow(false);};
+  return <>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16,marginBottom:24}}>
+      {[{l:"Всего",v:items.length,c:C.a},{l:"В работе",v:items.filter((x:any)=>x.status==="progress").length,c:C.y},{l:"Готово",v:items.filter((x:any)=>x.status==="ready").length,c:C.a},{l:"Опубликовано",v:items.filter((x:any)=>x.status==="published").length,c:C.g}].map((s,i)=><Card key={i} style={{padding:"20px 24px"}}><div style={{fontSize:26,fontWeight:700,color:s.c}}>{s.v}</div><div style={{fontSize:13,color:C.t2,marginTop:4}}>{s.l}</div></Card>)}
+    </div>
+    <div style={{display:"flex",justifyContent:"space-between",marginBottom:20}}><div style={{fontSize:18,fontWeight:600}}>Контент</div><Btn onClick={()=>setShow(!show)}>+ Контент</Btn></div>
+    {show&&<Card style={{marginBottom:20}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14}}>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Тема</label><input value={f.topic} onChange={e=>sF({...f,topic:e.target.value})} style={iS}/></div>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Платформа</label><select value={f.platform} onChange={e=>sF({...f,platform:e.target.value})} style={iS}>{PLATS.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}</select></div>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Тип</label><select value={f.type} onChange={e=>sF({...f,type:e.target.value})} style={iS}>{CTYPES.map(t=><option key={t}>{t}</option>)}</select></div>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Статус</label><select value={f.status} onChange={e=>sF({...f,status:e.target.value})} style={iS}>{CSTATS.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Дата</label><input type="date" value={f.date} onChange={e=>sF({...f,date:e.target.value})} style={iS}/></div>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Ссылка</label><input value={f.link} onChange={e=>sF({...f,link:e.target.value})} style={iS}/></div>
+    </div><div style={{display:"flex",gap:10,marginTop:16}}><Btn onClick={sub}>Добавить</Btn><Btn primary={false} onClick={()=>setShow(false)}>Отмена</Btn></div></Card>}
+    <Card style={{padding:0,overflow:"hidden"}}>{items.length===0?<div style={{padding:"48px",textAlign:"center",color:C.t2}}>Нет публикаций</div>:<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:14}}><thead><tr style={{borderBottom:"2px solid "+C.bd}}>{["Дата","Платформа","Тип","Тема","Статус",""].map((h,i)=><th key={i} style={{padding:"14px 16px",textAlign:"left",fontSize:12,fontWeight:600,color:C.t2,textTransform:"uppercase"}}>{h}</th>)}</tr></thead><tbody>{items.map((x:any)=><tr key={x.id} style={{borderBottom:"1px solid "+C.bd}}><td style={{padding:"12px 16px",fontSize:13}}>{x.date}</td><td style={{padding:"12px 16px"}}><Tag label={pLbl(x.platform)} color={pCol(x.platform)}/></td><td style={{padding:"12px 16px"}}>{x.type}</td><td style={{padding:"12px 16px",fontWeight:500}}>{x.topic}</td><td style={{padding:"12px 16px"}}><Tag label={csLbl(x.status)} color={csCol(x.status)}/></td><td style={{padding:"12px 8px"}}><button onClick={()=>remove(x.id)} style={{width:28,height:28,borderRadius:6,border:"none",background:C.bg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><I path="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" size={12} color={C.r} sw={2}/></button></td></tr>)}</tbody></table></div>}</Card>
+  </>;
+}
+
+/* ============ P&L ============ */
+function PnlPage({userId}:{userId:string}){
+  const{data:tx,add,remove}=useTable("pnl",userId);
+  const[show,setShow]=useState(false);
+  const[f,sF]=useState({type:"income",amount:"",category:"Продажи",date:today(),comment:""});
+  const sub=async()=>{if(!f.amount||+f.amount<=0)return;await add({...f,amount:+f.amount});sF({type:"income",amount:"",category:"Продажи",date:today(),comment:""});setShow(false);};
+  const cm=today().substring(0,7);
+  const cI=tx.filter((t:any)=>t.type==="income"&&t.date?.startsWith(cm)).reduce((s:number,t:any)=>s+(t.amount||0),0);
+  const cE=tx.filter((t:any)=>t.type==="expense"&&t.date?.startsWith(cm)).reduce((s:number,t:any)=>s+(t.amount||0),0);
+  const cP=cI-cE;
+  const cats=["Продажи","Реклама","Зарплата","Аренда","Сервисы","Другое"];
+  return <>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16,marginBottom:24}}>
+      {[{l:"Доходы",v:"+"+fmt$(cI)+" ₽",c:C.g},{l:"Расходы",v:fmt$(cE)+" ₽",c:C.r},{l:"Прибыль",v:(cP>=0?"+":"")+fmt$(cP)+" ₽",c:cP>=0?C.g:C.r}].map((s,i)=><Card key={i} style={{padding:"20px 24px"}}><div style={{fontSize:24,fontWeight:700,color:s.c}}>{s.v}</div><div style={{fontSize:13,color:C.t2,marginTop:4}}>{s.l} (месяц)</div></Card>)}
+    </div>
+    <div style={{display:"flex",justifyContent:"space-between",marginBottom:20}}><div style={{fontSize:18,fontWeight:600}}>Транзакции</div><Btn onClick={()=>setShow(!show)}>+ Транзакция</Btn></div>
+    {show&&<Card style={{marginBottom:20}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14}}>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Тип</label><select value={f.type} onChange={e=>sF({...f,type:e.target.value})} style={iS}><option value="income">Доход</option><option value="expense">Расход</option></select></div>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Сумма</label><input type="number" value={f.amount} onChange={e=>sF({...f,amount:e.target.value})} style={iS}/></div>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Категория</label><select value={f.category} onChange={e=>sF({...f,category:e.target.value})} style={iS}>{cats.map(c=><option key={c}>{c}</option>)}</select></div>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Дата</label><input type="date" value={f.date} onChange={e=>sF({...f,date:e.target.value})} style={iS}/></div>
+      <div style={{gridColumn:"span 2"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Комментарий</label><input value={f.comment} onChange={e=>sF({...f,comment:e.target.value})} style={iS}/></div>
+    </div><div style={{display:"flex",gap:10,marginTop:16}}><Btn onClick={sub}>Добавить</Btn><Btn primary={false} onClick={()=>setShow(false)}>Отмена</Btn></div></Card>}
+    <Card style={{padding:0,overflow:"hidden"}}>{tx.length===0?<div style={{padding:"48px",textAlign:"center",color:C.t2}}>Нет транзакций</div>:<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:14}}><thead><tr style={{borderBottom:"2px solid "+C.bd}}>{["Дата","Тип","Сумма","Категория","Комментарий",""].map((h,i)=><th key={i} style={{padding:"14px 16px",textAlign:"left",fontSize:12,fontWeight:600,color:C.t2,textTransform:"uppercase"}}>{h}</th>)}</tr></thead><tbody>{tx.map((t:any)=><tr key={t.id} style={{borderBottom:"1px solid "+C.bd}}><td style={{padding:"14px 16px",fontSize:13}}>{t.date}</td><td style={{padding:"14px 16px"}}><Tag label={t.type==="income"?"Доход":"Расход"} color={t.type==="income"?C.g:C.r}/></td><td style={{padding:"14px 16px",fontWeight:600,color:t.type==="income"?C.g:C.r}}>{(t.type==="income"?"+":"-")+fmt$(t.amount)} ₽</td><td style={{padding:"14px 16px"}}>{t.category}</td><td style={{padding:"14px 16px",color:C.t2}}>{t.comment||"-"}</td><td style={{padding:"14px 8px"}}><button onClick={()=>remove(t.id)} style={{width:28,height:28,borderRadius:6,border:"none",background:C.bg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><I path="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" size={12} color={C.r} sw={2}/></button></td></tr>)}</tbody></table></div>}</Card>
+  </>;
+}
+
+/* ============ MEDIA ============ */
+function MediaPage({userId}:{userId:string}){
+  const{data,add,remove}=useTable("media",userId);
+  const[show,setShow]=useState(false);
+  const[f,sF]=useState({date:today(),ig:0,yt:0,tg:0,oth:0,ig_story:0,tg_story:0});
+  const sub=async()=>{await add(f);sF({date:today(),ig:0,yt:0,tg:0,oth:0,ig_story:0,tg_story:0});setShow(false);};
+  const sorted=useMemo(()=>[...data].sort((a:any,b:any)=>a.date?.localeCompare(b.date)),[data]);
+  return <>
+    <div style={{display:"flex",justifyContent:"space-between",marginBottom:20}}><div style={{fontSize:18,fontWeight:600}}>Аналитика медийности</div><Btn onClick={()=>setShow(!show)}>+ Данные</Btn></div>
+    {show&&<Card style={{marginBottom:20}}><div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>
+      <div style={{gridColumn:"1/-1"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Дата</label><input type="date" value={f.date} onChange={e=>sF({...f,date:e.target.value})} style={iS}/></div>
+      {([["ig","Instagram"],["yt","YouTube"],["tg","Telegram"],["oth","Другие"]] as const).map(([k,l])=><div key={k}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>{l}</label><input type="number" value={(f as any)[k]} onChange={e=>sF({...f,[k]:+e.target.value})} style={iS}/></div>)}
+      {([["ig_story","Stories IG"],["tg_story","Stories TG"]] as const).map(([k,l])=><div key={k} style={{gridColumn:"span 2"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>{l}</label><input type="number" value={(f as any)[k]} onChange={e=>sF({...f,[k]:+e.target.value})} style={iS}/></div>)}
+    </div><div style={{display:"flex",gap:10,marginTop:16}}><Btn onClick={sub}>Добавить</Btn><Btn primary={false} onClick={()=>setShow(false)}>Отмена</Btn></div></Card>}
+    <Card style={{padding:0,overflow:"hidden"}}>{sorted.length===0?<div style={{padding:"48px",textAlign:"center",color:C.t2}}>Добавь данные</div>:<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:14}}><thead><tr style={{borderBottom:"2px solid "+C.bd}}>{["Дата","IG","YT","TG","Другие","Stories IG","Stories TG",""].map((h,i)=><th key={i} style={{padding:"12px 14px",textAlign:"left",fontSize:12,fontWeight:600,color:C.t2}}>{h}</th>)}</tr></thead><tbody>{sorted.map((d:any)=><tr key={d.id} style={{borderBottom:"1px solid "+C.bd}}><td style={{padding:"12px 14px"}}>{d.date}</td><td style={{padding:"12px 14px",color:C.pk,fontWeight:600}}>{d.ig}</td><td style={{padding:"12px 14px",color:C.r,fontWeight:600}}>{d.yt}</td><td style={{padding:"12px 14px",color:C.a,fontWeight:600}}>{d.tg}</td><td style={{padding:"12px 14px"}}>{d.oth}</td><td style={{padding:"12px 14px"}}>{d.ig_story}</td><td style={{padding:"12px 14px"}}>{d.tg_story}</td><td style={{padding:"12px 8px"}}><button onClick={()=>remove(d.id)} style={{width:28,height:28,borderRadius:6,border:"none",background:C.bg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><I path="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" size={12} color={C.r} sw={2}/></button></td></tr>)}</tbody></table></div>}</Card>
+  </>;
+}
+
+/* ============ ADS ============ */
+function AdsPage({userId}:{userId:string}){
+  const{data:camps,add,remove}=useTable("ads",userId);
+  const[show,setShow]=useState(false);
+  const[f,sF]=useState({name:"",platform:"Instagram",budget:"",spent:"",leads:"",revenue:"",reach:"",status:"active",period:""});
+  const sub=async()=>{if(!f.name.trim())return;await add({...f,budget:+f.budget||0,spent:+f.spent||0,leads:+f.leads||0,revenue:+f.revenue||0,reach:+f.reach||0});sF({name:"",platform:"Instagram",budget:"",spent:"",leads:"",revenue:"",reach:"",status:"active",period:""});setShow(false);};
+  return <>
+    <div style={{display:"flex",justifyContent:"space-between",marginBottom:20}}><div style={{fontSize:18,fontWeight:600}}>Рекламные кампании</div><Btn onClick={()=>setShow(!show)}>+ Кампания</Btn></div>
+    {show&&<Card style={{marginBottom:20}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14}}>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Название</label><input value={f.name} onChange={e=>sF({...f,name:e.target.value})} style={iS}/></div>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Платформа</label><select value={f.platform} onChange={e=>sF({...f,platform:e.target.value})} style={iS}>{SRCS.map(s=><option key={s}>{s}</option>)}</select></div>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Статус</label><select value={f.status} onChange={e=>sF({...f,status:e.target.value})} style={iS}><option value="active">Активна</option><option value="paused">Пауза</option><option value="done">Завершена</option></select></div>
+      {([["budget","Бюджет"],["spent","Потрачено"],["leads","Лиды"],["revenue","Выручка"],["reach","Охват"],["period","Период"]] as const).map(([k,l])=><div key={k}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>{l}</label><input type={k==="period"?"text":"number"} value={(f as any)[k]} onChange={e=>sF({...f,[k]:e.target.value})} style={iS}/></div>)}
+    </div><div style={{display:"flex",gap:10,marginTop:16}}><Btn onClick={sub}>Добавить</Btn><Btn primary={false} onClick={()=>setShow(false)}>Отмена</Btn></div></Card>}
+    <Card style={{padding:0,overflow:"hidden"}}>{camps.length===0?<div style={{padding:"48px",textAlign:"center",color:C.t2}}>Нет кампаний</div>:<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:14}}><thead><tr style={{borderBottom:"2px solid "+C.bd}}>{["Название","Платформа","Бюджет","Потрачено","Лиды","CPL","Статус",""].map((h,i)=><th key={i} style={{padding:"12px 14px",textAlign:"left",fontSize:11,fontWeight:600,color:C.t2,textTransform:"uppercase"}}>{h}</th>)}</tr></thead><tbody>{camps.map((c:any)=>{const cpl=c.leads>0?Math.round(c.spent/c.leads):0;return<tr key={c.id} style={{borderBottom:"1px solid "+C.bd}}><td style={{padding:"12px 14px",fontWeight:600}}>{c.name}</td><td style={{padding:"12px 14px"}}>{c.platform}</td><td style={{padding:"12px 14px"}}>{fmt$(c.budget)} ₽</td><td style={{padding:"12px 14px"}}>{fmt$(c.spent)} ₽</td><td style={{padding:"12px 14px",fontWeight:600}}>{c.leads}</td><td style={{padding:"12px 14px",fontWeight:600}}>{cpl?cpl+" ₽":"-"}</td><td style={{padding:"12px 14px"}}><Tag label={c.status==="active"?"Активна":c.status==="paused"?"Пауза":"Готово"} color={c.status==="active"?C.g:c.status==="paused"?C.y:C.t2}/></td><td style={{padding:"12px 8px"}}><button onClick={()=>remove(c.id)} style={{width:28,height:28,borderRadius:6,border:"none",background:C.bg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><I path="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" size={12} color={C.r} sw={2}/></button></td></tr>})}</tbody></table></div>}</Card>
+  </>;
+}
+
+/* ============ CALCULATOR ============ */
+function CalcPage(){
+  const[goal,sGoal]=useState({amount:300000,period:"month"});
+  const[p,sP]=useState({check:50000,convCall:30,convLead:40,convTraffic:5});
+  const calc=(pr:any)=>{const sales=Math.ceil(goal.amount/pr.check);const calls=Math.ceil(sales/(pr.convCall/100));const leads=Math.ceil(calls/(pr.convLead/100));const reach=Math.ceil(leads/(pr.convTraffic/100));return{sales,calls,leads,reach};};
+  const scenarios=[
+    {label:"Пессимист",pr:{...p,convCall:p.convCall*0.6,convLead:p.convLead*0.6,convTraffic:p.convTraffic*0.6}},
+    {label:"Реалист",pr:p},
+    {label:"Оптимист",pr:{...p,convCall:Math.min(p.convCall*1.4,100),convLead:Math.min(p.convLead*1.4,100),convTraffic:Math.min(p.convTraffic*1.4,100)}},
+  ];
+  return <>
+    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:"28px 36px",marginBottom:24,color:"#fff"}}><div style={{fontSize:20,fontWeight:700}}>Калькулятор конверсий</div><div style={{fontSize:14,opacity:0.7,marginTop:4}}>Введи цель - платформа посчитает</div></div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,marginBottom:24}}>
+      <Card><div style={{fontSize:16,fontWeight:600,marginBottom:16}}>Цель</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Сумма</label><input type="number" value={goal.amount} onChange={e=>sGoal({...goal,amount:+e.target.value})} style={iS}/></div>
+        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Период</label><select value={goal.period} onChange={e=>sGoal({...goal,period:e.target.value})} style={iS}><option value="month">Месяц</option><option value="quarter">Квартал</option></select></div>
+      </div></Card>
+      <Card><div style={{fontSize:16,fontWeight:600,marginBottom:16}}>Воронка</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Чек</label><input type="number" value={p.check} onChange={e=>sP({...p,check:+e.target.value||1})} style={iS}/></div>
+        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Звонок→продажа %</label><input type="number" value={p.convCall} onChange={e=>sP({...p,convCall:+e.target.value||1})} style={iS}/></div>
+        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Лид→звонок %</label><input type="number" value={p.convLead} onChange={e=>sP({...p,convLead:+e.target.value||1})} style={iS}/></div>
+        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Трафик→лид %</label><input type="number" value={p.convTraffic} onChange={e=>sP({...p,convTraffic:+e.target.value||1})} style={iS}/></div>
+      </div></Card>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16}}>
+      {scenarios.map((sc,si)=>{const r=calc(sc.pr);return<Card key={si} style={{borderTop:"4px solid "+(si===0?C.r:si===1?C.y:C.g)}}>
+        <div style={{fontSize:15,fontWeight:700,marginBottom:16,color:si===0?C.r:si===1?C.y:C.g}}>{sc.label}</div>
+        {[{l:"Продаж",v:r.sales},{l:"Звонков",v:r.calls},{l:"Лидов",v:r.leads},{l:"Охват",v:fmt$(r.reach)}].map((x,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid "+C.bd}}><span style={{fontSize:13,color:C.t2}}>{x.l}</span><span style={{fontSize:15,fontWeight:700}}>{x.v}</span></div>)}
+      </Card>})}
+    </div>
+  </>;
+}
+
+/* ============ TOOLS ============ */
+function ToolsPage(){
+  const[time,setTime]=useState(25*60);
+  const[running,setRunning]=useState(false);
+  const[isBreak,setIsBreak]=useState(false);
+  const[sessions,setSessions]=useState(0);
+  useEffect(()=>{if(!running)return;const iv=setInterval(()=>{setTime(t=>{if(t<=1){clearInterval(iv);setRunning(false);if(!isBreak){setSessions(s=>s+1);setIsBreak(true);setTime(5*60);}else{setIsBreak(false);setTime(25*60);}return 0;}return t-1;});},1000);return()=>clearInterval(iv);},[running,isBreak]);
+  const mm=String(Math.floor(time/60)).padStart(2,"0");
+  const ss=String(time%60).padStart(2,"0");
+  return <div style={{maxWidth:480,margin:"0 auto"}}>
+    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:24,padding:"48px 40px",textAlign:"center",marginBottom:24}}>
+      <div style={{fontSize:14,color:"rgba(255,255,255,0.6)",marginBottom:8}}>{isBreak?"Отдых":"Фокус"}</div>
+      <div style={{fontSize:72,fontWeight:800,color:"#fff",letterSpacing:4,fontVariantNumeric:"tabular-nums"}}>{mm}:{ss}</div>
+      <div style={{display:"flex",gap:12,justifyContent:"center",marginTop:32}}>
+        <button onClick={()=>setRunning(!running)} style={{padding:"14px 36px",background:running?"rgba(239,68,68,0.2)":C.a,color:running?"#fca5a5":"#fff",border:"none",borderRadius:14,fontSize:16,fontWeight:700,cursor:"pointer"}}>{running?"Пауза":"Старт"}</button>
+        <button onClick={()=>{setRunning(false);setIsBreak(false);setTime(25*60);}} style={{padding:"14px 24px",background:"rgba(255,255,255,0.1)",color:"rgba(255,255,255,0.6)",border:"none",borderRadius:14,fontSize:16,cursor:"pointer"}}>Сброс</button>
+      </div>
+    </div>
+    <Card style={{textAlign:"center"}}><div style={{fontSize:48,fontWeight:800,color:C.a}}>{sessions}</div><div style={{fontSize:14,color:C.t2,marginTop:4}}>Сессий сегодня</div></Card>
+  </div>;
 }
