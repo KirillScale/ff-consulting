@@ -1587,29 +1587,82 @@ function StoriesCarouselTab({userId}:{userId:string}){
     [...items.data.filter((x:any)=>x.carousel_id===carouselId)]
       .sort((a:any,b:any)=>a.order_index-b.order_index);
 
-  const calcAnalytics=(slots:any[])=>{
-    const filled=slots.filter(s=>s.view_count>0);
+  const calcAnalytics=(slots:any[],key:"ig_view_count"|"tg_view_count")=>{
+    const filled=slots.filter(s=>s[key]>0);
     if(filled.length<2)return null;
-    const first=slots[0].view_count;
-    const last=slots[slots.length-1].view_count;
+    const first=slots[0][key]||0;
+    const last=slots[slots.length-1][key]||0;
     if(!first)return null;
     const retention=Math.round(last/first*100);
     const lost=first-last;
-    // Find max drop between adjacent
     let maxDrop=0,maxDropIdx=0;
     for(let i=1;i<slots.length;i++){
-      const drop=slots[i-1].view_count-slots[i].view_count;
+      const drop=(slots[i-1][key]||0)-(slots[i][key]||0);
       if(drop>maxDrop){maxDrop=drop;maxDropIdx=i;}
     }
     const avgDrop=slots.length>1?Math.round((first-last)/(slots.length-1)):0;
     return{retention,lost,maxDrop,maxDropIdx,first,last,avgDrop};
   };
 
+  const IG_COLOR="#E1306C";
+  const TG_COLOR="#0088CC";
+
+  const RetentionRing=({pct,color,size=80}:{pct:number,color:string,size?:number})=>{
+    const r=size*0.4;
+    const circ=2*Math.PI*r;
+    return <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{transform:"rotate(-90deg)"}}>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={C.bd} strokeWidth={size*0.09}/>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={size*0.09}
+        strokeLinecap="round" strokeDasharray={circ}
+        strokeDashoffset={circ*(1-Math.min(pct,100)/100)}
+        style={{transition:"stroke-dashoffset 0.5s ease"}}/>
+    </svg>;
+  };
+
+  const PlatformAnalytics=({slots,platform,color,icon}:{slots:any[],platform:"ig"|"tg",color:string,icon:React.ReactNode})=>{
+    const key=platform==="ig"?"ig_view_count":"tg_view_count";
+    const an=calcAnalytics(slots,key);
+    const bg=color+"10";
+    const border=color+"30";
+    return <div style={{borderRadius:12,border:`1px solid ${border}`,overflow:"hidden"}}>
+      <div style={{padding:"8px 12px",background:bg,display:"flex",alignItems:"center",gap:6,borderBottom:`1px solid ${border}`}}>
+        {icon}
+        <span style={{fontSize:11,fontWeight:700,color}}>{platform==="ig"?"Instagram":"Telegram"}</span>
+      </div>
+      {!an
+        ? <div style={{padding:"10px 12px",fontSize:11,color:C.t2}}>Введи просмотры</div>
+        : <div style={{padding:"10px 12px",display:"flex",flexDirection:"column",gap:8}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <div style={{position:"relative",width:56,height:56,flexShrink:0}}>
+                <RetentionRing pct={an.retention} color={color} size={56}/>
+                <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column"}}>
+                  <span style={{fontSize:11,fontWeight:800,color}}>{an.retention}%</span>
+                </div>
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:10,color:C.t2}}>Дошло до конца</div>
+                <div style={{fontSize:11,fontWeight:600,color:C.t1,marginTop:1}}>{an.first.toLocaleString("ru")} → {an.last.toLocaleString("ru")}</div>
+                <div style={{fontSize:11,fontWeight:700,color:C.r,marginTop:1}}>-{an.lost.toLocaleString("ru")} зрителей</div>
+              </div>
+            </div>
+            {an.maxDrop>0&&<div style={{background:color+"0A",borderRadius:8,padding:"7px 10px",border:`1px solid ${color}22`}}>
+              <div style={{fontSize:10,fontWeight:600,color,marginBottom:2}}>Главный отвал</div>
+              <div style={{fontSize:11,color:C.t1}}>Сторис #{an.maxDropIdx} → #{an.maxDropIdx+1}</div>
+              <div style={{fontSize:11,fontWeight:700,color:C.r}}>-{an.maxDrop.toLocaleString("ru")} просмотров</div>
+            </div>}
+          </div>
+      }
+    </div>;
+  };
+
+  const IgIcon=()=><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={IG_COLOR} strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1" fill={IG_COLOR} stroke="none"/></svg>;
+  const TgIcon=()=><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={TG_COLOR} strokeWidth="2"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4 20-7z"/></svg>;
+
   return <>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
       <div>
         <div style={{fontSize:18,fontWeight:700}}>Карусели историй</div>
-        <div style={{fontSize:13,color:C.t2,marginTop:2}}>Аналитика удержания внимания в Stories</div>
+        <div style={{fontSize:13,color:C.t2,marginTop:2}}>Аналитика удержания внимания — Instagram & Telegram</div>
       </div>
       <button onClick={addCarousel} style={{padding:"10px 20px",background:C.a,color:"#fff",border:"none",borderRadius:12,fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -1626,20 +1679,20 @@ function StoriesCarouselTab({userId}:{userId:string}){
     <div style={{display:"flex",flexDirection:"column",gap:20}}>
       {[...carousels.data].reverse().map((car:any)=>{
         const slots=getCarouselItems(car.id);
-        const analytics=calcAnalytics(slots);
-        const maxViews=Math.max(...slots.map((s:any)=>s.view_count),1);
+        const igAn=calcAnalytics(slots,"ig_view_count");
+        const tgAn=calcAnalytics(slots,"tg_view_count");
+        const maxIgViews=Math.max(...slots.map((s:any)=>s.ig_view_count||0),1);
+        const maxTgViews=Math.max(...slots.map((s:any)=>s.tg_view_count||0),1);
 
         return <div key={car.id} style={{background:C.w,borderRadius:20,boxShadow:"0 4px 20px rgba(0,0,0,0.07)",border:"1px solid "+C.bd,overflow:"hidden"}}>
-          {/* Carousel header */}
-          <div style={{padding:"16px 20px",borderBottom:"1px solid "+C.bd,display:"flex",alignItems:"center",justifyContent:"space-between",background:"#FAFBFC"}}>
+          {/* Header */}
+          <div style={{padding:"14px 20px",borderBottom:"1px solid "+C.bd,display:"flex",alignItems:"center",justifyContent:"space-between",background:"#FAFBFC"}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
               {editTitleId===car.id
                 ? <input autoFocus value={editTitleVal} onChange={e=>setEditTitleVal(e.target.value)}
                     onBlur={()=>saveTitle(car.id)} onKeyDown={e=>{if(e.key==="Enter")saveTitle(car.id);if(e.key==="Escape")setEditTitleId(null);}}
                     style={{...iS,padding:"6px 10px",fontSize:15,fontWeight:700,width:240}}/>
-                : <span style={{fontSize:15,fontWeight:700,color:C.t1,cursor:"pointer"}} onDoubleClick={()=>{setEditTitleId(car.id);setEditTitleVal(car.title);}}>
-                    {car.title}
-                  </span>
+                : <span style={{fontSize:15,fontWeight:700,color:C.t1,cursor:"pointer"}} onDoubleClick={()=>{setEditTitleId(car.id);setEditTitleVal(car.title);}}>{car.title}</span>
               }
               <span style={{fontSize:11,color:C.t2,background:C.bd,borderRadius:20,padding:"2px 8px"}}>{slots.length}/15 сторис</span>
               <span style={{fontSize:11,color:C.t2,cursor:"pointer"}} onClick={()=>{setEditTitleId(car.id);setEditTitleVal(car.title);}}>✏️</span>
@@ -1654,81 +1707,47 @@ function StoriesCarouselTab({userId}:{userId:string}){
 
           <div style={{display:"flex",gap:0}}>
             {/* Analytics panel */}
-            <div style={{width:220,flexShrink:0,padding:"20px 18px",borderRight:"1px solid "+C.bd,display:"flex",flexDirection:"column",gap:14,background:"#FAFBFC"}}>
-              <div style={{fontSize:12,fontWeight:700,color:C.t2,letterSpacing:0.5,textTransform:"uppercase"}}>Аналитика</div>
-
-              {!analytics
-                ? <div style={{fontSize:12,color:C.t2,lineHeight:1.6}}>
-                    Добавь сторис и введи просмотры под каждой
-                  </div>
-                : <>
-                  {/* Retention ring */}
-                  <div style={{textAlign:"center",padding:"8px 0"}}>
-                    <svg width="90" height="90" viewBox="0 0 90 90" style={{transform:"rotate(-90deg)"}}>
-                      <circle cx="45" cy="45" r="36" fill="none" stroke={C.bd} strokeWidth="8"/>
-                      <circle cx="45" cy="45" r="36" fill="none"
-                        stroke={analytics.retention>=70?C.g:analytics.retention>=40?C.y:C.r}
-                        strokeWidth="8" strokeLinecap="round"
-                        strokeDasharray={2*Math.PI*36}
-                        strokeDashoffset={2*Math.PI*36*(1-analytics.retention/100)}
-                        style={{transition:"stroke-dashoffset 0.6s ease"}}/>
-                    </svg>
-                    <div style={{marginTop:-52,marginBottom:44,textAlign:"center"}}>
-                      <div style={{fontSize:20,fontWeight:800,color:analytics.retention>=70?C.g:analytics.retention>=40?C.y:C.r}}>{analytics.retention}%</div>
-                      <div style={{fontSize:9,color:C.t2,marginTop:1}}>удержание</div>
-                    </div>
-                  </div>
-
-                  {/* Stats */}
-                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                    <div style={{background:C.bg,borderRadius:10,padding:"10px 12px"}}>
-                      <div style={{fontSize:10,color:C.t2,marginBottom:3}}>Первая → Последняя</div>
-                      <div style={{fontSize:13,fontWeight:700,color:C.t1}}>{analytics.first.toLocaleString("ru")} → {analytics.last.toLocaleString("ru")}</div>
-                    </div>
-                    <div style={{background:"#FEF2F2",borderRadius:10,padding:"10px 12px"}}>
-                      <div style={{fontSize:10,color:C.r,marginBottom:3}}>Потеряно зрителей</div>
-                      <div style={{fontSize:14,fontWeight:800,color:C.r}}>-{analytics.lost.toLocaleString("ru")}</div>
-                    </div>
-                    <div style={{background:analytics.maxDrop>0?"#FFF7ED":C.bg,borderRadius:10,padding:"10px 12px",border:analytics.maxDrop>0?"1px solid "+C.y+"44":"none"}}>
-                      <div style={{fontSize:10,color:C.y,marginBottom:3,fontWeight:600}}>🔴 Критическая точка</div>
-                      {analytics.maxDrop>0
-                        ? <div style={{fontSize:12,fontWeight:700,color:C.t1}}>Сторис #{analytics.maxDropIdx} → #{analytics.maxDropIdx+1}<br/><span style={{color:C.r}}>-{analytics.maxDrop.toLocaleString("ru")} просмотров</span></div>
-                        : <div style={{fontSize:12,color:C.t2}}>Нет резких падений</div>
-                      }
-                    </div>
-                    <div style={{background:C.bg,borderRadius:10,padding:"8px 12px"}}>
-                      <div style={{fontSize:10,color:C.t2,marginBottom:2}}>Среднее падение/слайд</div>
-                      <div style={{fontSize:12,fontWeight:600,color:C.t1}}>-{analytics.avgDrop.toLocaleString("ru")}</div>
-                    </div>
-                  </div>
-                </>
-              }
+            <div style={{width:240,flexShrink:0,padding:"16px 14px",borderRight:"1px solid "+C.bd,display:"flex",flexDirection:"column",gap:12,background:"#FAFBFC"}}>
+              <PlatformAnalytics slots={slots} platform="ig" color={IG_COLOR} icon={<IgIcon/>}/>
+              <PlatformAnalytics slots={slots} platform="tg" color={TG_COLOR} icon={<TgIcon/>}/>
             </div>
 
             {/* Stories strip */}
-            <div style={{flex:1,overflowX:"auto",padding:"16px 16px 12px"}}>
+            <div style={{flex:1,overflowX:"auto",padding:"14px 14px 12px"}}>
               <div style={{display:"flex",gap:10,alignItems:"flex-start",minWidth:"max-content"}}>
                 {slots.map((slot:any,idx:number)=>{
-                  const isMaxDrop=analytics&&analytics.maxDrop>0&&idx===analytics.maxDropIdx-1;
-                  const isMaxDropAfter=analytics&&analytics.maxDrop>0&&idx===analytics.maxDropIdx;
-                  const pct=slot.view_count&&slots[0].view_count?Math.round(slot.view_count/slots[0].view_count*100):0;
-                  const barH=slot.view_count?Math.max(4,Math.round(slot.view_count/maxViews*48)):0;
+                  const igIsMax=igAn&&igAn.maxDrop>0&&idx===igAn.maxDropIdx-1;
+                  const igIsAfter=igAn&&igAn.maxDrop>0&&idx===igAn.maxDropIdx;
+                  const tgIsMax=tgAn&&tgAn.maxDrop>0&&idx===tgAn.maxDropIdx-1;
+                  const tgIsAfter=tgAn&&tgAn.maxDrop>0&&idx===tgAn.maxDropIdx;
+                  const anyMax=igIsMax||tgIsMax;
+                  const anyAfter=igIsAfter||tgIsAfter;
+                  const igBarH=slot.ig_view_count?Math.max(4,Math.round(slot.ig_view_count/maxIgViews*36)):0;
+                  const tgBarH=slot.tg_view_count?Math.max(4,Math.round(slot.tg_view_count/maxTgViews*36)):0;
 
-                  return <div key={slot.id} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:0,position:"relative"}}>
-                    {/* Drop warning between cards */}
-                    {isMaxDrop&&<div style={{position:"absolute",right:-18,top:30,zIndex:10,fontSize:16}}>🔴</div>}
+                  // Border color based on which platform has max drop
+                  const borderColor=igIsMax||igIsAfter?IG_COLOR:tgIsMax||tgIsAfter?TG_COLOR:C.bd;
 
-                    {/* Bar chart above card */}
-                    <div style={{width:140,height:64,display:"flex",alignItems:"flex-end",justifyContent:"center",marginBottom:4}}>
-                      {slot.view_count>0&&<div style={{width:40,borderRadius:"4px 4px 0 0",background:isMaxDrop||isMaxDropAfter?C.r:C.a,opacity:0.85,height:barH,transition:"height 0.3s",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",paddingTop:2}}>
-                        {barH>18&&<span style={{fontSize:8,color:"#fff",fontWeight:700,transform:"rotate(-90deg)",whiteSpace:"nowrap"}}>{pct}%</span>}
-                      </div>}
+                  return <div key={slot.id} style={{display:"flex",flexDirection:"column",alignItems:"center",position:"relative"}}>
+                    {/* Drop alert markers between cards */}
+                    {igIsMax&&<div style={{position:"absolute",right:-14,top:16,zIndex:10,fontSize:13}}>🩷</div>}
+                    {tgIsMax&&<div style={{position:"absolute",right:-14,top:igIsMax?32:16,zIndex:10,fontSize:13}}>💙</div>}
+
+                    {/* Dual bar chart */}
+                    <div style={{width:140,height:48,display:"flex",alignItems:"flex-end",justifyContent:"center",gap:4,marginBottom:4}}>
+                      {(slot.ig_view_count>0||slot.tg_view_count>0)&&<>
+                        <div style={{width:18,borderRadius:"3px 3px 0 0",background:igIsMax||igIsAfter?IG_COLOR:IG_COLOR+"99",height:igBarH,transition:"height 0.3s",minHeight:slot.ig_view_count>0?4:0}}/>
+                        <div style={{width:18,borderRadius:"3px 3px 0 0",background:tgIsMax||tgIsAfter?TG_COLOR:TG_COLOR+"99",height:tgBarH,transition:"height 0.3s",minHeight:slot.tg_view_count>0?4:0}}/>
+                      </>}
                     </div>
 
                     {/* Story card */}
-                    <div style={{width:140,borderRadius:16,overflow:"hidden",border:`2px solid ${isMaxDrop||isMaxDropAfter?C.r:isMaxDrop?"#FFF7ED":C.bd}`,background:C.bg,boxShadow:isMaxDrop||isMaxDropAfter?"0 0 0 3px "+C.r+"22":"none",transition:"border 0.2s"}}>
-                      {/* Image area */}
-                      <div style={{width:140,height:200,background:(slot.image_url&&slot.image_url.startsWith("http"))?"transparent":"#F1F3F8",cursor:"pointer",position:"relative",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}
+                    <div style={{width:140,borderRadius:16,overflow:"hidden",
+                      border:`2px solid ${borderColor}`,
+                      boxShadow:(anyMax||anyAfter)?`0 0 0 3px ${borderColor}22`:"none",
+                      transition:"border 0.2s",background:C.bg}}>
+                      {/* Image */}
+                      <div style={{width:140,height:190,background:(slot.image_url&&slot.image_url.startsWith("http"))?"transparent":"#F1F3F8",cursor:"pointer",position:"relative",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}
                         onClick={()=>(slot.image_url&&slot.image_url.startsWith("http"))&&!uploading&&setLightbox(slot.image_url)}>
                         {uploading===slot.id
                           ? <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6}}>
@@ -1743,58 +1762,59 @@ function StoriesCarouselTab({userId}:{userId:string}){
                               <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0])uploadImage(slot.id,e.target.files[0]);}}/>
                             </label>
                         }
-                        {(slot.image_url&&slot.image_url.startsWith("http"))&&<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",transition:"background 0.2s",display:"flex",alignItems:"center",justifyContent:"center"}} onMouseEnter={e=>(e.currentTarget.style.background="rgba(0,0,0,0.3)")} onMouseLeave={e=>(e.currentTarget.style.background="rgba(0,0,0,0)")}>
-                          <label style={{position:"absolute",bottom:4,right:4,cursor:"pointer",background:"rgba(0,0,0,0.5)",borderRadius:6,padding:"2px 4px"}}>
+                        {(slot.image_url&&slot.image_url.startsWith("http"))&&<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",transition:"background 0.2s"}} onMouseEnter={e=>(e.currentTarget.style.background="rgba(0,0,0,0.3)")} onMouseLeave={e=>(e.currentTarget.style.background="rgba(0,0,0,0)")}>
+                          <label style={{position:"absolute",bottom:4,right:4,cursor:"pointer",background:"rgba(0,0,0,0.5)",borderRadius:6,padding:"3px 5px"}}>
                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                             <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0])uploadImage(slot.id,e.target.files[0]);}}/>
                           </label>
                         </div>}
                       </div>
-                      {/* Number + views input */}
+
+                      {/* Number + dual inputs */}
                       <div style={{padding:"8px 8px 10px",background:C.w}}>
-                        <div style={{fontSize:11,fontWeight:700,color:C.t2,textAlign:"center",marginBottom:6}}>Сторис #{idx+1}</div>
-                        <input type="number" value={slot.view_count||""} onChange={e=>updateViews(slot.id,e.target.value)}
-                          placeholder="👁 просмотры"
-                          style={{width:"100%",padding:"7px 8px",border:"1px solid "+C.bd,borderRadius:8,fontSize:12,textAlign:"center",outline:"none",background:C.ib,boxSizing:"border-box",fontFamily:"'Montserrat',sans-serif",color:C.t1}}/>
+                        <div style={{fontSize:11,fontWeight:700,color:C.t2,textAlign:"center",marginBottom:7}}>Сторис #{idx+1}</div>
+                        {/* Instagram input */}
+                        <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:5,background:IG_COLOR+"0C",borderRadius:8,padding:"5px 7px",border:`1px solid ${IG_COLOR}22`}}>
+                          <IgIcon/>
+                          <input type="number" value={slot.ig_view_count||""} onChange={e=>items.update(slot.id,{ig_view_count:+e.target.value||0})}
+                            placeholder="IG"
+                            style={{flex:1,border:"none",background:"transparent",fontSize:11,outline:"none",fontFamily:"'Montserrat',sans-serif",color:C.t1,minWidth:0,textAlign:"center"}}/>
+                        </div>
+                        {/* Telegram input */}
+                        <div style={{display:"flex",alignItems:"center",gap:4,background:TG_COLOR+"0C",borderRadius:8,padding:"5px 7px",border:`1px solid ${TG_COLOR}22`}}>
+                          <TgIcon/>
+                          <input type="number" value={slot.tg_view_count||""} onChange={e=>items.update(slot.id,{tg_view_count:+e.target.value||0})}
+                            placeholder="TG"
+                            style={{flex:1,border:"none",background:"transparent",fontSize:11,outline:"none",fontFamily:"'Montserrat',sans-serif",color:C.t1,minWidth:0,textAlign:"center"}}/>
+                        </div>
                       </div>
                     </div>
-
-                    {/* Drop % between cards */}
-                    {idx<slots.length-1&&slots[idx+1].view_count>0&&slot.view_count>0&&<div style={{position:"absolute",right:-22,top:100,fontSize:10,fontWeight:700,color:isMaxDrop?C.r:C.t2,background:C.w,border:"1px solid "+(isMaxDrop?C.r:C.bd),borderRadius:20,padding:"2px 5px",zIndex:5,whiteSpace:"nowrap"}}>
-                      -{Math.round((slot.view_count-slots[idx+1].view_count)/slot.view_count*100)}%
-                    </div>}
                   </div>;
                 })}
 
-                {/* Add story button */}
-                {slots.length<15&&<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:0}}>
-                  <div style={{width:140,height:64+6+200,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                    <button onClick={()=>addSlot(car.id)} style={{width:60,height:60,borderRadius:16,border:"2px dashed "+C.bd,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.t2,fontSize:22,transition:"border-color 0.15s,color 0.15s"}}
-                      onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.a;(e.currentTarget as HTMLElement).style.color=C.a;}}
-                      onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.color=C.t2;}}>
-                      +
-                    </button>
-                  </div>
+                {/* Add slot */}
+                {slots.length<15&&<div style={{display:"flex",alignItems:"center",justifyContent:"center",width:140,height:48+4+190+10+48+10}}>
+                  <button onClick={()=>addSlot(car.id)} style={{width:56,height:56,borderRadius:16,border:"2px dashed "+C.bd,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.t2,fontSize:24,transition:"all 0.15s"}}
+                    onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.a;(e.currentTarget as HTMLElement).style.color=C.a;}}
+                    onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.color=C.t2;}}>+</button>
                 </div>}
               </div>
 
-              {/* Progress bar */}
-              {analytics&&slots.length>1&&<div style={{marginTop:14,padding:"0 4px"}}>
-                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
-                  <span style={{fontSize:10,color:C.t2,fontWeight:600}}>Падение аудитории</span>
-                  <span style={{fontSize:10,color:C.t2}}>→</span>
-                </div>
-                <div style={{display:"flex",gap:2,height:6,borderRadius:3,overflow:"hidden"}}>
-                  {slots.map((slot:any,i:number)=>{
-                    const pct=slot.view_count&&analytics.first?slot.view_count/analytics.first:0;
-                    const isHot=analytics.maxDrop>0&&(i===analytics.maxDropIdx-1||i===analytics.maxDropIdx);
-                    return <div key={slot.id} style={{flex:1,background:isHot?C.r:C.a,opacity:Math.max(0.15,pct),borderRadius:2,transition:"opacity 0.3s"}}/>;
-                  })}
-                </div>
-                <div style={{display:"flex",justifyContent:"space-between",marginTop:3}}>
-                  <span style={{fontSize:9,color:C.t2}}>Старт</span>
-                  <span style={{fontSize:9,color:analytics.retention>=50?C.g:C.r,fontWeight:700}}>{analytics.retention}% дошли до конца</span>
-                </div>
+              {/* Dual progress bars */}
+              {(igAn||tgAn)&&slots.length>1&&<div style={{marginTop:14,display:"flex",flexDirection:"column",gap:8}}>
+                {[{an:igAn,color:IG_COLOR,key:"ig_view_count",label:"Instagram"},{an:tgAn,color:TG_COLOR,key:"tg_view_count",label:"Telegram"}].map(({an,color,key,label})=>an&&<div key={label}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                    <span style={{fontSize:10,color,fontWeight:600}}>{label}</span>
+                    <span style={{fontSize:10,color:an.retention>=50?C.g:C.r,fontWeight:700}}>{an.retention}% досмотрели</span>
+                  </div>
+                  <div style={{display:"flex",gap:2,height:5,borderRadius:3,overflow:"hidden"}}>
+                    {slots.map((s:any,i:number)=>{
+                      const pct=s[key as string]&&an.first?s[key as string]/an.first:0;
+                      const isHot=an.maxDrop>0&&(i===an.maxDropIdx-1||i===an.maxDropIdx);
+                      return <div key={s.id} style={{flex:1,background:isHot?C.r:color,opacity:Math.max(0.12,pct),borderRadius:2}}/>;
+                    })}
+                  </div>
+                </div>)}
               </div>}
             </div>
           </div>
