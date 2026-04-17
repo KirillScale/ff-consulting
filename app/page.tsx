@@ -663,23 +663,28 @@ function StrategyPage({userId}:{userId:string}){
 }
 
 /* ============ CRM ============ */
+const CRM_STAGES_FIXED = [
+  {id:"new",      label:"Новый",            color:"#007AFF"},
+  {id:"contact",  label:"Взаимодействовали",color:"#AF52DE"},
+  {id:"call",     label:"Созвон",           color:"#FF9500"},
+  {id:"closed",   label:"Закрыт",           color:"#34C759"},
+  {id:"rejected", label:"Отказ",            color:"#FF3B30"},
+];
+
 function CrmPage({userId}:{userId:string}){
   const{data:leads,add,update,remove}=useTable("leads",userId);
-  const crmStages=useTable("crm_stages",userId);
-  const[tab,setTab]=useState<"list"|"funnel">("list");
+  const[tab,setTab]=useState<"list"|"kanban">("kanban");
   const[search,setSearch]=useState("");
   const[show,setShow]=useState(false);
-  const[f,sF]=useState({name:"",contact:"",phone:"",email:"",source:"Instagram",status:"new",note:"",deal:"",pains:"",desires:"",history:""});
+  const[editStageId,setEditStageId]=useState<string|null>(null);
+  const[stageLabels,setStageLabels]=useState<Record<string,string>>({});
+  const[f,sF]=useState({name:"",contact:"",phone:"",email:"",source:"Instagram",status:"new",note:"",deal:""});
   const[dragId,setDragId]=useState<string|null>(null);
-  const[showStageForm,setShowStageForm]=useState(false);
-  const[newStage,setNewStage]=useState({label:"",color:C.a});
+  const[dragOver,setDragOver]=useState<string|null>(null);
+  const[openLead,setOpenLead]=useState<string|null>(null);
 
-  const stages=useMemo(()=>{
-    if(crmStages.data.length>0){
-      return crmStages.data.map((s:any)=>({id:s.stage_id||s.id,label:s.label,color:s.color}));
-    }
-    return STAGES_DEFAULT;
-  },[crmStages.data]);
+  // Merge fixed stages with any user-renamed labels
+  const stages = CRM_STAGES_FIXED.map(s=>({...s,label:stageLabels[s.id]||s.label}));
 
   const found=useMemo(()=>{
     if(!search)return leads;
@@ -690,94 +695,225 @@ function CrmPage({userId}:{userId:string}){
   const sub=async()=>{
     if(!f.name.trim())return;
     await add({...f,deal:f.deal?+f.deal:null});
-    sF({name:"",contact:"",phone:"",email:"",source:"Instagram",status:"new",note:"",deal:"",pains:"",desires:"",history:""});
+    sF({name:"",contact:"",phone:"",email:"",source:"Instagram",status:"new",note:"",deal:""});
     setShow(false);
-  };
-
-  const addStage=async()=>{
-    if(!newStage.label.trim())return;
-    const sid="stage_"+Date.now();
-    await crmStages.add({stage_id:sid,label:newStage.label,color:newStage.color});
-    setNewStage({label:"",color:C.a});setShowStageForm(false);
   };
 
   const totalD=leads.filter((l:any)=>l.status==="closed"&&l.deal).reduce((s:number,l:any)=>s+(l.deal||0),0);
 
-  const onDragStart=(id:string)=>setDragId(id);
+  const onDragStart=(id:string,e:React.DragEvent)=>{
+    setDragId(id);
+    e.dataTransfer.effectAllowed="move";
+  };
+  const onDragOver=(stageId:string,e:React.DragEvent)=>{
+    e.preventDefault();
+    e.dataTransfer.dropEffect="move";
+    setDragOver(stageId);
+  };
   const onDrop=(stageId:string)=>{
-    if(dragId){update(dragId,{status:stageId});setDragId(null);}
+    if(dragId){update(dragId,{status:stageId});}
+    setDragId(null);setDragOver(null);
+  };
+  const onDragEnd=()=>{setDragId(null);setDragOver(null);};
+
+  const stCol2=(id:string)=>stages.find(s=>s.id===id)?.color||C.t2;
+  const stLbl2=(id:string)=>stages.find(s=>s.id===id)?.label||id;
+
+  // iOS tab style
+  const tabStyle=(active:boolean):React.CSSProperties=>({
+    flex:1,padding:"8px 0",border:"none",borderRadius:8,
+    background:active?"#fff":"transparent",
+    color:active?C.t1:C.t2,fontSize:13,fontWeight:active?600:400,
+    cursor:"pointer",boxShadow:active?"0 1px 4px rgba(0,0,0,0.12)":"none",
+    transition:"all 0.2s",
+  });
+
+  // iOS card style for leads
+  const leadCard=(l:any,stageColor:string)=>{
+    const isOpen=openLead===l.id;
+    return <div key={l.id} draggable
+      onDragStart={e=>onDragStart(l.id,e)}
+      onDragEnd={onDragEnd}
+      onClick={()=>setOpenLead(isOpen?null:l.id)}
+      style={{background:"#fff",borderRadius:14,padding:"13px 15px",marginBottom:8,
+        cursor:"grab",userSelect:"none",
+        boxShadow:"0 2px 8px rgba(0,0,0,0.08),0 0 0 0.5px rgba(0,0,0,0.06)",
+        borderLeft:`3px solid ${stageColor}`,
+        transition:"box-shadow 0.15s, transform 0.15s",
+        opacity:dragId===l.id?0.45:1,
+        transform:dragId===l.id?"scale(0.97)":"scale(1)",
+      }}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+        <div style={{fontWeight:600,fontSize:14,color:"#1C1C1E",flex:1}}>{l.name}</div>
+        {l.deal&&<div style={{fontSize:12,fontWeight:700,color:"#34C759",marginLeft:8,whiteSpace:"nowrap"}}>{fmt$(l.deal)} ₽</div>}
+      </div>
+      {(l.phone||l.email||l.contact)&&<div style={{fontSize:12,color:"#8E8E93",marginTop:4}}>
+        {l.phone||l.email||l.contact}
+      </div>}
+      {isOpen&&<div style={{marginTop:10,paddingTop:10,borderTop:"0.5px solid #E5E5EA"}}>
+        {l.source&&<div style={{fontSize:11,color:"#8E8E93",marginBottom:4}}>Источник: {l.source}</div>}
+        {l.note&&<div style={{fontSize:12,color:"#3C3C43",marginBottom:4}}>{l.note}</div>}
+        <div style={{display:"flex",gap:6,marginTop:8,flexWrap:"wrap"}}>
+          {stages.filter(s=>s.id!==l.status).map(s=><button key={s.id} onClick={e=>{e.stopPropagation();update(l.id,{status:s.id});}} style={{fontSize:11,padding:"4px 10px",borderRadius:20,border:"none",background:s.color+"18",color:s.color,fontWeight:600,cursor:"pointer"}}>{s.label}</button>)}
+          <button onClick={e=>{e.stopPropagation();if(confirm("Удалить лида?"))remove(l.id);}} style={{fontSize:11,padding:"4px 10px",borderRadius:20,border:"none",background:"#FF3B3018",color:"#FF3B30",fontWeight:600,cursor:"pointer",marginLeft:"auto"}}>Удалить</button>
+        </div>
+      </div>}
+    </div>;
   };
 
-  const closedRejected=leads.filter((l:any)=>["closed","rejected"].includes(l.status));
-
   return <>
-    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16,marginBottom:24}}>
-      {[{l:"Всего",v:leads.length,c:C.a},{l:"В работе",v:leads.filter((l:any)=>!["closed","rejected"].includes(l.status)).length,c:C.y},{l:"Закрыто",v:leads.filter((l:any)=>l.status==="closed").length,c:C.g},{l:"Сделки",v:fmt$(totalD)+" ₽",c:C.dk}].map((s,i)=><Card key={i} style={{padding:"20px 24px"}}><div style={{fontSize:26,fontWeight:700,color:s.c}}>{s.v}</div><div style={{fontSize:13,color:C.t2,marginTop:4}}>{s.l}</div></Card>)}
+    {/* Stats */}
+    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24}}>
+      {[
+        {l:"Всего",v:leads.length,c:"#007AFF"},
+        {l:"В работе",v:leads.filter((l:any)=>!["closed","rejected"].includes(l.status)).length,c:"#FF9500"},
+        {l:"Закрыто",v:leads.filter((l:any)=>l.status==="closed").length,c:"#34C759"},
+        {l:"Сделки",v:fmt$(totalD)+" ₽",c:"#1C1C1E"},
+      ].map((s,i)=><div key={i} style={{background:"#fff",borderRadius:16,padding:"18px 20px",boxShadow:"0 2px 8px rgba(0,0,0,0.07),0 0 0 0.5px rgba(0,0,0,0.05)"}}>
+        <div style={{fontSize:24,fontWeight:700,color:s.c,marginBottom:2}}>{s.v}</div>
+        <div style={{fontSize:12,color:"#8E8E93"}}>{s.l}</div>
+      </div>)}
     </div>
 
-    <div style={{display:"flex",gap:4,marginBottom:20,borderBottom:"2px solid "+C.bd}}>
-      {[{id:"list",label:"Список лидов"},{id:"funnel",label:"Воронка продаж"}].map(t=><button key={t.id} onClick={()=>setTab(t.id as any)} style={{padding:"10px 20px",background:"none",border:"none",borderBottom:tab===t.id?"3px solid "+C.a:"3px solid transparent",color:tab===t.id?C.a:C.t2,fontSize:14,fontWeight:tab===t.id?600:400,cursor:"pointer",marginBottom:-2}}>{t.label}</button>)}
+    {/* iOS segmented control */}
+    <div style={{display:"flex",background:"#F2F2F7",borderRadius:10,padding:2,marginBottom:20,gap:2}}>
+      <button style={tabStyle(tab==="kanban")} onClick={()=>setTab("kanban")}>Канбан</button>
+      <button style={tabStyle(tab==="list")} onClick={()=>setTab("list")}>Список лидов</button>
     </div>
 
-    {tab==="list"&&<>
-      <div style={{display:"flex",justifyContent:"space-between",marginBottom:20,gap:12}}>
-        <input placeholder="Поиск по имени, контакту, телефону..." value={search} onChange={e=>setSearch(e.target.value)} style={{...iS,width:280,padding:"9px 14px",fontSize:13}}/>
-        <Btn onClick={()=>setShow(!show)}>+ Лид</Btn>
+    {/* KANBAN TAB */}
+    {tab==="kanban"&&<>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <div style={{fontSize:12,color:"#8E8E93"}}>Перетаскивай карточки между этапами. Нажми на этап чтобы переименовать.</div>
+        <button onClick={()=>setShow(!show)} style={{padding:"9px 18px",background:"#007AFF",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer"}}>+ Лид</button>
       </div>
-      {show&&<Card style={{marginBottom:20}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14}}>
-        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Имя</label><input value={f.name} onChange={e=>sF({...f,name:e.target.value})} style={iS}/></div>
-        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Контакт (ник)</label><input value={f.contact} onChange={e=>sF({...f,contact:e.target.value})} style={iS}/></div>
-        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Телефон</label><input value={f.phone} onChange={e=>sF({...f,phone:e.target.value})} style={iS}/></div>
-        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Email</label><input type="email" value={f.email} onChange={e=>sF({...f,email:e.target.value})} style={iS}/></div>
-        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Источник</label><select value={f.source} onChange={e=>sF({...f,source:e.target.value})} style={iS}>{SRCS.map(s=><option key={s}>{s}</option>)}</select></div>
-        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Статус</label><select value={f.status} onChange={e=>sF({...f,status:e.target.value})} style={iS}>{stages.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
-        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Сделка</label><input type="number" value={f.deal} onChange={e=>sF({...f,deal:e.target.value})} style={iS}/></div>
-        <div style={{gridColumn:"span 2"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Заметка</label><input value={f.note} onChange={e=>sF({...f,note:e.target.value})} style={iS}/></div>
-      </div><div style={{display:"flex",gap:10,marginTop:16}}><Btn onClick={sub}>Добавить</Btn><Btn primary={false} onClick={()=>setShow(false)}>Отмена</Btn></div></Card>}
-      <Card style={{padding:0,overflow:"hidden"}}>{found.length===0?<div style={{padding:"48px",textAlign:"center",color:C.t2}}>Нет лидов</div>:<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:14}}><thead><tr style={{borderBottom:"2px solid "+C.bd}}>{["Имя","Телефон","Email","Источник","Статус","Сделка",""].map((h,i)=><th key={i} style={{padding:"14px 16px",textAlign:"left",fontSize:12,fontWeight:600,color:C.t2,textTransform:"uppercase"}}>{h}</th>)}</tr></thead><tbody>{found.map((l:any)=><tr key={l.id} style={{borderBottom:"1px solid "+C.bd}}><td style={{padding:"14px 16px",fontWeight:600}}>{l.name}<br/><span style={{fontWeight:400,fontSize:12,color:C.t2}}>{l.contact||""}</span></td><td style={{padding:"14px 16px",color:C.t2,fontSize:13}}>{l.phone||"-"}</td><td style={{padding:"14px 16px",color:C.t2,fontSize:13}}>{l.email||"-"}</td><td style={{padding:"14px 16px"}}>{l.source}</td><td style={{padding:"14px 16px"}}><Tag label={stLbl(l.status,stages)} color={stCol(l.status,stages)}/></td><td style={{padding:"14px 16px"}}>{l.deal?fmt$(l.deal)+" ₽":"-"}</td><td style={{padding:"14px 8px"}}><button onClick={()=>remove(l.id)} style={{width:28,height:28,borderRadius:6,border:"none",background:C.bg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><I path="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" size={12} color={C.r} sw={2}/></button></td></tr>)}</tbody></table></div>}</Card>
-    </>}
 
-    {tab==="funnel"&&<>
-      <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}>
-        <div style={{fontSize:14,color:C.t2}}>Перетаскивай карточки между этапами</div>
-        <Btn primary={false} onClick={()=>setShowStageForm(!showStageForm)} style={{fontSize:13}}>+ Этап</Btn>
-      </div>
-      {showStageForm&&<Card style={{marginBottom:16,padding:16}}><div style={{display:"flex",gap:10,alignItems:"flex-end"}}>
-        <div style={{flex:1}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Название этапа</label><input value={newStage.label} onChange={e=>setNewStage({...newStage,label:e.target.value})} style={iS}/></div>
-        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Цвет</label><div style={{display:"flex",gap:6}}>{[C.a,"#8B5CF6",C.g,C.r,C.y,C.pk,C.lb].map(c=><button key={c} onClick={()=>setNewStage({...newStage,color:c})} style={{width:28,height:28,borderRadius:8,background:c,border:newStage.color===c?"3px solid "+C.t1:"3px solid transparent",cursor:"pointer"}}/>)}</div></div>
-        <Btn onClick={addStage} style={{height:42}}>Создать</Btn>
-        <Btn primary={false} onClick={()=>setShowStageForm(false)} style={{height:42}}>Отмена</Btn>
-      </div></Card>}
+      {show&&<div style={{background:"#fff",borderRadius:16,padding:20,marginBottom:20,boxShadow:"0 2px 12px rgba(0,0,0,0.08)"}}>
+        <div style={{fontSize:15,fontWeight:600,marginBottom:14,color:"#1C1C1E"}}>Новый лид</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
+          {([["name","Имя *"],["contact","Контакт"],["phone","Телефон"],["email","Email"],["note","Заметка"],["deal","Сделка, ₽"]] as const).map(([k,l])=><div key={k}>
+            <label style={{fontSize:11,color:"#8E8E93",display:"block",marginBottom:5,fontWeight:500}}>{l}</label>
+            <input type={k==="deal"?"number":"text"} value={(f as any)[k]} onChange={e=>sF({...f,[k]:e.target.value})}
+              style={{width:"100%",padding:"10px 12px",border:"0.5px solid #C6C6C8",borderRadius:10,fontSize:13,outline:"none",background:"#FAFAFA",boxSizing:"border-box",fontFamily:"'Montserrat',sans-serif"}}/>
+          </div>)}
+          <div><label style={{fontSize:11,color:"#8E8E93",display:"block",marginBottom:5,fontWeight:500}}>Источник</label>
+            <select value={f.source} onChange={e=>sF({...f,source:e.target.value})} style={{width:"100%",padding:"10px 12px",border:"0.5px solid #C6C6C8",borderRadius:10,fontSize:13,outline:"none",background:"#FAFAFA",boxSizing:"border-box"}}>
+              {SRCS.map(s=><option key={s}>{s}</option>)}
+            </select>
+          </div>
+          <div><label style={{fontSize:11,color:"#8E8E93",display:"block",marginBottom:5,fontWeight:500}}>Этап</label>
+            <select value={f.status} onChange={e=>sF({...f,status:e.target.value})} style={{width:"100%",padding:"10px 12px",border:"0.5px solid #C6C6C8",borderRadius:10,fontSize:13,outline:"none",background:"#FAFAFA",boxSizing:"border-box"}}>
+              {stages.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}
+            </select>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:8,marginTop:14}}>
+          <button onClick={sub} style={{padding:"10px 20px",background:"#007AFF",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer"}}>Добавить</button>
+          <button onClick={()=>setShow(false)} style={{padding:"10px 16px",background:"#F2F2F7",color:"#8E8E93",border:"none",borderRadius:10,fontSize:13,cursor:"pointer"}}>Отмена</button>
+        </div>
+      </div>}
 
-      <div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(stages.filter(s=>!["closed","rejected"].includes(s.id)).length+1,5)},1fr)`,gap:12,overflowX:"auto"}}>
-        {stages.filter((s:any)=>!["closed","rejected"].includes(s.id)).map((stage:any)=>{
-          const stageleads=leads.filter((l:any)=>l.status===stage.id);
-          return<div key={stage.id} onDragOver={e=>{e.preventDefault();}} onDrop={()=>onDrop(stage.id)} style={{background:C.bg,borderRadius:14,padding:14,minHeight:200,border:"2px dashed transparent",transition:"border 0.2s"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-              <div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:10,height:10,borderRadius:3,background:stage.color}}/><span style={{fontSize:13,fontWeight:600}}>{stage.label}</span></div>
-              <span style={{fontSize:12,color:C.t2,background:C.w,borderRadius:6,padding:"2px 8px"}}>{stageleads.length}</span>
+      {/* Kanban board */}
+      <div style={{display:"flex",gap:14,overflowX:"auto",paddingBottom:16,alignItems:"flex-start"}}>
+        {stages.map(stage=>{
+          const stageLeads=leads.filter((l:any)=>l.status===stage.id);
+          const isOver=dragOver===stage.id;
+          return <div key={stage.id}
+            onDragOver={e=>onDragOver(stage.id,e)}
+            onDrop={()=>onDrop(stage.id)}
+            onDragLeave={()=>setDragOver(null)}
+            style={{
+              minWidth:240,width:240,flexShrink:0,
+              background:isOver?"#F0F6FF":"#F2F2F7",
+              borderRadius:18,padding:"0 0 12px",
+              boxShadow:isOver?"0 0 0 2px #007AFF,0 4px 20px rgba(0,122,255,0.15)":"0 1px 4px rgba(0,0,0,0.06)",
+              transition:"box-shadow 0.2s, background 0.2s",
+              border:isOver?"2px solid #007AFF":"2px solid transparent",
+            }}>
+            {/* Stage header */}
+            <div style={{padding:"14px 14px 10px",borderBottom:"0.5px solid rgba(0,0,0,0.06)"}}>
+              {editStageId===stage.id
+                ? <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                    <input autoFocus defaultValue={stage.label}
+                      onBlur={e=>{setStageLabels(p=>({...p,[stage.id]:e.target.value||stage.label}));setEditStageId(null);}}
+                      onKeyDown={e=>{if(e.key==="Enter"){setStageLabels(p=>({...p,[stage.id]:(e.target as HTMLInputElement).value||stage.label}));setEditStageId(null);}if(e.key==="Escape")setEditStageId(null);}}
+                      style={{flex:1,fontSize:13,fontWeight:600,padding:"4px 8px",border:"1.5px solid "+stage.color,borderRadius:8,outline:"none",background:"#fff"}}/>
+                  </div>
+                : <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:7}}>
+                      <div style={{width:9,height:9,borderRadius:"50%",background:stage.color,flexShrink:0}}/>
+                      <span style={{fontSize:13,fontWeight:600,color:"#1C1C1E"}}>{stage.label}</span>
+                    </div>
+                    <div style={{display:"flex",alignItems:"center",gap:6}}>
+                      <span style={{fontSize:12,fontWeight:600,color:"#fff",background:stage.color,borderRadius:20,padding:"2px 8px",minWidth:22,textAlign:"center"}}>{stageLeads.length}</span>
+                      <button onClick={()=>setEditStageId(stage.id)} title="Переименовать" style={{width:24,height:24,border:"none",background:"transparent",cursor:"pointer",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",color:"#8E8E93",fontSize:13}}>✎</button>
+                    </div>
+                  </div>
+              }
             </div>
-            {stageleads.map((l:any)=><div key={l.id} draggable onDragStart={()=>onDragStart(l.id)} style={{background:C.w,borderRadius:10,padding:"12px 14px",marginBottom:8,boxShadow:C.sh,cursor:"grab",borderLeft:"3px solid "+stage.color}}>
-              <div style={{fontWeight:600,fontSize:13,marginBottom:4}}>{l.name}</div>
-              {l.phone&&<div style={{fontSize:11,color:C.t2}}>{l.phone}</div>}
-              {l.email&&<div style={{fontSize:11,color:C.t2}}>{l.email}</div>}
-              {l.contact&&<div style={{fontSize:11,color:C.t2}}>{l.contact}</div>}
-              {l.deal&&<div style={{fontSize:12,fontWeight:600,color:C.g,marginTop:4}}>{fmt$(l.deal)} ₽</div>}
-            </div>)}
+            {/* Leads */}
+            <div style={{padding:"10px 10px 0"}}>
+              {stageLeads.length===0&&!isOver&&
+                <div style={{padding:"20px 0",textAlign:"center",color:"#C7C7CC",fontSize:12}}>Нет лидов</div>}
+              {stageLeads.map(l=>leadCard(l,stage.color))}
+              {isOver&&dragId&&<div style={{height:56,borderRadius:12,border:"2px dashed "+stage.color,background:stage.color+"0A",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:12,color:stage.color,fontWeight:500}}>Перетащи сюда</span></div>}
+            </div>
           </div>;
         })}
-        <div onDragOver={e=>e.preventDefault()} onDrop={()=>onDrop("closed")} style={{background:C.bg,borderRadius:14,padding:14,minHeight:200}}>
-          <div style={{marginBottom:12}}><span style={{fontSize:13,fontWeight:600,color:C.g}}>Закрыт / Отказ</span></div>
-          {closedRejected.map((l:any)=><div key={l.id} draggable onDragStart={()=>onDragStart(l.id)} style={{background:C.w,borderRadius:10,padding:"12px 14px",marginBottom:8,boxShadow:C.sh,cursor:"grab",borderLeft:"3px solid "+(l.status==="closed"?C.g:C.r)}}>
-            <div style={{fontWeight:600,fontSize:13}}>{l.name}</div>
-            <Tag label={l.status==="closed"?"Закрыт":"Отказ"} color={l.status==="closed"?C.g:C.r}/>
-            {l.deal&&<div style={{fontSize:12,fontWeight:600,color:C.g,marginTop:4}}>{fmt$(l.deal)} ₽</div>}
+      </div>
+    </>}
+
+    {/* LIST TAB */}
+    {tab==="list"&&<>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:16,gap:12}}>
+        <input placeholder="Поиск..." value={search} onChange={e=>setSearch(e.target.value)}
+          style={{...iS,width:260,borderRadius:10,background:"#F2F2F7",border:"none",fontSize:13}}/>
+        <button onClick={()=>setShow(!show)} style={{padding:"9px 18px",background:"#007AFF",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer"}}>+ Лид</button>
+      </div>
+      {show&&<div style={{background:"#fff",borderRadius:16,padding:20,marginBottom:20,boxShadow:"0 2px 12px rgba(0,0,0,0.08)"}}>
+        <div style={{fontSize:15,fontWeight:600,marginBottom:14,color:"#1C1C1E"}}>Новый лид</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
+          {([["name","Имя *"],["contact","Контакт"],["phone","Телефон"],["email","Email"],["note","Заметка"],["deal","Сделка, ₽"]] as const).map(([k,l])=><div key={k}>
+            <label style={{fontSize:11,color:"#8E8E93",display:"block",marginBottom:5,fontWeight:500}}>{l}</label>
+            <input type={k==="deal"?"number":"text"} value={(f as any)[k]} onChange={e=>sF({...f,[k]:e.target.value})}
+              style={{width:"100%",padding:"10px 12px",border:"0.5px solid #C6C6C8",borderRadius:10,fontSize:13,outline:"none",background:"#FAFAFA",boxSizing:"border-box",fontFamily:"'Montserrat',sans-serif"}}/>
           </div>)}
+          <div><label style={{fontSize:11,color:"#8E8E93",display:"block",marginBottom:5,fontWeight:500}}>Этап</label>
+            <select value={f.status} onChange={e=>sF({...f,status:e.target.value})} style={{width:"100%",padding:"10px 12px",border:"0.5px solid #C6C6C8",borderRadius:10,fontSize:13,outline:"none",background:"#FAFAFA",boxSizing:"border-box"}}>
+              {stages.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}
+            </select>
+          </div>
         </div>
+        <div style={{display:"flex",gap:8,marginTop:14}}>
+          <button onClick={sub} style={{padding:"10px 20px",background:"#007AFF",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer"}}>Добавить</button>
+          <button onClick={()=>setShow(false)} style={{padding:"10px 16px",background:"#F2F2F7",color:"#8E8E93",border:"none",borderRadius:10,fontSize:13,cursor:"pointer"}}>Отмена</button>
+        </div>
+      </div>}
+      <div style={{background:"#fff",borderRadius:16,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.07)"}}>
+        {found.length===0
+          ? <div style={{padding:"48px",textAlign:"center",color:"#8E8E93",fontSize:14}}>Нет лидов</div>
+          : found.map((l:any,i:number)=><div key={l.id} style={{display:"flex",alignItems:"center",gap:14,padding:"14px 18px",borderBottom:i<found.length-1?"0.5px solid #E5E5EA":"none"}}>
+              <div style={{width:36,height:36,borderRadius:"50%",background:stCol2(l.status)+"22",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <span style={{fontSize:15,fontWeight:700,color:stCol2(l.status)}}>{l.name[0]?.toUpperCase()}</span>
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:14,fontWeight:600,color:"#1C1C1E"}}>{l.name}</div>
+                <div style={{fontSize:12,color:"#8E8E93",marginTop:2}}>{l.phone||l.email||l.contact||l.source}</div>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                {l.deal&&<span style={{fontSize:12,fontWeight:600,color:"#34C759"}}>{fmt$(l.deal)} ₽</span>}
+                <span style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:20,background:stCol2(l.status)+"18",color:stCol2(l.status)}}>{stLbl2(l.status)}</span>
+                <button onClick={()=>remove(l.id)} style={{width:26,height:26,borderRadius:8,border:"none",background:"#FF3B3012",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#FF3B30" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+              </div>
+            </div>)
+        }
       </div>
     </>}
   </>;
 }
+
 
 /* ============ CONTENT ============ */
 function ContentPage({userId}:{userId:string}){
