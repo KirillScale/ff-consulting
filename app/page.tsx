@@ -1537,6 +1537,11 @@ function StoriesCarouselTab({userId}:{userId:string}){
     await items.add({carousel_id:carouselId,image_url:"",view_count:0,order_index:existing.length});
   };
 
+  const saveTitle=async(id:string)=>{
+    if(editTitleVal.trim())await carousels.update(id,{title:editTitleVal.trim()});
+    setEditTitleId(null);
+  };
+
   const[uploading,setUploading]=useState<string|null>(null);
 
   const uploadImage=async(slotId:string,file:File)=>{
