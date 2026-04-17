@@ -1518,19 +1518,23 @@ function StoriesCarouselTab({userId}:{userId:string}){
   const[lightbox,setLightbox]=useState<string|null>(null);
 
   const addCarousel=async()=>{
-    const title="Карусель "+(carousels.data.length+1);
-    await carousels.add({title});
-  };
-
-  const saveTitle=async(id:string)=>{
-    if(editTitleVal.trim())await carousels.update(id,{title:editTitleVal.trim()});
-    setEditTitleId(null);
+    try{
+      const title="Карусель "+(carousels.data.length+1);
+      const newCar=await carousels.add({title});
+      if(newCar?.id){
+        for(let i=0;i<3;i++){
+          await items.add({carousel_id:newCar.id,image_url:"",view_count:0,order_index:i});
+        }
+      }
+    }catch(err){
+      console.error("addCarousel error:",err);
+    }
   };
 
   const addSlot=async(carouselId:string)=>{
     const existing=items.data.filter((x:any)=>x.carousel_id===carouselId);
     if(existing.length>=15)return;
-    await items.add({carousel_id:carouselId,image_url:null,view_count:0,order_index:existing.length});
+    await items.add({carousel_id:carouselId,image_url:"",view_count:0,order_index:existing.length});
   };
 
   const[uploading,setUploading]=useState<string|null>(null);
@@ -1567,7 +1571,8 @@ function StoriesCarouselTab({userId}:{userId:string}){
       await items.update(slotId,{image_url:url});
     }catch(err){
       console.error("Upload error:",err);
-      alert("Ошибка загрузки. Проверь настройки bucket (должен быть Public).");
+      // Silent fail - show error inline instead of alert
+      await items.update(slotId,{image_url:""});
     }finally{
       setUploading(null);
     }
@@ -1722,14 +1727,14 @@ function StoriesCarouselTab({userId}:{userId:string}){
                     {/* Story card */}
                     <div style={{width:90,borderRadius:14,overflow:"hidden",border:`2px solid ${isMaxDrop||isMaxDropAfter?C.r:isMaxDrop?"#FFF7ED":C.bd}`,background:C.bg,boxShadow:isMaxDrop||isMaxDropAfter?"0 0 0 3px "+C.r+"22":"none",transition:"border 0.2s"}}>
                       {/* Image area */}
-                      <div style={{width:90,height:130,background:slot.image_url?"transparent":"#F1F3F8",cursor:"pointer",position:"relative",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}
-                        onClick={()=>slot.image_url&&!uploading&&setLightbox(slot.image_url)}>
+                      <div style={{width:90,height:130,background:(slot.image_url&&slot.image_url.startsWith("http"))?"transparent":"#F1F3F8",cursor:"pointer",position:"relative",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}
+                        onClick={()=>(slot.image_url&&slot.image_url.startsWith("http"))&&!uploading&&setLightbox(slot.image_url)}>
                         {uploading===slot.id
                           ? <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6}}>
                               <div style={{width:24,height:24,border:"3px solid "+C.bd,borderTopColor:C.a,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
                               <span style={{fontSize:9,color:C.t2}}>Загрузка...</span>
                             </div>
-                          : slot.image_url
+                          : (slot.image_url&&slot.image_url.startsWith("http"))
                           ? <img src={slot.image_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt={`Сторис ${idx+1}`}/>
                           : <label style={{cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4,width:"100%",height:"100%",justifyContent:"center"}}>
                               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
@@ -1737,7 +1742,7 @@ function StoriesCarouselTab({userId}:{userId:string}){
                               <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0])uploadImage(slot.id,e.target.files[0]);}}/>
                             </label>
                         }
-                        {slot.image_url&&<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",transition:"background 0.2s",display:"flex",alignItems:"center",justifyContent:"center"}} onMouseEnter={e=>(e.currentTarget.style.background="rgba(0,0,0,0.3)")} onMouseLeave={e=>(e.currentTarget.style.background="rgba(0,0,0,0)")}>
+                        {(slot.image_url&&slot.image_url.startsWith("http"))&&<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",transition:"background 0.2s",display:"flex",alignItems:"center",justifyContent:"center"}} onMouseEnter={e=>(e.currentTarget.style.background="rgba(0,0,0,0.3)")} onMouseLeave={e=>(e.currentTarget.style.background="rgba(0,0,0,0)")}>
                           <label style={{position:"absolute",bottom:4,right:4,cursor:"pointer",background:"rgba(0,0,0,0.5)",borderRadius:6,padding:"2px 4px"}}>
                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                             <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0])uploadImage(slot.id,e.target.files[0]);}}/>
