@@ -617,9 +617,9 @@ function YearMap({userId,goals,goalUpdate,goalAdd}:{userId:string,goals:any,goal
           {YEARS.map(y=><button key={y} onClick={()=>{setViewYear(y);setStartMonth(0);}} style={{padding:"6px 14px",border:"none",borderRadius:8,background:viewYear===y&&period===12?C.a:"transparent",color:viewYear===y&&period===12?"#fff":C.t2,fontSize:13,fontWeight:viewYear===y&&period===12?700:400,cursor:"pointer"}}>{y}</button>)}
         </div>
         {/* Period selector */}
-        <div style={{display:"flex",background:"#F2F2F7",borderRadius:10,padding:3,gap:2}}>
-          {([1,"1 мес"],[3,"3 мес"],[6,"6 мес"],[12,"Год"]] as [number,string][]).map(([p,l])=><button key={p} onClick={()=>{setPeriod(p as any);if(p===12)setStartMonth(0);else setStartMonth(now.getMonth());}} style={{padding:"6px 14px",border:"none",borderRadius:8,background:period===p?C.a:"transparent",color:period===p?"#fff":C.t2,fontSize:13,fontWeight:period===p?700:400,cursor:"pointer"}}>{l}</button>)}
-        </div>
+        {(()=>{const PERIODS:Array<[number,string]>=[[1,"1 мес"],[3,"3 мес"],[6,"6 мес"],[12,"Год"]];return <div style={{display:"flex",background:"#F2F2F7",borderRadius:10,padding:3,gap:2}}>
+          {PERIODS.map(([p,l])=><button key={p} onClick={()=>{setPeriod(p as any);if(p===12)setStartMonth(0);else setStartMonth(now.getMonth());}} style={{padding:"6px 14px",border:"none",borderRadius:8,background:period===p?C.a:"transparent",color:period===p?"#fff":C.t2,fontSize:13,fontWeight:period===p?700:400,cursor:"pointer"}}>{l}</button>)}
+        </div>;})()}
         {/* Nav arrows (only for < 12 months) */}
         {period<12&&<div style={{display:"flex",gap:4}}>
           <button onClick={()=>shiftPeriod(-1)} style={{width:32,height:32,border:"1px solid "+C.bd,borderRadius:8,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg></button>
