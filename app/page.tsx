@@ -1547,37 +1547,33 @@ function StoriesCarouselTab({userId}:{userId:string}){
   const uploadImage=async(slotId:string,file:File)=>{
     setUploading(slotId);
     try{
-      // Compress image before upload using canvas
-      const compressed=await new Promise<Blob>((resolve)=>{
+      // Compress via canvas before upload (max 900px, quality 0.8)
+      const compressed=await new Promise<Blob>((resolve,reject)=>{
         const img=new Image();
-        const url=URL.createObjectURL(file);
+        const objUrl=URL.createObjectURL(file);
         img.onload=()=>{
-          const MAX=800;
+          const MAX=900;
           const scale=Math.min(1,MAX/Math.max(img.width,img.height));
+          const w=Math.round(img.width*scale);
+          const h=Math.round(img.height*scale);
           const canvas=document.createElement("canvas");
-          canvas.width=Math.round(img.width*scale);
-          canvas.height=Math.round(img.height*scale);
-          const ctx=canvas.getContext("2d")!;
-          ctx.drawImage(img,0,0,canvas.width,canvas.height);
-          canvas.toBlob(b=>resolve(b!),file.type==="image/png"?"image/png":"image/jpeg",0.82);
-          URL.revokeObjectURL(url);
+          canvas.width=w;canvas.height=h;
+          canvas.getContext("2d")!.drawImage(img,0,0,w,h);
+          URL.revokeObjectURL(objUrl);
+          canvas.toBlob(b=>b?resolve(b):reject(new Error("Canvas blob failed")),"image/jpeg",0.8);
         };
-        img.src=url;
+        img.onerror=reject;
+        img.src=objUrl;
       });
 
-      const ext=file.name.split(".").pop()||"jpg";
-      const path=`${userId}/${slotId}.${ext}`;
-      const{error}=await supabase.storage.from("stories").upload(path,compressed,{upsert:true,contentType:compressed.type});
-      if(error)throw error;
+      const path=`${userId}/${slotId}_${Date.now()}.jpg`;
+      const{error:upErr}=await supabase.storage.from("stories").upload(path,compressed,{upsert:true,contentType:"image/jpeg"});
+      if(upErr)throw upErr;
 
       const{data}=supabase.storage.from("stories").getPublicUrl(path);
-      // Add cache-busting so re-upload shows immediately
-      const url=data.publicUrl+"?t="+Date.now();
-      await items.update(slotId,{image_url:url});
-    }catch(err){
-      console.error("Upload error:",err);
-      // Silent fail - show error inline instead of alert
-      await items.update(slotId,{image_url:""});
+      await items.update(slotId,{image_url:data.publicUrl});
+    }catch(err:any){
+      console.error("Upload failed:",err?.message||err);
     }finally{
       setUploading(null);
     }
@@ -1723,16 +1719,16 @@ function StoriesCarouselTab({userId}:{userId:string}){
                     {isMaxDrop&&<div style={{position:"absolute",right:-18,top:30,zIndex:10,fontSize:16}}>🔴</div>}
 
                     {/* Bar chart above card */}
-                    <div style={{width:90,height:52,display:"flex",alignItems:"flex-end",justifyContent:"center",marginBottom:4}}>
-                      {slot.view_count>0&&<div style={{width:28,borderRadius:"4px 4px 0 0",background:isMaxDrop||isMaxDropAfter?C.r:C.a,opacity:0.85,height:barH,transition:"height 0.3s",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",paddingTop:2}}>
+                    <div style={{width:140,height:64,display:"flex",alignItems:"flex-end",justifyContent:"center",marginBottom:4}}>
+                      {slot.view_count>0&&<div style={{width:40,borderRadius:"4px 4px 0 0",background:isMaxDrop||isMaxDropAfter?C.r:C.a,opacity:0.85,height:barH,transition:"height 0.3s",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",paddingTop:2}}>
                         {barH>18&&<span style={{fontSize:8,color:"#fff",fontWeight:700,transform:"rotate(-90deg)",whiteSpace:"nowrap"}}>{pct}%</span>}
                       </div>}
                     </div>
 
                     {/* Story card */}
-                    <div style={{width:90,borderRadius:14,overflow:"hidden",border:`2px solid ${isMaxDrop||isMaxDropAfter?C.r:isMaxDrop?"#FFF7ED":C.bd}`,background:C.bg,boxShadow:isMaxDrop||isMaxDropAfter?"0 0 0 3px "+C.r+"22":"none",transition:"border 0.2s"}}>
+                    <div style={{width:140,borderRadius:16,overflow:"hidden",border:`2px solid ${isMaxDrop||isMaxDropAfter?C.r:isMaxDrop?"#FFF7ED":C.bd}`,background:C.bg,boxShadow:isMaxDrop||isMaxDropAfter?"0 0 0 3px "+C.r+"22":"none",transition:"border 0.2s"}}>
                       {/* Image area */}
-                      <div style={{width:90,height:130,background:(slot.image_url&&slot.image_url.startsWith("http"))?"transparent":"#F1F3F8",cursor:"pointer",position:"relative",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}
+                      <div style={{width:140,height:200,background:(slot.image_url&&slot.image_url.startsWith("http"))?"transparent":"#F1F3F8",cursor:"pointer",position:"relative",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}
                         onClick={()=>(slot.image_url&&slot.image_url.startsWith("http"))&&!uploading&&setLightbox(slot.image_url)}>
                         {uploading===slot.id
                           ? <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6}}>
@@ -1741,9 +1737,9 @@ function StoriesCarouselTab({userId}:{userId:string}){
                             </div>
                           : (slot.image_url&&slot.image_url.startsWith("http"))
                           ? <img src={slot.image_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt={`Сторис ${idx+1}`}/>
-                          : <label style={{cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4,width:"100%",height:"100%",justifyContent:"center"}}>
-                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                              <span style={{fontSize:9,color:C.t2,textAlign:"center"}}>Загрузить</span>
+                          : <label style={{cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6,width:"100%",height:"100%",justifyContent:"center"}}>
+                              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                              <span style={{fontSize:11,color:C.t2,textAlign:"center",fontWeight:500}}>Загрузить фото</span>
                               <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0])uploadImage(slot.id,e.target.files[0]);}}/>
                             </label>
                         }
@@ -1755,11 +1751,11 @@ function StoriesCarouselTab({userId}:{userId:string}){
                         </div>}
                       </div>
                       {/* Number + views input */}
-                      <div style={{padding:"6px 6px 8px",background:C.w}}>
-                        <div style={{fontSize:10,fontWeight:700,color:C.t2,textAlign:"center",marginBottom:5}}>#{idx+1}</div>
+                      <div style={{padding:"8px 8px 10px",background:C.w}}>
+                        <div style={{fontSize:11,fontWeight:700,color:C.t2,textAlign:"center",marginBottom:6}}>Сторис #{idx+1}</div>
                         <input type="number" value={slot.view_count||""} onChange={e=>updateViews(slot.id,e.target.value)}
-                          placeholder="👁 просм."
-                          style={{width:"100%",padding:"5px 6px",border:"1px solid "+C.bd,borderRadius:7,fontSize:11,textAlign:"center",outline:"none",background:C.ib,boxSizing:"border-box",fontFamily:"'Montserrat',sans-serif",color:C.t1}}/>
+                          placeholder="👁 просмотры"
+                          style={{width:"100%",padding:"7px 8px",border:"1px solid "+C.bd,borderRadius:8,fontSize:12,textAlign:"center",outline:"none",background:C.ib,boxSizing:"border-box",fontFamily:"'Montserrat',sans-serif",color:C.t1}}/>
                       </div>
                     </div>
 
@@ -1772,8 +1768,8 @@ function StoriesCarouselTab({userId}:{userId:string}){
 
                 {/* Add story button */}
                 {slots.length<15&&<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:0}}>
-                  <div style={{width:90,height:52+6+130,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                    <button onClick={()=>addSlot(car.id)} style={{width:52,height:52,borderRadius:14,border:"2px dashed "+C.bd,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.t2,fontSize:22,transition:"border-color 0.15s,color 0.15s"}}
+                  <div style={{width:140,height:64+6+200,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    <button onClick={()=>addSlot(car.id)} style={{width:60,height:60,borderRadius:16,border:"2px dashed "+C.bd,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.t2,fontSize:22,transition:"border-color 0.15s,color 0.15s"}}
                       onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.a;(e.currentTarget as HTMLElement).style.color=C.a;}}
                       onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.color=C.t2;}}>
                       +
