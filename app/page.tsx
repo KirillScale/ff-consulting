@@ -508,107 +508,332 @@ function TaskModal({task,taskType,userId,onClose}:{task:any,taskType:"kanban"|"g
   </div>;
 }
 
-// Year map (Gantt-style)
+// Year map (Gantt-style) — full rewrite
 function YearMap({userId,goals,goalUpdate,goalAdd}:{userId:string,goals:any,goalUpdate:any,goalAdd:any}){
   const year=new Date().getFullYear();
   const MONTHS_RU=["Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"];
   const[showForm,setShowForm]=useState(false);
-  const[gf,sGf]=useState({name:"",color:C.a,start_date:"",end_date:""});
+  const[gf,sGf]=useState({name:"",description:"",color:C.a,start_date:"",end_date:""});
+  const[editGoal,setEditGoal]=useState<any|null>(null);
+  const[openGoalId,setOpenGoalId]=useState<string|null>(null);
 
   const addGoal=async()=>{
     if(!gf.name.trim()||!gf.start_date||!gf.end_date)return;
-    await goalAdd({name:gf.name,color:gf.color,start_date:gf.start_date,end_date:gf.end_date,deadline:gf.end_date});
-    sGf({name:"",color:C.a,start_date:"",end_date:""});
+    await goalAdd({name:gf.name,description:gf.description,color:gf.color,start_date:gf.start_date,end_date:gf.end_date,deadline:gf.end_date});
+    sGf({name:"",description:"",color:C.a,start_date:"",end_date:""});
     setShowForm(false);
   };
 
-  const monthStart=(m:number)=>new Date(year,m,1).getTime();
-  const yearStart=monthStart(0);
-  const yearEnd=new Date(year,11,31).getTime();
-  const yearLen=yearEnd-yearStart;
-
-  const goalToBar=(g:any)=>{
-    if(!g.start_date||!g.end_date)return null;
-    const s=new Date(g.start_date).getTime();
-    const e=new Date(g.end_date).getTime();
-    if(e<yearStart||s>yearEnd)return null;
-    const left=Math.max(0,(s-yearStart)/yearLen*100);
-    const right=Math.min(100,(e-yearStart)/yearLen*100);
-    const width=Math.max(right-left,1);
-    return{left,width};
+  const saveEdit=async()=>{
+    if(!editGoal||!editGoal.name.trim())return;
+    await goalUpdate(editGoal.id,{name:editGoal.name,description:editGoal.description,color:editGoal.color,start_date:editGoal.start_date,end_date:editGoal.end_date,deadline:editGoal.end_date});
+    setEditGoal(null);
   };
 
-  const todayPct=(new Date().getTime()-yearStart)/yearLen*100;
+  // Per-cell width in % = 100/12
+  const CW=100/12;
+  const now=new Date();
+  const todayCol=(now.getMonth()*CW)+(now.getDate()/new Date(year,now.getMonth()+1,0).getDate()*CW);
 
-  const goalsWithDates=goals.data.filter((g:any)=>g.start_date&&g.end_date);
-  const goalsWithout=goals.data.filter((g:any)=>!g.start_date||!g.end_date);
+  // Compute bar position in grid units (0..12)
+  const goalToBar=(g:any)=>{
+    if(!g.start_date||!g.end_date)return null;
+    const s=new Date(g.start_date);
+    const e=new Date(g.end_date);
+    const left=(s.getMonth()+s.getDate()/31)*CW;
+    const right=(e.getMonth()+1+(e.getDate()/new Date(year,e.getMonth()+1,0).getDate()-1))*CW;
+    return{left:Math.max(0,Math.min(left,100)),width:Math.max(CW*0.4,Math.min(right,100)-Math.max(0,left))};
+  };
+
+  const COLORS=[C.a,"#8B5CF6",C.g,C.r,C.y,C.pk,"#06B6D4","#F97316"];
+
+  const GoalForm=({value,onChange,onSave,onCancel,saveLabel}:{value:any,onChange:(v:any)=>void,onSave:()=>void,onCancel:()=>void,saveLabel:string})=><Card style={{marginBottom:16,padding:20}}>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+      <div style={{gridColumn:"span 2"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Название *</label><input value={value.name} onChange={e=>onChange({...value,name:e.target.value})} style={iS} placeholder="Запуск продукта..."/></div>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Начало *</label><input type="date" value={value.start_date} onChange={e=>onChange({...value,start_date:e.target.value})} style={iS}/></div>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Конец *</label><input type="date" value={value.end_date} onChange={e=>onChange({...value,end_date:e.target.value})} style={iS}/></div>
+      <div style={{gridColumn:"span 2"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Описание</label><textarea value={value.description||""} onChange={e=>onChange({...value,description:e.target.value})} rows={2} style={{...iS,resize:"none"}}/></div>
+      <div style={{gridColumn:"span 2"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Цвет</label><div style={{display:"flex",gap:6,marginTop:2}}>{COLORS.map(c=><button key={c} onClick={()=>onChange({...value,color:c})} style={{width:28,height:28,borderRadius:8,background:c,border:value.color===c?"3px solid #111":"3px solid transparent",cursor:"pointer"}}/>)}</div></div>
+    </div>
+    <div style={{display:"flex",gap:10}}><Btn onClick={onSave}>{saveLabel}</Btn><Btn primary={false} onClick={onCancel}>Отмена</Btn></div>
+  </Card>;
 
   return <>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-      <div style={{fontSize:18,fontWeight:700}}>Карта года — {year}</div>
-      <Btn onClick={()=>setShowForm(!showForm)}>+ Глобальная цель</Btn>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+      <div style={{fontSize:20,fontWeight:700}}>Карта года — {year}</div>
+      <Btn onClick={()=>{setShowForm(!showForm);setEditGoal(null);}}>+ Глобальная цель</Btn>
     </div>
 
-    {showForm&&<Card style={{marginBottom:20}}>
-      <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr",gap:12,alignItems:"end"}}>
-        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Название цели</label><input value={gf.name} onChange={e=>sGf({...gf,name:e.target.value})} style={iS} placeholder="Запуск продукта..."/></div>
-        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Начало</label><input type="date" value={gf.start_date} onChange={e=>sGf({...gf,start_date:e.target.value})} style={iS}/></div>
-        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Конец</label><input type="date" value={gf.end_date} onChange={e=>sGf({...gf,end_date:e.target.value})} style={iS}/></div>
-        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Цвет</label><div style={{display:"flex",gap:5,marginTop:4}}>{[C.a,"#8B5CF6",C.g,C.r,C.y,C.pk].map(c=><button key={c} onClick={()=>sGf({...gf,color:c})} style={{width:26,height:26,borderRadius:7,background:c,border:gf.color===c?"3px solid "+C.t1:"3px solid transparent",cursor:"pointer"}}/>)}</div></div>
-      </div>
-      <div style={{display:"flex",gap:10,marginTop:14}}><Btn onClick={addGoal}>Создать</Btn><Btn primary={false} onClick={()=>setShowForm(false)}>Отмена</Btn></div>
-    </Card>}
+    {showForm&&!editGoal&&<GoalForm value={gf} onChange={sGf} onSave={addGoal} onCancel={()=>setShowForm(false)} saveLabel="Создать"/>}
+    {editGoal&&<GoalForm value={editGoal} onChange={setEditGoal} onSave={saveEdit} onCancel={()=>setEditGoal(null)} saveLabel="Сохранить"/>}
 
-    <Card style={{padding:"20px 24px",overflowX:"auto"}}>
-      <div style={{minWidth:700}}>
-        {/* Month headers */}
-        <div style={{display:"grid",gridTemplateColumns:"160px 1fr",marginBottom:8}}>
-          <div/>
-          <div style={{display:"flex"}}>
-            {MONTHS_RU.map((m,i)=><div key={i} style={{flex:1,fontSize:11,fontWeight:600,color:C.t2,textAlign:"center"}}>{m}</div>)}
-          </div>
+    {/* Timeline */}
+    <Card style={{padding:0,overflow:"hidden",marginBottom:24}}>
+      {/* Month header row */}
+      <div style={{display:"flex",borderBottom:"2px solid "+C.bd,background:"#FAFBFC"}}>
+        <div style={{width:220,flexShrink:0,padding:"12px 16px",fontSize:12,fontWeight:600,color:C.t2,borderRight:"1px solid "+C.bd}}>Цель</div>
+        <div style={{flex:1,display:"flex",position:"relative"}}>
+          {MONTHS_RU.map((m,i)=><div key={i} style={{flex:1,textAlign:"center",padding:"12px 0",fontSize:11,fontWeight:700,color:C.t2,borderRight:i<11?"1px solid "+C.bd:"none"}}>{m}</div>)}
         </div>
+      </div>
 
-        {/* Grid + bars */}
-        <div style={{display:"grid",gridTemplateColumns:"160px 1fr",gap:0}}>
-          <div/>
-          <div style={{position:"relative",height:goalsWithDates.length*44+8}}>
-            {/* Month grid lines */}
-            {MONTHS_RU.map((_,i)=><div key={i} style={{position:"absolute",left:`${i/12*100}%`,top:0,bottom:0,width:"1px",background:C.bd,opacity:0.6}}/>)}
-            {/* Today line */}
-            {todayPct>=0&&todayPct<=100&&<div style={{position:"absolute",left:`${todayPct}%`,top:-4,bottom:-4,width:2,background:C.r,zIndex:2,borderRadius:1}}>
-              <div style={{position:"absolute",top:-16,left:"50%",transform:"translateX(-50%)",fontSize:10,color:C.r,fontWeight:700,whiteSpace:"nowrap"}}>Сегодня</div>
-            </div>}
-            {/* Goal bars */}
-            {goalsWithDates.map((g:any,i:number)=>{
-              const bar=goalToBar(g);
-              if(!bar)return null;
-              return <div key={g.id} style={{position:"absolute",top:i*44+4,left:`${bar.left}%`,width:`${bar.width}%`,height:36,background:g.color+"22",border:`2px solid ${g.color}`,borderRadius:8,display:"flex",alignItems:"center",paddingLeft:8,overflow:"hidden",cursor:"default",boxSizing:"border-box"}}>
-                <span style={{fontSize:12,fontWeight:600,color:g.color,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{g.name}</span>
+      {/* Goal rows */}
+      {goals.data.length===0&&<div style={{padding:"60px 0",textAlign:"center",color:C.t2,fontSize:14}}>Добавь первую глобальную цель</div>}
+      {goals.data.map((g:any,idx:number)=>{
+        const bar=goalToBar(g);
+        const isOpen=openGoalId===g.id;
+        return <div key={g.id} style={{borderBottom:idx<goals.data.length-1?"1px solid "+C.bd:"none"}}>
+          {/* Row */}
+          <div style={{display:"flex",minHeight:52,alignItems:"stretch"}}>
+            {/* Label cell */}
+            <div style={{width:220,flexShrink:0,display:"flex",alignItems:"center",gap:8,padding:"10px 14px",borderRight:"1px solid "+C.bd,background:isOpen?g.color+"06":"transparent",cursor:"pointer"}} onClick={()=>setOpenGoalId(isOpen?null:g.id)}>
+              <div style={{width:10,height:10,borderRadius:3,background:g.color,flexShrink:0}}/>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:13,fontWeight:600,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{g.name}</div>
+                {g.start_date&&g.end_date&&<div style={{fontSize:10,color:C.t2,marginTop:1}}>{g.start_date.substring(5)} - {g.end_date.substring(5)}</div>}
+              </div>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><polyline points={isOpen?"18 15 12 9 6 15":"6 9 12 15 18 9"}/></svg>
+            </div>
+            {/* Timeline cell */}
+            <div style={{flex:1,position:"relative",background:idx%2===0?"transparent":"#FAFBFC"}}>
+              {/* Grid lines */}
+              {MONTHS_RU.map((_,i)=><div key={i} style={{position:"absolute",left:`${i*CW}%`,top:0,bottom:0,width:1,background:C.bd,opacity:0.5}}/>)}
+              {/* Today line */}
+              {todayCol>=0&&todayCol<=100&&<div style={{position:"absolute",left:`${todayCol}%`,top:0,bottom:0,width:2,background:"#EF4444",zIndex:3}}/>}
+              {/* Bar */}
+              {bar&&<div style={{position:"absolute",top:"50%",transform:"translateY(-50%)",left:`${bar.left}%`,width:`${bar.width}%`,height:28,background:g.color,borderRadius:6,display:"flex",alignItems:"center",paddingLeft:8,boxSizing:"border-box",zIndex:2,boxShadow:`0 2px 6px ${g.color}44`,minWidth:8}}>
+                <span style={{fontSize:11,fontWeight:700,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",textShadow:"0 1px 2px rgba(0,0,0,0.3)"}}>{g.name}</span>
+              </div>}
+              {!bar&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",paddingLeft:12}}><span style={{fontSize:11,color:C.t2,fontStyle:"italic"}}>Даты не заданы</span></div>}
+            </div>
+          </div>
+
+          {/* Expanded detail */}
+          {isOpen&&<div style={{borderTop:"1px solid "+C.bd,padding:"16px 20px",background:g.color+"04"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:15,fontWeight:700,color:C.t1,marginBottom:g.description?6:0}}>{g.name}</div>
+                {g.description&&<div style={{fontSize:13,color:C.t2,lineHeight:1.5}}>{g.description}</div>}
+              </div>
+              <div style={{display:"flex",gap:8,marginLeft:16}}>
+                <button onClick={()=>{setEditGoal({...g});setShowForm(false);setOpenGoalId(null);}} style={{padding:"7px 14px",fontSize:12,fontWeight:600,background:C.a+"14",color:C.a,border:"1px solid "+C.a+"33",borderRadius:8,cursor:"pointer"}}>Редактировать</button>
+                <button onClick={()=>goals.remove(g.id)} style={{padding:"7px 14px",fontSize:12,fontWeight:600,background:C.r+"12",color:C.r,border:"1px solid "+C.r+"33",borderRadius:8,cursor:"pointer"}}>Удалить</button>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:16,fontSize:12,color:C.t2}}>
+              {g.start_date&&<span>Начало: <b style={{color:C.t1}}>{g.start_date}</b></span>}
+              {g.end_date&&<span>Конец: <b style={{color:C.t1}}>{g.end_date}</b></span>}
+            </div>
+          </div>}
+        </div>;
+      })}
+
+      {/* Today label at bottom */}
+      {goals.data.length>0&&<div style={{display:"flex",borderTop:"1px solid "+C.bd}}>
+        <div style={{width:220,flexShrink:0}}/>
+        <div style={{flex:1,position:"relative",height:20}}>
+          {todayCol>=0&&todayCol<=100&&<div style={{position:"absolute",left:`${todayCol}%`,transform:"translateX(-50%)",top:2,fontSize:9,fontWeight:700,color:"#EF4444",whiteSpace:"nowrap"}}>▲ Сегодня</div>}
+        </div>
+      </div>}
+    </Card>
+  </>;
+}
+
+/* ============ GOALS BLOCK ============ */
+function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOver,onGtDragStart,onGtDragOver,onGtDrop,setActiveModal,TYPES}:any){
+  const[openGoal,setOpenGoal]=useState<string|null>(null);
+  const[showGTF,setShowGTF]=useState<string|null>(null);
+  const[gtf,sGtf]=useState({text:"",mins:30,type:"biz",date:""});
+  const[tfErr,setTfErr]=useState("");
+  const[showNewGoal,setShowNewGoal]=useState(false);
+  const[newGoal,sNewGoal]=useState({name:"",description:"",color:C.a,start_date:"",end_date:""});
+  const[editGoalId,setEditGoalId]=useState<string|null>(null);
+  const[editGoalData,setEditGoalData]=useState<any>({});
+
+  const COLORS=[C.a,"#8B5CF6",C.g,C.r,C.y,C.pk,"#06B6D4","#F97316"];
+
+  // Ensure system pinned block exists
+  useEffect(()=>{
+    if(!userId||goals.loading)return;
+    const hasPinned=goals.data.some((g:any)=>g.is_system_pinned);
+    if(!hasPinned){
+      goals.add({name:"Масштабные цели",color:C.a,is_system_pinned:true});
+    }
+  },[userId,goals.loading,goals.data.length]);
+
+  const systemBlock=goals.data.find((g:any)=>g.is_system_pinned);
+  // Child goals = goals with parent_id = systemBlock.id, or regular non-pinned goals
+  const childGoals=useMemo(()=>{
+    if(!systemBlock)return goals.data.filter((g:any)=>!g.is_system_pinned);
+    return goals.data.filter((g:any)=>!g.is_system_pinned);
+  },[goals.data,systemBlock]);
+
+  const addChildGoal=async()=>{
+    if(!newGoal.name.trim())return;
+    await goals.add({
+      name:newGoal.name,description:newGoal.description,color:newGoal.color,
+      start_date:newGoal.start_date||null,end_date:newGoal.end_date||null,
+      deadline:newGoal.end_date||null,
+      parent_id:systemBlock?.id||null,
+      is_system_pinned:false,
+    });
+    sNewGoal({name:"",description:"",color:C.a,start_date:"",end_date:""});
+    setShowNewGoal(false);
+  };
+
+  const saveGoalEdit=async()=>{
+    if(!editGoalId||!editGoalData.name?.trim())return;
+    await goals.update(editGoalId,{
+      name:editGoalData.name,description:editGoalData.description,color:editGoalData.color,
+      start_date:editGoalData.start_date||null,end_date:editGoalData.end_date||null,
+      deadline:editGoalData.end_date||null,
+    });
+    setEditGoalId(null);
+  };
+
+  const addGoalTask=async(goalId:string)=>{
+    setTfErr("");
+    if(!gtf.text.trim()){setTfErr("Введи задачу");return;}
+    if(gtf.mins<30){setTfErr("Минимум 30 минут");return;}
+    const order=goalTasks.data.filter((t:any)=>t.goal_id===goalId).length;
+    await goalTasks.add({goal_id:goalId,text:gtf.text,mins:gtf.mins,type:gtf.type,date:gtf.date||null,done:false,status:"todo",sort_order:order});
+    sGtf({text:"",mins:30,type:"biz",date:""});setShowGTF(null);
+  };
+
+  const goalProgress=(gid:string)=>{
+    const tasks=goalTasks.data.filter((t:any)=>t.goal_id===gid&&t.type!=="delegate");
+    if(!tasks.length)return 0;
+    return Math.round(tasks.filter((t:any)=>t.status==="done"||t.done).length/tasks.length*100);
+  };
+  const prgColor=(p:number)=>p<30?C.r:p<50?"#F97316":p<70?C.y:p<90?"#84CC16":"#16A34A";
+
+  if(!systemBlock&&goals.loading) return <div style={{padding:40,textAlign:"center",color:C.t2}}>Загрузка...</div>;
+
+  return <div style={{background:C.w,borderRadius:20,boxShadow:"0 4px 24px rgba(0,0,0,0.07)",border:"1px solid "+C.bd,overflow:"hidden"}}>
+    {/* Header */}
+    <div style={{padding:"18px 24px",background:`linear-gradient(135deg,${C.dk},${C.da})`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <div style={{width:32,height:32,borderRadius:10,background:"rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </div>
+        <div>
+          <div style={{fontSize:16,fontWeight:700,color:"#fff"}}>Масштабные цели</div>
+          <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",marginTop:1}}>{childGoals.length} {childGoals.length===1?"цель":"целей"}</div>
+        </div>
+      </div>
+      <button onClick={()=>setShowNewGoal(!showNewGoal)} style={{padding:"8px 16px",background:"rgba(255,255,255,0.15)",color:"#fff",border:"1px solid rgba(255,255,255,0.25)",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer"}}>+ Цель</button>
+    </div>
+
+    {/* New goal form */}
+    {showNewGoal&&<div style={{padding:"20px 24px",borderBottom:"1px solid "+C.bd,background:"#FAFBFD"}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:12}}>
+        <div style={{gridColumn:"span 3"}}><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>Название цели *</label><input value={newGoal.name} onChange={e=>sNewGoal({...newGoal,name:e.target.value})} style={iS} placeholder="Запустить воронку..."/></div>
+        <div><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>Начало</label><input type="date" value={newGoal.start_date} onChange={e=>sNewGoal({...newGoal,start_date:e.target.value})} style={iS}/></div>
+        <div><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>Конец</label><input type="date" value={newGoal.end_date} onChange={e=>sNewGoal({...newGoal,end_date:e.target.value})} style={iS}/></div>
+        <div><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>Цвет</label><div style={{display:"flex",gap:5,marginTop:2}}>{COLORS.map((c:string)=><button key={c} onClick={()=>sNewGoal({...newGoal,color:c})} style={{width:26,height:26,borderRadius:7,background:c,border:newGoal.color===c?"3px solid #111":"3px solid transparent",cursor:"pointer"}}/>)}</div></div>
+        <div style={{gridColumn:"span 3"}}><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>Описание</label><textarea value={newGoal.description} onChange={e=>sNewGoal({...newGoal,description:e.target.value})} rows={2} style={{...iS,resize:"none"}}/></div>
+      </div>
+      <div style={{display:"flex",gap:8}}><Btn onClick={addChildGoal}>Создать цель</Btn><Btn primary={false} onClick={()=>setShowNewGoal(false)}>Отмена</Btn></div>
+    </div>}
+
+    {/* Goals list */}
+    <div style={{padding:"16px 24px",display:"flex",flexDirection:"column",gap:12}}>
+      {childGoals.length===0&&!showNewGoal&&<div style={{padding:"32px 0",textAlign:"center",color:C.t2,fontSize:14}}>Создай первую цель</div>}
+
+      {childGoals.map((g:any)=>{
+        const p=goalProgress(g.id);
+        const gTasks=[...goalTasks.data.filter((t:any)=>t.goal_id===g.id)].sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));
+        const isOpen=openGoal===g.id;
+        const isEditing=editGoalId===g.id;
+
+        return <div key={g.id} style={{background:C.bg,borderRadius:14,overflow:"hidden",border:"1px solid "+C.bd}}>
+          {/* Edit form */}
+          {isEditing&&<div style={{padding:"16px 18px",background:C.w,borderBottom:"1px solid "+C.bd}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:10}}>
+              <div style={{gridColumn:"span 3"}}><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4,fontWeight:600}}>Название</label><input value={editGoalData.name||""} onChange={e=>setEditGoalData({...editGoalData,name:e.target.value})} style={iS}/></div>
+              <div><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4,fontWeight:600}}>Начало</label><input type="date" value={editGoalData.start_date||""} onChange={e=>setEditGoalData({...editGoalData,start_date:e.target.value})} style={iS}/></div>
+              <div><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4,fontWeight:600}}>Конец</label><input type="date" value={editGoalData.end_date||""} onChange={e=>setEditGoalData({...editGoalData,end_date:e.target.value})} style={iS}/></div>
+              <div><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4,fontWeight:600}}>Цвет</label><div style={{display:"flex",gap:4,marginTop:2}}>{COLORS.map((c:string)=><button key={c} onClick={()=>setEditGoalData({...editGoalData,color:c})} style={{width:22,height:22,borderRadius:6,background:c,border:(editGoalData.color||C.a)===c?"3px solid #111":"3px solid transparent",cursor:"pointer"}}/>)}</div></div>
+              <div style={{gridColumn:"span 3"}}><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4,fontWeight:600}}>Описание</label><textarea value={editGoalData.description||""} onChange={e=>setEditGoalData({...editGoalData,description:e.target.value})} rows={2} style={{...iS,resize:"none"}}/></div>
+            </div>
+            <div style={{display:"flex",gap:8}}><Btn onClick={saveGoalEdit} style={{padding:"8px 16px",fontSize:13}}>Сохранить</Btn><Btn primary={false} onClick={()=>setEditGoalId(null)} style={{padding:"8px 14px",fontSize:13}}>Отмена</Btn></div>
+          </div>}
+
+          {/* Goal header */}
+          <div style={{padding:"14px 18px",display:"flex",alignItems:"center",gap:12,borderLeft:`4px solid ${g.color||C.a}`,background:C.w,cursor:"pointer"}} onClick={()=>setOpenGoal(isOpen?null:g.id)}>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+                <span style={{fontSize:14,fontWeight:700,color:C.t1}}>{g.name}</span>
+                {g.start_date&&g.end_date&&<span style={{fontSize:11,color:C.t2,background:C.bd,padding:"2px 8px",borderRadius:20}}>{g.start_date.substring(5)} — {g.end_date.substring(5)}</span>}
+              </div>
+              {g.description&&<div style={{fontSize:12,color:C.t2,marginBottom:6,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{g.description}</div>}
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <div style={{flex:1,height:6,background:C.bd,borderRadius:3,overflow:"hidden",maxWidth:200}}><div style={{width:p+"%",height:"100%",background:prgColor(p),borderRadius:3,transition:"width 0.3s"}}/></div>
+                <span style={{fontSize:11,color:C.t2,whiteSpace:"nowrap"}}>{gTasks.filter((t:any)=>t.status==="done"||t.done).length}/{gTasks.length} задач ({p}%)</span>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:6}} onClick={e=>e.stopPropagation()}>
+              <button onClick={()=>{setEditGoalId(g.id);setEditGoalData({...g});setOpenGoal(null);}} style={{padding:"6px 12px",fontSize:12,background:C.a+"12",color:C.a,border:"1px solid "+C.a+"22",borderRadius:8,cursor:"pointer",fontWeight:500}}>Изменить</button>
+              <button onClick={()=>goals.remove(g.id)} style={{padding:"6px 10px",fontSize:12,background:C.r+"10",color:C.r,border:"1px solid "+C.r+"22",borderRadius:8,cursor:"pointer"}}>×</button>
+              <button style={{width:28,height:28,border:"none",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points={isOpen?"18 15 12 9 6 15":"6 9 12 15 18 9"}/></svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Tasks list */}
+          {isOpen&&<div style={{padding:"10px 18px 14px"}}>
+            {gTasks.map((t:any)=>{
+              const isDone=t.status==="done"||t.done;
+              const isOver=dndOver===t.id;
+              return <div key={t.id}
+                draggable
+                onDragStart={()=>onGtDragStart(t.id)}
+                onDragOver={(e:React.DragEvent)=>onGtDragOver(t.id,e)}
+                onDrop={()=>onGtDrop(t.id,g.id)}
+                onDragEnd={()=>{setDndDrag(null);setDndOver(null);}}
+                style={{display:"flex",alignItems:"center",gap:8,padding:"9px 12px",borderRadius:10,
+                  background:isDone?"#F0FDF4":C.w,marginBottom:6,
+                  borderLeft:"3px solid "+(t.type==="biz"?C.a:t.type==="delegate"?C.t2:C.y),
+                  opacity:dndDrag===t.id?0.4:1,
+                  boxShadow:isOver?"0 0 0 2px "+C.a:"0 1px 3px rgba(0,0,0,0.05)",
+                  cursor:"grab",border:"1px solid "+C.bd,
+                  borderLeftWidth:3,
+                }}>
+                <span style={{fontSize:13,color:C.t2,cursor:"grab",userSelect:"none"}}>⠿</span>
+                <button onClick={()=>goalTasks.update(t.id,{status:nextStatus(t.status||"todo"),done:nextStatus(t.status||"todo")==="done"})} style={{width:18,height:18,minWidth:18,borderRadius:5,border:"2px solid "+(isDone?C.g:(t.status==="inprogress")?C.y:C.bd),background:isDone?C.g:(t.status==="inprogress")?C.y+"33":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{isDone&&<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}</button>
+                <div style={{flex:1,cursor:"pointer",minWidth:0}} onClick={()=>setActiveModal({task:t,type:"goal"})}>
+                  <div style={{fontSize:13,textDecoration:isDone?"line-through":"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.text}</div>
+                  <div style={{fontSize:10,color:C.t2,marginTop:1}}>{t.mins}м{t.date?` | ${t.date.substring(5)}`:""}</div>
+                </div>
+                <Tag label={tsLbl(t.status||"todo")} color={tsCol(t.status||"todo")}/>
+                <input type="date" value={t.date||""} onChange={e=>goalTasks.update(t.id,{date:e.target.value||null})} style={{width:110,padding:"3px 6px",border:"1px solid "+C.bd,borderRadius:6,fontSize:11,background:C.ib,flexShrink:0}}/>
+                <button onClick={()=>goalTasks.remove(t.id)} style={{border:"none",background:"transparent",cursor:"pointer",color:C.t2,fontSize:14,flexShrink:0}}>×</button>
               </div>;
             })}
-          </div>
 
-          {/* Labels */}
-          <div style={{display:"flex",flexDirection:"column",gap:0}}>
-            {goalsWithDates.map((g:any)=><div key={g.id} style={{height:44,display:"flex",alignItems:"center",gap:6,paddingRight:8}}>
-              <div style={{width:8,height:8,borderRadius:"50%",background:g.color,flexShrink:0}}/>
-              <span style={{fontSize:12,fontWeight:500,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{g.name}</span>
-            </div>)}
-          </div>
-        </div>
-
-        {goalsWithDates.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:C.t2,fontSize:14}}>Добавь первую глобальную цель с датами начала и окончания</div>}
-      </div>
-    </Card>
-
-    {goalsWithout.length>0&&<div style={{marginTop:16}}>
-      <div style={{fontSize:13,color:C.t2,marginBottom:8}}>Цели без дат (не отображаются на таймлайне)</div>
-      <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-        {goalsWithout.map((g:any)=><span key={g.id} style={{fontSize:12,padding:"4px 12px",borderRadius:20,background:g.color+"18",color:g.color,fontWeight:600}}>{g.name}</span>)}
-      </div>
-    </div>}
-  </>;
+            {/* Add task form */}
+            {showGTF===g.id
+              ? <div style={{marginTop:8,padding:12,background:C.w,borderRadius:10,border:"1px solid "+C.bd}}>
+                  <input placeholder="Задача" value={gtf.text} onChange={e=>sGtf({...gtf,text:e.target.value})} style={{...iS,padding:"8px 10px",fontSize:12,marginBottom:8}}/>
+                  <div style={{display:"flex",gap:6,marginBottom:6}}>
+                    <input type="number" value={gtf.mins} onChange={e=>sGtf({...gtf,mins:+e.target.value})} min={30} max={480} step={5} style={{...iS,width:75,padding:"6px 8px",fontSize:12}}/>
+                    <select value={gtf.type} onChange={e=>sGtf({...gtf,type:e.target.value})} style={{...iS,flex:1,padding:"6px 8px",fontSize:12}}>{TYPES.map((t:any)=><option key={t.id} value={t.id}>{t.label}</option>)}</select>
+                    <input type="date" value={gtf.date} onChange={e=>sGtf({...gtf,date:e.target.value})} style={{...iS,width:130,padding:"6px 8px",fontSize:12}}/>
+                  </div>
+                  {tfErr&&<div style={{fontSize:11,color:C.r,marginBottom:6}}>{tfErr}</div>}
+                  <div style={{display:"flex",gap:6}}>
+                    <button onClick={()=>addGoalTask(g.id)} style={{flex:1,padding:"7px",background:C.a,color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer"}}>Добавить</button>
+                    <button onClick={()=>setShowGTF(null)} style={{padding:"7px 12px",background:C.bg,border:"1px solid "+C.bd,borderRadius:8,fontSize:12,cursor:"pointer"}}>Отмена</button>
+                  </div>
+                </div>
+              : <button onClick={()=>{setShowGTF(g.id);sGtf({text:"",mins:30,type:"biz",date:""}); }} style={{width:"100%",padding:"8px",background:"transparent",border:"1px dashed "+C.bd,borderRadius:10,fontSize:12,color:C.t2,cursor:"pointer",marginTop:4}}>+ Задача</button>
+            }
+          </div>}
+        </div>;
+      })}
+    </div>
+  </div>;
 }
 
 function StrategyPage({userId}:{userId:string}){
@@ -840,79 +1065,8 @@ function StrategyPage({userId}:{userId:string}){
         <span style={{fontSize:14,lineHeight:1.5}}>{advice.text}</span>
       </div>
 
-      {/* Goals */}
-      <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}>
-        <div style={{fontSize:18,fontWeight:700}}>Цели и достижения</div>
-        <Btn onClick={()=>setShowGF(!showGF)}>+ Цель</Btn>
-      </div>
-      {showGF&&<Card style={{marginBottom:20}}><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14}}>
-        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Название</label><input value={gf.name} onChange={e=>sGf({...gf,name:e.target.value})} style={iS}/></div>
-        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Дедлайн</label><input type="date" value={gf.deadline} onChange={e=>sGf({...gf,deadline:e.target.value})} style={iS}/></div>
-        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Цвет</label><div style={{display:"flex",gap:6,marginTop:4}}>{[C.a,"#8B5CF6",C.g,C.r,C.y,C.pk].map(c=><button key={c} onClick={()=>sGf({...gf,color:c})} style={{width:28,height:28,borderRadius:8,background:c,border:gf.color===c?"3px solid "+C.t1:"3px solid transparent",cursor:"pointer"}}/>)}</div></div>
-      </div><div style={{display:"flex",gap:10,marginTop:16}}><Btn onClick={addGoal}>Создать</Btn><Btn primary={false} onClick={()=>setShowGF(false)}>Отмена</Btn></div></Card>}
-      {goals.data.length===0&&!showGF&&<Card style={{padding:"48px",textAlign:"center"}}><span style={{color:C.t2,fontSize:14}}>Создай первую цель</span></Card>}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16}}>
-        {goals.data.map((g:any)=>{
-          const p=goalProgress(g.id);
-          const gTasks=[...goalTasks.data.filter((t:any)=>t.goal_id===g.id)].sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));
-          return<Card key={g.id} style={{padding:0,overflow:"hidden",borderTop:"4px solid "+g.color}}>
-            <div style={{padding:"18px 20px"}}>
-              <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
-                <div style={{fontSize:16,fontWeight:700,flex:1}}>{g.name}</div>
-                <button onClick={()=>goals.remove(g.id)} style={{width:24,height:24,borderRadius:6,border:"none",background:C.bg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><I path="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" size={10} color={C.r} sw={2}/></button>
-              </div>
-              {g.deadline&&<div style={{fontSize:12,color:C.t2,marginBottom:8}}>Дедлайн: {g.deadline}</div>}
-              <div style={{height:8,background:C.bg,borderRadius:4,overflow:"hidden",marginBottom:6}}><div style={{width:p+"%",height:"100%",background:prgColor(p),borderRadius:4}}/></div>
-              <div style={{fontSize:12,color:C.t2}}>{gTasks.filter((t:any)=>(t.status==="done"||t.done)&&t.type!=="delegate").length} из {gTasks.filter((t:any)=>t.type!=="delegate").length} ({p}%)</div>
-            </div>
-            <div style={{borderTop:"1px solid "+C.bd}}>
-              <button onClick={()=>setOpenGoal(openGoal===g.id?null:g.id)} style={{width:"100%",padding:"10px 16px",background:"none",border:"none",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:13,color:C.t2}}>
-                <span>{openGoal===g.id?"Скрыть":"План"} ({gTasks.length})</span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points={openGoal===g.id?"18 15 12 9 6 15":"6 9 12 15 18 9"}/></svg>
-              </button>
-              {openGoal===g.id&&<div style={{padding:"0 16px 16px"}}>
-                {gTasks.map((t:any)=>{
-                  const isDone=t.status==="done"||t.done;
-                  const isOver=dndOver===t.id;
-                  return <div key={t.id}
-                    draggable
-                    onDragStart={()=>onGtDragStart(t.id)}
-                    onDragOver={e=>onGtDragOver(t.id,e)}
-                    onDrop={()=>onGtDrop(t.id,g.id)}
-                    onDragEnd={()=>{setDndDrag(null);setDndOver(null);}}
-                    style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:8,
-                      background:isDone?"#F0FDF4":C.bg,marginBottom:6,
-                      borderLeft:"3px solid "+(t.type==="biz"?C.a:t.type==="delegate"?C.t2:C.y),
-                      opacity:dndDrag===t.id?0.4:1,
-                      outline:isOver?"2px dashed "+C.a:"none",
-                      cursor:"grab",
-                    }}>
-                    <span style={{fontSize:14,color:C.t2,cursor:"grab",userSelect:"none",marginRight:2}}>⠿</span>
-                    <button onClick={()=>goalTasks.update(t.id,{status:nextStatus(t.status||"todo"),done:nextStatus(t.status||"todo")==="done"})} style={{width:18,height:18,minWidth:18,borderRadius:5,border:"2px solid "+(isDone?C.g:(t.status==="inprogress")?C.y:C.bd),background:isDone?C.g:(t.status==="inprogress")?C.y+"33":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>{isDone&&<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}</button>
-                    <div style={{flex:1,cursor:"pointer"}} onClick={()=>setActiveModal({task:t,type:"goal"})}>
-                      <div style={{fontSize:13,textDecoration:isDone?"line-through":"none"}}>{t.text}</div>
-                      <div style={{fontSize:10,color:C.t2}}>{t.mins}м {t.date?`| ${t.date.substring(5)}`:""}</div>
-                    </div>
-                    <Tag label={tsLbl(t.status||"todo")} color={tsCol(t.status||"todo")}/>
-                    <input type="date" value={t.date||""} onChange={e=>goalTasks.update(t.id,{date:e.target.value||null})} style={{width:120,padding:"4px 6px",border:"1px solid "+C.bd,borderRadius:6,fontSize:11,background:C.ib}}/>
-                    <button onClick={()=>goalTasks.remove(t.id)} style={{border:"none",background:"transparent",cursor:"pointer",color:C.t2,fontSize:12}}>×</button>
-                  </div>;
-                })}
-                {showGTF===g.id?<div style={{marginTop:8,padding:12,background:C.bg,borderRadius:10}}>
-                  <input placeholder="Задача" value={gtf.text} onChange={e=>sGtf({...gtf,text:e.target.value})} style={{...iS,padding:"8px 10px",fontSize:12,marginBottom:6}}/>
-                  <div style={{display:"flex",gap:6,marginBottom:6}}>
-                    <input type="number" value={gtf.mins} onChange={e=>sGtf({...gtf,mins:+e.target.value})} min={30} max={480} step={5} style={{...iS,width:70,padding:"6px 8px",fontSize:12}}/>
-                    <select value={gtf.type} onChange={e=>sGtf({...gtf,type:e.target.value})} style={{...iS,flex:1,padding:"6px 8px",fontSize:12}}>{TYPES.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}</select>
-                    <input type="date" value={gtf.date} onChange={e=>sGtf({...gtf,date:e.target.value})} style={{...iS,width:130,padding:"6px 8px",fontSize:12}}/>
-                  </div>
-                  {tfErr&&<div style={{fontSize:11,color:C.r,marginBottom:4}}>{tfErr}</div>}
-                  <div style={{display:"flex",gap:6}}><button onClick={()=>addGoalTask(g.id)} style={{flex:1,padding:"6px",background:C.a,color:"#fff",border:"none",borderRadius:6,fontSize:12,cursor:"pointer"}}>Добавить</button><button onClick={()=>setShowGTF(null)} style={{padding:"6px 10px",background:C.w,border:"1px solid "+C.bd,borderRadius:6,fontSize:12,cursor:"pointer"}}>Отмена</button></div>
-                </div>:<button onClick={()=>{setShowGTF(g.id);sGtf({text:"",mins:30,type:"biz",date:""}); }} style={{width:"100%",padding:"8px",background:"none",border:"1px dashed "+C.bd,borderRadius:8,fontSize:12,color:C.t2,cursor:"pointer",marginTop:4}}>+ Задача</button>}
-              </div>}
-            </div>
-          </Card>;
-        })}
-      </div>
+      {/* Goals — Масштабные цели (system pinned block) */}
+      <GoalsBlock userId={userId} goals={goals} goalTasks={goalTasks} dndDrag={dndDrag} dndOver={dndOver} setDndDrag={setDndDrag} setDndOver={setDndOver} onGtDragStart={onGtDragStart} onGtDragOver={onGtDragOver} onGtDrop={onGtDrop} setActiveModal={setActiveModal} TYPES={TYPES}/>
     </>}
 
     {/* Task modal */}
