@@ -272,9 +272,10 @@ function DashPage({userId,name,onNav}:{userId:string,name:string,onNav:(p:string
 
   const todayTasks = kanban.data.filter((t:any)=>t.date===td&&t.type!=="delegate");
   const todayGoalTasks = goalTasks.data.filter((t:any)=>t.date===td&&t.type!=="delegate");
-  const seenTexts = new Set(todayTasks.map((t:any)=>t.text?.trim().toLowerCase()));
-  const uniqueGoalTasks = todayGoalTasks.filter((t:any)=>!seenTexts.has(t.text?.trim().toLowerCase()));
-  const allTodayTasks = [...todayTasks, ...uniqueGoalTasks];
+  // Объединяем по id чтобы не было дублей если одна запись попала в обе таблицы
+  const allTodayTasksMap = new Map<string,any>();
+  [...todayTasks, ...todayGoalTasks].forEach(t=>allTodayTasksMap.set(t.id, t));
+  const allTodayTasks = Array.from(allTodayTasksMap.values());
   const doneTodayTasks = allTodayTasks.filter((t:any)=>t.status==="done"||t.done);
 
   const cI = pnl.data.filter((t:any)=>t.type==="income"&&t.date?.startsWith(cm)).reduce((s:number,t:any)=>s+(t.amount||0),0);
@@ -311,7 +312,7 @@ function DashPage({userId,name,onNav}:{userId:string,name:string,onNav:(p:string
 
     {/* Stat cards */}
     <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16,marginBottom:24}}>
-      {[{l:"Задачи",v:todayTasks.filter((t:any)=>t.status!=="done").length,c:C.a},{l:"Лиды",v:leads.data.length,c:C.g},{l:"Публикации",v:content.data.filter((x:any)=>x.status==="published").length,c:C.y},{l:"Прибыль",v:(cP>=0?"+":"")+fmt$(cP)+" ₽",c:cP>=0?C.g:C.r}].map((s,i)=><Card key={i} style={{padding:"22px 24px"}}><div style={{fontSize:28,fontWeight:700,marginBottom:4}}>{s.v}</div><div style={{fontSize:13,color:C.t2}}>{s.l}</div></Card>)}
+      {[{l:"Задачи",v:allTodayTasks.filter((t:any)=>t.status!=="done"&&!t.done).length,c:C.a},{l:"Лиды",v:leads.data.length,c:C.g},{l:"Публикации",v:content.data.filter((x:any)=>x.status==="published").length,c:C.y},{l:"Прибыль",v:(cP>=0?"+":"")+fmt$(cP)+" ₽",c:cP>=0?C.g:C.r}].map((s,i)=><Card key={i} style={{padding:"22px 24px"}}><div style={{fontSize:28,fontWeight:700,marginBottom:4}}>{s.v}</div><div style={{fontSize:13,color:C.t2}}>{s.l}</div></Card>)}
     </div>
 
     {/* NEW: donut + media summary */}
@@ -375,8 +376,10 @@ function DashPage({userId,name,onNav}:{userId:string,name:string,onNav:(p:string
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
       <Card>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}><span style={{fontSize:16,fontWeight:600}}>Задачи сегодня</span><button onClick={()=>onNav("strategy")} style={{fontSize:13,color:C.a,background:"none",border:"none",cursor:"pointer"}}>Стратегия</button></div>
-        {todayTasks.filter((t:any)=>t.status!=="done").length===0?<div style={{padding:"24px 0",textAlign:"center",color:C.t2,fontSize:14}}>Нет задач</div>:
-        <div style={{display:"flex",flexDirection:"column",gap:8}}>{todayTasks.filter((t:any)=>t.status!=="done").slice(0,5).map((t:any)=><div key={t.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",background:C.bg,borderRadius:10,borderLeft:"3px solid "+(t.type==="biz"?C.a:C.y)}}><span style={{fontSize:14,flex:1}}>{t.text}</span><Tag label={tsLbl(t.status||"todo")} color={tsCol(t.status||"todo")}/><span style={{fontSize:11,color:C.t2}}>{t.mins}м</span></div>)}</div>}
+        {allTodayTasks.filter((t:any)=>t.status!=="done"&&!t.done).length===0
+          ? <div style={{padding:"24px 0",textAlign:"center",color:C.t2,fontSize:14}}>Нет задач</div>
+          : <div style={{display:"flex",flexDirection:"column",gap:8}}>{allTodayTasks.filter((t:any)=>t.status!=="done"&&!t.done).slice(0,5).map((t:any)=><div key={t.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",background:C.bg,borderRadius:10,borderLeft:"3px solid "+(t.type==="biz"?C.a:C.y)}}><span style={{fontSize:14,flex:1}}>{t.text}</span><Tag label={tsLbl(t.status||"todo")} color={tsCol(t.status||"todo")}/><span style={{fontSize:11,color:C.t2}}>{t.mins}м</span></div>)}</div>
+        }
       </Card>
       <Card>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}><span style={{fontSize:16,fontWeight:600}}>P&L (месяц)</span><button onClick={()=>onNav("pnl")} style={{fontSize:13,color:C.a,background:"none",border:"none",cursor:"pointer"}}>Подробнее</button></div>
