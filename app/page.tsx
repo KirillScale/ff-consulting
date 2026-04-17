@@ -1883,7 +1883,7 @@ function CallsPage({userId}:{userId:string}){
             {/* Day header */}
             <div style={{height:28,display:"flex",alignItems:"center",justifyContent:"center",gap:6,borderBottom:"1px solid "+C.bd,background:isToday?C.a+"0A":"transparent"}}>
               <span style={{fontSize:11,color:C.t2}}>{WDS_SHORT[(d.getDay()+6)%7]}</span>
-              <span style={{fontSize:13,fontWeight:isToday?700:500,color:isToday?C.a:C.t1,width:22,height:22,borderRadius:"50%",background:isToday?C.a:"transparent",display:"flex",alignItems:"center",justifyContent:"center",color:isToday?"#fff":C.t1}}>{d.getDate()}</span>
+              <span style={{fontSize:13,fontWeight:isToday?700:500,width:22,height:22,borderRadius:"50%",background:isToday?C.a:"transparent",display:"flex",alignItems:"center",justifyContent:"center",color:isToday?"#fff":C.t1}}>{d.getDate()}</span>
             </div>
             {/* Hour slots */}
             <div style={{position:"relative"}}>
@@ -1945,7 +1945,7 @@ function CallsPage({userId}:{userId:string}){
         const dayCalls=callsForDay(d);
         return <div key={i} style={{minHeight:90,padding:"6px 8px",borderRight:i%7!==6?"1px solid "+C.bd:"none",borderBottom:"1px solid "+C.bd,background:isToday?C.a+"05":"transparent",cursor:"pointer"}}
           onClick={()=>{setCalDate(d);setCalView("1d");}}>
-          <div style={{fontSize:13,fontWeight:isToday?700:400,color:isToday?C.a:isCurrentMonth?C.t1:C.t2,
+          <div style={{fontSize:13,fontWeight:isToday?700:400,
             width:22,height:22,borderRadius:"50%",background:isToday?C.a:"transparent",
             display:"flex",alignItems:"center",justifyContent:"center",color:isToday?"#fff":isCurrentMonth?C.t1:C.t2,
             marginBottom:4}}>{d.getDate()}</div>
