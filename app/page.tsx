@@ -26,6 +26,7 @@ const NAV=[
   {id:"pnl",label:"P&L",ic:"M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"},
   {id:"calc",label:"Калькулятор",ic:"M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"},
   {id:"tools",label:"Инструменты",ic:"M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"},
+  {id:"links",label:"База ссылок",ic:"M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"},
 ];
 const WD=["Воскресенье","Понедельник","Вторник","Среда","Четверг","Пятница","Суббота"];
 const MR=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
@@ -226,7 +227,8 @@ export default function App() {
           {page === "ads" && <AdsPage userId={user.id}/>}
           {page === "calc" && <CalcPage/>}
           {page === "tools" && <ToolsPage/>}
-          {!["dashboard","strategy","crm","calls","content","pnl","media","ads","calc","tools"].includes(page) && nav && <Placeholder title={nav.label} ic={nav.ic}/>}
+          {page === "links" && <LinksPage userId={user.id}/>}
+          {!["dashboard","strategy","crm","calls","content","pnl","media","ads","calc","tools","links"].includes(page) && nav && <Placeholder title={nav.label} ic={nav.ic}/>}
         </div>
       </div>
     </div>
@@ -2103,6 +2105,173 @@ function CalcPage(){
         {[{l:"Продаж",v:r.sales},{l:"Звонков",v:r.calls},{l:"Лидов",v:r.leads},{l:"Охват",v:fmt$(r.reach)}].map((x,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid "+C.bd}}><span style={{fontSize:13,color:C.t2}}>{x.l}</span><span style={{fontSize:15,fontWeight:700}}>{x.v}</span></div>)}
       </Card>})}
     </div>
+  </>;
+}
+
+/* ============ LINKS ============ */
+function LinksPage({userId}:{userId:string}){
+  const{data:links,add,update,remove}=useTable("links",userId);
+  const[showForm,setShowForm]=useState(false);
+  const[editId,setEditId]=useState<string|null>(null);
+  const[search,setSearch]=useState("");
+  const[activeCategory,setActiveCategory]=useState("Все");
+  const[f,sF]=useState({title:"",url:"",description:"",category:"Общее",color:C.a});
+
+  const LINK_COLORS=[C.a,"#8B5CF6","#10B981","#EF4444","#F59E0B","#EC4899","#06B6D4","#F97316","#0F1E40"];
+  const DEFAULT_CATS=["Общее","Работа","Соцсети","Инструменты","Обучение"];
+
+  const allCategories=useMemo(()=>{
+    const cats=new Set(links.map((l:any)=>l.category||"Общее"));
+    DEFAULT_CATS.forEach(c=>cats.add(c));
+    return["Все",...Array.from(cats)];
+  },[links]);
+
+  const filtered=useMemo(()=>{
+    let res=links;
+    if(activeCategory!=="Все") res=res.filter((l:any)=>(l.category||"Общее")===activeCategory);
+    if(search){const q=search.toLowerCase();res=res.filter((l:any)=>l.title.toLowerCase().includes(q)||(l.description||"").toLowerCase().includes(q)||(l.url||"").toLowerCase().includes(q));}
+    return res;
+  },[links,activeCategory,search]);
+
+  const grouped=useMemo(()=>{
+    if(activeCategory!=="Все") return{[activeCategory]:filtered};
+    const g:Record<string,any[]>={};
+    filtered.forEach((l:any)=>{const c=l.category||"Общее";if(!g[c])g[c]=[];g[c].push(l);});
+    return g;
+  },[filtered,activeCategory]);
+
+  const resetForm=()=>sF({title:"",url:"",description:"",category:"Общее",color:C.a});
+
+  const sub=async()=>{
+    if(!f.title.trim()||!f.url.trim())return;
+    const url=f.url.startsWith("http")?f.url:"https://"+f.url;
+    if(editId){await update(editId,{...f,url});setEditId(null);}
+    else{await add({...f,url});}
+    resetForm();setShowForm(false);
+  };
+
+  const startEdit=(l:any)=>{
+    sF({title:l.title,url:l.url,description:l.description||"",category:l.category||"Общее",color:l.color||C.a});
+    setEditId(l.id);setShowForm(true);
+  };
+
+  const openLink=(url:string)=>window.open(url,"_blank","noopener,noreferrer");
+
+  const getFavicon=(url:string)=>{
+    try{const u=new URL(url.startsWith("http")?url:"https://"+url);return`https://www.google.com/s2/favicons?domain=${u.hostname}&sz=32`;}
+    catch{return null;}
+  };
+
+  const formatDomain=(url:string)=>{
+    try{const u=new URL(url.startsWith("http")?url:"https://"+url);return u.hostname.replace("www.","");}
+    catch{return url;}
+  };
+
+  return <>
+    {/* Header */}
+    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:"24px 32px",marginBottom:24,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+      <div>
+        <div style={{fontSize:20,fontWeight:700,color:"#fff"}}>База ссылок</div>
+        <div style={{fontSize:13,color:"rgba(255,255,255,0.5)",marginTop:4}}>{links.length} сохранено · Быстрый доступ к нужным сайтам</div>
+      </div>
+      <button onClick={()=>{setShowForm(!showForm);setEditId(null);resetForm();}} style={{padding:"10px 20px",background:"rgba(255,255,255,0.15)",color:"#fff",border:"1px solid rgba(255,255,255,0.25)",borderRadius:12,fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Добавить ссылку
+      </button>
+    </div>
+
+    {/* Add/Edit form */}
+    {showForm&&<div style={{background:C.w,borderRadius:16,padding:"22px 24px",marginBottom:24,boxShadow:"0 4px 24px rgba(0,0,0,0.08)",border:"1px solid "+C.bd}}>
+      <div style={{fontSize:15,fontWeight:700,marginBottom:18,color:C.t1}}>{editId?"Редактировать ссылку":"Новая ссылка"}</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Название *</label><input value={f.title} onChange={e=>sF({...f,title:e.target.value})} placeholder="Google Analytics" style={iS}/></div>
+        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>URL *</label><input value={f.url} onChange={e=>sF({...f,url:e.target.value})} placeholder="analytics.google.com" style={iS}/></div>
+        <div style={{gridColumn:"span 2"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Описание</label><input value={f.description} onChange={e=>sF({...f,description:e.target.value})} placeholder="Краткое описание что это и зачем..." style={iS}/></div>
+        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Категория</label>
+          <input value={f.category} onChange={e=>sF({...f,category:e.target.value})} list="cats" style={iS} placeholder="Общее"/>
+          <datalist id="cats">{DEFAULT_CATS.map(c=><option key={c} value={c}/>)}</datalist>
+        </div>
+        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Цвет карточки</label>
+          <div style={{display:"flex",gap:6,marginTop:4}}>
+            {LINK_COLORS.map(c=><button key={c} onClick={()=>sF({...f,color:c})} style={{width:28,height:28,borderRadius:8,background:c,border:f.color===c?"3px solid #111":"3px solid transparent",cursor:"pointer",flexShrink:0}}/>)}
+          </div>
+        </div>
+      </div>
+      <div style={{display:"flex",gap:10}}>
+        <button onClick={sub} disabled={!f.title.trim()||!f.url.trim()} style={{padding:"10px 22px",background:C.a,color:"#fff",border:"none",borderRadius:10,fontSize:14,fontWeight:600,cursor:f.title.trim()&&f.url.trim()?"pointer":"not-allowed",opacity:f.title.trim()&&f.url.trim()?1:0.5}}>{editId?"Сохранить":"Добавить"}</button>
+        <button onClick={()=>{setShowForm(false);setEditId(null);resetForm();}} style={{padding:"10px 16px",background:C.bg,color:C.t2,border:"1px solid "+C.bd,borderRadius:10,fontSize:14,cursor:"pointer"}}>Отмена</button>
+        {editId&&<button onClick={()=>{remove(editId);setShowForm(false);setEditId(null);resetForm();}} style={{padding:"10px 16px",background:C.r+"10",color:C.r,border:"1px solid "+C.r+"22",borderRadius:10,fontSize:14,cursor:"pointer",marginLeft:"auto"}}>Удалить</button>}
+      </div>
+    </div>}
+
+    {/* Search + categories */}
+    <div style={{display:"flex",gap:12,marginBottom:20,alignItems:"center",flexWrap:"wrap"}}>
+      <div style={{position:"relative",flex:"0 0 260px"}}>
+        <svg style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Поиск по ссылкам..." style={{...iS,paddingLeft:34}}/>
+      </div>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+        {allCategories.map(cat=><button key={cat} onClick={()=>setActiveCategory(cat)} style={{padding:"7px 14px",borderRadius:20,border:"1px solid "+(activeCategory===cat?C.a:C.bd),background:activeCategory===cat?C.a:"transparent",color:activeCategory===cat?"#fff":C.t2,fontSize:12,fontWeight:activeCategory===cat?600:400,cursor:"pointer",whiteSpace:"nowrap"}}>{cat}</button>)}
+      </div>
+    </div>
+
+    {/* Links grid */}
+    {links.length===0
+      ? <div style={{textAlign:"center",padding:"60px 20px",color:C.t2}}>
+          <div style={{fontSize:48,marginBottom:16}}>🔗</div>
+          <div style={{fontSize:18,fontWeight:600,marginBottom:8,color:C.t1}}>База ссылок пуста</div>
+          <div style={{fontSize:14}}>Добавь первую ссылку — и она всегда будет под рукой</div>
+        </div>
+      : Object.entries(grouped).map(([category,items])=><div key={category} style={{marginBottom:28}}>
+          {activeCategory==="Все"&&<div style={{fontSize:12,fontWeight:700,color:C.t2,letterSpacing:0.8,textTransform:"uppercase",marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
+            {category}
+            <span style={{fontSize:11,fontWeight:500,color:C.t2,background:C.bd,borderRadius:20,padding:"1px 8px",textTransform:"none",letterSpacing:0}}>{(items as any[]).length}</span>
+          </div>}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:12}}>
+            {(items as any[]).map((l:any)=>{
+              const favicon=getFavicon(l.url);
+              const domain=formatDomain(l.url);
+              const accent=l.color||C.a;
+              return <div key={l.id} style={{background:C.w,borderRadius:14,overflow:"hidden",boxShadow:"0 2px 10px rgba(0,0,0,0.06)",border:"1px solid "+C.bd,display:"flex",flexDirection:"column",transition:"box-shadow 0.2s, transform 0.15s"}}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 6px 24px rgba(0,0,0,0.12)";(e.currentTarget as HTMLElement).style.transform="translateY(-2px)";}}
+                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 2px 10px rgba(0,0,0,0.06)";(e.currentTarget as HTMLElement).style.transform="translateY(0)";}}>
+                {/* Top accent bar */}
+                <div style={{height:4,background:accent,flexShrink:0}}/>
+                {/* Card body */}
+                <div style={{padding:"16px 16px 12px",flex:1,display:"flex",flexDirection:"column",gap:8}}>
+                  <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
+                    {/* Favicon */}
+                    <div style={{width:36,height:36,borderRadius:10,background:accent+"15",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden"}}>
+                      {favicon
+                        ? <img src={favicon} width={20} height={20} style={{objectFit:"contain"}} onError={e=>{(e.target as HTMLImageElement).style.display="none";}}/>
+                        : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+                      }
+                    </div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:14,fontWeight:700,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.title}</div>
+                      <div style={{fontSize:11,color:C.t2,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{domain}</div>
+                    </div>
+                  </div>
+                  {l.description&&<div style={{fontSize:12,color:C.t2,lineHeight:1.5,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{l.description}</div>}
+                </div>
+                {/* Actions */}
+                <div style={{padding:"10px 12px",borderTop:"1px solid "+C.bd,display:"flex",gap:6}}>
+                  <button onClick={()=>openLink(l.url)} style={{flex:1,padding:"9px 0",background:accent,color:"#fff",border:"none",borderRadius:9,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,letterSpacing:0.3}}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    Открыть
+                  </button>
+                  <button onClick={()=>startEdit(l)} style={{width:36,height:36,borderRadius:9,border:"1px solid "+C.bd,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.t2}}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
+                  <button onClick={()=>{if(navigator.clipboard)navigator.clipboard.writeText(l.url);}} title="Скопировать ссылку" style={{width:36,height:36,borderRadius:9,border:"1px solid "+C.bd,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.t2}}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                  </button>
+                </div>
+              </div>;
+            })}
+          </div>
+        </div>)
+    }
   </>;
 }
 
