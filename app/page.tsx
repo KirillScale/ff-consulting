@@ -212,6 +212,7 @@ export default function App() {
 
   return (
     <div style={{fontFamily:"'Montserrat',-apple-system,BlinkMacSystemFont,sans-serif",background:C.bg,minHeight:"100vh",color:C.t1}}>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
       <Side active={page} onNav={setPage} onLogout={logout}/>
       <div style={{marginLeft:252,minHeight:"100vh"}}>
@@ -1407,7 +1408,7 @@ function CrmPage({userId}:{userId:string}){
 /* ============ CONTENT ============ */
 function ContentPage({userId}:{userId:string}){
   const{data:items,add,update,remove}=useTable("content",userId);
-  const[tab,setTab]=useState<"list"|"calendar">("list");
+  const[tab,setTab]=useState<"list"|"calendar"|"stories">("list");
   const[show,setShow]=useState(false);
   const[editId,setEditId]=useState<string|null>(null);
   const[f,sF]=useState({platform:"instagram",type:"Пост",topic:"",status:"idea",date:today(),link:"",scenario:""});
@@ -1457,7 +1458,7 @@ function ContentPage({userId}:{userId:string}){
     {topByPlatform.some((x:any)=>x[1]>0)&&<Card style={{marginBottom:20,padding:16}}><div style={{fontSize:13,fontWeight:600,marginBottom:10,color:C.t2}}>Топ платформ (опубликовано)</div><div style={{display:"flex",gap:16}}>{topByPlatform.filter((x:any)=>x[1]>0).map(([pid,cnt]:any)=><div key={pid} style={{display:"flex",alignItems:"center",gap:6}}><div style={{width:8,height:8,borderRadius:2,background:pCol(pid)}}/><span style={{fontSize:13}}>{pLbl(pid)}</span><span style={{fontSize:13,fontWeight:700,color:pCol(pid)}}>{cnt}</span></div>)}</div></Card>}
 
     <div style={{display:"flex",gap:4,marginBottom:20,borderBottom:"2px solid "+C.bd}}>
-      {[{id:"list",label:"Контент"},{id:"calendar",label:"Календарь"}].map(t=><button key={t.id} onClick={()=>setTab(t.id as any)} style={{padding:"10px 20px",background:"none",border:"none",borderBottom:tab===t.id?"3px solid "+C.a:"3px solid transparent",color:tab===t.id?C.a:C.t2,fontSize:14,fontWeight:tab===t.id?600:400,cursor:"pointer",marginBottom:-2}}>{t.label}</button>)}
+      {[{id:"list",label:"Контент"},{id:"calendar",label:"Календарь"},{id:"stories",label:"📊 Карусели историй"}].map(t=><button key={t.id} onClick={()=>setTab(t.id as any)} style={{padding:"10px 20px",background:"none",border:"none",borderBottom:tab===t.id?"3px solid "+C.a:"3px solid transparent",color:tab===t.id?C.a:C.t2,fontSize:14,fontWeight:tab===t.id?600:400,cursor:"pointer",marginBottom:-2}}>{t.label}</button>)}
     </div>
 
     {tab==="list"&&<>
@@ -1503,6 +1504,303 @@ function ContentPage({userId}:{userId:string}){
         </div>
       </Card>
     </>}
+
+    {tab==="stories"&&<StoriesCarouselTab userId={userId}/>}
+  </>;
+}
+
+/* ============ STORIES CAROUSEL ============ */
+function StoriesCarouselTab({userId}:{userId:string}){
+  const carousels=useTable("story_carousels",userId);
+  const items=useTable("story_items",userId);
+  const[editTitleId,setEditTitleId]=useState<string|null>(null);
+  const[editTitleVal,setEditTitleVal]=useState("");
+  const[lightbox,setLightbox]=useState<string|null>(null);
+
+  const addCarousel=async()=>{
+    const title="Карусель "+(carousels.data.length+1);
+    await carousels.add({title});
+  };
+
+  const saveTitle=async(id:string)=>{
+    if(editTitleVal.trim())await carousels.update(id,{title:editTitleVal.trim()});
+    setEditTitleId(null);
+  };
+
+  const addSlot=async(carouselId:string)=>{
+    const existing=items.data.filter((x:any)=>x.carousel_id===carouselId);
+    if(existing.length>=15)return;
+    await items.add({carousel_id:carouselId,image_url:null,view_count:0,order_index:existing.length});
+  };
+
+  const[uploading,setUploading]=useState<string|null>(null);
+
+  const uploadImage=async(slotId:string,file:File)=>{
+    setUploading(slotId);
+    try{
+      // Compress image before upload using canvas
+      const compressed=await new Promise<Blob>((resolve)=>{
+        const img=new Image();
+        const url=URL.createObjectURL(file);
+        img.onload=()=>{
+          const MAX=800;
+          const scale=Math.min(1,MAX/Math.max(img.width,img.height));
+          const canvas=document.createElement("canvas");
+          canvas.width=Math.round(img.width*scale);
+          canvas.height=Math.round(img.height*scale);
+          const ctx=canvas.getContext("2d")!;
+          ctx.drawImage(img,0,0,canvas.width,canvas.height);
+          canvas.toBlob(b=>resolve(b!),file.type==="image/png"?"image/png":"image/jpeg",0.82);
+          URL.revokeObjectURL(url);
+        };
+        img.src=url;
+      });
+
+      const ext=file.name.split(".").pop()||"jpg";
+      const path=`${userId}/${slotId}.${ext}`;
+      const{error}=await supabase.storage.from("stories").upload(path,compressed,{upsert:true,contentType:compressed.type});
+      if(error)throw error;
+
+      const{data}=supabase.storage.from("stories").getPublicUrl(path);
+      // Add cache-busting so re-upload shows immediately
+      const url=data.publicUrl+"?t="+Date.now();
+      await items.update(slotId,{image_url:url});
+    }catch(err){
+      console.error("Upload error:",err);
+      alert("Ошибка загрузки. Проверь настройки bucket (должен быть Public).");
+    }finally{
+      setUploading(null);
+    }
+  };
+
+  const updateViews=async(slotId:string,val:string)=>{
+    await items.update(slotId,{view_count:+val||0});
+  };
+
+  const getCarouselItems=(carouselId:string)=>
+    [...items.data.filter((x:any)=>x.carousel_id===carouselId)]
+      .sort((a:any,b:any)=>a.order_index-b.order_index);
+
+  const calcAnalytics=(slots:any[])=>{
+    const filled=slots.filter(s=>s.view_count>0);
+    if(filled.length<2)return null;
+    const first=slots[0].view_count;
+    const last=slots[slots.length-1].view_count;
+    if(!first)return null;
+    const retention=Math.round(last/first*100);
+    const lost=first-last;
+    // Find max drop between adjacent
+    let maxDrop=0,maxDropIdx=0;
+    for(let i=1;i<slots.length;i++){
+      const drop=slots[i-1].view_count-slots[i].view_count;
+      if(drop>maxDrop){maxDrop=drop;maxDropIdx=i;}
+    }
+    const avgDrop=slots.length>1?Math.round((first-last)/(slots.length-1)):0;
+    return{retention,lost,maxDrop,maxDropIdx,first,last,avgDrop};
+  };
+
+  return <>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+      <div>
+        <div style={{fontSize:18,fontWeight:700}}>Карусели историй</div>
+        <div style={{fontSize:13,color:C.t2,marginTop:2}}>Аналитика удержания внимания в Stories</div>
+      </div>
+      <button onClick={addCarousel} style={{padding:"10px 20px",background:C.a,color:"#fff",border:"none",borderRadius:12,fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Новая карусель
+      </button>
+    </div>
+
+    {carousels.data.length===0&&<div style={{textAlign:"center",padding:"60px 20px",color:C.t2}}>
+      <div style={{fontSize:40,marginBottom:12}}>📊</div>
+      <div style={{fontSize:16,fontWeight:600,marginBottom:8,color:C.t1}}>Нет каруселей</div>
+      <div style={{fontSize:13}}>Создай карусель, загрузи сторис и введи просмотры для анализа</div>
+    </div>}
+
+    <div style={{display:"flex",flexDirection:"column",gap:20}}>
+      {[...carousels.data].reverse().map((car:any)=>{
+        const slots=getCarouselItems(car.id);
+        const analytics=calcAnalytics(slots);
+        const maxViews=Math.max(...slots.map((s:any)=>s.view_count),1);
+
+        return <div key={car.id} style={{background:C.w,borderRadius:20,boxShadow:"0 4px 20px rgba(0,0,0,0.07)",border:"1px solid "+C.bd,overflow:"hidden"}}>
+          {/* Carousel header */}
+          <div style={{padding:"16px 20px",borderBottom:"1px solid "+C.bd,display:"flex",alignItems:"center",justifyContent:"space-between",background:"#FAFBFC"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              {editTitleId===car.id
+                ? <input autoFocus value={editTitleVal} onChange={e=>setEditTitleVal(e.target.value)}
+                    onBlur={()=>saveTitle(car.id)} onKeyDown={e=>{if(e.key==="Enter")saveTitle(car.id);if(e.key==="Escape")setEditTitleId(null);}}
+                    style={{...iS,padding:"6px 10px",fontSize:15,fontWeight:700,width:240}}/>
+                : <span style={{fontSize:15,fontWeight:700,color:C.t1,cursor:"pointer"}} onDoubleClick={()=>{setEditTitleId(car.id);setEditTitleVal(car.title);}}>
+                    {car.title}
+                  </span>
+              }
+              <span style={{fontSize:11,color:C.t2,background:C.bd,borderRadius:20,padding:"2px 8px"}}>{slots.length}/15 сторис</span>
+              <span style={{fontSize:11,color:C.t2,cursor:"pointer"}} onClick={()=>{setEditTitleId(car.id);setEditTitleVal(car.title);}}>✏️</span>
+            </div>
+            <div style={{display:"flex",gap:8,alignItems:"center"}}>
+              <span style={{fontSize:11,color:C.t2}}>{new Date(car.created_at).toLocaleDateString("ru-RU")}</span>
+              <button onClick={()=>carousels.remove(car.id)} style={{width:28,height:28,border:"none",background:C.r+"10",borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={C.r} strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div style={{display:"flex",gap:0}}>
+            {/* Analytics panel */}
+            <div style={{width:220,flexShrink:0,padding:"20px 18px",borderRight:"1px solid "+C.bd,display:"flex",flexDirection:"column",gap:14,background:"#FAFBFC"}}>
+              <div style={{fontSize:12,fontWeight:700,color:C.t2,letterSpacing:0.5,textTransform:"uppercase"}}>Аналитика</div>
+
+              {!analytics
+                ? <div style={{fontSize:12,color:C.t2,lineHeight:1.6}}>
+                    Добавь сторис и введи просмотры под каждой
+                  </div>
+                : <>
+                  {/* Retention ring */}
+                  <div style={{textAlign:"center",padding:"8px 0"}}>
+                    <svg width="90" height="90" viewBox="0 0 90 90" style={{transform:"rotate(-90deg)"}}>
+                      <circle cx="45" cy="45" r="36" fill="none" stroke={C.bd} strokeWidth="8"/>
+                      <circle cx="45" cy="45" r="36" fill="none"
+                        stroke={analytics.retention>=70?C.g:analytics.retention>=40?C.y:C.r}
+                        strokeWidth="8" strokeLinecap="round"
+                        strokeDasharray={2*Math.PI*36}
+                        strokeDashoffset={2*Math.PI*36*(1-analytics.retention/100)}
+                        style={{transition:"stroke-dashoffset 0.6s ease"}}/>
+                    </svg>
+                    <div style={{marginTop:-52,marginBottom:44,textAlign:"center"}}>
+                      <div style={{fontSize:20,fontWeight:800,color:analytics.retention>=70?C.g:analytics.retention>=40?C.y:C.r}}>{analytics.retention}%</div>
+                      <div style={{fontSize:9,color:C.t2,marginTop:1}}>удержание</div>
+                    </div>
+                  </div>
+
+                  {/* Stats */}
+                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                    <div style={{background:C.bg,borderRadius:10,padding:"10px 12px"}}>
+                      <div style={{fontSize:10,color:C.t2,marginBottom:3}}>Первая → Последняя</div>
+                      <div style={{fontSize:13,fontWeight:700,color:C.t1}}>{analytics.first.toLocaleString("ru")} → {analytics.last.toLocaleString("ru")}</div>
+                    </div>
+                    <div style={{background:"#FEF2F2",borderRadius:10,padding:"10px 12px"}}>
+                      <div style={{fontSize:10,color:C.r,marginBottom:3}}>Потеряно зрителей</div>
+                      <div style={{fontSize:14,fontWeight:800,color:C.r}}>-{analytics.lost.toLocaleString("ru")}</div>
+                    </div>
+                    <div style={{background:analytics.maxDrop>0?"#FFF7ED":C.bg,borderRadius:10,padding:"10px 12px",border:analytics.maxDrop>0?"1px solid "+C.y+"44":"none"}}>
+                      <div style={{fontSize:10,color:C.y,marginBottom:3,fontWeight:600}}>🔴 Критическая точка</div>
+                      {analytics.maxDrop>0
+                        ? <div style={{fontSize:12,fontWeight:700,color:C.t1}}>Сторис #{analytics.maxDropIdx} → #{analytics.maxDropIdx+1}<br/><span style={{color:C.r}}>-{analytics.maxDrop.toLocaleString("ru")} просмотров</span></div>
+                        : <div style={{fontSize:12,color:C.t2}}>Нет резких падений</div>
+                      }
+                    </div>
+                    <div style={{background:C.bg,borderRadius:10,padding:"8px 12px"}}>
+                      <div style={{fontSize:10,color:C.t2,marginBottom:2}}>Среднее падение/слайд</div>
+                      <div style={{fontSize:12,fontWeight:600,color:C.t1}}>-{analytics.avgDrop.toLocaleString("ru")}</div>
+                    </div>
+                  </div>
+                </>
+              }
+            </div>
+
+            {/* Stories strip */}
+            <div style={{flex:1,overflowX:"auto",padding:"16px 16px 12px"}}>
+              <div style={{display:"flex",gap:10,alignItems:"flex-start",minWidth:"max-content"}}>
+                {slots.map((slot:any,idx:number)=>{
+                  const isMaxDrop=analytics&&analytics.maxDrop>0&&idx===analytics.maxDropIdx-1;
+                  const isMaxDropAfter=analytics&&analytics.maxDrop>0&&idx===analytics.maxDropIdx;
+                  const pct=slot.view_count&&slots[0].view_count?Math.round(slot.view_count/slots[0].view_count*100):0;
+                  const barH=slot.view_count?Math.max(4,Math.round(slot.view_count/maxViews*48)):0;
+
+                  return <div key={slot.id} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:0,position:"relative"}}>
+                    {/* Drop warning between cards */}
+                    {isMaxDrop&&<div style={{position:"absolute",right:-18,top:30,zIndex:10,fontSize:16}}>🔴</div>}
+
+                    {/* Bar chart above card */}
+                    <div style={{width:90,height:52,display:"flex",alignItems:"flex-end",justifyContent:"center",marginBottom:4}}>
+                      {slot.view_count>0&&<div style={{width:28,borderRadius:"4px 4px 0 0",background:isMaxDrop||isMaxDropAfter?C.r:C.a,opacity:0.85,height:barH,transition:"height 0.3s",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",paddingTop:2}}>
+                        {barH>18&&<span style={{fontSize:8,color:"#fff",fontWeight:700,transform:"rotate(-90deg)",whiteSpace:"nowrap"}}>{pct}%</span>}
+                      </div>}
+                    </div>
+
+                    {/* Story card */}
+                    <div style={{width:90,borderRadius:14,overflow:"hidden",border:`2px solid ${isMaxDrop||isMaxDropAfter?C.r:isMaxDrop?"#FFF7ED":C.bd}`,background:C.bg,boxShadow:isMaxDrop||isMaxDropAfter?"0 0 0 3px "+C.r+"22":"none",transition:"border 0.2s"}}>
+                      {/* Image area */}
+                      <div style={{width:90,height:130,background:slot.image_url?"transparent":"#F1F3F8",cursor:"pointer",position:"relative",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}
+                        onClick={()=>slot.image_url&&!uploading&&setLightbox(slot.image_url)}>
+                        {uploading===slot.id
+                          ? <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6}}>
+                              <div style={{width:24,height:24,border:"3px solid "+C.bd,borderTopColor:C.a,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+                              <span style={{fontSize:9,color:C.t2}}>Загрузка...</span>
+                            </div>
+                          : slot.image_url
+                          ? <img src={slot.image_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt={`Сторис ${idx+1}`}/>
+                          : <label style={{cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4,width:"100%",height:"100%",justifyContent:"center"}}>
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                              <span style={{fontSize:9,color:C.t2,textAlign:"center"}}>Загрузить</span>
+                              <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0])uploadImage(slot.id,e.target.files[0]);}}/>
+                            </label>
+                        }
+                        {slot.image_url&&<div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",transition:"background 0.2s",display:"flex",alignItems:"center",justifyContent:"center"}} onMouseEnter={e=>(e.currentTarget.style.background="rgba(0,0,0,0.3)")} onMouseLeave={e=>(e.currentTarget.style.background="rgba(0,0,0,0)")}>
+                          <label style={{position:"absolute",bottom:4,right:4,cursor:"pointer",background:"rgba(0,0,0,0.5)",borderRadius:6,padding:"2px 4px"}}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0])uploadImage(slot.id,e.target.files[0]);}}/>
+                          </label>
+                        </div>}
+                      </div>
+                      {/* Number + views input */}
+                      <div style={{padding:"6px 6px 8px",background:C.w}}>
+                        <div style={{fontSize:10,fontWeight:700,color:C.t2,textAlign:"center",marginBottom:5}}>#{idx+1}</div>
+                        <input type="number" value={slot.view_count||""} onChange={e=>updateViews(slot.id,e.target.value)}
+                          placeholder="👁 просм."
+                          style={{width:"100%",padding:"5px 6px",border:"1px solid "+C.bd,borderRadius:7,fontSize:11,textAlign:"center",outline:"none",background:C.ib,boxSizing:"border-box",fontFamily:"'Montserrat',sans-serif",color:C.t1}}/>
+                      </div>
+                    </div>
+
+                    {/* Drop % between cards */}
+                    {idx<slots.length-1&&slots[idx+1].view_count>0&&slot.view_count>0&&<div style={{position:"absolute",right:-22,top:100,fontSize:10,fontWeight:700,color:isMaxDrop?C.r:C.t2,background:C.w,border:"1px solid "+(isMaxDrop?C.r:C.bd),borderRadius:20,padding:"2px 5px",zIndex:5,whiteSpace:"nowrap"}}>
+                      -{Math.round((slot.view_count-slots[idx+1].view_count)/slot.view_count*100)}%
+                    </div>}
+                  </div>;
+                })}
+
+                {/* Add story button */}
+                {slots.length<15&&<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:0}}>
+                  <div style={{width:90,height:52+6+130,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    <button onClick={()=>addSlot(car.id)} style={{width:52,height:52,borderRadius:14,border:"2px dashed "+C.bd,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.t2,fontSize:22,transition:"border-color 0.15s,color 0.15s"}}
+                      onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.a;(e.currentTarget as HTMLElement).style.color=C.a;}}
+                      onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.color=C.t2;}}>
+                      +
+                    </button>
+                  </div>
+                </div>}
+              </div>
+
+              {/* Progress bar */}
+              {analytics&&slots.length>1&&<div style={{marginTop:14,padding:"0 4px"}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
+                  <span style={{fontSize:10,color:C.t2,fontWeight:600}}>Падение аудитории</span>
+                  <span style={{fontSize:10,color:C.t2}}>→</span>
+                </div>
+                <div style={{display:"flex",gap:2,height:6,borderRadius:3,overflow:"hidden"}}>
+                  {slots.map((slot:any,i:number)=>{
+                    const pct=slot.view_count&&analytics.first?slot.view_count/analytics.first:0;
+                    const isHot=analytics.maxDrop>0&&(i===analytics.maxDropIdx-1||i===analytics.maxDropIdx);
+                    return <div key={slot.id} style={{flex:1,background:isHot?C.r:C.a,opacity:Math.max(0.15,pct),borderRadius:2,transition:"opacity 0.3s"}}/>;
+                  })}
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",marginTop:3}}>
+                  <span style={{fontSize:9,color:C.t2}}>Старт</span>
+                  <span style={{fontSize:9,color:analytics.retention>=50?C.g:C.r,fontWeight:700}}>{analytics.retention}% дошли до конца</span>
+                </div>
+              </div>}
+            </div>
+          </div>
+        </div>;
+      })}
+    </div>
+
+    {/* Lightbox */}
+    {lightbox&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}} onClick={()=>setLightbox(null)}>
+      <img src={lightbox} style={{maxWidth:"80vw",maxHeight:"90vh",borderRadius:16,objectFit:"contain",boxShadow:"0 24px 80px rgba(0,0,0,0.5)"}} alt="preview"/>
+      <button onClick={()=>setLightbox(null)} style={{position:"absolute",top:20,right:24,width:40,height:40,borderRadius:"50%",background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",fontSize:20,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+    </div>}
   </>;
 }
 
