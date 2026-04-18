@@ -221,7 +221,7 @@ export default function App() {
       <div style={{marginLeft:252,minHeight:"100vh"}}>
         <Head name={userName}/>
         <div style={{padding:"28px 32px"}}>
-          {page === "dashboard" && <DashPage userId={user.id} name={userName} avatar={userAvatar} onNav={setPage} onAvatarChange={(url)=>{setUserAvatar(url);supabase.from("profiles").update({avatar_url:url}).eq("id",user.id);}}/>}
+          {page === "dashboard" && <DashPage userId={user.id} name={userName} avatar={userAvatar} onNav={setPage} onAvatarChange={async(url)=>{setUserAvatar(url);await supabase.from("profiles").upsert({id:user.id,avatar_url:url},{onConflict:"id"});}}/>}
           {page === "strategy" && <StrategyPage userId={user.id}/>}
           {page === "crm" && <CrmPage userId={user.id}/>}
           {page === "calls" && <CallsPage userId={user.id}/>}
