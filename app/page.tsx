@@ -20,7 +20,7 @@ const NAV=[
   {id:"strategy",label:"Стратегия роста",ic:"M5 3l3.057 7.134L2 16h5.5L12 21l4.5-5H22l-6.057-5.866L19 3l-7 4-7-4z",glow:true},
   {id:"crm",label:"CRM",ic:"M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"},
   {id:"calls",label:"Созвоны",ic:"M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"},
-  {id:"content",label:"Контент-план",ic:"M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"},
+  {id:"content",label:"Контент",ic:"M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"},
   {id:"media",label:"Медийность",ic:"M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"},
   {id:"ads",label:"Реклама",ic:"M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"},
   {id:"pnl",label:"P&L",ic:"M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"},
@@ -1475,36 +1475,69 @@ function CrmPage({userId}:{userId:string}){
 
 
 /* ============ CONTENT ============ */
+
+// Platform SVG icons for content
+const PlatformIcon=({pid,size=16}:{pid:string,size?:number})=>{
+  if(pid==="instagram") return <svg width={size} height={size} viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5" stroke="url(#igG)" strokeWidth="2"/><circle cx="12" cy="12" r="5" stroke="url(#igG)" strokeWidth="2"/><circle cx="17.5" cy="6.5" r="1.2" fill="#E1306C"/><defs><linearGradient id="igG" x1="2" y1="22" x2="22" y2="2" gradientUnits="userSpaceOnUse"><stop stopColor="#F58529"/><stop offset="0.5" stopColor="#DD2A7B"/><stop offset="1" stopColor="#8134AF"/></linearGradient></defs></svg>;
+  if(pid==="youtube") return <svg width={size} height={size} viewBox="0 0 24 24"><rect width="24" height="24" rx="5" fill="#FF0000"/><path d="M19.59 7.35A2.5 2.5 0 0017.83 5.6C16.37 5.2 12 5.2 12 5.2s-4.37 0-5.83.4A2.5 2.5 0 004.41 7.35 26 26 0 004 12a26 26 0 00.41 4.65A2.5 2.5 0 006.17 18.4c1.46.4 5.83.4 5.83.4s4.37 0 5.83-.4a2.5 2.5 0 001.76-1.75A26 26 0 0020 12a26 26 0 00-.41-4.65z" fill="white"/><path d="M10 15.2l5.2-3.2-5.2-3.2v6.4z" fill="#FF0000"/></svg>;
+  if(pid==="telegram") return <svg width={size} height={size} viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#29B6F6"/><path d="M5.5 11.8l11.5-4.4c.5-.2 1 .1.8.9l-2 9.2c-.1.6-.5.7-.9.5l-2.5-1.8-1.2 1.1c-.1.1-.3.2-.6.2l.2-2.6 4.8-4.3c.2-.2 0-.3-.3-.1L7.8 13.4 5.3 12.7c-.6-.2-.6-.6.2-.9z" fill="white"/></svg>;
+  if(pid==="vk") return <svg width={size} height={size} viewBox="0 0 24 24"><rect width="24" height="24" rx="5" fill="#4C75A3"/><path d="M13.1 16.3h1.2s.4 0 .5-.3c.1-.2 0-.5 0-.5s-.1-1.3.6-1.5c.7-.2 1.5 1.3 2.4 1.8.7.4 1.2.3 1.2.3l2.4-.1s1.2-.1.7-.9c0-.1-.3-.6-1.4-1.6-1.2-1.1-1-1 .4-2.9.9-1.2 1.2-2 1.1-2.3-.1-.3-1.1-.2-1.1-.2h-2.7s-.2 0-.3.1c-.1.1-.2.3-.2.3s-.4 1.1-.9 2c-1.1 1.8-1.5 1.9-1.7 1.8-.4-.3-.3-1-.3-1.6V9.4c0-1.3-.3-1.8-1.1-1.8H10c-.5 0-.8.3-.8.3s-.3.3.2.3c.6.1.7.5.7.5V12c0 1.5-.3 1.7-.7 1.7-.7 0-1.6-1.3-2.3-2.8-.3-.7-.6-1.5-.6-1.5s-.1-.2-.2-.3c-.2-.1-.4-.1-.4-.1H3.5s-.5 0-.5.3c0 .3.2.9.9 2.1C5.1 13.9 6.8 16.4 9.1 16.4c1.3 0 1.3-.2 1.3-.2l1.2-.3s.1-.2.3-.1c.2.1.1.3.1.3l-.1.5s-.1.3.1.5c.1.1.3.1.3.1h2.1" fill="white"/></svg>;
+  return <div style={{width:size,height:size,borderRadius:"50%",background:C.t2+"44",display:"flex",alignItems:"center",justifyContent:"center"}}><svg width={size*0.55} height={size*0.55} viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg></div>;
+};
+
 function ContentPage({userId}:{userId:string}){
   const{data:items,add,update,remove}=useTable("content",userId);
   const[tab,setTab]=useState<"list"|"calendar"|"stories">("list");
   const[show,setShow]=useState(false);
   const[editId,setEditId]=useState<string|null>(null);
-  const[f,sF]=useState({platform:"instagram",type:"Пост",topic:"",status:"idea",date:today(),link:"",scenario:""});
+  const[coverUploading,setCoverUploading]=useState(false);
+  const emptyF=()=>({platform:"instagram",type:"Пост",topic:"",status:"idea",date:today(),link:"",scenario:"",cover_url:"",content_url:"",deadline_prep:"",deadline_dev:"",deadline_pub:"",publish_date:""});
+  const[f,sF]=useState<any>(emptyF());
   const[calMonth,setCalMonth]=useState(()=>{const d=new Date();return{y:d.getFullYear(),m:d.getMonth()};});
+
+  const uploadCover=async(file:File)=>{
+    setCoverUploading(true);
+    try{
+      const compressed=await new Promise<Blob>((resolve,reject)=>{
+        const img=new Image();
+        const obj=URL.createObjectURL(file);
+        img.onload=()=>{
+          const MAX=900;
+          const scale=Math.min(1,MAX/Math.max(img.width,img.height));
+          const canvas=document.createElement("canvas");
+          canvas.width=Math.round(img.width*scale);
+          canvas.height=Math.round(img.height*scale);
+          canvas.getContext("2d")!.drawImage(img,0,0,canvas.width,canvas.height);
+          URL.revokeObjectURL(obj);
+          canvas.toBlob(b=>b?resolve(b):reject(),"image/jpeg",0.82);
+        };
+        img.onerror=reject;img.src=obj;
+      });
+      const path=`${userId}/content_${Date.now()}.jpg`;
+      const{error}=await supabase.storage.from("files").upload(path,compressed,{upsert:true,contentType:"image/jpeg"});
+      if(error)throw error;
+      const{data}=supabase.storage.from("files").getPublicUrl(path);
+      sF((prev:any)=>({...prev,cover_url:data.publicUrl}));
+    }catch(e){console.error(e);}
+    finally{setCoverUploading(false);}
+  };
 
   const sub=async()=>{
     if(!f.topic.trim())return;
-    if(editId){
-      await update(editId,f);
-      setEditId(null);
-    }else{
-      await add(f);
-    }
-    sF({platform:"instagram",type:"Пост",topic:"",status:"idea",date:today(),link:"",scenario:""});
-    setShow(false);
+    if(editId){await update(editId,f);setEditId(null);}
+    else{await add(f);}
+    sF(emptyF());setShow(false);
   };
 
   const startEdit=(item:any)=>{
-    sF({platform:item.platform,type:item.type,topic:item.topic,status:item.status,date:item.date,link:item.link||"",scenario:item.scenario||""});
-    setEditId(item.id);
-    setShow(true);
+    sF({platform:item.platform||"instagram",type:item.type||"Пост",topic:item.topic||"",status:item.status||"idea",date:item.date||today(),link:item.link||"",scenario:item.scenario||"",cover_url:item.cover_url||"",content_url:item.content_url||"",deadline_prep:item.deadline_prep||"",deadline_dev:item.deadline_dev||"",deadline_pub:item.deadline_pub||"",publish_date:item.publish_date||""});
+    setEditId(item.id);setShow(true);
   };
 
   const calDays=useMemo(()=>{
     const first=new Date(calMonth.y,calMonth.m,1);
     const last=new Date(calMonth.y,calMonth.m+1,0);
-    const days=[];
+    const days:any[]=[];
     const startDay=first.getDay()===0?6:first.getDay()-1;
     for(let i=0;i<startDay;i++)days.push(null);
     for(let i=1;i<=last.getDate();i++)days.push(new Date(calMonth.y,calMonth.m,i));
@@ -1513,44 +1546,145 @@ function ContentPage({userId}:{userId:string}){
 
   const itemsForDay=(d:Date)=>items.filter((x:any)=>x.date===ds(d));
 
-  const topByPlatform=useMemo(()=>{
-    const res:any={};
-    PLATS.forEach(p=>{const pts=items.filter((x:any)=>x.platform===p.id&&x.status==="published");res[p.id]=pts.length;});
-    return Object.entries(res).sort((a:any,b:any)=>b[1]-a[1]).slice(0,5);
+  // Group by month for list view
+  const groupedByMonth=useMemo(()=>{
+    const sorted=[...items].sort((a:any,b:any)=>(b.date||"").localeCompare(a.date||""));
+    const groups:Record<string,any[]>={};
+    sorted.forEach((x:any)=>{
+      const key=x.date?x.date.substring(0,7):"без даты";
+      if(!groups[key])groups[key]=[];
+      groups[key].push(x);
+    });
+    return groups;
   },[items]);
+
+  const monthLabel=(key:string)=>{
+    if(key==="без даты")return"Без даты";
+    const[y,m]=key.split("-");
+    return`${MS[parseInt(m)-1]} ${y}`;
+  };
+
+  const DEADLINES=[
+    {key:"deadline_prep",label:"Дедлайн подготовки",color:"#8B5CF6"},
+    {key:"deadline_dev",label:"Дедлайн разработки",color:C.y},
+    {key:"deadline_pub",label:"Дедлайн публикации",color:C.r},
+    {key:"publish_date",label:"Дата публикации",color:C.g},
+  ];
 
   return <>
     <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16,marginBottom:24}}>
       {[{l:"Всего",v:items.length,c:C.a},{l:"В работе",v:items.filter((x:any)=>x.status==="progress").length,c:C.y},{l:"Готово",v:items.filter((x:any)=>x.status==="ready").length,c:C.a},{l:"Опубликовано",v:items.filter((x:any)=>x.status==="published").length,c:C.g}].map((s,i)=><Card key={i} style={{padding:"20px 24px"}}><div style={{fontSize:26,fontWeight:700,color:s.c}}>{s.v}</div><div style={{fontSize:13,color:C.t2,marginTop:4}}>{s.l}</div></Card>)}
     </div>
 
-    {topByPlatform.some((x:any)=>x[1]>0)&&<Card style={{marginBottom:20,padding:16}}><div style={{fontSize:13,fontWeight:600,marginBottom:10,color:C.t2}}>Топ платформ (опубликовано)</div><div style={{display:"flex",gap:16}}>{topByPlatform.filter((x:any)=>x[1]>0).map(([pid,cnt]:any)=><div key={pid} style={{display:"flex",alignItems:"center",gap:6}}><div style={{width:8,height:8,borderRadius:2,background:pCol(pid)}}/><span style={{fontSize:13}}>{pLbl(pid)}</span><span style={{fontSize:13,fontWeight:700,color:pCol(pid)}}>{cnt}</span></div>)}</div></Card>}
-
+    {/* Tabs */}
     <div style={{display:"flex",gap:4,marginBottom:20,borderBottom:"2px solid "+C.bd}}>
-      {[{id:"list",label:"Контент"},{id:"calendar",label:"Календарь"},{id:"stories",label:"📊 Карусели историй"}].map(t=><button key={t.id} onClick={()=>setTab(t.id as any)} style={{padding:"10px 20px",background:"none",border:"none",borderBottom:tab===t.id?"3px solid "+C.a:"3px solid transparent",color:tab===t.id?C.a:C.t2,fontSize:14,fontWeight:tab===t.id?600:400,cursor:"pointer",marginBottom:-2}}>{t.label}</button>)}
+      {[{id:"list",label:"Контент-план"},{id:"calendar",label:"Календарь"},{id:"stories",label:"📊 Карусели историй"}].map(t=><button key={t.id} onClick={()=>setTab(t.id as any)} style={{padding:"10px 20px",background:"none",border:"none",borderBottom:tab===t.id?"3px solid "+C.a:"3px solid transparent",color:tab===t.id?C.a:C.t2,fontSize:14,fontWeight:tab===t.id?600:400,cursor:"pointer",marginBottom:-2}}>{t.label}</button>)}
     </div>
 
+    {/* LIST TAB */}
     {tab==="list"&&<>
       <div style={{display:"flex",justifyContent:"space-between",marginBottom:20}}>
-        <div style={{fontSize:18,fontWeight:600}}>Контент</div>
-        <Btn onClick={()=>{setShow(!show);setEditId(null);sF({platform:"instagram",type:"Пост",topic:"",status:"idea",date:today(),link:"",scenario:""});}}>+ Контент</Btn>
+        <div style={{fontSize:18,fontWeight:600}}>Контент-план</div>
+        <Btn onClick={()=>{setShow(!show);setEditId(null);sF(emptyF());}}>+ Контент</Btn>
       </div>
+
+      {/* Form */}
       {show&&<Card style={{marginBottom:20}}>
-        <div style={{fontSize:14,fontWeight:600,marginBottom:14}}>{editId?"Редактировать":"Добавить контент"}</div>
+        <div style={{fontSize:15,fontWeight:700,marginBottom:18}}>{editId?"Редактировать":"Добавить контент"}</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14}}>
-          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Тема</label><input value={f.topic} onChange={e=>sF({...f,topic:e.target.value})} style={iS}/></div>
-          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Платформа</label><select value={f.platform} onChange={e=>sF({...f,platform:e.target.value})} style={iS}>{PLATS.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}</select></div>
-          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Тип</label><select value={f.type} onChange={e=>sF({...f,type:e.target.value})} style={iS}>{CTYPES.map(t=><option key={t}>{t}</option>)}</select></div>
-          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Статус</label><select value={f.status} onChange={e=>sF({...f,status:e.target.value})} style={iS}>{CSTATS.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
-          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Дата</label><input type="date" value={f.date} onChange={e=>sF({...f,date:e.target.value})} style={iS}/></div>
-          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Ссылка</label><input value={f.link} onChange={e=>sF({...f,link:e.target.value})} style={iS}/></div>
-          <div style={{gridColumn:"span 3"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Сценарий</label><textarea value={f.scenario} onChange={e=>sF({...f,scenario:e.target.value})} rows={3} style={{...iS,resize:"vertical"}}/></div>
+          {/* Cover upload */}
+          <div style={{gridRow:"span 2",display:"flex",flexDirection:"column",gap:8}}>
+            <label style={{fontSize:12,color:C.t2,fontWeight:600}}>Обложка</label>
+            <label style={{cursor:"pointer",flex:1}}>
+              <div style={{width:"100%",aspectRatio:"1",background:C.bg,borderRadius:12,border:"2px dashed "+C.bd,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
+                {coverUploading
+                  ? <div style={{width:24,height:24,border:"3px solid "+C.bd,borderTopColor:C.a,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+                  : f.cover_url
+                  ? <img src={f.cover_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="cover"/>
+                  : <div style={{textAlign:"center",padding:8}}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.5" style={{marginBottom:4}}><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                      <div style={{fontSize:11,color:C.t2}}>Загрузить фото</div>
+                    </div>
+                }
+              </div>
+              <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0])uploadCover(e.target.files[0]);}}/>
+            </label>
+          </div>
+
+          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Тема *</label><input value={f.topic} onChange={e=>sF({...f,topic:e.target.value})} style={iS}/></div>
+
+          {/* Platform with icon */}
+          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Платформа</label>
+            <div style={{display:"flex",alignItems:"center",gap:8,padding:"0 10px",border:"1px solid "+C.bd,borderRadius:8,background:C.ib,height:38}}>
+              <PlatformIcon pid={f.platform} size={18}/>
+              <select value={f.platform} onChange={e=>sF({...f,platform:e.target.value})} style={{flex:1,border:"none",background:"transparent",fontSize:13,outline:"none",fontFamily:"'Montserrat',sans-serif",cursor:"pointer"}}>
+                {PLATS.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Тип</label><select value={f.type} onChange={e=>sF({...f,type:e.target.value})} style={iS}>{CTYPES.map(t=><option key={t}>{t}</option>)}</select></div>
+          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Статус</label><select value={f.status} onChange={e=>sF({...f,status:e.target.value})} style={iS}>{CSTATS.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
+          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Ссылка на контент</label><input value={f.content_url} onChange={e=>sF({...f,content_url:e.target.value})} placeholder="https://..." style={iS}/></div>
+
+          {/* Deadlines */}
+          {DEADLINES.map(d=><div key={d.key}>
+            <label style={{fontSize:12,display:"block",marginBottom:6,fontWeight:600,color:d.color}}>{d.label}</label>
+            <input type="datetime-local" value={f[d.key]} onChange={e=>sF({...f,[d.key]:e.target.value})} style={{...iS,borderColor:f[d.key]?d.color:C.bd}}/>
+          </div>)}
+
+          <div style={{gridColumn:"span 3"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Текст контента</label><textarea value={f.scenario} onChange={e=>sF({...f,scenario:e.target.value})} rows={3} style={{...iS,resize:"vertical"}}/></div>
         </div>
         <div style={{display:"flex",gap:10,marginTop:16}}><Btn onClick={sub}>{editId?"Сохранить":"Добавить"}</Btn><Btn primary={false} onClick={()=>{setShow(false);setEditId(null);}}>Отмена</Btn></div>
       </Card>}
-      <Card style={{padding:0,overflow:"hidden"}}>{items.length===0?<div style={{padding:"48px",textAlign:"center",color:C.t2}}>Нет публикаций</div>:<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:14}}><thead><tr style={{borderBottom:"2px solid "+C.bd}}>{["Дата","Платформа","Тип","Тема","Статус",""].map((h,i)=><th key={i} style={{padding:"14px 16px",textAlign:"left",fontSize:12,fontWeight:600,color:C.t2,textTransform:"uppercase"}}>{h}</th>)}</tr></thead><tbody>{items.map((x:any)=><tr key={x.id} style={{borderBottom:"1px solid "+C.bd}}><td style={{padding:"12px 16px",fontSize:13}}>{x.date}</td><td style={{padding:"12px 16px"}}><Tag label={pLbl(x.platform)} color={pCol(x.platform)}/></td><td style={{padding:"12px 16px"}}>{x.type}</td><td style={{padding:"12px 16px",fontWeight:500}}>{x.topic}{x.scenario&&<div style={{fontSize:11,color:C.t2,marginTop:2,maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{x.scenario}</div>}</td><td style={{padding:"12px 16px"}}><Tag label={csLbl(x.status)} color={csCol(x.status)}/></td><td style={{padding:"12px 8px",display:"flex",gap:4,alignItems:"center"}}><button onClick={()=>startEdit(x)} style={{width:28,height:28,borderRadius:6,border:"none",background:C.bg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><I path="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" size={12} color={C.a} sw={2}/></button><button onClick={()=>remove(x.id)} style={{width:28,height:28,borderRadius:6,border:"none",background:C.bg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><I path="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" size={12} color={C.r} sw={2}/></button></td></tr>)}</tbody></table></div>}</Card>
+
+      {/* Grouped list */}
+      {items.length===0
+        ? <Card style={{padding:"48px",textAlign:"center"}}><span style={{color:C.t2}}>Нет публикаций</span></Card>
+        : Object.entries(groupedByMonth).map(([key,group])=><div key={key} style={{marginBottom:24}}>
+            <div style={{fontSize:13,fontWeight:700,color:C.t2,letterSpacing:0.5,textTransform:"uppercase",marginBottom:10,display:"flex",alignItems:"center",gap:8}}>
+              {monthLabel(key)}
+              <span style={{fontSize:11,fontWeight:500,background:C.bd,borderRadius:20,padding:"1px 8px",textTransform:"none"}}>{(group as any[]).length}</span>
+            </div>
+            <Card style={{padding:0,overflow:"hidden"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:14}}>
+                <tbody>{(group as any[]).map((x:any,i:number)=><tr key={x.id} style={{borderBottom:i<(group as any[]).length-1?"1px solid "+C.bd:"none"}}
+                  onMouseEnter={e=>(e.currentTarget.style.background=C.bg)} onMouseLeave={e=>(e.currentTarget.style.background="transparent")}>
+                  {/* Cover thumbnail */}
+                  <td style={{padding:"10px 12px",width:52}}>
+                    <div style={{width:44,height:44,borderRadius:8,overflow:"hidden",background:C.bg,border:"1px solid "+C.bd,flexShrink:0,position:"relative"}}>
+                      {x.cover_url?<img src={x.cover_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center"}}><PlatformIcon pid={x.platform} size={16}/></div>}
+                    </div>
+                  </td>
+                  {/* Platform icon */}
+                  <td style={{padding:"10px 8px",width:28}}><PlatformIcon pid={x.platform} size={20}/></td>
+                  <td style={{padding:"10px 8px",minWidth:80}}><Tag label={pLbl(x.platform)} color={pCol(x.platform)}/></td>
+                  <td style={{padding:"10px 8px",width:80,fontSize:12,color:C.t2}}>{x.type}</td>
+                  <td style={{padding:"10px 12px",fontWeight:500}}>
+                    {x.topic}
+                    {x.scenario&&<div style={{fontSize:11,color:C.t2,marginTop:1,maxWidth:300,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{x.scenario}</div>}
+                  </td>
+                  <td style={{padding:"10px 8px"}}><Tag label={csLbl(x.status)} color={csCol(x.status)}/></td>
+                  <td style={{padding:"10px 8px",fontSize:11,color:C.t2,whiteSpace:"nowrap"}}>{x.date||""}</td>
+                  <td style={{padding:"10px 10px"}}>
+                    <div style={{display:"flex",gap:5,alignItems:"center"}}>
+                      {/* View link button */}
+                      {x.content_url
+                        ? <a href={x.content_url} target="_blank" rel="noreferrer" style={{padding:"5px 10px",background:C.a+"12",color:C.a,borderRadius:7,fontSize:11,fontWeight:600,textDecoration:"none",whiteSpace:"nowrap",border:"1px solid "+C.a+"22"}}>Посмотреть</a>
+                        : <span style={{padding:"5px 10px",background:C.bg,color:C.t2,borderRadius:7,fontSize:11,border:"1px solid "+C.bd,whiteSpace:"nowrap",opacity:0.5}}>Посмотреть</span>
+                      }
+                      <button onClick={()=>startEdit(x)} style={{width:28,height:28,borderRadius:6,border:"none",background:C.bg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><I path="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" size={12} color={C.a} sw={2}/></button>
+                      <button onClick={()=>remove(x.id)} style={{width:28,height:28,borderRadius:6,border:"none",background:C.bg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><I path="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" size={12} color={C.r} sw={2}/></button>
+                    </div>
+                  </td>
+                </tr>)}</tbody>
+              </table>
+            </Card>
+          </div>)
+      }
     </>}
 
+    {/* CALENDAR TAB */}
     {tab==="calendar"&&<>
       <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
         <button onClick={()=>setCalMonth(m=>m.m===0?{y:m.y-1,m:11}:{y:m.y,m:m.m-1})} style={{width:36,height:36,border:"1px solid "+C.bd,borderRadius:10,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg></button>
@@ -1565,9 +1699,18 @@ function ContentPage({userId}:{userId:string}){
           {calDays.map((d,i)=>{
             const dayItems=d?itemsForDay(d):[];
             const isT=d&&ds(d)===today();
-            return<div key={i} style={{minHeight:100,padding:"6px",borderRight:i%7!==6?"1px solid "+C.bd:"none",borderBottom:"1px solid "+C.bd,background:isT?"rgba(37,99,235,0.03)":"transparent"}}>
-              {d&&<><div style={{fontSize:13,fontWeight:isT?700:400,color:isT?C.a:C.t1,marginBottom:4}}>{d.getDate()}</div>
-              {dayItems.map((x:any)=><div key={x.id} style={{fontSize:10,padding:"2px 5px",borderRadius:4,background:pCol(x.platform)+"22",color:pCol(x.platform),marginBottom:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{x.topic}</div>)}</>}
+            return <div key={i} style={{minHeight:110,padding:"6px",borderRight:i%7!==6?"1px solid "+C.bd:"none",borderBottom:"1px solid "+C.bd,background:isT?"rgba(37,99,235,0.03)":"transparent"}}>
+              {d&&<>
+                <div style={{fontSize:13,fontWeight:isT?700:400,color:isT?C.a:C.t1,marginBottom:5}}>{d.getDate()}</div>
+                {dayItems.slice(0,3).map((x:any)=><div key={x.id} style={{marginBottom:4,borderRadius:6,overflow:"hidden",border:"1px solid "+C.bd,background:C.w}}>
+                  {x.cover_url&&<img src={x.cover_url} style={{width:"100%",height:36,objectFit:"cover",display:"block"}} alt=""/>}
+                  <div style={{padding:"3px 5px",display:"flex",alignItems:"center",gap:4}}>
+                    <PlatformIcon pid={x.platform} size={10}/>
+                    <span style={{fontSize:9,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1,color:C.t1}}>{x.topic}</span>
+                  </div>
+                </div>)}
+                {dayItems.length>3&&<div style={{fontSize:9,color:C.t2,textAlign:"center"}}>+{dayItems.length-3}</div>}
+              </>}
             </div>;
           })}
         </div>
