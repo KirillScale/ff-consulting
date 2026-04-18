@@ -1068,34 +1068,6 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
     </div>
   </div>;
 }
-  const[openGoal,setOpenGoal]=useState<string|null>(null);
-  const[showGTF,setShowGTF]=useState<string|null>(null);
-  const[gtf,sGtf]=useState({text:"",mins:30,type:"biz",date:""});
-  const[tfErr,setTfErr]=useState("");
-  const[showNewGoal,setShowNewGoal]=useState(false);
-  const[newGoal,sNewGoal]=useState({name:"",description:"",color:C.a,start_date:"",end_date:""});
-  const[editGoalId,setEditGoalId]=useState<string|null>(null);
-  const[editGoalData,setEditGoalData]=useState<any>({});
-
-  const COLORS=[C.a,"#8B5CF6",C.g,C.r,C.y,C.pk,"#06B6D4","#F97316"];
-
-  // Ensure system pinned block exists
-  useEffect(()=>{
-    if(!userId||goals.loading)return;
-    const hasPinned=goals.data.some((g:any)=>g.is_system_pinned);
-    if(!hasPinned){
-      goals.add({name:"Масштабные цели",color:C.a,is_system_pinned:true});
-    }
-  },[userId,goals.loading,goals.data.length]);
-
-  const systemBlock=goals.data.find((g:any)=>g.is_system_pinned);
-  // Child goals = goals with parent_id = systemBlock.id, or regular non-pinned goals
-  const childGoals=useMemo(()=>{
-    if(!systemBlock)return goals.data.filter((g:any)=>!g.is_system_pinned);
-    return goals.data.filter((g:any)=>!g.is_system_pinned);
-  },[goals.data,systemBlock]);
-
-}
 
 function StrategyPage({userId}:{userId:string}){
   const kanban = useTable("kanban", userId);
