@@ -27,6 +27,7 @@ const NAV=[
   {id:"calc",label:"Калькулятор",ic:"M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"},
   {id:"tools",label:"Инструменты",ic:"M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"},
   {id:"links",label:"База ссылок",ic:"M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"},
+  {id:"files",label:"База файлов",ic:"M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"},
 ];
 const WD=["Воскресенье","Понедельник","Вторник","Среда","Четверг","Пятница","Суббота"];
 const MR=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
@@ -180,23 +181,25 @@ export default function App() {
   const [user, setUser] = useState<any>(null);
   const [page, setPage] = useState("dashboard");
   const [loading, setLoading] = useState(true);
-  const [userName, setUserName] = useState("User");
+  const [userName, setUserName] = useState("");
+  const [userAvatar, setUserAvatar] = useState("");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) { setUser(session.user); loadName(session.user.id); }
+      if (session?.user) { setUser(session.user); loadProfile(session.user.id); }
       setLoading(false);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) { setUser(session.user); loadName(session.user.id); }
+      if (session?.user) { setUser(session.user); loadProfile(session.user.id); }
       else { setUser(null); }
     });
     return () => subscription.unsubscribe();
   }, []);
 
-  const loadName = async (uid: string) => {
-    const { data } = await supabase.from("profiles").select("name").eq("id", uid).single();
+  const loadProfile = async (uid: string) => {
+    const { data } = await supabase.from("profiles").select("name,avatar_url").eq("id", uid).single();
     if (data?.name) setUserName(data.name);
+    if (data?.avatar_url) setUserAvatar(data.avatar_url);
   };
 
   const logout = async () => {
@@ -206,7 +209,7 @@ export default function App() {
   };
 
   if (loading) return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.bg,fontFamily:"'Montserrat',sans-serif"}}><div style={{fontSize:18,color:C.t2}}>Загрузка...</div></div>;
-  if (!user) return <Auth onLogin={(u) => { setUser(u); loadName(u.id); }} />;
+  if (!user) return <Auth onLogin={(u) => { setUser(u); loadProfile(u.id); }} />;
 
   const nav = NAV.find(n => n.id === page);
 
@@ -218,7 +221,7 @@ export default function App() {
       <div style={{marginLeft:252,minHeight:"100vh"}}>
         <Head name={userName}/>
         <div style={{padding:"28px 32px"}}>
-          {page === "dashboard" && <DashPage userId={user.id} name={userName} onNav={setPage}/>}
+          {page === "dashboard" && <DashPage userId={user.id} name={userName} avatar={userAvatar} onNav={setPage} onAvatarChange={(url)=>{setUserAvatar(url);supabase.from("profiles").update({avatar_url:url}).eq("id",user.id);}}/>}
           {page === "strategy" && <StrategyPage userId={user.id}/>}
           {page === "crm" && <CrmPage userId={user.id}/>}
           {page === "calls" && <CallsPage userId={user.id}/>}
@@ -229,7 +232,8 @@ export default function App() {
           {page === "calc" && <CalcPage/>}
           {page === "tools" && <ToolsPage/>}
           {page === "links" && <LinksPage userId={user.id}/>}
-          {!["dashboard","strategy","crm","calls","content","pnl","media","ads","calc","tools","links"].includes(page) && nav && <Placeholder title={nav.label} ic={nav.ic}/>}
+          {page === "files" && <FilesPage userId={user.id}/>}
+          {!["dashboard","strategy","crm","calls","content","pnl","media","ads","calc","tools","links","files"].includes(page) && nav && <Placeholder title={nav.label} ic={nav.ic}/>}
         </div>
       </div>
     </div>
@@ -250,20 +254,53 @@ function DonutChart({done,total,size=140}:{done:number,total:number,size?:number
         strokeDasharray={circ} strokeDashoffset={circ*(1-doneFrac)} strokeLinecap="round"
         style={{transition:"stroke-dashoffset 0.6s ease"}}
         onMouseEnter={()=>setHover("done")} onMouseLeave={()=>setHover(null)}/>
-      {done<total&&<circle cx={cx} cy={cy} r={r} fill="none" stroke={C.bd} strokeWidth={stroke}
-        strokeDasharray={`${circ*(1-doneFrac)} ${circ*doneFrac}`}
-        strokeDashoffset={-circ*doneFrac} strokeLinecap="round"
-        onMouseEnter={()=>setHover("todo")} onMouseLeave={()=>setHover(null)}/>}
     </svg>
     <div style={{position:"absolute",textAlign:"center",pointerEvents:"none"}}>
       {hover==="done"?<><div style={{fontSize:13,fontWeight:700,color:C.a}}>Выполнено</div><div style={{fontSize:12,color:C.t2}}>{done} из {total}</div></>
-      :hover==="todo"?<><div style={{fontSize:13,fontWeight:700,color:C.t2}}>Осталось</div><div style={{fontSize:12,color:C.t2}}>{total-done} из {total}</div></>
       :<><div style={{fontSize:22,fontWeight:800,color:C.a}}>{pct}%</div><div style={{fontSize:10,color:C.t2,marginTop:1}}>выполнено</div></>}
     </div>
   </div>;
 }
 
-function DashPage({userId,name,onNav}:{userId:string,name:string,onNav:(p:string)=>void}){
+// Simple inline SVG bar chart for P&L
+function PnlBarChart({income,expense,width=280,height=80}:{income:number,expense:number,width?:number,height?:number}){
+  const max=Math.max(income,expense,1);
+  const iH=Math.max(4,Math.round(income/max*(height-20)));
+  const eH=Math.max(4,Math.round(expense/max*(height-20)));
+  const[hover,setHover]=useState<string|null>(null);
+  const bw=42,gap=16,pad=20;
+  const iX=pad,eX=pad+bw+gap;
+  return <svg width={width} height={height} style={{overflow:"visible"}}>
+    {/* Income bar */}
+    <rect x={iX} y={height-20-iH} width={bw} height={iH} rx={6} fill={C.g} opacity={hover==="i"?1:0.8}
+      style={{cursor:"pointer",transition:"opacity 0.15s"}}
+      onMouseEnter={()=>setHover("i")} onMouseLeave={()=>setHover(null)}/>
+    <text x={iX+bw/2} y={height-4} textAnchor="middle" fontSize="10" fill={C.t2}>Доход</text>
+    {hover==="i"&&<g>
+      <rect x={iX+bw/2-32} y={height-20-iH-24} width={64} height={20} rx={5} fill={C.dk}/>
+      <text x={iX+bw/2} y={height-20-iH-10} textAnchor="middle" fontSize="11" fill="#fff" fontWeight="700">+{fmt$(income)} ₽</text>
+    </g>}
+    {/* Expense bar */}
+    <rect x={eX} y={height-20-eH} width={bw} height={eH} rx={6} fill={C.r} opacity={hover==="e"?1:0.8}
+      style={{cursor:"pointer",transition:"opacity 0.15s"}}
+      onMouseEnter={()=>setHover("e")} onMouseLeave={()=>setHover(null)}/>
+    <text x={eX+bw/2} y={height-4} textAnchor="middle" fontSize="10" fill={C.t2}>Расход</text>
+    {hover==="e"&&<g>
+      <rect x={eX+bw/2-32} y={height-20-eH-24} width={64} height={20} rx={5} fill={C.dk}/>
+      <text x={eX+bw/2} y={height-20-eH-10} textAnchor="middle" fontSize="11" fill="#fff" fontWeight="700">-{fmt$(expense)} ₽</text>
+    </g>}
+    {/* Profit line */}
+    <text x={eX+bw+16} y={height/2-4} fontSize="11" fill={income-expense>=0?C.g:C.r} fontWeight="700">{income-expense>=0?"+":""}{fmt$(income-expense)} ₽</text>
+    <text x={eX+bw+16} y={height/2+10} fontSize="9" fill={C.t2}>прибыль</text>
+  </svg>;
+}
+
+// Social media SVG icons
+const IgSvg=({size=18}:{size?:number})=><svg width={size} height={size} viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5" stroke="url(#igGrad)" strokeWidth="2"/><circle cx="12" cy="12" r="5" stroke="url(#igGrad)" strokeWidth="2"/><circle cx="17.5" cy="6.5" r="1.2" fill="#E1306C"/><defs><linearGradient id="igGrad" x1="2" y1="22" x2="22" y2="2" gradientUnits="userSpaceOnUse"><stop stopColor="#F58529"/><stop offset="0.5" stopColor="#DD2A7B"/><stop offset="1" stopColor="#8134AF"/></linearGradient></defs></svg>;
+const YtSvg=({size=18}:{size?:number})=><svg width={size} height={size} viewBox="0 0 24 24"><rect width="24" height="24" rx="5" fill="#FF0000"/><path d="M19.59 7.35A2.5 2.5 0 0017.83 5.6C16.37 5.2 12 5.2 12 5.2s-4.37 0-5.83.4A2.5 2.5 0 004.41 7.35 26 26 0 004 12a26 26 0 00.41 4.65A2.5 2.5 0 006.17 18.4c1.46.4 5.83.4 5.83.4s4.37 0 5.83-.4a2.5 2.5 0 001.76-1.75A26 26 0 0020 12a26 26 0 00-.41-4.65z" fill="white"/><path d="M10 15.2l5.2-3.2-5.2-3.2v6.4z" fill="#FF0000"/></svg>;
+const TgSvg=({size=18}:{size?:number})=><svg width={size} height={size} viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#29B6F6"/><path d="M5.5 11.8l11.5-4.4c.5-.2 1 .1.8.9l-2 9.2c-.1.6-.5.7-.9.5l-2.5-1.8-1.2 1.1c-.1.1-.3.2-.6.2l.2-2.6 4.8-4.3c.2-.2 0-.3-.3-.1L7.8 13.4 5.3 12.7c-.6-.2-.6-.6.2-.9z" fill="white"/></svg>;
+
+function DashPage({userId,name,avatar,onNav,onAvatarChange}:{userId:string,name:string,avatar:string,onNav:(p:string)=>void,onAvatarChange:(url:string)=>void}){
   const leads = useTable("leads", userId);
   const pnl = useTable("pnl", userId);
   const kanban = useTable("kanban", userId);
@@ -271,15 +308,41 @@ function DashPage({userId,name,onNav}:{userId:string,name:string,onNav:(p:string
   const content = useTable("content", userId);
   const calls = useTable("calls", userId);
   const media = useTable("media", userId);
+  const[avatarUploading,setAvatarUploading]=useState(false);
   const td = today();
   const cm = td.substring(0,7);
 
+  const uploadAvatar=async(file:File)=>{
+    setAvatarUploading(true);
+    try{
+      const compressed=await new Promise<Blob>((resolve,reject)=>{
+        const img=new Image();
+        const obj=URL.createObjectURL(file);
+        img.onload=()=>{
+          const SIZE=256;
+          const canvas=document.createElement("canvas");
+          canvas.width=SIZE;canvas.height=SIZE;
+          const ctx=canvas.getContext("2d")!;
+          const s=Math.min(img.width,img.height);
+          const ox=(img.width-s)/2,oy=(img.height-s)/2;
+          ctx.drawImage(img,ox,oy,s,s,0,0,SIZE,SIZE);
+          URL.revokeObjectURL(obj);
+          canvas.toBlob(b=>b?resolve(b):reject(),"image/jpeg",0.85);
+        };
+        img.onerror=reject;img.src=obj;
+      });
+      const path=`${userId}/avatar.jpg`;
+      await supabase.storage.from("files").upload(path,compressed,{upsert:true,contentType:"image/jpeg"});
+      const{data}=supabase.storage.from("files").getPublicUrl(path);
+      onAvatarChange(data.publicUrl+"?t="+Date.now());
+    }catch(e){console.error(e);}
+    finally{setAvatarUploading(false);}
+  };
+
   const todayTasks = kanban.data.filter((t:any)=>t.date===td&&t.type!=="delegate");
   const todayGoalTasks = goalTasks.data.filter((t:any)=>t.date===td&&t.type!=="delegate");
-  // Объединяем по id чтобы не было дублей если одна запись попала в обе таблицы
-  const allTodayTasksMap = new Map<string,any>();
-  [...todayTasks, ...todayGoalTasks].forEach(t=>allTodayTasksMap.set(t.id, t));
-  const allTodayTasks = Array.from(allTodayTasksMap.values());
+  const seenIds = new Set(todayTasks.map((t:any)=>t.id));
+  const allTodayTasks = [...todayTasks, ...todayGoalTasks.filter((t:any)=>!seenIds.has(t.id))];
   const doneTodayTasks = allTodayTasks.filter((t:any)=>t.status==="done"||t.done);
 
   const cI = pnl.data.filter((t:any)=>t.type==="income"&&t.date?.startsWith(cm)).reduce((s:number,t:any)=>s+(t.amount||0),0);
@@ -309,9 +372,26 @@ function DashPage({userId,name,onNav}:{userId:string,name:string,onNav:(p:string
   const callLabel = (c:any) => c.goal === "Своя цель" ? (c.custom_goal || "Созвон") : c.goal;
 
   return <>
-    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:"32px 36px",marginBottom:24,color:"#fff"}}>
-      <div style={{fontSize:24,fontWeight:700,marginBottom:6}}>{getGreeting()}{name&&name!=="User"?", "+name:""}</div>
-      <div style={{fontSize:14,opacity:0.7}}>Сегодня {fmtDate(new Date())}</div>
+    {/* Hero greeting with avatar */}
+    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:"28px 36px",marginBottom:24,color:"#fff",display:"flex",alignItems:"center",gap:20}}>
+      {/* Avatar */}
+      <label style={{cursor:"pointer",flexShrink:0}}>
+        <div style={{width:64,height:64,borderRadius:"50%",border:"3px solid rgba(255,255,255,0.3)",overflow:"hidden",background:"rgba(255,255,255,0.1)",display:"flex",alignItems:"center",justifyContent:"center",transition:"border-color 0.2s"}}
+          onMouseEnter={e=>(e.currentTarget.style.borderColor="rgba(255,255,255,0.7)")}
+          onMouseLeave={e=>(e.currentTarget.style.borderColor="rgba(255,255,255,0.3)")}>
+          {avatarUploading
+            ? <div style={{width:20,height:20,border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+            : avatar
+            ? <img src={avatar} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>
+            : <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          }
+        </div>
+        <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0])uploadAvatar(e.target.files[0]);}}/>
+      </label>
+      <div>
+        <div style={{fontSize:24,fontWeight:700,marginBottom:4}}>{getGreeting()}{name?", "+name:""}</div>
+        <div style={{fontSize:14,opacity:0.6}}>Сегодня {fmtDate(new Date())}</div>
+      </div>
     </div>
 
     {/* Stat cards */}
@@ -319,9 +399,8 @@ function DashPage({userId,name,onNav}:{userId:string,name:string,onNav:(p:string
       {[{l:"Задачи",v:allTodayTasks.filter((t:any)=>t.status!=="done"&&!t.done).length,c:C.a},{l:"Лиды",v:leads.data.length,c:C.g},{l:"Публикации",v:content.data.filter((x:any)=>x.status==="published").length,c:C.y},{l:"Прибыль",v:(cP>=0?"+":"")+fmt$(cP)+" ₽",c:cP>=0?C.g:C.r}].map((s,i)=><Card key={i} style={{padding:"22px 24px"}}><div style={{fontSize:28,fontWeight:700,marginBottom:4}}>{s.v}</div><div style={{fontSize:13,color:C.t2}}>{s.l}</div></Card>)}
     </div>
 
-    {/* NEW: donut + media summary */}
+    {/* Donut + Media */}
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:24}}>
-      {/* Donut */}
       <Card>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}>
           <span style={{fontSize:16,fontWeight:600}}>Прогресс задач сегодня</span>
@@ -332,27 +411,15 @@ function DashPage({userId,name,onNav}:{userId:string,name:string,onNav:(p:string
           : <div style={{display:"flex",alignItems:"center",gap:24}}>
               <DonutChart done={doneTodayTasks.length} total={allTodayTasks.length}/>
               <div style={{display:"flex",flexDirection:"column",gap:10,flex:1}}>
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <div style={{width:10,height:10,borderRadius:3,background:C.a}}/>
-                  <span style={{fontSize:13,color:C.t2}}>Выполнено</span>
-                  <span style={{fontSize:15,fontWeight:700,marginLeft:"auto"}}>{doneTodayTasks.length}</span>
-                </div>
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <div style={{width:10,height:10,borderRadius:3,background:C.bd}}/>
-                  <span style={{fontSize:13,color:C.t2}}>Осталось</span>
-                  <span style={{fontSize:15,fontWeight:700,marginLeft:"auto"}}>{allTodayTasks.length-doneTodayTasks.length}</span>
-                </div>
-                <div style={{height:1,background:C.bd,margin:"2px 0"}}/>
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:13,color:C.t2}}>Всего</span>
-                  <span style={{fontSize:15,fontWeight:700,marginLeft:"auto"}}>{allTodayTasks.length}</span>
-                </div>
+                <div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:10,height:10,borderRadius:3,background:C.a}}/><span style={{fontSize:13,color:C.t2}}>Выполнено</span><span style={{fontSize:15,fontWeight:700,marginLeft:"auto"}}>{doneTodayTasks.length}</span></div>
+                <div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:10,height:10,borderRadius:3,background:C.bd}}/><span style={{fontSize:13,color:C.t2}}>Осталось</span><span style={{fontSize:15,fontWeight:700,marginLeft:"auto"}}>{allTodayTasks.length-doneTodayTasks.length}</span></div>
+                <div style={{height:1,background:C.bd}}/><div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:13,color:C.t2}}>Всего</span><span style={{fontSize:15,fontWeight:700,marginLeft:"auto"}}>{allTodayTasks.length}</span></div>
               </div>
             </div>
         }
       </Card>
 
-      {/* Media summary */}
+      {/* Media widget with real SVG icons */}
       <div onClick={()=>onNav("media")} style={{cursor:"pointer",background:C.w,borderRadius:16,padding:24,boxShadow:C.sh}}>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}>
           <span style={{fontSize:16,fontWeight:600}}>Медийность</span>
@@ -361,22 +428,22 @@ function DashPage({userId,name,onNav}:{userId:string,name:string,onNav:(p:string
         {!latestMedia
           ? <div style={{padding:"32px 0",textAlign:"center",color:C.t2,fontSize:14}}>Нет данных. Добавь в разделе Медийность.</div>
           : <div style={{display:"flex",flexDirection:"column",gap:10}}>
-              <div style={{fontSize:11,color:C.t2,marginBottom:4}}>Последнее обновление: {latestMedia.date}</div>
+              <div style={{fontSize:11,color:C.t2,marginBottom:4}}>Обновлено: {latestMedia.date}</div>
               {[
-                {label:"Instagram",key:"ig",color:C.pk,icon:"📸"},
-                {label:"YouTube",key:"yt",color:C.r,icon:"▶️"},
-                {label:"Telegram",key:"tg",color:C.a,icon:"✈️"},
+                {label:"Instagram",key:"ig",icon:<IgSvg/>},
+                {label:"YouTube",key:"yt",icon:<YtSvg/>},
+                {label:"Telegram",key:"tg",icon:<TgSvg/>},
               ].map(p=><div key={p.key} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",background:C.bg,borderRadius:10,border:"1px solid "+C.bd}}>
-                <span style={{fontSize:18}}>{p.icon}</span>
+                {p.icon}
                 <span style={{fontSize:14,flex:1,fontWeight:500}}>{p.label}</span>
-                <span style={{fontSize:18,fontWeight:800,color:p.color}}>{fmt$(latestMedia[p.key]||0)}</span>
+                <span style={{fontSize:18,fontWeight:800,color:C.t1}}>{fmt$(latestMedia[p.key]||0)}</span>
               </div>)}
             </div>
         }
       </div>
     </div>
 
-    {/* Tasks + P&L */}
+    {/* Tasks + P&L with chart */}
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
       <Card>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}><span style={{fontSize:16,fontWeight:600}}>Задачи сегодня</span><button onClick={()=>onNav("strategy")} style={{fontSize:13,color:C.a,background:"none",border:"none",cursor:"pointer"}}>Стратегия</button></div>
@@ -386,12 +453,17 @@ function DashPage({userId,name,onNav}:{userId:string,name:string,onNav:(p:string
         }
       </Card>
       <Card>
-        <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}><span style={{fontSize:16,fontWeight:600}}>P&L (месяц)</span><button onClick={()=>onNav("pnl")} style={{fontSize:13,color:C.a,background:"none",border:"none",cursor:"pointer"}}>Подробнее</button></div>
-        <div style={{display:"flex",flexDirection:"column",gap:10}}>
-          <div style={{display:"flex",justifyContent:"space-between",padding:"10px 14px",background:C.bg,borderRadius:10}}><span>Доходы</span><span style={{fontWeight:600,color:C.g}}>{fmt$(cI)} ₽</span></div>
-          <div style={{display:"flex",justifyContent:"space-between",padding:"10px 14px",background:C.bg,borderRadius:10}}><span>Расходы</span><span style={{fontWeight:600,color:C.r}}>{fmt$(cE)} ₽</span></div>
-          <div style={{display:"flex",justifyContent:"space-between",padding:"10px 14px",background:cP>=0?"#F0FDF4":"#FEF2F2",borderRadius:10}}><span style={{fontWeight:600}}>Прибыль</span><span style={{fontWeight:700,color:cP>=0?C.g:C.r}}>{(cP>=0?"+":"")+fmt$(cP)} ₽</span></div>
-        </div>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}><span style={{fontSize:16,fontWeight:600}}>P&L (месяц)</span><button onClick={()=>onNav("pnl")} style={{fontSize:13,color:C.a,background:"none",border:"none",cursor:"pointer"}}>Подробнее</button></div>
+        {cI===0&&cE===0
+          ? <div style={{padding:"24px 0",textAlign:"center",color:C.t2,fontSize:14}}>Нет данных за месяц</div>
+          : <>
+              <PnlBarChart income={cI} expense={cE}/>
+              <div style={{display:"flex",gap:8,marginTop:8}}>
+                <div style={{flex:1,padding:"8px 10px",background:"#F0FDF4",borderRadius:8,textAlign:"center"}}><div style={{fontSize:11,color:C.g,fontWeight:600}}>Доходы</div><div style={{fontSize:14,fontWeight:700,color:C.g}}>+{fmt$(cI)} ₽</div></div>
+                <div style={{flex:1,padding:"8px 10px",background:"#FEF2F2",borderRadius:8,textAlign:"center"}}><div style={{fontSize:11,color:C.r,fontWeight:600}}>Расходы</div><div style={{fontSize:14,fontWeight:700,color:C.r}}>{fmt$(cE)} ₽</div></div>
+              </div>
+            </>
+        }
       </Card>
     </div>
 
@@ -411,13 +483,10 @@ function DashPage({userId,name,onNav}:{userId:string,name:string,onNav:(p:string
               const isImminentOrNow = mins !== null && mins >= 0;
               return <div key={c.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",background:isToday?"#FFF7ED":C.bg,borderRadius:10,borderLeft:"3px solid "+(isToday?C.y:C.a)}}>
                 <div style={{flex:1}}>
-                  <div style={{fontSize:14,fontWeight:600,display:"flex",alignItems:"center",gap:8}}>
-                    {isToday&&<span style={{color:C.y,fontSize:16}}>!</span>}
-                    {callLabel(c)}
-                  </div>
+                  <div style={{fontSize:14,fontWeight:600,display:"flex",alignItems:"center",gap:8}}>{isToday&&<span style={{color:C.y,fontSize:16}}>!</span>}{callLabel(c)}</div>
                   <div style={{fontSize:12,color:C.t2,marginTop:2}}>{c.date} в {c.time_start}{c.time_end?" - "+c.time_end:""}</div>
                 </div>
-                {isToday && isImminentOrNow && <span style={{fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:C.y+"22",color:C.y,whiteSpace:"nowrap"}}>Созвон сегодня через {mins} мин</span>}
+                {isToday && isImminentOrNow && <span style={{fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:C.y+"22",color:C.y,whiteSpace:"nowrap"}}>через {mins} мин</span>}
                 {isToday && isPast && <span style={{fontSize:11,fontWeight:700,padding:"4px 10px",borderRadius:20,background:C.r+"18",color:C.r}}>Сегодня</span>}
                 {!isToday && <span style={{fontSize:11,color:C.t2}}>{c.date}</span>}
               </div>;
@@ -426,6 +495,30 @@ function DashPage({userId,name,onNav}:{userId:string,name:string,onNav:(p:string
       }
     </Card>
   </>;
+}
+  const[hover,setHover]=useState<string|null>(null);
+  const r=54,cx=size/2,cy=size/2,stroke=16;
+  const circ=2*Math.PI*r;
+  const pct=total>0?Math.round(done/total*100):0;
+  const doneFrac=total>0?done/total:0;
+  return <div style={{position:"relative",display:"inline-flex",alignItems:"center",justifyContent:"center"}}>
+    <svg width={size} height={size} style={{transform:"rotate(-90deg)"}}>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke={C.bd} strokeWidth={stroke}/>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke={C.a} strokeWidth={stroke}
+        strokeDasharray={circ} strokeDashoffset={circ*(1-doneFrac)} strokeLinecap="round"
+        style={{transition:"stroke-dashoffset 0.6s ease"}}
+        onMouseEnter={()=>setHover("done")} onMouseLeave={()=>setHover(null)}/>
+      {done<total&&<circle cx={cx} cy={cy} r={r} fill="none" stroke={C.bd} strokeWidth={stroke}
+        strokeDasharray={`${circ*(1-doneFrac)} ${circ*doneFrac}`}
+        strokeDashoffset={-circ*doneFrac} strokeLinecap="round"
+        onMouseEnter={()=>setHover("todo")} onMouseLeave={()=>setHover(null)}/>}
+    </svg>
+    <div style={{position:"absolute",textAlign:"center",pointerEvents:"none"}}>
+      {hover==="done"?<><div style={{fontSize:13,fontWeight:700,color:C.a}}>Выполнено</div><div style={{fontSize:12,color:C.t2}}>{done} из {total}</div></>
+      :hover==="todo"?<><div style={{fontSize:13,fontWeight:700,color:C.t2}}>Осталось</div><div style={{fontSize:12,color:C.t2}}>{total-done} из {total}</div></>
+      :<><div style={{fontSize:22,fontWeight:800,color:C.a}}>{pct}%</div><div style={{fontSize:10,color:C.t2,marginTop:1}}>выполнено</div></>}
+    </div>
+  </div>;
 }
 
 /* ============ STRATEGY ============ */
@@ -2596,6 +2689,156 @@ function LinksPage({userId}:{userId:string}){
           </div>
         </div>)
     }
+  </>;
+}
+
+/* ============ FILES ============ */
+function FilesPage({userId}:{userId:string}){
+  const{data:files,add,remove}=useTable("files",userId);
+  const[showForm,setShowForm]=useState(false);
+  const[dragging,setDragging]=useState(false);
+  const[uploading,setUploading]=useState(false);
+  const[fName,setFName]=useState("");
+  const[search,setSearch]=useState("");
+
+  const FILE_ICONS:Record<string,{color:string,label:string}>={
+    pdf:{color:"#EF4444",label:"PDF"},
+    doc:{color:"#2563EB",label:"DOC"},docx:{color:"#2563EB",label:"DOC"},
+    xls:{color:"#10B981",label:"XLS"},xlsx:{color:"#10B981",label:"XLS"},
+    ppt:{color:"#F59E0B",label:"PPT"},pptx:{color:"#F59E0B",label:"PPT"},
+    jpg:{color:"#EC4899",label:"IMG"},jpeg:{color:"#EC4899",label:"IMG"},png:{color:"#EC4899",label:"IMG"},
+    gif:{color:"#8B5CF6",label:"GIF"},webp:{color:"#EC4899",label:"IMG"},
+    mp4:{color:"#06B6D4",label:"MP4"},mov:{color:"#06B6D4",label:"VID"},
+    zip:{color:"#6B7280",label:"ZIP"},rar:{color:"#6B7280",label:"RAR"},
+    txt:{color:"#9CA3AF",label:"TXT"},csv:{color:"#10B981",label:"CSV"},
+  };
+
+  const getExt=(name:string)=>name.split(".").pop()?.toLowerCase()||"";
+  const getIcon=(name:string)=>FILE_ICONS[getExt(name)]||{color:C.t2,label:getExt(name).toUpperCase()||"?"};
+  const fmtSize=(b:number)=>b>1024*1024?`${(b/1024/1024).toFixed(1)} МБ`:b>1024?`${(b/1024).toFixed(0)} КБ`:`${b} Б`;
+
+  const uploadFile=async(file:File,customName?:string)=>{
+    setUploading(true);
+    try{
+      const path=`${userId}/${Date.now()}_${file.name}`;
+      const{error}=await supabase.storage.from("files").upload(path,file,{contentType:file.type});
+      if(error)throw error;
+      const{data}=supabase.storage.from("files").getPublicUrl(path);
+      await add({name:customName||file.name,file_url:data.publicUrl,file_type:getExt(file.name),file_size:file.size});
+      setShowForm(false);setFName("");
+    }catch(e:any){console.error(e);alert("Ошибка загрузки: "+e.message);}
+    finally{setUploading(false);}
+  };
+
+  const handleDrop=(e:React.DragEvent)=>{
+    e.preventDefault();setDragging(false);
+    const file=e.dataTransfer.files[0];
+    if(file)uploadFile(file);
+  };
+
+  const openFile=(url:string)=>window.open(url,"_blank","noopener,noreferrer");
+
+  const filtered=files.filter((f:any)=>f.name.toLowerCase().includes(search.toLowerCase()));
+
+  return <>
+    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:"24px 32px",marginBottom:24,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+      <div>
+        <div style={{fontSize:20,fontWeight:700,color:"#fff"}}>База файлов</div>
+        <div style={{fontSize:13,color:"rgba(255,255,255,0.5)",marginTop:4}}>{files.length} файлов · Облачное хранилище</div>
+      </div>
+      <button onClick={()=>setShowForm(!showForm)} style={{padding:"10px 20px",background:"rgba(255,255,255,0.15)",color:"#fff",border:"1px solid rgba(255,255,255,0.25)",borderRadius:12,fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Добавить файл
+      </button>
+    </div>
+
+    {/* Upload form */}
+    {showForm&&<div style={{background:C.w,borderRadius:16,padding:22,marginBottom:20,boxShadow:C.sh,border:"1px solid "+C.bd}}>
+      <div style={{fontSize:15,fontWeight:700,marginBottom:14}}>Загрузить файл</div>
+      <div style={{marginBottom:12}}>
+        <label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Название (необязательно)</label>
+        <input value={fName} onChange={e=>setFName(e.target.value)} placeholder="Мой файл..." style={iS}/>
+      </div>
+      <div
+        onDragOver={e=>{e.preventDefault();setDragging(true);}}
+        onDragLeave={()=>setDragging(false)}
+        onDrop={handleDrop}
+        style={{border:`2px dashed ${dragging?C.a:C.bd}`,borderRadius:12,padding:"32px 20px",textAlign:"center",background:dragging?C.a+"06":C.bg,transition:"all 0.2s"}}>
+        {uploading
+          ? <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
+              <div style={{width:28,height:28,border:"3px solid "+C.bd,borderTopColor:C.a,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+              <span style={{fontSize:13,color:C.t2}}>Загрузка...</span>
+            </div>
+          : <>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.5" style={{marginBottom:8}}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <div style={{fontSize:14,color:C.t1,fontWeight:500,marginBottom:4}}>Перетащи файл сюда</div>
+              <div style={{fontSize:12,color:C.t2,marginBottom:12}}>или</div>
+              <label style={{padding:"9px 20px",background:C.a,color:"#fff",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer",display:"inline-block"}}>
+                Выбрать файл
+                <input type="file" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0])uploadFile(e.target.files[0],fName||undefined);}}/>
+              </label>
+            </>
+        }
+      </div>
+      <div style={{marginTop:12}}><Btn primary={false} onClick={()=>{setShowForm(false);setFName("");}}>Отмена</Btn></div>
+    </div>}
+
+    {/* Search */}
+    <div style={{position:"relative",marginBottom:16,maxWidth:320}}>
+      <svg style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Поиск файлов..." style={{...iS,paddingLeft:34}}/>
+    </div>
+
+    {/* Table */}
+    <div style={{background:C.w,borderRadius:16,boxShadow:C.sh,overflow:"hidden"}}>
+      {filtered.length===0
+        ? <div style={{padding:"60px 20px",textAlign:"center",color:C.t2}}>
+            <div style={{fontSize:40,marginBottom:12}}>📁</div>
+            <div style={{fontSize:16,fontWeight:600,color:C.t1,marginBottom:6}}>{search?"Файлы не найдены":"База файлов пуста"}</div>
+            <div style={{fontSize:13}}>Загрузи первый файл</div>
+          </div>
+        : <table style={{width:"100%",borderCollapse:"collapse",fontSize:14}}>
+            <thead><tr style={{borderBottom:"2px solid "+C.bd,background:"#FAFBFC"}}>
+              {["Название","Формат","Размер","Дата","Действия"].map((h,i)=><th key={i} style={{padding:"12px 16px",textAlign:"left",fontSize:11,fontWeight:700,color:C.t2,textTransform:"uppercase",letterSpacing:0.5}}>{h}</th>)}
+            </tr></thead>
+            <tbody>{filtered.map((f:any,i:number)=>{
+              const icon=getIcon(f.name||"");
+              const isImage=["jpg","jpeg","png","gif","webp"].includes(getExt(f.name||""));
+              const isPdf=getExt(f.name||"")==="pdf";
+              return <tr key={f.id} style={{borderBottom:i<filtered.length-1?"1px solid "+C.bd:"none",transition:"background 0.1s"}}
+                onMouseEnter={e=>(e.currentTarget.style.background=C.bg)}
+                onMouseLeave={e=>(e.currentTarget.style.background="transparent")}>
+                <td style={{padding:"14px 16px"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <div style={{width:36,height:36,borderRadius:8,background:icon.color+"15",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                      {isImage&&f.file_url
+                        ? <img src={f.file_url} style={{width:36,height:36,borderRadius:8,objectFit:"cover"}} alt=""/>
+                        : <span style={{fontSize:9,fontWeight:800,color:icon.color}}>{icon.label}</span>}
+                    </div>
+                    <span style={{fontWeight:500,color:C.t1}}>{f.name}</span>
+                  </div>
+                </td>
+                <td style={{padding:"14px 16px"}}><span style={{fontSize:11,fontWeight:700,padding:"3px 8px",borderRadius:6,background:icon.color+"18",color:icon.color}}>{icon.label}</span></td>
+                <td style={{padding:"14px 16px",color:C.t2,fontSize:12}}>{f.file_size?fmtSize(f.file_size):"-"}</td>
+                <td style={{padding:"14px 16px",color:C.t2,fontSize:12}}>{new Date(f.created_at).toLocaleDateString("ru-RU")}</td>
+                <td style={{padding:"14px 12px"}}>
+                  <div style={{display:"flex",gap:6}}>
+                    {(isImage||isPdf)&&<button onClick={()=>openFile(f.file_url)} title="Открыть" style={{width:32,height:32,border:"none",background:C.a+"12",borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.a}}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </button>}
+                    <a href={f.file_url} download={f.name} title="Скачать" style={{width:32,height:32,border:"none",background:C.g+"12",borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.g,textDecoration:"none"}}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    </a>
+                    <button onClick={()=>remove(f.id)} title="Удалить" style={{width:32,height:32,border:"none",background:C.r+"12",borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.r}}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>;
+            })}</tbody>
+          </table>
+      }
+    </div>
   </>;
 }
 
