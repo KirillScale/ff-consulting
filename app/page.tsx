@@ -787,7 +787,287 @@ function YearMap({userId,goals,goalUpdate,goalAdd}:{userId:string,goals:any,goal
 }
 
 /* ============ GOALS BLOCK ============ */
+// Priority system helpers
+const PRIORITIES={
+  urgent:{id:"urgent",label:"Горит",color:"#EF4444",icon:"🔥"},
+  medium:{id:"medium",label:"Ещё терпимо",color:"#F59E0B",icon:"⏳"},
+  low:{id:"low",label:"Можно отложить",color:"#10B981",icon:"📌"},
+};
+
+const calcAutoPriority=(endDate:string|null):{p:"urgent"|"medium"|"low",days:number|null,overdue:boolean}=>{
+  if(!endDate)return{p:"low",days:null,overdue:false};
+  const end=new Date(endDate);end.setHours(23,59,59);
+  const now=new Date();
+  const days=Math.ceil((end.getTime()-now.getTime())/(1000*60*60*24));
+  if(days<0)return{p:"urgent",days,overdue:true};
+  if(days<=5)return{p:"urgent",days,overdue:false};
+  if(days<=14)return{p:"medium",days,overdue:false};
+  return{p:"low",days,overdue:false};
+};
+
 function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOver,onGtDragStart,onGtDragOver,onGtDrop,setActiveModal,TYPES}:any){
+  const[openGoal,setOpenGoal]=useState<string|null>(null);
+  const[showGTF,setShowGTF]=useState<string|null>(null);
+  const[gtf,sGtf]=useState({text:"",mins:30,type:"biz",date:""});
+  const[tfErr,setTfErr]=useState("");
+  const[showNewGoal,setShowNewGoal]=useState(false);
+  const[newGoal,sNewGoal]=useState({name:"",description:"",color:C.a,start_date:"",end_date:""});
+  const[editGoalId,setEditGoalId]=useState<string|null>(null);
+  const[editGoalData,setEditGoalData]=useState<any>({});
+  const[priorityMenu,setPriorityMenu]=useState<string|null>(null);
+  const[toast,setToast]=useState<string|null>(null);
+
+  const COLORS=[C.a,"#8B5CF6",C.g,C.r,C.y,C.pk,"#06B6D4","#F97316"];
+
+  const showToast=(msg:string)=>{setToast(msg);setTimeout(()=>setToast(null),3500);};
+
+  useEffect(()=>{
+    if(!userId||goals.loading)return;
+    const hasPinned=goals.data.some((g:any)=>g.is_system_pinned);
+    if(!hasPinned){goals.add({name:"Масштабные цели",color:C.a,is_system_pinned:true});}
+  },[userId,goals.loading,goals.data.length]);
+
+  // Auto-update priorities on load
+  useEffect(()=>{
+    if(goals.loading)return;
+    goals.data.filter((g:any)=>!g.is_system_pinned&&!g.priority_manual).forEach((g:any)=>{
+      const{p}=calcAutoPriority(g.end_date||null);
+      if(g.priority!==p){
+        goals.update(g.id,{priority:p,priority_updated_at:new Date().toISOString()});
+        if((g.priority||"low")!==p){
+          const pr=PRIORITIES[p as keyof typeof PRIORITIES];
+          const{days,overdue}=calcAutoPriority(g.end_date||null);
+          if(p==="urgent"&&overdue)showToast(`Цель "${g.name}" просрочена!`);
+          else if(p==="urgent"&&days!==null)showToast(`Цель "${g.name}" теперь "${pr.label}" — до дедлайна ${days} дн.`);
+        }
+      }
+    });
+  },[goals.data.length,goals.loading]);
+
+  const systemBlock=goals.data.find((g:any)=>g.is_system_pinned);
+  const childGoals=useMemo(()=>goals.data.filter((g:any)=>!g.is_system_pinned),[goals.data]);
+
+  // Sort goals by priority
+  const priorityOrder={urgent:0,medium:1,low:2};
+  const sortedGoals=useMemo(()=>{
+    return [...childGoals].sort((a:any,b:any)=>{
+      const pa=a.priority||"low",pb=b.priority||"low";
+      if(priorityOrder[pa as keyof typeof priorityOrder]!==priorityOrder[pb as keyof typeof priorityOrder])
+        return priorityOrder[pa as keyof typeof priorityOrder]-priorityOrder[pb as keyof typeof priorityOrder];
+      // Within same priority: overdue first, then by days remaining
+      const da=calcAutoPriority(a.end_date),db=calcAutoPriority(b.end_date);
+      if(da.overdue&&!db.overdue)return -1;
+      if(!da.overdue&&db.overdue)return 1;
+      if(da.days!==null&&db.days!==null)return da.days-db.days;
+      return 0;
+    });
+  },[childGoals]);
+
+  const groupedGoals=useMemo(()=>{
+    const g:Record<string,any[]>={urgent:[],medium:[],low:[]};
+    sortedGoals.forEach((goal:any)=>{const p=goal.priority||"low";if(g[p])g[p].push(goal);});
+    return g;
+  },[sortedGoals]);
+
+  const setPriority=async(goalId:string,p:string,manual:boolean)=>{
+    await goals.update(goalId,{priority:p,priority_manual:manual,priority_updated_at:new Date().toISOString()});
+    setPriorityMenu(null);
+  };
+
+  const addChildGoal=async()=>{
+    if(!newGoal.name.trim())return;
+    const{p}=calcAutoPriority(newGoal.end_date||null);
+    await goals.add({name:newGoal.name,description:newGoal.description,color:newGoal.color,start_date:newGoal.start_date||null,end_date:newGoal.end_date||null,deadline:newGoal.end_date||null,parent_id:systemBlock?.id||null,is_system_pinned:false,priority:p,priority_manual:false});
+    sNewGoal({name:"",description:"",color:C.a,start_date:"",end_date:""});setShowNewGoal(false);
+  };
+
+  const saveGoalEdit=async()=>{
+    if(!editGoalId||!editGoalData.name?.trim())return;
+    const{p}=calcAutoPriority(editGoalData.end_date||null);
+    await goals.update(editGoalId,{name:editGoalData.name,description:editGoalData.description,color:editGoalData.color,start_date:editGoalData.start_date||null,end_date:editGoalData.end_date||null,deadline:editGoalData.end_date||null,...(!editGoalData.priority_manual?{priority:p}:{})});
+    setEditGoalId(null);
+  };
+
+  const addGoalTask=async(goalId:string)=>{
+    setTfErr("");
+    if(!gtf.text.trim()){setTfErr("Введи задачу");return;}
+    if(gtf.mins<30){setTfErr("Минимум 30 минут");return;}
+    const order=goalTasks.data.filter((t:any)=>t.goal_id===goalId).length;
+    await goalTasks.add({goal_id:goalId,text:gtf.text,mins:gtf.mins,type:gtf.type,date:gtf.date||null,done:false,status:"todo",sort_order:order});
+    sGtf({text:"",mins:30,type:"biz",date:""});setShowGTF(null);
+  };
+
+  const goalProgress=(gid:string)=>{
+    const tasks=goalTasks.data.filter((t:any)=>t.goal_id===gid&&t.type!=="delegate");
+    if(!tasks.length)return 0;
+    return Math.round(tasks.filter((t:any)=>t.status==="done"||t.done).length/tasks.length*100);
+  };
+  const prgColor=(p:number)=>p<30?C.r:p<50?"#F97316":p<70?C.y:p<90?"#84CC16":"#16A34A";
+
+  if(!systemBlock&&goals.loading) return <div style={{padding:40,textAlign:"center",color:C.t2}}>Загрузка...</div>;
+
+  const GoalCard=({g}:{g:any})=>{
+    const p=goalProgress(g.id);
+    const gTasks=[...goalTasks.data.filter((t:any)=>t.goal_id===g.id)].sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));
+    const isOpen=openGoal===g.id;
+    const isEditing=editGoalId===g.id;
+    const pr=PRIORITIES[(g.priority||"low") as keyof typeof PRIORITIES]||PRIORITIES.low;
+    const{days,overdue}=calcAutoPriority(g.end_date||null);
+    const isUrgent=pr.id==="urgent";
+    const isPriorityMenuOpen=priorityMenu===g.id;
+
+    return <div style={{background:C.bg,borderRadius:14,overflow:"hidden",border:"1px solid "+C.bd,
+      transition:"transform 0.2s,box-shadow 0.2s",
+      borderLeft:`4px solid ${pr.color}`}}>
+      {isEditing&&<div style={{padding:"16px 18px",background:C.w,borderBottom:"1px solid "+C.bd}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:10}}>
+          <div style={{gridColumn:"span 3"}}><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4,fontWeight:600}}>Название</label><input value={editGoalData.name||""} onChange={e=>setEditGoalData({...editGoalData,name:e.target.value})} style={iS}/></div>
+          <div><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4,fontWeight:600}}>Начало</label><input type="date" value={editGoalData.start_date||""} onChange={e=>setEditGoalData({...editGoalData,start_date:e.target.value})} style={iS}/></div>
+          <div><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4,fontWeight:600}}>Конец</label><input type="date" value={editGoalData.end_date||""} onChange={e=>setEditGoalData({...editGoalData,end_date:e.target.value})} style={iS}/></div>
+          <div><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4,fontWeight:600}}>Цвет</label><div style={{display:"flex",gap:4,marginTop:2}}>{COLORS.map((c:string)=><button key={c} onClick={()=>setEditGoalData({...editGoalData,color:c})} style={{width:22,height:22,borderRadius:6,background:c,border:(editGoalData.color||C.a)===c?"3px solid #111":"3px solid transparent",cursor:"pointer"}}/>)}</div></div>
+          <div style={{gridColumn:"span 3"}}><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4,fontWeight:600}}>Описание</label><textarea value={editGoalData.description||""} onChange={e=>setEditGoalData({...editGoalData,description:e.target.value})} rows={2} style={{...iS,resize:"none"}}/></div>
+        </div>
+        <div style={{display:"flex",gap:8}}><Btn onClick={saveGoalEdit}>Сохранить</Btn><Btn primary={false} onClick={()=>setEditGoalId(null)}>Отмена</Btn></div>
+      </div>}
+
+      {/* Goal header */}
+      <div style={{padding:"14px 18px",display:"flex",alignItems:"center",gap:12,background:C.w,cursor:"pointer"}} onClick={()=>setOpenGoal(isOpen?null:g.id)}>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,flexWrap:"wrap"}}>
+            <span style={{fontSize:14,fontWeight:700,color:C.t1}}>{g.name}</span>
+            {overdue&&<span style={{fontSize:10,fontWeight:700,background:C.r+"18",color:C.r,borderRadius:20,padding:"2px 8px"}}>Просрочена на {Math.abs(days||0)} дн.</span>}
+            {!overdue&&days!==null&&days<=14&&<span style={{fontSize:10,color:pr.color,fontWeight:600}}>осталось {days} дн.</span>}
+            {g.priority_manual&&<span style={{fontSize:9,background:C.bd,color:C.t2,borderRadius:20,padding:"1px 6px"}}>вручную</span>}
+          </div>
+          {g.start_date&&g.end_date&&<div style={{fontSize:11,color:C.t2,marginBottom:4}}>{g.start_date.substring(5)} — {g.end_date.substring(5)}</div>}
+          {!g.end_date&&<div style={{fontSize:10,color:C.t2,fontStyle:"italic",marginBottom:4}}>Укажите дедлайн для автоопределения приоритета</div>}
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{flex:1,height:5,background:C.bd,borderRadius:3,overflow:"hidden",maxWidth:180}}><div style={{width:p+"%",height:"100%",background:prgColor(p),borderRadius:3,transition:"width 0.3s"}}/></div>
+            <span style={{fontSize:10,color:C.t2,whiteSpace:"nowrap"}}>{gTasks.filter((t:any)=>t.status==="done"||t.done).length}/{gTasks.length} ({p}%)</span>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:6,alignItems:"center"}} onClick={e=>e.stopPropagation()}>
+          {/* Priority badge */}
+          <div style={{position:"relative"}}>
+            <button onClick={()=>setPriorityMenu(isPriorityMenuOpen?null:g.id)}
+              style={{display:"flex",alignItems:"center",gap:4,padding:"5px 10px",borderRadius:20,border:`1px solid ${pr.color}33`,background:pr.color+"10",cursor:"pointer",fontSize:11,fontWeight:600,color:pr.color}}>
+              <span style={{animation:isUrgent?"pulse 1.5s ease-in-out infinite":"none"}}>{pr.icon}</span>
+              <span>{pr.label}</span>
+            </button>
+            {isPriorityMenuOpen&&<div style={{position:"absolute",top:"calc(100% + 4px)",right:0,background:C.w,border:"1px solid "+C.bd,borderRadius:10,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:100,minWidth:200,overflow:"hidden"}}>
+              {Object.values(PRIORITIES).map(op=><button key={op.id} onClick={()=>setPriority(g.id,op.id,true)}
+                style={{width:"100%",padding:"10px 14px",background:g.priority===op.id?op.color+"10":"transparent",border:"none",borderBottom:"1px solid "+C.bd,cursor:"pointer",display:"flex",alignItems:"center",gap:8,fontSize:13,color:g.priority===op.id?op.color:C.t1,fontWeight:g.priority===op.id?600:400,textAlign:"left"}}>
+                <span>{op.icon}</span><span>{op.label}</span>
+                {g.priority===op.id&&<svg style={{marginLeft:"auto"}} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
+              </button>)}
+              {g.priority_manual&&<button onClick={()=>setPriority(g.id,calcAutoPriority(g.end_date||null).p,false)}
+                style={{width:"100%",padding:"10px 14px",background:"transparent",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:8,fontSize:12,color:C.t2,textAlign:"left"}}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12a9 9 0 1018 0 9 9 0 00-18 0"/><path d="M12 8v4l3 3"/></svg>
+                Вернуть автоматическое
+              </button>}
+            </div>}
+          </div>
+          <button onClick={()=>{setEditGoalId(g.id);setEditGoalData({...g});setOpenGoal(null);}} style={{padding:"5px 10px",fontSize:12,background:C.a+"12",color:C.a,border:"1px solid "+C.a+"22",borderRadius:8,cursor:"pointer",fontWeight:500}}>Изм.</button>
+          <button onClick={()=>goals.remove(g.id)} style={{width:26,height:26,fontSize:12,background:C.r+"10",color:C.r,border:"1px solid "+C.r+"22",borderRadius:8,cursor:"pointer"}}>×</button>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points={isOpen?"18 15 12 9 6 15":"6 9 12 15 18 9"}/></svg>
+        </div>
+      </div>
+
+      {/* Tasks */}
+      {isOpen&&<div style={{padding:"10px 18px 14px"}}>
+        {gTasks.map((t:any)=>{
+          const isDone=t.status==="done"||t.done;
+          const isOver=dndOver===t.id;
+          return <div key={t.id} draggable
+            onDragStart={()=>onGtDragStart(t.id)} onDragOver={(e:React.DragEvent)=>onGtDragOver(t.id,e)}
+            onDrop={()=>onGtDrop(t.id,g.id)} onDragEnd={()=>{setDndDrag(null);setDndOver(null);}}
+            style={{display:"flex",alignItems:"center",gap:8,padding:"9px 12px",borderRadius:10,background:isDone?"#F0FDF4":C.w,marginBottom:6,
+              borderLeft:"3px solid "+(t.type==="biz"?C.a:t.type==="delegate"?C.t2:C.y),
+              opacity:dndDrag===t.id?0.4:1,boxShadow:isOver?"0 0 0 2px "+C.a:"0 1px 3px rgba(0,0,0,0.05)",cursor:"grab",border:"1px solid "+C.bd,borderLeftWidth:3}}>
+            <span style={{fontSize:13,color:C.t2,cursor:"grab",userSelect:"none"}}>⠿</span>
+            <button onClick={()=>goalTasks.update(t.id,{status:nextStatus(t.status||"todo"),done:nextStatus(t.status||"todo")==="done"})} style={{width:18,height:18,minWidth:18,borderRadius:5,border:"2px solid "+(isDone?C.g:(t.status==="inprogress")?C.y:C.bd),background:isDone?C.g:(t.status==="inprogress")?C.y+"33":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{isDone&&<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}</button>
+            <div style={{flex:1,cursor:"pointer",minWidth:0}} onClick={()=>setActiveModal({task:t,type:"goal"})}>
+              <div style={{fontSize:13,textDecoration:isDone?"line-through":"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.text}</div>
+              <div style={{fontSize:10,color:C.t2,marginTop:1}}>{t.mins}м{t.date?` | ${t.date.substring(5)}`:""}</div>
+            </div>
+            <Tag label={tsLbl(t.status||"todo")} color={tsCol(t.status||"todo")}/>
+            <input type="date" value={t.date||""} onChange={e=>goalTasks.update(t.id,{date:e.target.value||null})} style={{width:110,padding:"3px 6px",border:"1px solid "+C.bd,borderRadius:6,fontSize:11,background:C.ib,flexShrink:0}}/>
+            <button onClick={()=>goalTasks.remove(t.id)} style={{border:"none",background:"transparent",cursor:"pointer",color:C.t2,fontSize:14,flexShrink:0}}>×</button>
+          </div>;
+        })}
+        {showGTF===g.id
+          ? <div style={{marginTop:8,padding:12,background:C.w,borderRadius:10,border:"1px solid "+C.bd}}>
+              <input placeholder="Задача" value={gtf.text} onChange={e=>sGtf({...gtf,text:e.target.value})} style={{...iS,padding:"8px 10px",fontSize:12,marginBottom:8}}/>
+              <div style={{display:"flex",gap:6,marginBottom:6}}>
+                <input type="number" value={gtf.mins} onChange={e=>sGtf({...gtf,mins:+e.target.value})} min={30} max={480} step={5} style={{...iS,width:75,padding:"6px 8px",fontSize:12}}/>
+                <select value={gtf.type} onChange={e=>sGtf({...gtf,type:e.target.value})} style={{...iS,flex:1,padding:"6px 8px",fontSize:12}}>{TYPES.map((t:any)=><option key={t.id} value={t.id}>{t.label}</option>)}</select>
+                <input type="date" value={gtf.date} onChange={e=>sGtf({...gtf,date:e.target.value})} style={{...iS,width:130,padding:"6px 8px",fontSize:12}}/>
+              </div>
+              {tfErr&&<div style={{fontSize:11,color:C.r,marginBottom:6}}>{tfErr}</div>}
+              <div style={{display:"flex",gap:6}}>
+                <button onClick={()=>addGoalTask(g.id)} style={{flex:1,padding:"7px",background:C.a,color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer"}}>Добавить</button>
+                <button onClick={()=>setShowGTF(null)} style={{padding:"7px 12px",background:C.bg,border:"1px solid "+C.bd,borderRadius:8,fontSize:12,cursor:"pointer"}}>Отмена</button>
+              </div>
+            </div>
+          : <button onClick={()=>{setShowGTF(g.id);sGtf({text:"",mins:30,type:"biz",date:""}); }} style={{width:"100%",padding:"8px",background:"transparent",border:"1px dashed "+C.bd,borderRadius:10,fontSize:12,color:C.t2,cursor:"pointer",marginTop:4}}>+ Задача</button>
+        }
+      </div>}
+    </div>;
+  };
+
+  return <div style={{background:C.w,borderRadius:20,boxShadow:"0 4px 24px rgba(0,0,0,0.07)",border:"1px solid "+C.bd,overflow:"hidden"}}>
+    <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}`}</style>
+    {/* Toast */}
+    {toast&&<div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:C.dk,color:"#fff",padding:"12px 20px",borderRadius:12,fontSize:13,fontWeight:500,zIndex:1000,boxShadow:"0 8px 24px rgba(0,0,0,0.2)",maxWidth:360,textAlign:"center"}}>{toast}</div>}
+
+    {/* Header */}
+    <div style={{padding:"18px 24px",background:`linear-gradient(135deg,${C.dk},${C.da})`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <div style={{width:32,height:32,borderRadius:10,background:"rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </div>
+        <div>
+          <div style={{fontSize:16,fontWeight:700,color:"#fff"}}>Масштабные цели</div>
+          <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",marginTop:1}}>{childGoals.length} целей · сортировка по приоритету</div>
+        </div>
+      </div>
+      <button onClick={()=>setShowNewGoal(!showNewGoal)} style={{padding:"8px 16px",background:"rgba(255,255,255,0.15)",color:"#fff",border:"1px solid rgba(255,255,255,0.25)",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer"}}>+ Цель</button>
+    </div>
+
+    {/* New goal form */}
+    {showNewGoal&&<div style={{padding:"20px 24px",borderBottom:"1px solid "+C.bd,background:"#FAFBFD"}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:12}}>
+        <div style={{gridColumn:"span 3"}}><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>Название *</label><input value={newGoal.name} onChange={e=>sNewGoal({...newGoal,name:e.target.value})} style={iS} placeholder="Запустить воронку..."/></div>
+        <div><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>Начало</label><input type="date" value={newGoal.start_date} onChange={e=>sNewGoal({...newGoal,start_date:e.target.value})} style={iS}/></div>
+        <div><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>Дедлайн</label><input type="date" value={newGoal.end_date} onChange={e=>sNewGoal({...newGoal,end_date:e.target.value})} style={iS}/></div>
+        <div><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>Цвет</label><div style={{display:"flex",gap:5,marginTop:2}}>{COLORS.map((c:string)=><button key={c} onClick={()=>sNewGoal({...newGoal,color:c})} style={{width:26,height:26,borderRadius:7,background:c,border:newGoal.color===c?"3px solid #111":"3px solid transparent",cursor:"pointer"}}/>)}</div></div>
+        <div style={{gridColumn:"span 3"}}><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>Описание</label><textarea value={newGoal.description} onChange={e=>sNewGoal({...newGoal,description:e.target.value})} rows={2} style={{...iS,resize:"none"}}/></div>
+      </div>
+      <div style={{display:"flex",gap:8}}><Btn onClick={addChildGoal}>Создать</Btn><Btn primary={false} onClick={()=>setShowNewGoal(false)}>Отмена</Btn></div>
+    </div>}
+
+    {/* Goals grouped by priority */}
+    <div style={{padding:"16px 24px",display:"flex",flexDirection:"column",gap:16}}>
+      {childGoals.length===0&&<div style={{padding:"32px 0",textAlign:"center",color:C.t2,fontSize:14}}>Создай первую цель</div>}
+
+      {Object.entries(PRIORITIES).map(([pKey,pInfo])=>{
+        const group=groupedGoals[pKey]||[];
+        if(group.length===0)return null;
+        return <div key={pKey}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+            <span style={{fontSize:14,animation:pKey==="urgent"?"pulse 1.5s ease-in-out infinite":"none"}}>{pInfo.icon}</span>
+            <span style={{fontSize:12,fontWeight:700,color:pInfo.color,textTransform:"uppercase",letterSpacing:0.5}}>{pInfo.label}</span>
+            <span style={{fontSize:11,background:pInfo.color+"15",color:pInfo.color,borderRadius:20,padding:"1px 8px",fontWeight:600}}>{group.length}</span>
+            <div style={{flex:1,height:1,background:pInfo.color+"20"}}/>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {group.map((g:any)=><GoalCard key={g.id} g={g}/>)}
+          </div>
+        </div>;
+      })}
+    </div>
+  </div>;
+}
   const[openGoal,setOpenGoal]=useState<string|null>(null);
   const[showGTF,setShowGTF]=useState<string|null>(null);
   const[gtf,sGtf]=useState({text:"",mins:30,type:"biz",date:""});
@@ -1005,6 +1285,33 @@ function StrategyPage({userId}:{userId:string}){
   // DnD for goal tasks
   const[dndDrag,setDndDrag]=useState<string|null>(null);
   const[dndOver,setDndOver]=useState<string|null>(null);
+  // DnD for kanban day tasks
+  const[kanbanDrag,setKanbanDrag]=useState<string|null>(null);
+  const[kanbanOver,setKanbanOver]=useState<string|null>(null);
+  const[kanbanErrToast,setKanbanErrToast]=useState(false);
+
+  const onKanbanDragStart=(id:string)=>{
+    setKanbanDrag(id);
+    if(navigator.vibrate)navigator.vibrate(30);
+  };
+  const onKanbanDragOver=(id:string,e:React.DragEvent)=>{e.preventDefault();setKanbanOver(id);};
+  const onKanbanDrop=async(targetId:string,dayStr:string)=>{
+    if(!kanbanDrag||kanbanDrag===targetId){setKanbanDrag(null);setKanbanOver(null);return;}
+    const dayTasks=[...kanban.data.filter((t:any)=>t.date===dayStr)].sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));
+    const fromIdx=dayTasks.findIndex((t:any)=>t.id===kanbanDrag);
+    const toIdx=dayTasks.findIndex((t:any)=>t.id===targetId);
+    if(fromIdx<0||toIdx<0){setKanbanDrag(null);setKanbanOver(null);return;}
+    const reordered=[...dayTasks];
+    const[moved]=reordered.splice(fromIdx,1);
+    reordered.splice(toIdx,0,moved);
+    setKanbanDrag(null);setKanbanOver(null);
+    try{
+      await Promise.all(reordered.map((t:any,i:number)=>kanban.update(t.id,{sort_order:i})));
+    }catch{
+      setKanbanErrToast(true);
+      setTimeout(()=>setKanbanErrToast(false),3000);
+    }
+  };
 
   const days=useMemo(()=>{const d=[];for(let i=0;i<7;i++){const dt=new Date();dt.setDate(dt.getDate()+i);d.push(ds(dt));}return d;},[]);
   const td=today();
@@ -1013,7 +1320,7 @@ function StrategyPage({userId}:{userId:string}){
   const typeColor=(t:string)=>(TYPES.find(x=>x.id===t)||{c:C.t2}).c;
 
   const tasksForDay=(d:string)=>{
-    const manual=kanban.data.filter((t:any)=>t.date===d);
+    const manual=[...kanban.data.filter((t:any)=>t.date===d)].sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));
     const fromGoals=goalTasks.data.filter((t:any)=>t.date===d).map((t:any)=>({...t,fromGoal:true,goalColor:goals.data.find((g:any)=>g.id===t.goal_id)?.color||C.a}));
     return[...manual,...fromGoals];
   };
@@ -1117,10 +1424,13 @@ function StrategyPage({userId}:{userId:string}){
 
   const visibleDays=days.slice(scroll,scroll+4);
 
-  const TaskItem=({t,showDate=false}:{t:any,showDate?:boolean})=>{
+  const TaskItem=({t,showDate=false,dayStr}:{t:any,showDate?:boolean,dayStr?:string})=>{
     const status=t.status||"todo";
     const statusColor=tsCol(status);
     const isDone=status==="done";
+    const isKanbanOver=kanbanOver===t.id;
+    const isKanbanDragging=kanbanDrag===t.id;
+    const canDrag=!t.fromGoal&&dayStr;
     if(editingTask===t.id){
       return <div style={{display:"flex",alignItems:"center",gap:6,padding:"8px 10px",borderRadius:8,background:C.bg,borderLeft:"3px solid "+typeColor(t.type)}}>
         <input autoFocus value={editText} onChange={e=>setEditText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")saveEdit(t);if(e.key==="Escape")setEditingTask(null);}} style={{...iS,padding:"4px 8px",fontSize:12,flex:1}}/>
@@ -1135,8 +1445,21 @@ function StrategyPage({userId}:{userId:string}){
         <button onClick={()=>setDeleteConfirm(null)} style={{padding:"4px 8px",background:C.bg,border:"1px solid "+C.bd,borderRadius:6,fontSize:11,cursor:"pointer"}}>Нет</button>
       </div>;
     }
-    return <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:8,background:isDone?"#F0FDF4":C.bg,borderLeft:"3px solid "+typeColor(t.type)}}>
-      <button onClick={()=>cycleTaskStatus(t)} title={tsLbl(status)} style={{width:20,height:20,minWidth:20,borderRadius:6,border:"2px solid "+statusColor,background:isDone?C.g:status==="inprogress"?C.y+"33":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+    return <div
+      draggable={!!canDrag}
+      onDragStart={canDrag?()=>onKanbanDragStart(t.id):undefined}
+      onDragOver={canDrag?(e)=>onKanbanDragOver(t.id,e):undefined}
+      onDrop={canDrag&&dayStr?()=>onKanbanDrop(t.id,dayStr):undefined}
+      onDragEnd={canDrag?()=>{setKanbanDrag(null);setKanbanOver(null);}:undefined}
+      style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:8,
+        background:isDone?"#F0FDF4":C.bg,borderLeft:"3px solid "+typeColor(t.type),
+        opacity:isKanbanDragging?0.4:1,
+        boxShadow:isKanbanOver?"0 0 0 2px "+C.a:isKanbanDragging?"0 4px 16px rgba(0,0,0,0.15)":"none",
+        cursor:canDrag?"grab":"default",
+        transition:"opacity 0.15s,box-shadow 0.15s",
+      }}>
+      {canDrag&&<span style={{fontSize:13,color:C.t2,cursor:"grab",userSelect:"none",flexShrink:0,opacity:0.5}}>⠿</span>}
+      <button onClick={()=>cycleTaskStatus(t)} title={tsLbl(status)} style={{width:20,height:20,minWidth:20,borderRadius:6,border:"2px solid "+statusColor,background:isDone?C.g:status==="inprogress"?C.y+"33":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
         {isDone&&<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
         {status==="inprogress"&&<div style={{width:8,height:8,borderRadius:2,background:C.y}}/>}
       </button>
@@ -1169,6 +1492,7 @@ function StrategyPage({userId}:{userId:string}){
 
     {/* SPRINT */}
     {stratTab==="sprint"&&<>
+      {kanbanErrToast&&<div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:C.r,color:"#fff",padding:"12px 20px",borderRadius:12,fontSize:13,fontWeight:500,zIndex:1000,boxShadow:"0 8px 24px rgba(0,0,0,0.2)"}}>Не удалось сохранить порядок. Попробуйте ещё раз</div>}
       {/* Kanban */}
       <div style={{marginBottom:20}}>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}>
@@ -1188,7 +1512,7 @@ function StrategyPage({userId}:{userId:string}){
               </div>
               <div style={{flex:1,padding:"10px 12px",overflowY:"auto",display:"flex",flexDirection:"column",gap:6}}>
                 {st.tasks.length===0&&<div style={{textAlign:"center",color:C.t2,fontSize:12,padding:"20px 0"}}>Нет задач</div>}
-                {st.tasks.map((t:any)=><TaskItem key={t.id} t={t}/>)}
+                {st.tasks.map((t:any)=><TaskItem key={t.id} t={t} dayStr={d}/>)}
                 {showTF===d?<div style={{marginTop:6}}>
                   <input placeholder="Задача" value={tf.text} onChange={e=>sTf({...tf,text:e.target.value})} style={{...iS,padding:"8px 10px",fontSize:12,marginBottom:6}}/>
                   <div style={{display:"flex",gap:6,marginBottom:6}}>
