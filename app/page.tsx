@@ -496,30 +496,6 @@ function DashPage({userId,name,avatar,onNav,onAvatarChange}:{userId:string,name:
     </Card>
   </>;
 }
-  const[hover,setHover]=useState<string|null>(null);
-  const r=54,cx=size/2,cy=size/2,stroke=16;
-  const circ=2*Math.PI*r;
-  const pct=total>0?Math.round(done/total*100):0;
-  const doneFrac=total>0?done/total:0;
-  return <div style={{position:"relative",display:"inline-flex",alignItems:"center",justifyContent:"center"}}>
-    <svg width={size} height={size} style={{transform:"rotate(-90deg)"}}>
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke={C.bd} strokeWidth={stroke}/>
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke={C.a} strokeWidth={stroke}
-        strokeDasharray={circ} strokeDashoffset={circ*(1-doneFrac)} strokeLinecap="round"
-        style={{transition:"stroke-dashoffset 0.6s ease"}}
-        onMouseEnter={()=>setHover("done")} onMouseLeave={()=>setHover(null)}/>
-      {done<total&&<circle cx={cx} cy={cy} r={r} fill="none" stroke={C.bd} strokeWidth={stroke}
-        strokeDasharray={`${circ*(1-doneFrac)} ${circ*doneFrac}`}
-        strokeDashoffset={-circ*doneFrac} strokeLinecap="round"
-        onMouseEnter={()=>setHover("todo")} onMouseLeave={()=>setHover(null)}/>}
-    </svg>
-    <div style={{position:"absolute",textAlign:"center",pointerEvents:"none"}}>
-      {hover==="done"?<><div style={{fontSize:13,fontWeight:700,color:C.a}}>Выполнено</div><div style={{fontSize:12,color:C.t2}}>{done} из {total}</div></>
-      :hover==="todo"?<><div style={{fontSize:13,fontWeight:700,color:C.t2}}>Осталось</div><div style={{fontSize:12,color:C.t2}}>{total-done} из {total}</div></>
-      :<><div style={{fontSize:22,fontWeight:800,color:C.a}}>{pct}%</div><div style={{fontSize:10,color:C.t2,marginTop:1}}>выполнено</div></>}
-    </div>
-  </div>;
-}
 
 /* ============ STRATEGY ============ */
 
