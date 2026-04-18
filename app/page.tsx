@@ -141,7 +141,18 @@ function Auth({ onLogin }: { onLogin: (u: any) => void }) {
   );
 }
 
-/* ============ SIDEBAR ============ */
+/* ============ MOBILE HOOK ============ */
+function useIsMobile(){
+  const[m,setM]=useState(()=>typeof window!=="undefined"&&window.innerWidth<768);
+  useEffect(()=>{
+    const h=()=>setM(window.innerWidth<768);
+    window.addEventListener("resize",h);
+    return()=>window.removeEventListener("resize",h);
+  },[]);
+  return m;
+}
+
+/* ============ SIDEBAR (desktop) ============ */
 function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onLogout:()=>void}){
   const[c,sC]=useState(false);
   return(
@@ -164,9 +175,74 @@ function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onL
   );
 }
 
-const Head=({name}:{name:string})=>{
+/* ============ MOBILE NAV ============ */
+// Shows top 5 most important nav items + "More" drawer
+const MOB_NAV_PRIMARY=["dashboard","strategy","crm","calls","content"];
+function MobileNav({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onLogout:()=>void}){
+  const[drawerOpen,setDrawerOpen]=useState(false);
+  const primary=NAV.filter(n=>MOB_NAV_PRIMARY.includes(n.id));
+  const more=NAV.filter(n=>!MOB_NAV_PRIMARY.includes(n.id));
+
+  return <>
+    {/* Bottom nav bar */}
+    <div style={{position:"fixed",bottom:0,left:0,right:0,background:C.dk,zIndex:200,borderTop:"1px solid rgba(255,255,255,0.08)",display:"flex",alignItems:"stretch",height:60,paddingBottom:"env(safe-area-inset-bottom)"}}>
+      {primary.map(n=>{
+        const a=active===n.id;
+        return <button key={n.id} onClick={()=>{onNav(n.id);setDrawerOpen(false);}}
+          style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,border:"none",background:"transparent",cursor:"pointer",padding:"8px 4px"}}>
+          <I path={n.ic} size={20} color={a?C.a:"rgba(255,255,255,0.5)"}/>
+          <span style={{fontSize:9,color:a?C.a:"rgba(255,255,255,0.5)",fontWeight:a?700:400,lineHeight:1}}>{n.label.split(" ")[0]}</span>
+        </button>;
+      })}
+      {/* More button */}
+      <button onClick={()=>setDrawerOpen(!drawerOpen)}
+        style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,border:"none",background:"transparent",cursor:"pointer",padding:"8px 4px"}}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={drawerOpen?C.a:"rgba(255,255,255,0.5)"} strokeWidth="2"><circle cx="5" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="19" cy="12" r="1.5" fill="currentColor"/></svg>
+        <span style={{fontSize:9,color:drawerOpen?C.a:"rgba(255,255,255,0.5)",fontWeight:400,lineHeight:1}}>Ещё</span>
+      </button>
+    </div>
+
+    {/* Drawer overlay */}
+    {drawerOpen&&<div style={{position:"fixed",inset:0,zIndex:190,background:"rgba(0,0,0,0.5)"}} onClick={()=>setDrawerOpen(false)}/>}
+
+    {/* Drawer panel */}
+    <div style={{position:"fixed",bottom:60,left:0,right:0,background:C.dk,zIndex:195,borderTop:"1px solid rgba(255,255,255,0.1)",borderRadius:"20px 20px 0 0",transform:drawerOpen?"translateY(0)":"translateY(100%)",transition:"transform 0.3s ease",maxHeight:"70vh",overflowY:"auto",paddingBottom:"env(safe-area-inset-bottom)"}}>
+      <div style={{padding:"12px 0 4px",textAlign:"center"}}>
+        <div style={{width:36,height:4,background:"rgba(255,255,255,0.15)",borderRadius:2,margin:"0 auto"}}/>
+      </div>
+      <div style={{padding:"8px 16px 16px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+        {more.map(n=>{
+          const a=active===n.id;
+          return <button key={n.id} onClick={()=>{onNav(n.id);setDrawerOpen(false);}}
+            style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",border:"none",borderRadius:12,background:a?C.a:"rgba(255,255,255,0.07)",cursor:"pointer"}}>
+            <I path={n.ic} size={18} color={a?"#fff":"rgba(255,255,255,0.7)"}/>
+            <span style={{fontSize:13,color:a?"#fff":"rgba(255,255,255,0.7)",fontWeight:a?600:400,textAlign:"left",lineHeight:1.2}}>{n.label}</span>
+          </button>;
+        })}
+        <button onClick={()=>{onLogout();setDrawerOpen(false);}}
+          style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",border:"none",borderRadius:12,background:"rgba(239,68,68,0.15)",cursor:"pointer",gridColumn:"span 2"}}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="1.5"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span style={{fontSize:13,color:"#EF4444",fontWeight:500}}>Выйти</span>
+        </button>
+      </div>
+    </div>
+  </>;
+}
+
+const Head=({name,onMenuOpen}:{name:string,onMenuOpen?:()=>void})=>{
+  const isMobile=useIsMobile();
   const greeting = getGreeting();
   const displayName = name && name !== "User" ? name : "";
+  if(isMobile) return <div style={{height:56,background:C.dk,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px",position:"sticky",top:0,zIndex:50}}>
+    <div style={{display:"flex",alignItems:"center",gap:10}}>
+      <Logo s={20}/>
+      <div style={{display:"flex",flexDirection:"column",lineHeight:1.15}}>
+        <span style={{color:"#fff",fontSize:11,fontWeight:800,letterSpacing:1.5}}>FF CONSULTING</span>
+        <span style={{color:"rgba(255,255,255,0.4)",fontSize:8,letterSpacing:1}}>by Kirill Scales</span>
+      </div>
+    </div>
+    <div style={{fontSize:13,fontWeight:500,color:"rgba(255,255,255,0.7)"}}>{greeting}{displayName?", "+displayName:""}</div>
+  </div>;
   return <div style={{height:64,background:C.w,borderBottom:"1px solid "+C.bd,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 32px",position:"sticky",top:0,zIndex:50}}>
     <div style={{fontSize:15,fontWeight:600}}>{greeting}{displayName?", "+displayName:""}</div>
     <div style={{display:"inline-flex",alignItems:"center",gap:10,background:C.dk,padding:"8px 20px",borderRadius:10}}><Logo s={16}/><div style={{display:"flex",flexDirection:"column",lineHeight:1.15}}><span style={{color:"#fff",fontSize:11,fontWeight:800,letterSpacing:1.5}}>FF CONSULTING</span><span style={{color:"rgba(255,255,255,0.5)",fontSize:8,fontWeight:300,letterSpacing:1}}>by Kirill Scales</span></div></div>
@@ -213,29 +289,57 @@ export default function App() {
 
   const nav = NAV.find(n => n.id === page);
 
+  return <AppLayout user={user} page={page} setPage={setPage} userName={userName} userAvatar={userAvatar} setUserAvatar={setUserAvatar} logout={logout} nav={nav}/>;
+}
+
+function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,nav}:any){
+  const isMobile=useIsMobile();
+
+  const pageContent=<>
+    {page === "dashboard" && <DashPage userId={user.id} name={userName} avatar={userAvatar} onNav={setPage} onAvatarChange={async(url:string)=>{setUserAvatar(url);await supabase.from("profiles").upsert({id:user.id,avatar_url:url},{onConflict:"id"});}}/>}
+    {page === "strategy" && <StrategyPage userId={user.id}/>}
+    {page === "crm" && <CrmPage userId={user.id}/>}
+    {page === "calls" && <CallsPage userId={user.id}/>}
+    {page === "content" && <ContentPage userId={user.id}/>}
+    {page === "pnl" && <PnlPage userId={user.id}/>}
+    {page === "media" && <MediaPage userId={user.id}/>}
+    {page === "ads" && <AdsPage userId={user.id}/>}
+    {page === "calc" && <CalcPage/>}
+    {page === "tools" && <ToolsPage/>}
+    {page === "links" && <LinksPage userId={user.id}/>}
+    {page === "files" && <FilesPage userId={user.id}/>}
+    {!["dashboard","strategy","crm","calls","content","pnl","media","ads","calc","tools","links","files"].includes(page) && nav && <Placeholder title={nav.label} ic={nav.ic}/>}
+  </>;
+
   return (
     <div style={{fontFamily:"'Montserrat',-apple-system,BlinkMacSystemFont,sans-serif",background:C.bg,minHeight:"100vh",color:C.t1}}>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <style>{`
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+        *{box-sizing:border-box;}
+        body{overflow-x:hidden;}
+      `}</style>
       <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
-      <Side active={page} onNav={setPage} onLogout={logout}/>
-      <div style={{marginLeft:252,minHeight:"100vh"}}>
-        <Head name={userName}/>
-        <div style={{padding:"28px 32px"}}>
-          {page === "dashboard" && <DashPage userId={user.id} name={userName} avatar={userAvatar} onNav={setPage} onAvatarChange={async(url)=>{setUserAvatar(url);await supabase.from("profiles").upsert({id:user.id,avatar_url:url},{onConflict:"id"});}}/>}
-          {page === "strategy" && <StrategyPage userId={user.id}/>}
-          {page === "crm" && <CrmPage userId={user.id}/>}
-          {page === "calls" && <CallsPage userId={user.id}/>}
-          {page === "content" && <ContentPage userId={user.id}/>}
-          {page === "pnl" && <PnlPage userId={user.id}/>}
-          {page === "media" && <MediaPage userId={user.id}/>}
-          {page === "ads" && <AdsPage userId={user.id}/>}
-          {page === "calc" && <CalcPage/>}
-          {page === "tools" && <ToolsPage/>}
-          {page === "links" && <LinksPage userId={user.id}/>}
-          {page === "files" && <FilesPage userId={user.id}/>}
-          {!["dashboard","strategy","crm","calls","content","pnl","media","ads","calc","tools","links","files"].includes(page) && nav && <Placeholder title={nav.label} ic={nav.ic}/>}
+
+      {isMobile ? <>
+        {/* Mobile layout */}
+        <MobileNav active={page} onNav={setPage} onLogout={logout}/>
+        <div style={{minHeight:"100vh",paddingBottom:80}}>
+          <Head name={userName}/>
+          <div style={{padding:"16px 16px 0"}}>
+            {pageContent}
+          </div>
         </div>
-      </div>
+      </> : <>
+        {/* Desktop layout */}
+        <Side active={page} onNav={setPage} onLogout={logout}/>
+        <div style={{marginLeft:252,minHeight:"100vh"}}>
+          <Head name={userName}/>
+          <div style={{padding:"28px 32px"}}>
+            {pageContent}
+          </div>
+        </div>
+      </>}
     </div>
   );
 }
