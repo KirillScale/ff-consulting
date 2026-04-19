@@ -28,6 +28,7 @@ const NAV=[
   {id:"tools",label:"Инструменты",ic:"M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"},
   {id:"links",label:"База ссылок",ic:"M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"},
   {id:"files",label:"База файлов",ic:"M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"},
+  {id:"ai",label:"Kirill Scales AI",ic:"M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z",glow:true},
 ];
 const WD=["Воскресенье","Понедельник","Вторник","Среда","Четверг","Пятница","Суббота"];
 const MR=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
@@ -177,7 +178,7 @@ function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onL
 
 /* ============ MOBILE NAV ============ */
 // Shows top 5 most important nav items + "More" drawer
-const MOB_NAV_PRIMARY=["dashboard","strategy","crm","calls","content"];
+const MOB_NAV_PRIMARY=["dashboard","strategy","crm","calls","ai"];
 function MobileNav({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onLogout:()=>void}){
   const[drawerOpen,setDrawerOpen]=useState(false);
   const primary=NAV.filter(n=>MOB_NAV_PRIMARY.includes(n.id));
@@ -308,7 +309,8 @@ function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,n
     {page === "tools" && <ToolsPage/>}
     {page === "links" && <LinksPage userId={user.id}/>}
     {page === "files" && <FilesPage userId={user.id}/>}
-    {!["dashboard","strategy","crm","calls","content","pnl","media","ads","calc","tools","links","files"].includes(page) && nav && <Placeholder title={nav.label} ic={nav.ic}/>}
+    {page === "ai" && <AIPage/>}
+    {!["dashboard","strategy","crm","calls","content","pnl","media","ads","calc","tools","links","files","ai"].includes(page) && nav && <Placeholder title={nav.label} ic={nav.ic}/>}
   </>;
 
   return (
@@ -3227,6 +3229,126 @@ function FilesPage({userId}:{userId:string}){
       }
     </div>
   </>;
+}
+
+/* ============ AI PAGE ============ */
+function AIPage(){
+  const isMobile=useIsMobile();
+  const[msgs,setMsgs]=useState<{role:"user"|"assistant",content:string}[]>([]);
+  const[input,setInput]=useState("");
+  const[loading,setLoading]=useState(false);
+  const[err,setErr]=useState("");
+  const bottomRef=React.useRef<HTMLDivElement>(null);
+  const inputRef=React.useRef<HTMLTextAreaElement>(null);
+
+  const SUGGESTIONS=["Как увеличить конверсию в консалтинге?","Напиши скрипт для первого созвона с лидом","Какие метрики важны для онлайн-бизнеса?","Помоги составить оффер для клиента","Как выстроить систему продаж с нуля?","Идеи для контента про предпринимательство"];
+
+  useEffect(()=>{
+    bottomRef.current?.scrollIntoView({behavior:"smooth"});
+  },[msgs,loading]);
+
+  const send=async(text?:string)=>{
+    const q=(text||input).trim();
+    if(!q||loading)return;
+    setInput("");setErr("");
+    const newMsgs:[{role:"user"|"assistant",content:string}]=[...msgs,{role:"user",content:q}];
+    setMsgs(newMsgs);
+    setLoading(true);
+    try{
+      const res=await fetch("/api/ai",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({messages:newMsgs}),
+      });
+      if(!res.ok)throw new Error("API error "+res.status);
+      const data=await res.json();
+      const reply=data.content?.[0]?.text||data.choices?.[0]?.message?.content||"Нет ответа";
+      setMsgs(prev=>[...prev,{role:"assistant",content:reply}]);
+    }catch(e:any){
+      setErr("Ошибка: "+e.message);
+      setMsgs(prev=>prev.slice(0,-1));
+    }finally{setLoading(false);}
+  };
+
+  const clear=()=>{setMsgs([]);setErr("");};
+
+  const formatMsg=(text:string)=>{
+    // Simple markdown: bold, code blocks, newlines
+    return text.split("\n").map((line,i)=>{
+      const parts=line.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).map((part,j)=>{
+        if(part.startsWith("**")&&part.endsWith("**"))return <strong key={j}>{part.slice(2,-2)}</strong>;
+        if(part.startsWith("`")&&part.endsWith("`"))return <code key={j} style={{background:"rgba(255,255,255,0.15)",borderRadius:4,padding:"1px 5px",fontSize:"0.9em",fontFamily:"monospace"}}>{part.slice(1,-1)}</code>;
+        return part;
+      });
+      return <span key={i}>{parts}{i<text.split("\n").length-1&&<br/>}</span>;
+    });
+  };
+
+  return <div style={{display:"flex",flexDirection:"column",height:isMobile?"calc(100vh - 136px)":"calc(100vh - 120px)",maxWidth:860,margin:"0 auto"}}>
+    {/* Header */}
+    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:isMobile?"14px 18px":"20px 28px",marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+      <div style={{display:"flex",alignItems:"center",gap:12}}>
+        <div style={{width:40,height:40,borderRadius:12,background:"rgba(255,255,255,0.12)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>✦</div>
+        <div>
+          <div style={{fontSize:isMobile?15:18,fontWeight:800,color:"#fff",letterSpacing:0.5}}>Kirill Scales AI</div>
+          <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",marginTop:2}}>Powered by DeepSeek</div>
+        </div>
+      </div>
+      {msgs.length>0&&<button onClick={clear} style={{padding:"6px 14px",background:"rgba(255,255,255,0.1)",color:"rgba(255,255,255,0.7)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:8,fontSize:12,cursor:"pointer"}}>Очистить</button>}
+    </div>
+
+    {/* Messages */}
+    <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:12,paddingBottom:8}}>
+      {msgs.length===0&&<div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:20,padding:"20px 0"}}>
+        <div style={{fontSize:isMobile?13:15,color:C.t2,textAlign:"center",lineHeight:1.6}}>Привет! Я твой AI-ассистент.<br/>Спроси что угодно про бизнес, маркетинг или стратегию.</div>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:8,width:"100%",maxWidth:600}}>
+          {SUGGESTIONS.map((s,i)=><button key={i} onClick={()=>send(s)}
+            style={{padding:"10px 14px",background:C.w,border:"1px solid "+C.bd,borderRadius:12,fontSize:12,color:C.t1,cursor:"pointer",textAlign:"left",lineHeight:1.4,fontFamily:"'Montserrat',sans-serif",transition:"all 0.15s"}}
+            onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.a;(e.currentTarget as HTMLElement).style.background=C.a+"08";}}
+            onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.background=C.w;}}>
+            {s}
+          </button>)}
+        </div>
+      </div>}
+
+      {msgs.map((m,i)=><div key={i} style={{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start"}}>
+        {m.role==="assistant"&&<div style={{width:28,height:28,borderRadius:8,background:C.dk,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0,marginRight:8,alignSelf:"flex-start",marginTop:2}}>✦</div>}
+        <div style={{
+          maxWidth:"80%",padding:"12px 16px",borderRadius:m.role==="user"?"16px 16px 4px 16px":"16px 16px 16px 4px",
+          background:m.role==="user"?`linear-gradient(135deg,${C.a},${C.da})`:"#1E293B",
+          color:"#fff",fontSize:13,lineHeight:1.6,wordBreak:"break-word",
+          boxShadow:m.role==="user"?"0 4px 12px "+C.a+"40":"0 4px 12px rgba(0,0,0,0.15)",
+        }}>
+          {m.role==="assistant"?formatMsg(m.content):m.content}
+        </div>
+      </div>)}
+
+      {loading&&<div style={{display:"flex",alignItems:"center",gap:8}}>
+        <div style={{width:28,height:28,borderRadius:8,background:C.dk,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>✦</div>
+        <div style={{padding:"12px 16px",background:"#1E293B",borderRadius:"16px 16px 16px 4px",display:"flex",gap:5,alignItems:"center"}}>
+          {[0,1,2].map(i=><div key={i} style={{width:7,height:7,borderRadius:"50%",background:"rgba(255,255,255,0.5)",animation:`pulse 1.2s ease-in-out ${i*0.2}s infinite`}}/>)}
+        </div>
+      </div>}
+
+      {err&&<div style={{padding:"10px 14px",background:"#FEF2F2",borderRadius:10,fontSize:12,color:C.r,border:"1px solid "+C.r+"22"}}>{err}</div>}
+      <div ref={bottomRef}/>
+    </div>
+
+    {/* Input */}
+    <div style={{marginTop:12,background:C.w,borderRadius:16,border:"1px solid "+C.bd,boxShadow:"0 4px 20px rgba(0,0,0,0.08)",padding:"12px 16px",display:"flex",gap:10,alignItems:"flex-end"}}>
+      <textarea ref={inputRef} value={input} onChange={e=>setInput(e.target.value)}
+        onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}}
+        placeholder="Напиши сообщение... (Enter — отправить, Shift+Enter — новая строка)"
+        rows={1}
+        style={{flex:1,border:"none",outline:"none",resize:"none",fontSize:13,fontFamily:"'Montserrat',sans-serif",color:C.t1,background:"transparent",lineHeight:1.5,maxHeight:120,overflowY:"auto"}}
+        onInput={e=>{const t=e.currentTarget;t.style.height="auto";t.style.height=Math.min(t.scrollHeight,120)+"px";}}
+      />
+      <button onClick={()=>send()} disabled={!input.trim()||loading}
+        style={{width:38,height:38,borderRadius:10,border:"none",background:input.trim()&&!loading?C.a:C.bd,cursor:input.trim()&&!loading?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"background 0.2s"}}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>;
 }
 
 /* ============ TOOLS (TIMER v2) ============ */
