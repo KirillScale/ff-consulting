@@ -910,6 +910,7 @@ const calcAutoPriority=(endDate:string|null):{p:"urgent"|"medium"|"low",days:num
 };
 
 function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOver,onGtDragStart,onGtDragOver,onGtDrop,setActiveModal,TYPES}:any){
+  const isMobile=useIsMobile();
   const[openGoal,setOpenGoal]=useState<string|null>(null);
   const[showGTF,setShowGTF]=useState<string|null>(null);
   const[gtf,sGtf]=useState({text:"",mins:30,type:"biz",date:""});
