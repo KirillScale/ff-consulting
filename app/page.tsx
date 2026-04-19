@@ -1886,7 +1886,8 @@ function ContentPage({userId}:{userId:string}){
               <span style={{fontSize:11,fontWeight:500,background:C.bd,borderRadius:20,padding:"1px 8px",textTransform:"none"}}>{(group as any[]).length}</span>
             </div>
             <Card style={{padding:0,overflow:"hidden"}}>
-              <table style={{width:"100%",borderCollapse:"collapse",fontSize:14}}>
+              <div style={{overflowX:"auto"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:14,minWidth:isMobile?480:0}}>
                 <tbody>{(group as any[]).map((x:any,i:number)=><tr key={x.id} style={{borderBottom:i<(group as any[]).length-1?"1px solid "+C.bd:"none"}}
                   onMouseEnter={e=>(e.currentTarget.style.background=C.bg)} onMouseLeave={e=>(e.currentTarget.style.background="transparent")}>
                   {/* Cover thumbnail */}
@@ -1917,7 +1918,7 @@ function ContentPage({userId}:{userId:string}){
                     </div>
                   </td>
                 </tr>)}</tbody>
-              </table>
+              </table></div>
             </Card>
           </div>)
       }
@@ -2757,7 +2758,7 @@ function CallsPage({userId}:{userId:string}){
           <button onClick={()=>{setCalDate(new Date());}} style={{padding:"6px 12px",fontSize:12,border:"1px solid "+C.bd,borderRadius:8,background:ds(calDate)===td?C.a:C.bg,color:ds(calDate)===td?"#fff":C.t2,cursor:"pointer",fontWeight:500}}>Сегодня</button>
           {/* View switcher */}
           <div style={{display:"flex",background:"#F2F2F7",borderRadius:8,padding:2,gap:1}}>
-            {([["1d","1д"],["3d","3д"],["7d","Нед"],["month","Мес"]] as const).map(([v,l])=><button key={v} onClick={()=>setCalView(v)} style={{padding:"5px 10px",border:"none",borderRadius:6,background:calView===v?C.w:"transparent",fontSize:11,fontWeight:calView===v?700:400,color:calView===v?C.a:C.t2,cursor:"pointer",boxShadow:calView===v?"0 1px 3px rgba(0,0,0,0.1)":"none"}}>{l}</button>)}
+            {(([["1d","1д"],["3d","3д"],["7d","Нед"],["month","Мес"]] as const).filter(([v])=>!isMobile||v==="1d"||v==="month")).map(([v,l])=><button key={v} onClick={()=>setCalView(v)} style={{padding:"5px 10px",border:"none",borderRadius:6,background:calView===v?C.w:"transparent",fontSize:11,fontWeight:calView===v?700:400,color:calView===v?C.a:C.t2,cursor:"pointer",boxShadow:calView===v?"0 1px 3px rgba(0,0,0,0.1)":"none"}}>{l}</button>)}
           </div>
         </div>
         {/* Grid */}
@@ -2867,7 +2868,7 @@ function CalcPage(){
   ];
   return <>
     <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:"28px 36px",marginBottom:24,color:"#fff"}}><div style={{fontSize:20,fontWeight:700}}>Калькулятор конверсий</div><div style={{fontSize:14,opacity:0.7,marginTop:4}}>Введи цель - платформа посчитает</div></div>
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,marginBottom:24}}>
+    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:isMobile?12:20,marginBottom:isMobile?16:24}}>
       <Card><div style={{fontSize:16,fontWeight:600,marginBottom:16}}>Цель</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
         <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Сумма</label><input type="number" value={goal.amount} onChange={e=>sGoal({...goal,amount:+e.target.value})} style={iS}/></div>
         <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Период</label><select value={goal.period} onChange={e=>sGoal({...goal,period:e.target.value})} style={iS}><option value="month">Месяц</option><option value="quarter">Квартал</option></select></div>
