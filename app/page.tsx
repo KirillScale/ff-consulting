@@ -161,7 +161,7 @@ function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onL
       <div style={{padding:c?"24px 0":"24px 20px",display:"flex",alignItems:"center",gap:10,justifyContent:c?"center":"flex-start",borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
         <Logo s={24}/>{!c&&<Brand size="sm"/>}
       </div>
-      <nav style={{flex:1,padding:"12px 10px",display:"flex",flexDirection:"column",gap:2}}>
+      <nav style={{flex:1,padding:"12px 10px",display:"flex",flexDirection:"column",gap:2,overflowY:"auto"}}>
         {NAV.map(n=>{const a=active===n.id;const gl=(n as any).glow&&!a;return<button key={n.id} onClick={()=>onNav(n.id)} title={c?n.label:undefined} style={{display:"flex",alignItems:"center",gap:12,padding:c?"12px 0":"11px 14px",justifyContent:c?"center":"flex-start",border:gl?"1px solid rgba(37,99,235,0.4)":"none",borderRadius:10,cursor:"pointer",background:a?C.a:gl?"rgba(37,99,235,0.1)":"transparent",color:"#fff",fontSize:13.5,fontWeight:a?600:gl?600:400,whiteSpace:"nowrap",overflow:"hidden",boxShadow:gl?"0 0 12px rgba(37,99,235,0.3)":"none"}}><I path={n.ic} size={18} color={a?"#fff":gl?"#60a5fa":"rgba(255,255,255,0.6)"}/>{!c&&n.label}</button>})}
       </nav>
       <div style={{padding:"16px 10px",borderTop:"1px solid rgba(255,255,255,0.08)"}}>
