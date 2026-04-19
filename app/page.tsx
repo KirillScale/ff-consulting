@@ -61,7 +61,7 @@ const I = ({path,size=20,color="currentColor",sw=1.5}:{path:string,size?:number,
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round"><path d={path}/></svg>
 );
 const iS:React.CSSProperties = {width:"100%",padding:"11px 14px",border:"1px solid "+C.bd,borderRadius:10,fontSize:14,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box",fontFamily:"'Montserrat',sans-serif"};
-const Logo = ({s=22}:{s?:number}) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={C.a} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="22" x2="12" y2="15.5"/><polyline points="22 8.5 12 15.5 2 8.5"/></svg>;
+const Logo = ({s=22}:{s?:number}) => <img src="/logo.png" width={s} height={s} style={{objectFit:"contain",display:"block"}} alt="Vizzy"/>;
 const Brand = ({size="md"}:{size?:string}) => {
   const sz:any={sm:{f:12,sub:8,gap:1},md:{f:15,sub:9,gap:2},lg:{f:20,sub:11,gap:3}};
   const s=sz[size]||sz.md;
