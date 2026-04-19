@@ -3032,7 +3032,7 @@ function LinksPage({userId}:{userId:string}){
                       <div style={{fontSize:11,color:C.t2,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{domain}</div>
                     </div>
                   </div>
-                  {l.description&&<div style={{fontSize:12,color:C.t2,lineHeight:1.5,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{l.description}</div>}
+                  {l.description&&<div style={{fontSize:12,color:C.t2,lineHeight:1.5,overflow:"hidden",maxHeight:"2.8em"}}>{l.description}</div>}
                 </div>
                 {/* Actions */}
                 <div style={{padding:"10px 12px",borderTop:"1px solid "+C.bd,display:"flex",gap:6}}>
