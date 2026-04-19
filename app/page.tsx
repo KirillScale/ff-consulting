@@ -65,7 +65,7 @@ const Logo = ({s=22}:{s?:number}) => <img src="/logo.png" width={s} height={s} s
 const Brand = ({size="md"}:{size?:string}) => {
   const sz:any={sm:{f:12,sub:8,gap:1},md:{f:15,sub:9,gap:2},lg:{f:20,sub:11,gap:3}};
   const s=sz[size]||sz.md;
-  return <div style={{display:"flex",flexDirection:"column",alignItems:"center",lineHeight:1.2}}><span style={{fontSize:s.f,fontWeight:800,color:"#fff",letterSpacing:2}}>FF CONSULTING</span><span style={{fontSize:s.sub,fontWeight:300,color:"rgba(255,255,255,0.6)",letterSpacing:1.5,marginTop:s.gap}}>by Kirill Scales</span></div>;
+  return <div style={{display:"flex",flexDirection:"column",alignItems:"center",lineHeight:1.2}}><span style={{fontSize:s.f,fontWeight:800,color:"#fff",letterSpacing:2}}>VIZZY</span><span style={{fontSize:s.sub,fontWeight:300,color:"rgba(255,255,255,0.6)",letterSpacing:1.5,marginTop:s.gap}}>by Kirill Scales</span></div>;
 };
 const Btn = ({children,onClick,primary=true,style:sx,disabled}:{children:React.ReactNode,onClick?:()=>void,primary?:boolean,style?:React.CSSProperties,disabled?:boolean}) => <button onClick={onClick} disabled={disabled} style={{padding:"10px 20px",background:primary?C.a:C.bg,color:primary?"#fff":C.t2,border:primary?"none":"1px solid "+C.bd,borderRadius:10,fontSize:14,fontWeight:600,cursor:disabled?"not-allowed":"pointer",opacity:disabled?0.5:1,...sx}}>{children}</button>;
 const Tag = ({label,color}:{label:string,color:string}) => <span style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:6,background:color+"18",color}}>{label}</span>;
@@ -237,7 +237,7 @@ const Head=({name,onMenuOpen}:{name:string,onMenuOpen?:()=>void})=>{
     <div style={{display:"flex",alignItems:"center",gap:10}}>
       <Logo s={20}/>
       <div style={{display:"flex",flexDirection:"column",lineHeight:1.15}}>
-        <span style={{color:"#fff",fontSize:11,fontWeight:800,letterSpacing:1.5}}>FF CONSULTING</span>
+        <span style={{color:"#fff",fontSize:11,fontWeight:800,letterSpacing:1.5}}>VIZZY</span>
         <span style={{color:"rgba(255,255,255,0.4)",fontSize:8,letterSpacing:1}}>by Kirill Scales</span>
       </div>
     </div>
@@ -245,7 +245,7 @@ const Head=({name,onMenuOpen}:{name:string,onMenuOpen?:()=>void})=>{
   </div>;
   return <div style={{height:64,background:C.w,borderBottom:"1px solid "+C.bd,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 32px",position:"sticky",top:0,zIndex:50}}>
     <div style={{fontSize:15,fontWeight:600}}>{greeting}{displayName?", "+displayName:""}</div>
-    <div style={{display:"inline-flex",alignItems:"center",gap:10,background:C.dk,padding:"8px 20px",borderRadius:10}}><Logo s={16}/><div style={{display:"flex",flexDirection:"column",lineHeight:1.15}}><span style={{color:"#fff",fontSize:11,fontWeight:800,letterSpacing:1.5}}>FF CONSULTING</span><span style={{color:"rgba(255,255,255,0.5)",fontSize:8,fontWeight:300,letterSpacing:1}}>by Kirill Scales</span></div></div>
+    <div style={{display:"inline-flex",alignItems:"center",gap:10,background:C.dk,padding:"8px 20px",borderRadius:10}}><Logo s={16}/><div style={{display:"flex",flexDirection:"column",lineHeight:1.15}}><span style={{color:"#fff",fontSize:11,fontWeight:800,letterSpacing:1.5}}>VIZZY</span><span style={{color:"rgba(255,255,255,0.5)",fontSize:8,fontWeight:300,letterSpacing:1}}>by Kirill Scales</span></div></div>
     <div style={{fontSize:14,color:C.t2}}>{fmtDate(new Date())}</div>
   </div>;
 };
@@ -2237,8 +2237,15 @@ function StoriesCarouselTab({userId}:{userId:string}){
                       </div>
 
                       {/* Number + dual inputs */}
-                      <div style={{padding:"8px 8px 10px",background:C.w}}>
-                        <div style={{fontSize:11,fontWeight:700,color:C.t2,textAlign:"center",marginBottom:7}}>Сторис #{idx+1}</div>
+                      <div style={{padding:"6px 8px 10px",background:C.w}}>
+                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+                          <div style={{fontSize:11,fontWeight:700,color:C.t2}}>Сторис #{idx+1}</div>
+                          <button onClick={()=>items.remove(slot.id)}
+                            style={{width:18,height:18,borderRadius:5,border:"none",background:C.r+"15",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}
+                            title="Удалить сторис">
+                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={C.r} strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                          </button>
+                        </div>
                         {/* Instagram input */}
                         <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:5,background:IG_COLOR+"0C",borderRadius:8,padding:"5px 7px",border:`1px solid ${IG_COLOR}22`}}>
                           <IgIcon/>
