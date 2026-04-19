@@ -3200,7 +3200,7 @@ function FilesPage({userId}:{userId:string}){
                 </td>
               </tr>;
             })}</tbody>
-          </table>
+          </table></div>
       }
     </div>
   </>;
