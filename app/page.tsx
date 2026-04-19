@@ -1241,7 +1241,8 @@ function StrategyPage({userId}:{userId:string}){
     setTfErr("");
     if(!tf.text.trim()){setTfErr("Введи задачу");return;}
     if(tf.mins<30){setTfErr("Минимум 30 минут");return;}
-    await kanban.add({text:tf.text,mins:tf.mins,type:tf.type,date:d,done:false,status:"todo",sort_order:0});
+    const order=kanban.data.filter((t:any)=>t.date===d).length;
+    await kanban.add({text:tf.text,mins:tf.mins,type:tf.type,date:d,done:false,status:"todo",sort_order:order});
     sTf({text:"",mins:30,type:"biz"});setShowTF(null);
   };
 
@@ -1423,7 +1424,20 @@ function StrategyPage({userId}:{userId:string}){
                 <div><div style={{fontSize:20,fontWeight:700,color:isT?C.a:C.t1}}>{dt.getDate()}</div><div style={{fontSize:11,color:C.t2}}>{WDS[dt.getDay()]}, {MR[dt.getMonth()].substring(0,3)}</div></div>
                 {st.overload&&<span style={{fontSize:10,color:C.r,fontWeight:600}}>⚠️ Перегруз</span>}
               </div>
-              <div style={{flex:1,padding:"10px 12px",overflowY:"auto",display:"flex",flexDirection:"column",gap:6}}>
+              <div style={{flex:1,padding:"10px 12px",overflowY:"auto",display:"flex",flexDirection:"column",gap:6}}
+                onDragOver={e=>{e.preventDefault();}}
+                onDrop={()=>{
+                  if(!kanbanDrag)return;
+                  const dayTasks=[...kanban.data.filter((t:any)=>t.date===d)].sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));
+                  const fromIdx=dayTasks.findIndex((t:any)=>t.id===kanbanDrag);
+                  if(fromIdx<0){setKanbanDrag(null);setKanbanOver(null);return;}
+                  // Move to end
+                  const reordered=[...dayTasks];
+                  const[moved]=reordered.splice(fromIdx,1);
+                  reordered.push(moved);
+                  setKanbanDrag(null);setKanbanOver(null);
+                  Promise.all(reordered.map((t:any,i:number)=>kanban.update(t.id,{sort_order:i}))).catch(()=>{setKanbanErrToast(true);setTimeout(()=>setKanbanErrToast(false),3000);});
+                }}>
                 {st.tasks.length===0&&<div style={{textAlign:"center",color:C.t2,fontSize:12,padding:"20px 0"}}>Нет задач</div>}
                 {st.tasks.map((t:any)=><TaskItem key={t.id} t={t} dayStr={d}/>)}
                 {showTF===d?<div style={{marginTop:6}}>
