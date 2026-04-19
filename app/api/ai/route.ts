@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const DEFAULT_SYSTEM = "Ты — AI-ассистент Kirill Scales AI. Ты помогаешь предпринимателям с бизнес-стратегией, маркетингом, продажами и контентом. Отвечай на русском языке. Давай конкретные, практичные советы. Будь прямым и по делу.";
+
 export async function POST(req: NextRequest) {
   try {
-    const { messages } = await req.json();
+    const { messages, system } = await req.json();
 
     const res = await fetch("https://api.deepseek.com/v1/chat/completions", {
       method: "POST",
@@ -13,13 +15,10 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         model: "deepseek-chat",
         messages: [
-          {
-            role: "system",
-            content: "Ты — AI-ассистент Kirill Scales AI. Ты помогаешь предпринимателям с бизнес-стратегией, маркетингом, продажами и контентом. Отвечай на русском языке. Давай конкретные, практичные советы. Будь прямым и по делу.",
-          },
+          { role: "system", content: system || DEFAULT_SYSTEM },
           ...messages,
         ],
-        max_tokens: 1000,
+        max_tokens: 2000,
         temperature: 0.7,
       }),
     });

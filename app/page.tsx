@@ -29,6 +29,7 @@ const NAV=[
   {id:"links",label:"База ссылок",ic:"M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"},
   {id:"files",label:"База файлов",ic:"M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"},
   {id:"ai",label:"Kirill Scales AI",ic:"M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z",glow:true},
+  {id:"script",label:"Vissy Сценарий AI",ic:"M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z",glow:true},
 ];
 const WD=["Воскресенье","Понедельник","Вторник","Среда","Четверг","Пятница","Суббота"];
 const MR=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
@@ -310,7 +311,8 @@ function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,n
     {page === "links" && <LinksPage userId={user.id}/>}
     {page === "files" && <FilesPage userId={user.id}/>}
     {page === "ai" && <AIPage/>}
-    {!["dashboard","strategy","crm","calls","content","pnl","media","ads","calc","tools","links","files","ai"].includes(page) && nav && <Placeholder title={nav.label} ic={nav.ic}/>}
+    {page === "script" && <ScriptAIPage/>}
+    {!["dashboard","strategy","crm","calls","content","pnl","media","ads","calc","tools","links","files","ai","script"].includes(page) && nav && <Placeholder title={nav.label} ic={nav.ic}/>}
   </>;
 
   return (
@@ -3291,7 +3293,7 @@ function AIPage(){
         <div style={{width:40,height:40,borderRadius:12,background:"rgba(255,255,255,0.12)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>✦</div>
         <div>
           <div style={{fontSize:isMobile?15:18,fontWeight:800,color:"#fff",letterSpacing:0.5}}>Kirill Scales AI</div>
-          <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",marginTop:2}}>Powered by DeepSeek</div>
+          <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",marginTop:2}}>Powered by the best AI's in the world</div>
         </div>
       </div>
       {msgs.length>0&&<button onClick={clear} style={{padding:"6px 14px",background:"rgba(255,255,255,0.1)",color:"rgba(255,255,255,0.7)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:8,fontSize:12,cursor:"pointer"}}>Очистить</button>}
@@ -3345,6 +3347,175 @@ function AIPage(){
       />
       <button onClick={()=>send()} disabled={!input.trim()||loading}
         style={{width:38,height:38,borderRadius:10,border:"none",background:input.trim()&&!loading?C.a:C.bd,cursor:input.trim()&&!loading?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"background 0.2s"}}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>;
+}
+
+/* ============ SCRIPT AI PAGE ============ */
+const SCRIPT_SYSTEM=`Ты — Vissy Сценарий AI. Твоя единственная задача — помогать писать сценарии для видео. Ты не делаешь ничего другого: не переводишь тексты, не пишешь код, не отвечаешь на общие вопросы, не помогаешь с чем-либо кроме сценариев для видео.
+
+Если пользователь просит что-то не связанное со сценариями, вежливо отказывай и возвращай разговор к теме: «Я специализируюсь только на написании сценариев для видео. Давай я помогу тебе создать сценарий! Это для Reels или для YouTube?»
+
+Алгоритм работы:
+1. Спроси: это короткое видео для Reels/TikTok или длинное для YouTube?
+2. Задавай уточняющие вопросы по одному: тема видео → целевая аудитория → цель видео → стиль (серьёзный/лёгкий/провокационный).
+3. После всех ответов пиши готовый сценарий.
+
+Правила для Reels/короткого видео (до 60 сек):
+— Хук [0–3 сек]: моментально цепляет. Провокационный вопрос, шокирующий факт или узнаваемая ситуация. Никаких «привет всем».
+— Суть [3–55 сек]: одна чёткая мысль. Никакой воды. Быстрый темп. Короткие предложения.
+— Призыв к действию [55–60 сек]: конкретное действие — подписаться, сохранить, написать в комментарии.
+
+Правила для YouTube/длинного видео:
+— Хук [0–15 сек]: смелое утверждение, проблема зрителя или тизер финала. Человек не должен уйти.
+— Завязка и проблема [10–20% хронометража]: обозначь боль зрителя, пообещай решение.
+— Основная часть [60–70% хронометража]: раскрой тему, примеры, истории, кейсы. Каждую минуту — ценность.
+— Заключение и призыв [5–10% хронометража]: итог в 2–3 предложениях и конкретный призыв.
+
+Всегда указывай тайминг каждого блока. Пиши сценарий чётко, структурированно, с разделением на блоки.`;
+
+function ScriptAIPage(){
+  const isMobile=useIsMobile();
+  const WELCOME={role:"assistant" as const,content:"Привет! Я Vissy Сценарий AI — помогаю писать сценарии для видео.\n\nС чего начнём? Мы делаем **короткое видео для Reels/TikTok** или **длинное видео для YouTube**?"};
+  const[msgs,setMsgs]=useState<{role:"user"|"assistant",content:string}[]>([WELCOME]);
+  const[input,setInput]=useState("");
+  const[loading,setLoading]=useState(false);
+  const[err,setErr]=useState("");
+  const[copied,setCopied]=useState(false);
+  const bottomRef=useRef<HTMLDivElement>(null);
+
+  useEffect(()=>{bottomRef.current?.scrollIntoView({behavior:"smooth"});},[msgs,loading]);
+
+  const lastScript=useMemo(()=>{
+    const assistantMsgs=msgs.filter(m=>m.role==="assistant");
+    for(let i=assistantMsgs.length-1;i>=0;i--){
+      if(assistantMsgs[i].content.includes("[")&&assistantMsgs[i].content.length>200)
+        return assistantMsgs[i].content;
+    }
+    return null;
+  },[msgs]);
+
+  const send=async(text?:string)=>{
+    const q=(text||input).trim();
+    if(!q||loading)return;
+    setInput("");setErr("");
+    const newMsgs:{role:"user"|"assistant",content:string}[]=[...msgs,{role:"user" as const,content:q}];
+    setMsgs(newMsgs);
+    setLoading(true);
+    try{
+      const res=await fetch("/api/ai",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({messages:newMsgs,system:SCRIPT_SYSTEM}),
+      });
+      if(!res.ok)throw new Error("API error "+res.status);
+      const data=await res.json();
+      const reply=data.content?.[0]?.text||data.choices?.[0]?.message?.content||"Нет ответа";
+      setMsgs(prev=>[...prev,{role:"assistant" as const,content:reply}]);
+    }catch(e:any){
+      setErr("Ошибка: "+e.message);
+      setMsgs(prev=>prev.slice(0,-1));
+    }finally{setLoading(false);}
+  };
+
+  const reset=()=>{setMsgs([WELCOME]);setErr("");setInput("");};
+
+  const copy=async()=>{
+    const text=lastScript||msgs.filter(m=>m.role==="assistant").map(m=>m.content).join("\n\n");
+    await navigator.clipboard.writeText(text);
+    setCopied(true);setTimeout(()=>setCopied(false),2000);
+  };
+
+  const download=()=>{
+    const text=lastScript||msgs.filter(m=>m.role==="assistant").map(m=>m.content).join("\n\n");
+    const blob=new Blob([text],{type:"text/plain;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;a.download="scenario_vissy.txt";a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const formatMsg=(text:string)=>text.split("\n").map((line,i)=>{
+    const parts=line.split(/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\])/g).map((part,j)=>{
+      if(part.startsWith("**")&&part.endsWith("**"))return <strong key={j}>{part.slice(2,-2)}</strong>;
+      if(part.startsWith("[")&&part.endsWith("]"))return <strong key={j} style={{color:"#60A5FA"}}>{part}</strong>;
+      if(part.startsWith("`")&&part.endsWith("`"))return <code key={j} style={{background:"rgba(255,255,255,0.15)",borderRadius:4,padding:"1px 5px",fontSize:"0.9em",fontFamily:"monospace"}}>{part.slice(1,-1)}</code>;
+      return part;
+    });
+    return <span key={i}>{parts}{i<text.split("\n").length-1&&<br/>}</span>;
+  });
+
+  return <div style={{display:"flex",flexDirection:"column",height:isMobile?"calc(100vh - 136px)":"calc(100vh - 120px)",maxWidth:860,margin:"0 auto"}}>
+    {/* Header */}
+    <div style={{background:"linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)",borderRadius:16,padding:isMobile?"14px 18px":"20px 28px",marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+      <div style={{display:"flex",alignItems:"center",gap:12}}>
+        <div style={{width:40,height:40,borderRadius:12,background:"rgba(99,102,241,0.3)",border:"1px solid rgba(99,102,241,0.5)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🎬</div>
+        <div>
+          <div style={{fontSize:isMobile?15:18,fontWeight:800,color:"#fff",letterSpacing:0.5}}>Vissy Сценарий AI</div>
+          <div style={{fontSize:11,color:"rgba(255,255,255,0.4)",marginTop:2}}>Только сценарии. Только результат.</div>
+        </div>
+      </div>
+      {/* Action buttons */}
+      <div style={{display:"flex",gap:8}}>
+        {msgs.length>1&&<>
+          <button onClick={copy} style={{padding:"7px 14px",background:copied?"rgba(16,185,129,0.2)":"rgba(255,255,255,0.08)",color:copied?"#10B981":"rgba(255,255,255,0.7)",border:"1px solid "+(copied?"rgba(16,185,129,0.4)":"rgba(255,255,255,0.15)"),borderRadius:8,fontSize:12,cursor:"pointer",fontWeight:500}}>
+            {copied?"✓ Скопировано":"Скопировать"}
+          </button>
+          {!isMobile&&<button onClick={download} style={{padding:"7px 14px",background:"rgba(255,255,255,0.08)",color:"rgba(255,255,255,0.7)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:8,fontSize:12,cursor:"pointer",fontWeight:500}}>Скачать</button>}
+          <button onClick={reset} style={{padding:"7px 14px",background:"rgba(99,102,241,0.2)",color:"#818CF8",border:"1px solid rgba(99,102,241,0.3)",borderRadius:8,fontSize:12,cursor:"pointer",fontWeight:600}}>Новый сценарий</button>
+        </>}
+      </div>
+    </div>
+
+    {/* Messages */}
+    <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:12,paddingBottom:8}}>
+      {msgs.map((m,i)=><div key={i} style={{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start",alignItems:"flex-start",gap:8}}>
+        {m.role==="assistant"&&<div style={{width:28,height:28,borderRadius:8,background:"linear-gradient(135deg,#1a1a2e,#0f3460)",border:"1px solid rgba(99,102,241,0.4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0,marginTop:2}}>🎬</div>}
+        <div style={{
+          maxWidth:"82%",padding:"12px 16px",
+          borderRadius:m.role==="user"?"16px 16px 4px 16px":"16px 16px 16px 4px",
+          background:m.role==="user"?"linear-gradient(135deg,#6366F1,#4F46E5)":"#1E293B",
+          color:"#fff",fontSize:13,lineHeight:1.7,wordBreak:"break-word",
+          boxShadow:m.role==="user"?"0 4px 12px rgba(99,102,241,0.4)":"0 4px 12px rgba(0,0,0,0.15)",
+        }}>
+          {formatMsg(m.content)}
+        </div>
+      </div>)}
+
+      {loading&&<div style={{display:"flex",alignItems:"center",gap:8}}>
+        <div style={{width:28,height:28,borderRadius:8,background:"linear-gradient(135deg,#1a1a2e,#0f3460)",border:"1px solid rgba(99,102,241,0.4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>🎬</div>
+        <div style={{padding:"12px 16px",background:"#1E293B",borderRadius:"16px 16px 16px 4px",display:"flex",gap:5,alignItems:"center"}}>
+          {[0,1,2].map(i=><div key={i} style={{width:7,height:7,borderRadius:"50%",background:"rgba(99,102,241,0.7)",animation:`pulse 1.2s ease-in-out ${i*0.2}s infinite`}}/>)}
+        </div>
+      </div>}
+
+      {err&&<div style={{padding:"10px 14px",background:"#FEF2F2",borderRadius:10,fontSize:12,color:C.r,border:"1px solid "+C.r+"22"}}>{err}</div>}
+      <div ref={bottomRef}/>
+    </div>
+
+    {/* Quick replies for first message */}
+    {msgs.length===1&&!loading&&<div style={{display:"flex",gap:8,marginBottom:8}}>
+      {["📱 Reels / TikTok","🎥 YouTube"].map(opt=><button key={opt} onClick={()=>send(opt)}
+        style={{flex:1,padding:"12px",background:"#1E293B",border:"1px solid rgba(99,102,241,0.3)",borderRadius:12,fontSize:13,color:"#fff",cursor:"pointer",fontWeight:600,transition:"all 0.15s"}}
+        onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(99,102,241,0.8)";(e.currentTarget as HTMLElement).style.background="#2D3748";}}
+        onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(99,102,241,0.3)";(e.currentTarget as HTMLElement).style.background="#1E293B";}}>
+        {opt}
+      </button>)}
+    </div>}
+
+    {/* Input */}
+    <div style={{marginTop:8,background:C.w,borderRadius:16,border:"1px solid "+C.bd,boxShadow:"0 4px 20px rgba(0,0,0,0.08)",padding:"12px 16px",display:"flex",gap:10,alignItems:"flex-end"}}>
+      <textarea value={input} onChange={e=>setInput(e.target.value)}
+        onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}}
+        placeholder="Напиши ответ... (Enter — отправить)"
+        rows={1}
+        style={{flex:1,border:"none",outline:"none",resize:"none",fontSize:13,fontFamily:"'Montserrat',sans-serif",color:C.t1,background:"transparent",lineHeight:1.5,maxHeight:120,overflowY:"auto"}}
+        onInput={e=>{const t=e.currentTarget;t.style.height="auto";t.style.height=Math.min(t.scrollHeight,120)+"px";}}
+      />
+      <button onClick={()=>send()} disabled={!input.trim()||loading}
+        style={{width:38,height:38,borderRadius:10,border:"none",background:input.trim()&&!loading?"#6366F1":C.bd,cursor:input.trim()&&!loading?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"background 0.2s"}}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
       </button>
     </div>
