@@ -3238,8 +3238,8 @@ function AIPage(){
   const[input,setInput]=useState("");
   const[loading,setLoading]=useState(false);
   const[err,setErr]=useState("");
-  const bottomRef=React.useRef<HTMLDivElement>(null);
-  const inputRef=React.useRef<HTMLTextAreaElement>(null);
+  const bottomRef=useRef<HTMLDivElement>(null);
+  const inputRef=useRef<HTMLTextAreaElement>(null);
 
   const SUGGESTIONS=["Как увеличить конверсию в консалтинге?","Напиши скрипт для первого созвона с лидом","Какие метрики важны для онлайн-бизнеса?","Помоги составить оффер для клиента","Как выстроить систему продаж с нуля?","Идеи для контента про предпринимательство"];
 
