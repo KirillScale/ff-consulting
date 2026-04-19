@@ -3251,7 +3251,7 @@ function AIPage(){
     const q=(text||input).trim();
     if(!q||loading)return;
     setInput("");setErr("");
-    const newMsgs:[{role:"user"|"assistant",content:string}]=[...msgs,{role:"user",content:q}];
+    const newMsgs:{role:"user"|"assistant",content:string}[]=[...msgs,{role:"user" as const,content:q}];
     setMsgs(newMsgs);
     setLoading(true);
     try{
