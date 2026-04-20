@@ -90,7 +90,7 @@ const I = ({path,size=20,color="currentColor",sw=1.5}:{path:string,size?:number,
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round"><path d={path}/></svg>
 );
 const iS:React.CSSProperties = {width:"100%",padding:"11px 14px",border:"1px solid "+C.bd,borderRadius:10,fontSize:14,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box",fontFamily:"'Montserrat',sans-serif"};
-const Logo = ({s=22}:{s?:number}) => <img src="/logo.png" width={s} height={s} style={{objectFit:"contain",display:"block"}} alt="Vizzy"/>;
+const Logo = ({s=28}:{s?:number}) => <img src="/logo.png" width={s} height={s} style={{objectFit:"contain",display:"block",flexShrink:0}} alt="Vizzy"/>;
 const Brand = ({size="md"}:{size?:string}) => {
   const sz:any={sm:{f:12,sub:8,gap:1},md:{f:15,sub:9,gap:2},lg:{f:20,sub:11,gap:3}};
   const s=sz[size]||sz.md;
@@ -153,7 +153,7 @@ function Auth({ onLogin }: { onLogin: (u: any) => void }) {
       <div style={{background:C.w,borderRadius:24,padding:"48px 40px",width:"100%",maxWidth:420,boxShadow:"0 24px 80px rgba(0,0,0,0.25)"}}>
         <div style={{textAlign:"center",marginBottom:36}}>
           <div style={{display:"inline-flex",alignItems:"center",gap:10,background:C.dk,padding:"14px 28px",borderRadius:12}}>
-            <Logo/><Brand size="lg"/>
+            <Logo s={40}/><Brand size="lg"/>
           </div>
         </div>
         <div style={{fontSize:16,fontWeight:600,textAlign:"center",marginBottom:24,color:C.t1}}>Вход в платформу</div>
@@ -238,7 +238,7 @@ function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onL
       <div style={{padding:c?"16px 0":"14px 16px",display:"flex",alignItems:"center",gap:8,
         justifyContent:c?"center":"flex-start",
         borderBottom:"1px solid rgba(255,255,255,0.06)",flexShrink:0}}>
-        <Logo s={22}/>
+        <Logo s={36}/>
         {!c&&<div style={{display:"flex",flexDirection:"column",lineHeight:1.2}}>
           <span style={{fontSize:13,fontWeight:700,color:"#fff",letterSpacing:0.5}}>VIZZY</span>
           <span style={{fontSize:9,color:"rgba(255,255,255,0.35)",letterSpacing:0.5}}>by Kirill Scales</span>
@@ -349,7 +349,7 @@ const Head=({name,onMenuOpen}:{name:string,onMenuOpen?:()=>void})=>{
   const displayName = name && name !== "User" ? name : "";
   if(isMobile) return <div style={{height:56,background:C.dk,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px",position:"sticky",top:0,zIndex:50}}>
     <div style={{display:"flex",alignItems:"center",gap:10}}>
-      <Logo s={20}/>
+      <Logo s={34}/>
       <div style={{display:"flex",flexDirection:"column",lineHeight:1.15}}>
         <span style={{color:"#fff",fontSize:11,fontWeight:800,letterSpacing:1.5}}>VIZZY</span>
         <span style={{color:"rgba(255,255,255,0.4)",fontSize:8,letterSpacing:1}}>by Kirill Scales</span>
@@ -359,7 +359,7 @@ const Head=({name,onMenuOpen}:{name:string,onMenuOpen?:()=>void})=>{
   </div>;
   return <div style={{height:64,background:C.w,borderBottom:"1px solid "+C.bd,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 32px",position:"sticky",top:0,zIndex:50}}>
     <div style={{fontSize:15,fontWeight:600}}>{greeting}{displayName?", "+displayName:""}</div>
-    <div style={{display:"inline-flex",alignItems:"center",gap:10,background:C.dk,padding:"8px 20px",borderRadius:10}}><Logo s={16}/><div style={{display:"flex",flexDirection:"column",lineHeight:1.15}}><span style={{color:"#fff",fontSize:11,fontWeight:800,letterSpacing:1.5}}>VIZZY</span><span style={{color:"rgba(255,255,255,0.5)",fontSize:8,fontWeight:300,letterSpacing:1}}>by Kirill Scales</span></div></div>
+    <div style={{display:"inline-flex",alignItems:"center",gap:10,background:C.dk,padding:"8px 20px",borderRadius:10}}><Logo s={28}/><div style={{display:"flex",flexDirection:"column",lineHeight:1.15}}><span style={{color:"#fff",fontSize:11,fontWeight:800,letterSpacing:1.5}}>VIZZY</span><span style={{color:"rgba(255,255,255,0.5)",fontSize:8,fontWeight:300,letterSpacing:1}}>by Kirill Scales</span></div></div>
     <div style={{fontSize:14,color:C.t2}}>{fmtDate(new Date())}</div>
   </div>;
 };
