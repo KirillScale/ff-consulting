@@ -160,7 +160,7 @@ function useIsMobile(){
 function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onLogout:()=>void}){
   const[c,sC]=useState(false);
   return(
-    <div style={{width:c?72:252,minHeight:"100vh",background:C.dk,display:"flex",flexDirection:"column",transition:"width 0.3s",position:"fixed",left:0,top:0,zIndex:100,overflowX:"hidden"}}>
+    <div style={{width:c?72:252,height:"100vh",background:C.dk,display:"flex",flexDirection:"column",transition:"width 0.3s",position:"fixed",left:0,top:0,zIndex:100,overflowX:"hidden",overflowY:"hidden"}}>
       <div style={{padding:c?"24px 0":"24px 20px",display:"flex",alignItems:"center",gap:10,justifyContent:c?"center":"flex-start",borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
         <Logo s={24}/>{!c&&<Brand size="sm"/>}
       </div>
