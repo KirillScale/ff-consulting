@@ -30,6 +30,7 @@ const NAV=[
   {id:"files",label:"База файлов",ic:"M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"},
   {id:"ai",label:"Kirill Scales AI",ic:"M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z",glow:true},
   {id:"script",label:"Vissy Сценарий AI",ic:"M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z",glow:true},
+  {id:"product",label:"Vizzy Product AI",ic:"M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4",glow:true},
 ];
 const WD=["Воскресенье","Понедельник","Вторник","Среда","Четверг","Пятница","Суббота"];
 const MR=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
@@ -312,7 +313,8 @@ function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,n
     {page === "files" && <FilesPage userId={user.id}/>}
     {page === "ai" && <AIPage/>}
     {page === "script" && <ScriptAIPage/>}
-    {!["dashboard","strategy","crm","calls","content","pnl","media","ads","calc","tools","links","files","ai","script"].includes(page) && nav && <Placeholder title={nav.label} ic={nav.ic}/>}
+    {page === "product" && <ProductAIPage/>}
+    {!["dashboard","strategy","crm","calls","content","pnl","media","ads","calc","tools","links","files","ai","script","product"].includes(page) && nav && <Placeholder title={nav.label} ic={nav.ic}/>}
   </>;
 
   return (
@@ -3519,6 +3521,229 @@ function ScriptAIPage(){
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
       </button>
     </div>
+  </div>;
+}
+
+/* ============ PRODUCT AI PAGE ============ */
+const PRODUCT_SYSTEM=`Ты — Vizzy Product AI. Твоя единственная задача — помогать онлайн-предпринимателям и креаторам создавать цифровые продукты: курсы, коучинговые программы, воркшопы, электронные книги, марафоны, мини-продукты.
+
+Правило 1. Работаешь ТОЛЬКО с темой создания цифровых продуктов. Если человек спрашивает что-то другое — отказывай: «Я помогаю создавать цифровые продукты. Давай создадим твой продукт! Расскажи в какой теме ты эксперт?»
+
+Правило 2. Задавай вопросы строго по одному. После каждого ответа пользователя — следующий вопрос. Вот порядок 7 вопросов:
+1. Что ты умеешь делать лучше всего? В какой теме ты эксперт?
+2. Кто твоя аудитория? Кому ты хочешь помочь?
+3. Какую главную проблему решает твой продукт?
+4. Какой результат получит человек после прохождения?
+5. Какой формат? (Онлайн-курс / Коучинговая программа / Воркшоп / Электронная книга / Мини-продукт / Марафон)
+6. Сколько времени у аудитории на прохождение? (1 день / Неделя / Месяц / 2 месяца)
+7. Какой уровень аудитории? (Новички / Средний уровень / Эксперты)
+
+Правило 3. После получения ответов на все 7 вопросов — генерируй полноценный продукт.
+
+Правило 4. Что генерировать:
+- Онлайн-курс: 3 варианта названий, позиционирование, 4-8 модулей с уроками, 5-7 результатов, описание ЦА, для кого НЕ подходит, 3 идеи бонусов, 3 варианта цен (эконом/стандарт/премиум), готовый текст для лендинга.
+- Коучинговая программа: название, формат (кол-во сессий/периодичность), структура сессий, результаты, 3 пакета с ценами (базовый/стандарт/VIP), описание для продажи.
+- Электронная книга/гайд: название, структура глав с описанием, тезисное содержание каждой главы, рекомендуемый объём, 3 варианта монетизации, описание для продажи.
+- Марафон: название, структура по дням (тема + задание), формат проведения, результат, рекомендуемая цена, описание для продажи.
+
+Правило 5. После генерации предложи доработку: «Хочешь доработать какой-то блок? Могу написать описание для Instagram, для Telegram, структуру лендинга или придумать новые названия.»
+
+Правило 6. Стиль — профессиональный, конкретный, без воды, вдохновляющий.`;
+
+const PRODUCT_QUESTIONS=["Что ты умеешь делать лучше всего? В какой теме ты эксперт?","Кто твоя аудитория? Кому ты хочешь помочь?","Какую главную проблему решает твой продукт?","Какой результат получит человек после прохождения?","Какой формат выбираем?","Сколько времени у аудитории на прохождение?","Какой уровень аудитории?"];
+
+function ProductAIPage(){
+  const isMobile=useIsMobile();
+  const WELCOME={role:"assistant" as const,content:"Привет! Я Vizzy Product AI.\n\n**Создай свой цифровой продукт за 10 минут.**\n\nЯ задам тебе 7 вопросов и сгенерирую готовый продукт — курс, марафон, коучинг, книгу или воркшоп. Поехали!\n\n**Вопрос 1 из 7.**\nЧто ты умеешь делать лучше всего? В какой теме ты эксперт?"};
+  const[msgs,setMsgs]=useState<{role:"user"|"assistant",content:string}[]>([WELCOME]);
+  const[input,setInput]=useState("");
+  const[loading,setLoading]=useState(false);
+  const[err,setErr]=useState("");
+  const[copied,setCopied]=useState(false);
+  const[refining,setRefining]=useState(false);
+  const[refineInput,setRefineInput]=useState("");
+  const bottomRef=useRef<HTMLDivElement>(null);
+
+  useEffect(()=>{bottomRef.current?.scrollIntoView({behavior:"smooth"});},[msgs,loading]);
+
+  // Count answered questions by counting user messages
+  const userMsgCount=msgs.filter(m=>m.role==="user").length;
+  const questionNum=Math.min(userMsgCount+1,7);
+  const progress=Math.min(userMsgCount/7,1);
+  const isDone=userMsgCount>=7;
+
+  const lastProduct=useMemo(()=>{
+    const asMsgs=msgs.filter(m=>m.role==="assistant");
+    for(let i=asMsgs.length-1;i>=0;i--){
+      if(asMsgs[i].content.length>400)return asMsgs[i].content;
+    }
+    return null;
+  },[msgs]);
+
+  const send=async(text?:string)=>{
+    const q=(text||input).trim();
+    if(!q||loading)return;
+    setInput("");setErr("");setRefining(false);setRefineInput("");
+    const newMsgs:{role:"user"|"assistant",content:string}[]=[...msgs,{role:"user" as const,content:q}];
+    setMsgs(newMsgs);
+    setLoading(true);
+    try{
+      const res=await fetch("/api/ai",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({messages:newMsgs,system:PRODUCT_SYSTEM}),
+      });
+      if(!res.ok)throw new Error("API error "+res.status);
+      const data=await res.json();
+      const reply=data.content?.[0]?.text||data.choices?.[0]?.message?.content||"Нет ответа";
+      setMsgs(prev=>[...prev,{role:"assistant" as const,content:reply}]);
+    }catch(e:any){
+      setErr("Ошибка: "+e.message);
+      setMsgs(prev=>prev.slice(0,-1));
+    }finally{setLoading(false);}
+  };
+
+  const reset=()=>{setMsgs([WELCOME]);setErr("");setInput("");setRefining(false);};
+
+  const copy=async()=>{
+    const text=lastProduct||msgs.filter(m=>m.role==="assistant").map(m=>m.content).join("\n\n");
+    await navigator.clipboard.writeText(text);
+    setCopied(true);setTimeout(()=>setCopied(false),2000);
+  };
+
+  const download=()=>{
+    const text=lastProduct||msgs.filter(m=>m.role==="assistant").map(m=>m.content).join("\n\n");
+    const blob=new Blob([text],{type:"text/plain;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;a.download="product_vizzy.txt";a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const FORMATS=["Онлайн-курс","Коучинговая программа","Воркшоп","Электронная книга","Мини-продукт","Марафон"];
+  const DURATIONS=["1 день","Неделя","Месяц","2 месяца"];
+  const LEVELS=["Новички","Средний уровень","Эксперты"];
+
+  const formatMsg=(text:string)=>text.split("\n").map((line,i,arr)=>{
+    const parts=line.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).map((part,j)=>{
+      if(part.startsWith("**")&&part.endsWith("**"))return <strong key={j}>{part.slice(2,-2)}</strong>;
+      if(part.startsWith("`")&&part.endsWith("`"))return <code key={j} style={{background:"rgba(255,255,255,0.15)",borderRadius:4,padding:"1px 5px",fontSize:"0.9em",fontFamily:"monospace"}}>{part.slice(1,-1)}</code>;
+      return part;
+    });
+    return <span key={i}>{parts}{i<arr.length-1&&<br/>}</span>;
+  });
+
+  // Quick reply options based on question number
+  const quickReplies=userMsgCount===4?FORMATS:userMsgCount===5?DURATIONS:userMsgCount===6?LEVELS:null;
+
+  const GRAD="linear-gradient(135deg,#0d1b2a,#1b2838,#0f2027)";
+  const ACC="#F59E0B";
+  const ACC2="#FBBF24";
+
+  return <div style={{display:"flex",flexDirection:"column",height:isMobile?"calc(100vh - 136px)":"calc(100vh - 120px)",maxWidth:900,margin:"0 auto"}}>
+
+    {/* Header */}
+    <div style={{background:GRAD,borderRadius:16,padding:isMobile?"14px 16px":"20px 28px",marginBottom:16,border:"1px solid rgba(245,158,11,0.2)"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:isDone?12:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <div style={{width:42,height:42,borderRadius:12,background:"rgba(245,158,11,0.15)",border:"1px solid rgba(245,158,11,0.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>📦</div>
+          <div>
+            <div style={{fontSize:isMobile?15:18,fontWeight:800,color:"#fff",letterSpacing:0.5}}>Vizzy Product AI</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.4)",marginTop:2}}>Создай цифровой продукт за 10 минут</div>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          {msgs.length>1&&<>
+            <button onClick={copy} style={{padding:"7px 14px",background:copied?"rgba(16,185,129,0.2)":"rgba(255,255,255,0.06)",color:copied?"#10B981":"rgba(255,255,255,0.6)",border:"1px solid "+(copied?"rgba(16,185,129,0.3)":"rgba(255,255,255,0.12)"),borderRadius:8,fontSize:12,cursor:"pointer",fontWeight:500}}>
+              {copied?"✓ Скопировано":"Скопировать"}
+            </button>
+            {!isMobile&&<button onClick={download} style={{padding:"7px 14px",background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.6)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:8,fontSize:12,cursor:"pointer"}}>Скачать</button>}
+            {isDone&&<button onClick={()=>setRefining(!refining)} style={{padding:"7px 14px",background:refining?"rgba(245,158,11,0.25)":"rgba(255,255,255,0.06)",color:refining?ACC:"rgba(255,255,255,0.6)",border:"1px solid "+(refining?"rgba(245,158,11,0.4)":"rgba(255,255,255,0.12)"),borderRadius:8,fontSize:12,cursor:"pointer",fontWeight:500}}>Доработать блок</button>}
+            <button onClick={reset} style={{padding:"7px 14px",background:"rgba(245,158,11,0.15)",color:ACC,border:"1px solid rgba(245,158,11,0.3)",borderRadius:8,fontSize:12,cursor:"pointer",fontWeight:600}}>Новый продукт</button>
+          </>}
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      {!isDone&&userMsgCount>0&&<div style={{marginTop:14}}>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+          <span style={{fontSize:11,color:"rgba(255,255,255,0.5)"}}>Вопрос {questionNum} из 7</span>
+          <span style={{fontSize:11,color:ACC}}>{Math.round(progress*100)}%</span>
+        </div>
+        <div style={{height:4,background:"rgba(255,255,255,0.1)",borderRadius:2,overflow:"hidden"}}>
+          <div style={{width:progress*100+"%",height:"100%",background:`linear-gradient(90deg,${ACC},${ACC2})`,borderRadius:2,transition:"width 0.4s ease"}}/>
+        </div>
+        <div style={{display:"flex",gap:4,marginTop:8}}>
+          {Array.from({length:7},(_,i)=><div key={i} style={{flex:1,height:3,borderRadius:2,background:i<userMsgCount?"rgba(245,158,11,0.8)":"rgba(255,255,255,0.1)",transition:"background 0.3s"}}/>)}
+        </div>
+      </div>}
+
+      {isDone&&lastProduct&&<div style={{marginTop:10,padding:"8px 12px",background:"rgba(16,185,129,0.1)",border:"1px solid rgba(16,185,129,0.2)",borderRadius:8,fontSize:12,color:"#10B981"}}>✓ Продукт сгенерирован — скопируй или скачай</div>}
+    </div>
+
+    {/* Refine input */}
+    {refining&&<div style={{background:C.w,borderRadius:12,border:"1px solid "+ACC+"44",padding:"12px 16px",marginBottom:12,display:"flex",gap:10,alignItems:"center"}}>
+      <input value={refineInput} onChange={e=>setRefineInput(e.target.value)}
+        placeholder="Какой блок доработать? Например: переписать модули, названия, описание для Instagram..."
+        style={{flex:1,border:"none",outline:"none",fontSize:13,fontFamily:"'Montserrat',sans-serif",color:C.t1,background:"transparent"}}
+        onKeyDown={e=>{if(e.key==="Enter"&&refineInput.trim())send(refineInput);}}
+      />
+      <button onClick={()=>send(refineInput)} disabled={!refineInput.trim()||loading}
+        style={{padding:"7px 16px",background:refineInput.trim()?ACC:C.bd,color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer"}}>
+        Отправить
+      </button>
+    </div>}
+
+    {/* Messages */}
+    <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:12,paddingBottom:8}}>
+      {msgs.map((m,i)=><div key={i} style={{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start",alignItems:"flex-start",gap:8}}>
+        {m.role==="assistant"&&<div style={{width:28,height:28,borderRadius:8,background:GRAD,border:"1px solid rgba(245,158,11,0.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0,marginTop:2}}>📦</div>}
+        <div style={{
+          maxWidth:"82%",padding:"12px 16px",
+          borderRadius:m.role==="user"?"16px 16px 4px 16px":"16px 16px 16px 4px",
+          background:m.role==="user"?`linear-gradient(135deg,${ACC},#D97706)`:"#1E293B",
+          color:"#fff",fontSize:13,lineHeight:1.7,wordBreak:"break-word",
+          boxShadow:m.role==="user"?"0 4px 12px rgba(245,158,11,0.3)":"0 4px 12px rgba(0,0,0,0.15)",
+        }}>
+          {formatMsg(m.content)}
+        </div>
+      </div>)}
+
+      {loading&&<div style={{display:"flex",alignItems:"center",gap:8}}>
+        <div style={{width:28,height:28,borderRadius:8,background:GRAD,border:"1px solid rgba(245,158,11,0.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>📦</div>
+        <div style={{padding:"12px 16px",background:"#1E293B",borderRadius:"16px 16px 16px 4px",display:"flex",gap:5,alignItems:"center"}}>
+          {[0,1,2].map(i=><div key={i} style={{width:7,height:7,borderRadius:"50%",background:"rgba(245,158,11,0.7)",animation:`pulse 1.2s ease-in-out ${i*0.2}s infinite`}}/>)}
+        </div>
+      </div>}
+
+      {err&&<div style={{padding:"10px 14px",background:"#FEF2F2",borderRadius:10,fontSize:12,color:C.r,border:"1px solid "+C.r+"22"}}>{err}</div>}
+      <div ref={bottomRef}/>
+    </div>
+
+    {/* Quick replies */}
+    {quickReplies&&!loading&&<div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:8}}>
+      {quickReplies.map(opt=><button key={opt} onClick={()=>send(opt)}
+        style={{padding:"9px 16px",background:"#1E293B",border:"1px solid rgba(245,158,11,0.25)",borderRadius:10,fontSize:12,color:"#fff",cursor:"pointer",fontWeight:500,transition:"all 0.15s"}}
+        onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(245,158,11,0.7)";(e.currentTarget as HTMLElement).style.color=ACC;}}
+        onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(245,158,11,0.25)";(e.currentTarget as HTMLElement).style.color="#fff";}}>
+        {opt}
+      </button>)}
+    </div>}
+
+    {/* Input */}
+    {(!refining)&&<div style={{marginTop:8,background:C.w,borderRadius:16,border:"1px solid "+C.bd,boxShadow:"0 4px 20px rgba(0,0,0,0.08)",padding:"12px 16px",display:"flex",gap:10,alignItems:"flex-end"}}>
+      <textarea value={input} onChange={e=>setInput(e.target.value)}
+        onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}}
+        placeholder="Напиши ответ... (Enter — отправить)"
+        rows={1}
+        style={{flex:1,border:"none",outline:"none",resize:"none",fontSize:13,fontFamily:"'Montserrat',sans-serif",color:C.t1,background:"transparent",lineHeight:1.5,maxHeight:120,overflowY:"auto"}}
+        onInput={e=>{const t=e.currentTarget;t.style.height="auto";t.style.height=Math.min(t.scrollHeight,120)+"px";}}
+      />
+      <button onClick={()=>send()} disabled={!input.trim()||loading}
+        style={{width:38,height:38,borderRadius:10,border:"none",background:input.trim()&&!loading?ACC:C.bd,cursor:input.trim()&&!loading?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"background 0.2s"}}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>}
   </div>;
 }
 
