@@ -3765,49 +3765,315 @@ const PRODUCT_QUESTIONS=["Что ты умеешь делать лучше вс�
 function ProductAIPage(){return <AIChatBase pageId="product" system={PRODUCT_SYSTEM}/>;}
 
 /* ============ STORIES AI PAGE ============ */
-const STORIES_SYSTEM=`Ты — Vizzy Stories AI. Создаёшь серии историй для Instagram и Telegram которые захватывают внимание и ведут к действию.
+const STORIES_SYSTEM_V2=`Ты — Vizzy Stories AI. Специализируешься ТОЛЬКО на создании сценариев для Stories и каруселей. На любые другие запросы отвечай: «Я создаю сценарии для Stories и каруселей. Давай создадим твой!»
 
-Правило 1. Только три вопроса — никогда не задаёшь больше. Не уточняешь лишнего. Если чего-то не хватает — додумываешь сам на основе скрина и ответов.
+ЗАДАЧА: По данным от пользователя генерируй готовый сценарий по слайдам.
 
-Правило 2. Вопросы строго по одному.
-
-Правило 3. Никаких длинных тире в текстах историй. Никаких точек в конце строк на экране. Текст на экране — максимум 3 строки.
-
-Правило 4. Пишешь умно и деловито. Адаптируешься под нишу пользователя. Психолог звучит иначе чем маркетолог.
-
-Правило 5. Одна история — одна мысль. Никакого перегруза.
-
-Правило 6. Серия от 10 до 15 историй. Подбираешь количество сам.
-
-Правило 7. На нерелевантные запросы: «Я создаю серии историй. Загрузи скрин аккаунта и начнём»
-
-Формат каждой истории строго такой:
-
-История [N] из [TOTAL]
-
-Цель — [одна фраза]
-
-Текст на экране:
-[максимум 3 строки, без точек в конце, без длинных тире]
-
-Голос или текст за кадром:
-[2-4 предложения, живо и цепляюще]
-
-Визуал:
-[конкретное описание — фон, шрифт, элементы]
-
-Интерактив:
-[опрос / вопрос в сторис / реакция / слайдер — конкретно]
-
-Переход:
-[одна фраза тянущая к следующей истории]
+СТРУКТУРА ВЫВОДА — строго такой формат для каждого слайда:
 
 ---
+**Слайд [N] — [название роли: Хук / Проблема / Инсайт / Решение / Доказательство / CTA]**
 
-Что AI определяет сам по скрину: ниша, тон общения, аудитория, визуальный стиль, позиционирование.
-Если скрин не загружен — предупреди что серия будет менее точной и попроси описать себя в двух словах.`;
+📱 Текст на слайде:
+[1–2 короткие строки, макс 120 символов, без точек в конце]
 
-function StoriesAIPage(){return <AIChatBase pageId="stories" system={STORIES_SYSTEM}/>;}
+🎙 Подпись/озвучка:
+[1–2 предложения — живо, по делу]
+
+🎨 Визуал:
+[фон, цвет, эмодзи, фото — конкретно]
+
+💬 Интерактив (если цель — вовлечение):
+[опрос / вопрос / реакция / слайдер]
+---
+
+ПРАВИЛА:
+1. Слайд 1 — всегда хук. Дай 2-3 варианта хука на выбор.
+2. Слайды 2–(N-2) — проблема → инсайт → решение/польза → доказательство/кейс.
+3. Последний слайд — CTA. Дай 2-3 варианта CTA на выбор.
+4. Максимум 120 символов текст на слайде.
+5. Без воды, без длинных абзацев, логика: хук → ценность → CTA.
+6. Тон строго соответствует выбранному пользователем.
+7. Без мата. Без гарантий типа "вы точно заработаете".
+8. После генерации предложи: доработать слайд, изменить тон, добавить интерактив, сгенерировать новый вариант хука или CTA.`;
+
+const STORIES_QUESTIONS=[
+  {id:"topic",label:"Тема",placeholder:"О чём сторис? Например: как я вышел на 500к/мес"},
+  {id:"goal",label:"Цель",options:["Вовлечение","Прогрев","Продажа","Анонс","Экспертность"]},
+  {id:"audience",label:"Целевая аудитория",placeholder:"Кто читает? Например: предприниматели 25-40 лет"},
+  {id:"tone",label:"Тон",options:["Дружелюбно","Экспертно","Дерзко","Минимализм"]},
+  {id:"format",label:"Формат",options:["Instagram Stories","Telegram Stories","Карусель поста"]},
+  {id:"slides",label:"Кол-во слайдов",options:["5","6","7","8","9","10","11","12"],default:"7"},
+  {id:"product",label:"Продукт/оффер",placeholder:"Что продаём? (необязательно)"},
+  {id:"rules",label:"Ограничения",placeholder:"Например: на «ты», без обещаний (необязательно)"},
+];
+
+function StoriesAIPage(){
+  const isMobile=useIsMobile();
+  const theme=AI_THEMES.stories;
+  const ac="#CC00FF";
+
+  const[step,setStep]=useState<"form"|"chat">("form");
+  const[form,setForm]=useState<Record<string,string>>({slides:"7"});
+  const[chats,setChats]=useState<AIChat[]>([]);
+  const[activeChatId,setActiveChatId]=useState<string|null>(null);
+  const[input,setInput]=useState("");
+  const[loading,setLoading]=useState(false);
+  const[err,setErr]=useState("");
+  const[copied,setCopied]=useState(false);
+  const[sidebarOpen,setSidebarOpen]=useState(true);
+  const bottomRef=useRef<HTMLDivElement>(null);
+  const fileRef=useRef<HTMLInputElement>(null);
+
+  useEffect(()=>{
+    try{const s=localStorage.getItem("stories_ai_chats_v2");if(s)setChats(JSON.parse(s));}catch{}
+    setSidebarOpen(!isMobile);
+  },[]);
+  useEffect(()=>{try{localStorage.setItem("stories_ai_chats_v2",JSON.stringify(chats));}catch{};},[chats]);
+  useEffect(()=>{bottomRef.current?.scrollIntoView({behavior:"smooth"});},[chats,loading,activeChatId]);
+
+  const activeChat=chats.find(c=>c.id===activeChatId)||null;
+  const msgs=activeChat?.msgs||[];
+
+  const lastScript=useMemo(()=>{
+    const am=msgs.filter(m=>m.role==="assistant");
+    for(let i=am.length-1;i>=0;i--){if(am[i].content.includes("Слайд")&&am[i].content.length>300)return am[i].content;}
+    return null;
+  },[msgs]);
+
+  const buildPrompt=()=>{
+    const f=form;
+    return `Создай сценарий Stories по следующим данным:
+
+Тема: ${f.topic||"не указана"}
+Цель: ${f.goal||"вовлечение"}
+ЦА: ${f.audience||"не указана"}
+Тон: ${f.tone||"дружелюбно"}
+Формат: ${f.format||"Instagram Stories"}
+Кол-во слайдов: ${f.slides||"7"}
+Продукт/оффер: ${f.product||"не указан"}
+Ограничения: ${f.rules||"нет"}
+
+Сгенерируй полный сценарий по всем слайдам строго по формату.`;
+  };
+
+  const startGeneration=async()=>{
+    if(!form.topic?.trim()){setErr("Укажи тему сторис");return;}
+    setErr("");
+    const id=Date.now().toString();
+    const title=(form.topic||"Сторис").slice(0,35);
+    const chat:AIChat={id,title,msgs:[],createdAt:Date.now()};
+    setChats(prev=>[chat,...prev].slice(0,MAX_CHATS));
+    setActiveChatId(id);
+    setStep("chat");
+    setLoading(true);
+    const prompt=buildPrompt();
+    const userMsg:AIMsg={role:"user",content:prompt};
+    const newMsgs=[userMsg];
+    setChats(prev=>prev.map(c=>c.id===id?{...c,msgs:newMsgs}:c));
+    try{
+      const res=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({messages:newMsgs,system:STORIES_SYSTEM_V2})});
+      if(!res.ok)throw new Error("API error "+res.status);
+      const data=await res.json();
+      const reply=data.content?.[0]?.text||data.choices?.[0]?.message?.content||"Нет ответа";
+      setChats(prev=>prev.map(c=>c.id===id?{...c,msgs:[...newMsgs,{role:"assistant" as const,content:reply}]}:c));
+    }catch(e:any){setErr("Ошибка: "+e.message);}
+    finally{setLoading(false);}
+  };
+
+  const send=async()=>{
+    const q=input.trim();if(!q||loading)return;
+    let chatId=activeChatId;
+    if(!chatId){const id=Date.now().toString();chatId=id;setChats(prev=>[{id,title:q.slice(0,35),msgs:[],createdAt:Date.now()},...prev].slice(0,MAX_CHATS));setActiveChatId(id);}
+    const newMsgs:AIMsg[]=[...msgs,{role:"user" as const,content:q}];
+    setChats(prev=>prev.map(c=>c.id===chatId?{...c,msgs:newMsgs}:c));
+    setInput("");setLoading(true);
+    try{
+      const res=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({messages:newMsgs,system:STORIES_SYSTEM_V2})});
+      if(!res.ok)throw new Error("API error "+res.status);
+      const data=await res.json();
+      const reply=data.content?.[0]?.text||data.choices?.[0]?.message?.content||"Нет ответа";
+      setChats(prev=>prev.map(c=>c.id===chatId?{...c,msgs:[...newMsgs,{role:"assistant" as const,content:reply}]}:c));
+    }catch(e:any){setErr("Ошибка: "+e.message);}
+    finally{setLoading(false);}
+  };
+
+  const copy=async()=>{
+    const text=lastScript||msgs.filter(m=>m.role==="assistant").map(m=>m.content).join("\n\n");
+    await navigator.clipboard.writeText(text);setCopied(true);setTimeout(()=>setCopied(false),2000);
+  };
+
+  const download=()=>{
+    const text=lastScript||msgs.filter(m=>m.role==="assistant").map(m=>m.content).join("\n\n");
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type:"text/plain;charset=utf-8"}));a.download="stories_vizzy.txt";a.click();
+  };
+
+  const newScenario=()=>{setStep("form");setForm({slides:"7"});setActiveChatId(null);setErr("");setInput("");};
+
+  const formatMsg=(text:string)=>text.split("\n").map((line,i,arr)=>{
+    const isBold=line.startsWith("**")&&line.endsWith("**");
+    const isLabel=line.startsWith("📱")||line.startsWith("🎙")||line.startsWith("🎨")||line.startsWith("💬")||line.startsWith("---");
+    const parts=line.split(/(\*\*[^*]+\*\*)/g).map((p,j)=>
+      p.startsWith("**")&&p.endsWith("**")?<strong key={j} style={{color:ac}}>{p.slice(2,-2)}</strong>:p
+    );
+    return <span key={i} style={isLabel?{color:ac,fontWeight:600}:isBold?{color:ac}:{}}>{parts}{i<arr.length-1&&<br/>}</span>;
+  });
+
+  const GRAD="linear-gradient(135deg,#200030,#120018)";
+
+  return <div style={{display:"flex",height:isMobile?"calc(100vh - 136px)":"calc(100vh - 120px)",overflow:"hidden",borderRadius:16,border:"1px solid rgba(204,0,255,0.15)",background:theme.bg,boxShadow:"0 8px 40px rgba(0,0,0,0.4)"}}>
+    <style>{`.stories-input:focus{border-color:${ac}!important;box-shadow:0 0 12px rgba(204,0,255,0.3)!important;}.stories-send:hover{transform:scale(1.05);}.stories-chat-item:hover .stories-del{opacity:1!important;}.stories-opt:hover{border-color:${ac}!important;background:rgba(204,0,255,0.1)!important;}`}</style>
+
+    {/* Sidebar */}
+    {(sidebarOpen||!isMobile)&&<div style={{width:isMobile?"100%":220,flexShrink:0,background:theme.sbBg,borderRight:"1px solid rgba(255,255,255,0.06)",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+      <div style={{padding:"14px 12px 10px",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+          <img src="/icon-stories.png" style={{width:30,height:30,borderRadius:8,objectFit:"cover",border:"1.5px solid "+ac,boxShadow:"0 0 12px rgba(204,0,255,0.4)"}} alt=""/>
+          <div>
+            <div style={{fontSize:12,fontWeight:700,color:"#fff"}}>Vizzy Stories AI</div>
+            <div style={{fontSize:9,color:"rgba(255,255,255,0.35)"}}>Сценарии сторис</div>
+          </div>
+        </div>
+        <button onClick={newScenario} style={{width:"100%",padding:"8px",background:"linear-gradient(135deg,#CC00FF,#FF44CC)",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,boxShadow:"0 4px 16px rgba(204,0,255,0.4)"}}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Новый сценарий
+        </button>
+        <div style={{fontSize:9,color:"rgba(255,255,255,0.25)",textAlign:"right",marginTop:5}}>{chats.length}/{MAX_CHATS}</div>
+      </div>
+      <div style={{flex:1,overflowY:"auto",padding:"6px"}}>
+        {chats.length===0&&<div style={{padding:"20px 8px",textAlign:"center",fontSize:11,color:"rgba(255,255,255,0.25)"}}>Нет сценариев</div>}
+        {chats.map(chat=><div key={chat.id} className="stories-chat-item" onClick={()=>{setActiveChatId(chat.id);setStep("chat");if(isMobile)setSidebarOpen(false);}}
+          style={{padding:"9px 10px",borderRadius:7,cursor:"pointer",marginBottom:2,display:"flex",alignItems:"center",gap:7,
+            background:activeChatId===chat.id?theme.sbActiveBg:"transparent",
+            borderLeft:activeChatId===chat.id?"3px solid "+ac:"3px solid transparent",transition:"all 0.15s",position:"relative"}}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={activeChatId===chat.id?ac:"rgba(255,255,255,0.3)"} strokeWidth="2" style={{flexShrink:0}}><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:11,fontWeight:activeChatId===chat.id?600:400,color:activeChatId===chat.id?"#fff":"rgba(255,255,255,0.6)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{chat.title}</div>
+            <div style={{fontSize:9,color:"rgba(255,255,255,0.25)",marginTop:1}}>{chat.msgs.length} сообщ.</div>
+          </div>
+          <button className="stories-del" onClick={e=>{e.stopPropagation();setChats(prev=>prev.filter(c=>c.id!==chat.id));if(activeChatId===chat.id){setActiveChatId(null);setStep("form");}}}
+            style={{width:18,height:18,border:"none",background:"rgba(255,59,48,0.15)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:0,flexShrink:0,borderRadius:4,transition:"opacity 0.15s"}}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#FF3B30" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>)}
+      </div>
+    </div>}
+
+    {/* Main */}
+    {(!isMobile||!sidebarOpen)&&<div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",background:theme.bg}}>
+      {/* Header */}
+      <div style={{padding:"12px 16px",background:GRAD,borderBottom:"1px solid rgba(204,0,255,0.15)",display:"flex",alignItems:"center",gap:10,flexShrink:0,boxShadow:"0 4px 40px rgba(204,0,255,0.25)"}}>
+        {isMobile&&<button onClick={()=>setSidebarOpen(true)} style={{width:30,height:30,border:"1px solid rgba(255,255,255,0.1)",borderRadius:7,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>}
+        <div style={{position:"relative",flexShrink:0}}>
+          <img src="/icon-stories.png" style={{width:36,height:36,borderRadius:10,objectFit:"cover",border:"2px solid "+ac,boxShadow:"0 0 20px rgba(204,0,255,0.6)",animation:"avatarPulse 2s ease-in-out infinite"}} alt=""/>
+          <div style={{position:"absolute",bottom:0,right:0,width:9,height:9,borderRadius:"50%",background:ac,border:"2px solid "+theme.bg,animation:"dotBlink 2s ease-in-out infinite"}}/>
+        </div>
+        <div style={{flex:1}}>
+          <div style={{fontSize:14,fontWeight:700,color:"#fff"}}>Vizzy Stories AI</div>
+          <div style={{fontSize:10,color:ac,display:"flex",alignItems:"center",gap:4}}>
+            <div style={{width:5,height:5,borderRadius:"50%",background:ac}}/> Сценарии для Stories и каруселей
+          </div>
+        </div>
+        {step==="chat"&&lastScript&&<div style={{display:"flex",gap:6}}>
+          <button onClick={copy} style={{padding:"5px 10px",background:copied?"rgba(16,185,129,0.2)":"rgba(255,255,255,0.06)",color:copied?"#10B981":"rgba(255,255,255,0.6)",border:"1px solid "+(copied?"rgba(16,185,129,0.3)":"rgba(255,255,255,0.1)"),borderRadius:7,fontSize:10,cursor:"pointer",fontWeight:500}}>{copied?"✓ Скопировано":"Скопировать"}</button>
+          {!isMobile&&<button onClick={download} style={{padding:"5px 10px",background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.5)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:7,fontSize:10,cursor:"pointer"}}>Скачать</button>}
+        </div>}
+      </div>
+
+      {/* Form or Chat */}
+      {step==="form"
+        ? <div style={{flex:1,overflowY:"auto",padding:"20px"}}>
+            <div style={{maxWidth:560,margin:"0 auto"}}>
+              <div style={{textAlign:"center",marginBottom:24}}>
+                <img src="/icon-stories.png" style={{width:56,height:56,borderRadius:14,objectFit:"cover",border:"2px solid "+ac,boxShadow:"0 0 20px rgba(204,0,255,0.5)",marginBottom:12}} alt=""/>
+                <div style={{fontSize:18,fontWeight:800,color:"#fff",marginBottom:4}}>Визzy Stories AI</div>
+                <div style={{fontSize:12,color:"rgba(255,255,255,0.4)"}}>Заполни форму — получи готовый сценарий по слайдам</div>
+              </div>
+
+              {STORIES_QUESTIONS.map(q=><div key={q.id} style={{marginBottom:16}}>
+                <label style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.5)",display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:0.5}}>{q.label}{q.id==="topic"||q.id==="audience"?" *":""}</label>
+                {q.options
+                  ? <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                      {q.options.map(opt=><button key={opt} className="stories-opt" onClick={()=>setForm(f=>({...f,[q.id]:opt}))}
+                        style={{padding:"7px 14px",background:form[q.id]===opt?"rgba(204,0,255,0.2)":"rgba(255,255,255,0.04)",border:"1px solid "+(form[q.id]===opt?ac:"rgba(255,255,255,0.1)"),borderRadius:20,fontSize:12,color:form[q.id]===opt?ac:"rgba(255,255,255,0.6)",cursor:"pointer",transition:"all 0.15s",fontFamily:"'Montserrat',sans-serif",fontWeight:form[q.id]===opt?600:400}}>
+                        {opt}
+                      </button>)}
+                    </div>
+                  : <input value={form[q.id]||""} onChange={e=>setForm(f=>({...f,[q.id]:e.target.value}))}
+                      placeholder={q.placeholder} className="stories-input"
+                      style={{width:"100%",padding:"10px 14px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,fontSize:13,color:"#fff",outline:"none",fontFamily:"'Montserrat',sans-serif",boxSizing:"border-box",transition:"all 0.2s"}}/>
+                }
+              </div>)}
+
+              {err&&<div style={{padding:"10px 14px",background:"rgba(255,59,48,0.1)",borderRadius:10,fontSize:12,color:"#FF3B30",border:"1px solid rgba(255,59,48,0.2)",marginBottom:12}}>{err}</div>}
+
+              <button onClick={startGeneration} disabled={loading||!form.topic?.trim()}
+                style={{width:"100%",padding:"14px",background:"linear-gradient(135deg,#CC00FF,#FF44CC)",color:"#fff",border:"none",borderRadius:12,fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 8px 24px rgba(204,0,255,0.4)",transition:"all 0.15s",opacity:loading||!form.topic?.trim()?0.5:1}}>
+                {loading?"Генерирую сценарий...":"✨ Сгенерировать сценарий"}
+              </button>
+            </div>
+          </div>
+
+        : <><div style={{flex:1,overflowY:"auto",padding:"16px",display:"flex",flexDirection:"column",gap:12}}>
+            {msgs.map((m,i)=><div key={i} style={{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start",alignItems:"flex-start",gap:8}}>
+              {m.role==="assistant"&&<img src="/icon-stories.png" style={{width:26,height:26,borderRadius:7,objectFit:"cover",flexShrink:0,marginTop:2,border:"1.5px solid "+ac}} alt=""/>}
+              <div style={{maxWidth:"82%",padding:"11px 14px",
+                borderRadius:m.role==="user"?"18px 18px 4px 18px":"18px 18px 18px 4px",
+                background:m.role==="user"?"linear-gradient(135deg,#2A0040,#1A0030)":theme.aiMsgBg,
+                border:"1px solid "+(m.role==="user"?"rgba(204,0,255,0.4)":theme.aiMsgBorder),
+                color:m.role==="user"?"#F5CCFF":"#fff",fontSize:13,lineHeight:1.7,wordBreak:"break-word",
+                boxShadow:m.role==="user"?"0 2px 20px rgba(204,0,255,0.2)":theme.aiMsgGlow,
+              }}>
+                {m.role==="assistant"?formatMsg(m.content):m.content}
+              </div>
+              {m.role==="user"&&<div style={{width:26,height:26,borderRadius:7,background:"rgba(204,0,255,0.15)",border:"1.5px solid rgba(204,0,255,0.3)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={ac} strokeWidth="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </div>}
+            </div>)}
+
+            {loading&&<div style={{display:"flex",alignItems:"center",gap:8}}>
+              <img src="/icon-stories.png" style={{width:26,height:26,borderRadius:7,objectFit:"cover",border:"1.5px solid "+ac}} alt=""/>
+              <div style={{padding:"11px 14px",background:theme.aiMsgBg,border:"1px solid "+theme.aiMsgBorder,borderRadius:"18px 18px 18px 4px",display:"flex",gap:5,alignItems:"center"}}>
+                {[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:ac,animation:`pulse 1.2s ease-in-out ${i*0.15}s infinite`}}/>)}
+              </div>
+            </div>}
+            {err&&<div style={{padding:"10px 14px",background:"rgba(255,59,48,0.1)",borderRadius:10,fontSize:12,color:"#FF3B30",border:"1px solid rgba(255,59,48,0.2)"}}>{err}</div>}
+            <div ref={bottomRef}/>
+          </div>
+
+          {/* Quick actions */}
+          {lastScript&&!loading&&<div style={{padding:"8px 12px",borderTop:"1px solid rgba(255,255,255,0.06)",display:"flex",gap:6,flexWrap:"wrap",background:"rgba(255,255,255,0.02)"}}>
+            {["Перепиши хук","Другой CTA","Добавь интерактив","Измени тон"].map(a=><button key={a} onClick={()=>{setInput(a);}}
+              style={{padding:"5px 12px",background:"rgba(204,0,255,0.1)",border:"1px solid rgba(204,0,255,0.25)",borderRadius:20,fontSize:11,color:ac,cursor:"pointer",fontWeight:500}}>
+              {a}
+            </button>)}
+          </div>}
+
+          {/* Input */}
+          <div style={{padding:"10px 12px",borderTop:"1px solid rgba(255,255,255,0.06)",background:"linear-gradient(180deg,#200030,#120018)",flexShrink:0}}>
+            <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
+              <textarea value={input} onChange={e=>setInput(e.target.value)}
+                onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}}
+                placeholder="Доработай слайд, измени тон, добавь интерактив..."
+                rows={1} className="stories-input"
+                style={{flex:1,border:"1px solid rgba(255,255,255,0.1)",outline:"none",resize:"none",fontSize:13,fontFamily:"'Montserrat',sans-serif",color:"#fff",background:"rgba(255,255,255,0.04)",lineHeight:1.5,maxHeight:100,overflowY:"auto",borderRadius:10,padding:"9px 12px",transition:"all 0.2s"}}
+                onInput={e=>{const t=e.currentTarget;t.style.height="auto";t.style.height=Math.min(t.scrollHeight,100)+"px";}}
+              />
+              <button className="stories-send" onClick={send} disabled={!input.trim()||loading}
+                style={{width:34,height:34,borderRadius:8,border:"none",background:input.trim()&&!loading?"linear-gradient(135deg,#CC00FF,#FF44CC)":"rgba(255,255,255,0.08)",cursor:input.trim()&&!loading?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.15s"}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </button>
+            </div>
+          </div>
+        </>
+      }
+    </div>}
+  </div>;
+}
 
 /* ============ TOOLS (TIMER v2) ============ */
 function ToolsPage(){
