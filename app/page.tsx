@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase";
 
 /* ============ CONSTANTS ============ */
 const C = {
-  bg:"#F5F7FA",w:"#FFFFFF",a:"#2563EB",ah:"#1D4ED8",dk:"#0F1E40",da:"#1E3A5F",
+  bg:"#F5F7FA",w:"#FFFFFF",a:"#2563EB",ah:"#1D4ED8",dk:"#1F1F1F",da:"#2F2F2F",
   t1:"#111827",t2:"#6B7280",bd:"#E5E7EB",g:"#10B981",r:"#EF4444",y:"#F59E0B",
   sh:"0 2px 12px rgba(0,0,0,0.06)",ib:"#F9FAFB",pk:"#EC4899",lb:"#06B6D4"
 };
@@ -719,7 +719,7 @@ function DashPage({userId,name,avatar,onNav,onAvatarChange}:{userId:string,name:
     </Card>
 
     {/* Kirill Scales AI widget */}
-    <div onClick={()=>onNav("ai")} style={{marginTop:isMobile?12:16,background:`linear-gradient(135deg,${C.dk},#1a2744)`,borderRadius:16,padding:isMobile?"14px 16px":"18px 24px",cursor:"pointer",display:"flex",alignItems:"center",gap:16,border:"1px solid rgba(255,255,255,0.08)",boxShadow:"0 4px 20px rgba(0,0,0,0.15)",transition:"transform 0.15s,box-shadow 0.15s"}}
+    <div onClick={()=>onNav("ai")} style={{marginTop:isMobile?12:16,background:`linear-gradient(135deg,${C.dk},#2a2a2a)`,borderRadius:16,padding:isMobile?"14px 16px":"18px 24px",cursor:"pointer",display:"flex",alignItems:"center",gap:16,border:"1px solid rgba(255,255,255,0.08)",boxShadow:"0 4px 20px rgba(0,0,0,0.15)",transition:"transform 0.15s,box-shadow 0.15s"}}
       onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(-1px)";(e.currentTarget as HTMLElement).style.boxShadow="0 8px 28px rgba(0,0,0,0.2)";}}
       onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(0)";(e.currentTarget as HTMLElement).style.boxShadow="0 4px 20px rgba(0,0,0,0.15)";}}>
       <img src="/ai-avatar.png" style={{width:isMobile?48:56,height:isMobile?48:56,borderRadius:14,objectFit:"cover",flexShrink:0,border:"2px solid rgba(255,255,255,0.15)"}} alt="AI"/>
@@ -3052,7 +3052,7 @@ function LinksPage({userId}:{userId:string}){
   const[activeCategory,setActiveCategory]=useState("Все");
   const[f,sF]=useState({title:"",url:"",description:"",category:"Общее",color:C.a});
 
-  const LINK_COLORS=[C.a,"#8B5CF6","#10B981","#EF4444","#F59E0B","#EC4899","#06B6D4","#F97316","#0F1E40"];
+  const LINK_COLORS=[C.a,"#8B5CF6","#10B981","#EF4444","#F59E0B","#EC4899","#06B6D4","#F97316","#1F1F1F"];
   const DEFAULT_CATS=["Общее","Работа","Соцсети","Инструменты","Обучение"];
 
   const allCategories=useMemo(()=>{
@@ -3370,17 +3370,22 @@ type AIChat={id:string,title:string,msgs:AIMsg[],createdAt:number};
 
 function AIPage(){
   const isMobile=useIsMobile();
-  const[chats,setChats]=useState<AIChat[]>(()=>{
-    try{const s=localStorage.getItem("ks_ai_chats");return s?JSON.parse(s):[];}catch{return[];}
-  });
+  const[chats,setChats]=useState<AIChat[]>([]);
   const[activeChatId,setActiveChatId]=useState<string|null>(null);
   const[input,setInput]=useState("");
   const[loading,setLoading]=useState(false);
   const[err,setErr]=useState("");
-  const[sidebarOpen,setSidebarOpen]=useState(!isMobile);
+  const[sidebarOpen,setSidebarOpen]=useState(true);
   const[fileData,setFileData]=useState<{name:string,data:string,type:string}|null>(null);
+  const[hydrated,setHydrated]=useState(false);
   const bottomRef=useRef<HTMLDivElement>(null);
   const fileRef=useRef<HTMLInputElement>(null);
+
+  // Load from localStorage after mount (SSR safe)
+  useEffect(()=>{
+    try{const s=localStorage.getItem("ks_ai_chats");if(s)setChats(JSON.parse(s));}catch{}
+    setHydrated(true);
+  },[]);
 
   const activeChat=chats.find(c=>c.id===activeChatId)||null;
   const msgs=activeChat?.msgs||[];
@@ -3780,7 +3785,7 @@ function ScriptAIPage(){
 
   return <div style={{display:"flex",flexDirection:"column",height:isMobile?"calc(100vh - 136px)":"calc(100vh - 120px)",maxWidth:860,margin:"0 auto"}}>
     {/* Header */}
-    <div style={{background:"linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)",borderRadius:16,padding:isMobile?"14px 18px":"20px 28px",marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+    <div style={{background:"linear-gradient(135deg,#1f1f1f,#2a2a2a,#333333)",borderRadius:16,padding:isMobile?"14px 18px":"20px 28px",marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
       <div style={{display:"flex",alignItems:"center",gap:12}}>
         <div style={{width:40,height:40,borderRadius:12,background:"rgba(99,102,241,0.3)",border:"1px solid rgba(99,102,241,0.5)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🎬</div>
         <div>
@@ -3803,7 +3808,7 @@ function ScriptAIPage(){
     {/* Messages */}
     <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:12,paddingBottom:8}}>
       {msgs.map((m,i)=><div key={i} style={{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start",alignItems:"flex-start",gap:8}}>
-        {m.role==="assistant"&&<div style={{width:28,height:28,borderRadius:8,background:"linear-gradient(135deg,#1a1a2e,#0f3460)",border:"1px solid rgba(99,102,241,0.4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0,marginTop:2}}>🎬</div>}
+        {m.role==="assistant"&&<div style={{width:28,height:28,borderRadius:8,background:"linear-gradient(135deg,#1f1f1f,#333333)",border:"1px solid rgba(99,102,241,0.4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0,marginTop:2}}>🎬</div>}
         <div style={{
           maxWidth:"82%",padding:"12px 16px",
           borderRadius:m.role==="user"?"16px 16px 4px 16px":"16px 16px 16px 4px",
@@ -3816,7 +3821,7 @@ function ScriptAIPage(){
       </div>)}
 
       {loading&&<div style={{display:"flex",alignItems:"center",gap:8}}>
-        <div style={{width:28,height:28,borderRadius:8,background:"linear-gradient(135deg,#1a1a2e,#0f3460)",border:"1px solid rgba(99,102,241,0.4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>🎬</div>
+        <div style={{width:28,height:28,borderRadius:8,background:"linear-gradient(135deg,#1f1f1f,#333333)",border:"1px solid rgba(99,102,241,0.4)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>🎬</div>
         <div style={{padding:"12px 16px",background:"#1E293B",borderRadius:"16px 16px 16px 4px",display:"flex",gap:5,alignItems:"center"}}>
           {[0,1,2].map(i=><div key={i} style={{width:7,height:7,borderRadius:"50%",background:"rgba(99,102,241,0.7)",animation:`pulse 1.2s ease-in-out ${i*0.2}s infinite`}}/>)}
         </div>
@@ -3965,7 +3970,7 @@ function ProductAIPage(){
   // Quick reply options based on question number
   const quickReplies=userMsgCount===4?FORMATS:userMsgCount===5?DURATIONS:userMsgCount===6?LEVELS:null;
 
-  const GRAD="linear-gradient(135deg,#0d1b2a,#1b2838,#0f2027)";
+  const GRAD="linear-gradient(135deg,#1f1f1f,#2a2a2a,#222222)";
   const ACC="#F59E0B";
   const ACC2="#FBBF24";
 
@@ -4239,7 +4244,7 @@ function StoriesAIPage(){
     return <span key={i} style={isBold?{color:"#93C5FD",fontWeight:700}:{}}>{parts}{i<arr.length-1&&<br/>}</span>;
   });
 
-  const GRAD="linear-gradient(135deg,#0a0a1a,#12122a,#0d1117)";
+  const GRAD="linear-gradient(135deg,#141414,#1f1f1f,#181818)";
   const ACC="#E879F9";
   const ACC2="#C026D3";
 
