@@ -3440,7 +3440,7 @@ function AIPage(){
       setActiveChatId(id);
     }
 
-    const userMsg:AIMsg={role:"user",content:q||`Файл: ${fileData?.name}`,..( fileData?{file:fileData}:{})};
+    const userMsg:AIMsg={role:"user",content:q||("Файл: "+(fileData?.name||"")),file:fileData||undefined};
     const newMsgs:AIMsg[]=[...msgs,userMsg];
 
     setChats(prev=>prev.map(c=>c.id===chatId?{...c,msgs:newMsgs,title:c.title==="Новый чат"?(q.slice(0,35)||c.title):c.title}:c));
