@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 
 /* ============ CONSTANTS ============ */
@@ -24,10 +24,8 @@ const NAV=[
   {id:"media",label:"Медийность",ic:"M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"},
   {id:"ads",label:"Реклама",ic:"M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"},
   {id:"pnl",label:"P&L",ic:"M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"},
-  {id:"calc",label:"Калькулятор",ic:"M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"},
   {id:"tools",label:"Инструменты",ic:"M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"},
   {id:"links",label:"База ссылок",ic:"M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"},
-  {id:"files",label:"База файлов",ic:"M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"},
   {id:"ai",label:"Kirill Scales AI",ic:"M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z",glow:true},
   {id:"script",label:"Vissy Сценарий AI",ic:"M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z",glow:true},
   {id:"product",label:"Vizzy Product AI",ic:"M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4",glow:true},
@@ -164,8 +162,19 @@ function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onL
       <div style={{padding:c?"24px 0":"24px 20px",display:"flex",alignItems:"center",gap:10,justifyContent:c?"center":"flex-start",borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
         <Logo s={24}/>{!c&&<Brand size="sm"/>}
       </div>
-      <nav style={{flex:1,padding:"12px 10px",display:"flex",flexDirection:"column",gap:2,overflowY:"auto"}}>
-        {NAV.map(n=>{const a=active===n.id;const gl=(n as any).glow&&!a;return<button key={n.id} onClick={()=>onNav(n.id)} title={c?n.label:undefined} style={{display:"flex",alignItems:"center",gap:12,padding:c?"12px 0":"11px 14px",justifyContent:c?"center":"flex-start",border:gl?"1px solid rgba(37,99,235,0.4)":"none",borderRadius:10,cursor:"pointer",background:a?C.a:gl?"rgba(37,99,235,0.1)":"transparent",color:"#fff",fontSize:13.5,fontWeight:a?600:gl?600:400,whiteSpace:"nowrap",overflow:"hidden",boxShadow:gl?"0 0 12px rgba(37,99,235,0.3)":"none"}}><I path={n.ic} size={18} color={a?"#fff":gl?"#60a5fa":"rgba(255,255,255,0.6)"}/>{!c&&n.label}</button>})}
+      <nav style={{flex:1,padding:"6px 10px",display:"flex",flexDirection:"column",gap:1,overflowY:"auto"}}>
+        {NAV.map((n,idx)=>{
+          const a=active===n.id;
+          const gl=(n as any).glow&&!a;
+          const isFirstAI=n.id==="ai";
+          return <React.Fragment key={n.id}>
+            {isFirstAI&&!c&&<div style={{height:1,background:"rgba(255,255,255,0.08)",margin:"6px 4px"}}/>}
+            <button onClick={()=>onNav(n.id)} title={c?n.label:undefined} style={{display:"flex",alignItems:"center",gap:10,padding:c?"9px 0":"7px 12px",justifyContent:c?"center":"flex-start",border:gl?"1px solid rgba(37,99,235,0.4)":"none",borderRadius:8,cursor:"pointer",background:a?C.a:gl?"rgba(37,99,235,0.1)":"transparent",color:"#fff",fontSize:12,fontWeight:a?600:gl?600:400,whiteSpace:"nowrap",overflow:"hidden",boxShadow:gl?"0 0 10px rgba(37,99,235,0.25)":"none",flexShrink:0}}>
+              <I path={n.ic} size={15} color={a?"#fff":gl?"#60a5fa":"rgba(255,255,255,0.55)"}/>
+              {!c&&n.label}
+            </button>
+          </React.Fragment>;
+        })}
       </nav>
       <div style={{padding:"16px 10px",borderTop:"1px solid rgba(255,255,255,0.08)"}}>
         <button onClick={()=>sC(!c)} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"10px 14px",justifyContent:c?"center":"flex-start",border:"none",borderRadius:10,cursor:"pointer",background:"rgba(255,255,255,0.05)",color:"rgba(255,255,255,0.5)",fontSize:13}}>
