@@ -194,11 +194,19 @@ function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onL
     return (n as any).accent||null;
   };
 
+  const AI_ICONS:Record<string,string>={
+    ai:"/icon-ai.png",
+    script:"/icon-copy.png",
+    product:"/icon-product.png",
+    stories:"/icon-stories.png",
+  };
+
   const renderItem=(n:any)=>{
     const a=active===n.id;
     const accent=getAccentColor(n);
     const isGrad=(n as any).accent==="gradient";
     const iconColor=a?"#fff":accent||"rgba(255,255,255,0.55)";
+    const customIcon=AI_ICONS[n.id];
     return <button key={n.id} onClick={()=>onNav(n.id)} title={c?n.label:undefined}
       style={{display:"flex",alignItems:"center",gap:9,padding:c?"8px 0":"6px 10px",justifyContent:c?"center":"flex-start",
         border:"none",borderRadius:6,cursor:"pointer",width:"100%",
@@ -212,13 +220,14 @@ function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onL
       {a&&<div style={{position:"absolute",left:0,top:"15%",bottom:"15%",width:3,borderRadius:"0 3px 3px 0",background:accent||"#fff"}}/>}
       {/* Gradient bg for stories */}
       {a&&isGrad&&<div style={{position:"absolute",inset:0,background:"linear-gradient(135deg,rgba(134,239,172,0.12),rgba(167,139,250,0.12))",borderRadius:6}}/>}
-      {/* Icon with accent */}
-      <div style={{
-        width:22,height:22,borderRadius:5,flexShrink:0,
-        display:"flex",alignItems:"center",justifyContent:"center",
-        background:a?(isGrad?"linear-gradient(135deg,#86EFAC,#A78BFA)":accent?accent+"22":"rgba(255,255,255,0.1)"):"transparent",
+      {/* Icon — custom image or SVG */}
+      <div style={{width:22,height:22,borderRadius:5,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",
+        background:customIcon?"transparent":(a?(isGrad?"linear-gradient(135deg,#86EFAC,#A78BFA)":accent?accent+"22":"rgba(255,255,255,0.1)"):"transparent"),
       }}>
-        <I path={n.ic} size={13} color={isGrad&&a?"#fff":iconColor}/>
+        {customIcon
+          ? <img src={customIcon} width={22} height={22} style={{borderRadius:5,objectFit:"cover",opacity:a?1:0.7,transition:"opacity 0.15s"}} alt={n.label}/>
+          : <I path={n.ic} size={13} color={isGrad&&a?"#fff":iconColor}/>
+        }
       </div>
       {!c&&<span style={{
         fontSize:12.5,fontWeight:a?600:400,
