@@ -3689,9 +3689,6 @@ function AIPage(){return <AIChatBase pageId="ai"/>;}
 
 
 
-type AIMsg={role:"user"|"assistant",content:string,file?:{name:string,data:string,type:string}};
-type AIChat={id:string,title:string,msgs:AIMsg[],createdAt:number};
-
 /* ============ SCRIPT AI PAGE ============ */
 const SCRIPT_SYSTEM=`Ты — Vissy Сценарий AI. Твоя единственная задача — помогать писать сценарии для видео. Ты не делаешь ничего другого: не переводишь тексты, не пишешь код, не отвечаешь на общие вопросы, не помогаешь с чем-либо кроме сценариев для видео.
 
