@@ -15,22 +15,49 @@ const STAGES_DEFAULT=[{id:"new",label:"Новый",color:C.a},{id:"contact",labe
 const SRCS=["Instagram","Telegram","YouTube","Сайт","Рекомендация","Реклама","Другое"];
 const TASK_STATUS=[{id:"todo",label:"Не начата",color:C.t2},{id:"inprogress",label:"В процессе",color:C.y},{id:"done",label:"Выполнена",color:C.g}];
 const CALL_GOALS=["Созвон с командой","Созвон с лидом","Созвон с клиентом","Своя цель"];
-const NAV=[
-  {id:"dashboard",label:"Dashboard",ic:"M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"},
-  {id:"strategy",label:"Стратегия роста",ic:"M5 3l3.057 7.134L2 16h5.5L12 21l4.5-5H22l-6.057-5.866L19 3l-7 4-7-4z",glow:true},
-  {id:"crm",label:"CRM",ic:"M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"},
-  {id:"calls",label:"Созвоны",ic:"M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"},
-  {id:"content",label:"Контент",ic:"M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"},
-  {id:"media",label:"Медийность",ic:"M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"},
-  {id:"ads",label:"Реклама",ic:"M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"},
-  {id:"pnl",label:"P&L",ic:"M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"},
-  {id:"tools",label:"Инструменты",ic:"M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"},
-  {id:"links",label:"База ссылок",ic:"M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"},
-  {id:"ai",label:"Kirill Scales AI",ic:"M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z",glow:true},
-  {id:"script",label:"Vissy Сценарий AI",ic:"M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z",glow:true},
-  {id:"product",label:"Vizzy Product AI",ic:"M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4",glow:true},
-  {id:"stories",label:"Vizzy Stories AI",ic:"M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z",glow:true},
+// NAV grouped structure
+const NAV_GROUPS=[
+  {
+    items:[
+      {id:"dashboard",label:"Dashboard",ic:"M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"},
+      {id:"strategy",label:"Стратегия роста",ic:"M5 3l3.057 7.134L2 16h5.5L12 21l4.5-5H22l-6.057-5.866L19 3l-7 4-7-4z"},
+    ]
+  },
+  {
+    label:"Работа с лидами",
+    items:[
+      {id:"crm",label:"CRM",ic:"M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"},
+      {id:"calls",label:"Созвоны",ic:"M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"},
+    ]
+  },
+  {
+    label:"Привлечение",
+    items:[
+      {id:"content",label:"Контент",ic:"M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"},
+      {id:"media",label:"Медийность",ic:"M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"},
+      {id:"ads",label:"Реклама",ic:"M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"},
+    ]
+  },
+  {
+    label:"VIZZY AI",
+    items:[
+      {id:"ai",label:"Kirill Scales AI",ic:"M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z",accent:"#A78BFA"},
+      {id:"script",label:"Vizzy Copy AI",ic:"M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z",accent:"#FB923C"},
+      {id:"product",label:"Vizzy Product AI",ic:"M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4",accent:"#34D399"},
+      {id:"stories",label:"Vizzy Stories AI",ic:"M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z",accent:"gradient"},
+    ]
+  },
+  {
+    label:"Остальное",
+    items:[
+      {id:"pnl",label:"P&L",ic:"M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"},
+      {id:"tools",label:"Инструменты",ic:"M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"},
+      {id:"links",label:"База ссылок",ic:"M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"},
+    ]
+  },
 ];
+// Flat NAV for routing/mobile
+const NAV=NAV_GROUPS.flatMap(g=>g.items);
 const WD=["Воскресенье","Понедельник","Вторник","Среда","Четверг","Пятница","Суббота"];
 const MR=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
 const MS=["Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"];
@@ -155,33 +182,107 @@ function useIsMobile(){
 }
 
 /* ============ SIDEBAR (desktop) ============ */
+const SB="#1F1F1F"; // Notion-style dark gray
+const SB_H="#2F2F2F"; // hover
+const SB_ACT="#3B3B3B"; // active bg
+
 function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onLogout:()=>void}){
   const[c,sC]=useState(false);
-  return(
-    <div style={{width:c?72:252,height:"100vh",background:C.dk,display:"flex",flexDirection:"column",transition:"width 0.3s",position:"fixed",left:0,top:0,zIndex:100,overflowX:"hidden",overflowY:"hidden"}}>
-      <div style={{padding:c?"24px 0":"24px 20px",display:"flex",alignItems:"center",gap:10,justifyContent:c?"center":"flex-start",borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
-        <Logo s={24}/>{!c&&<Brand size="sm"/>}
+
+  const getAccentColor=(n:any)=>{
+    if((n as any).accent==="gradient")return null;
+    return (n as any).accent||null;
+  };
+
+  const renderItem=(n:any)=>{
+    const a=active===n.id;
+    const accent=getAccentColor(n);
+    const isGrad=(n as any).accent==="gradient";
+    const iconColor=a?"#fff":accent||"rgba(255,255,255,0.55)";
+    return <button key={n.id} onClick={()=>onNav(n.id)} title={c?n.label:undefined}
+      style={{display:"flex",alignItems:"center",gap:9,padding:c?"8px 0":"6px 10px",justifyContent:c?"center":"flex-start",
+        border:"none",borderRadius:6,cursor:"pointer",width:"100%",
+        background:a?(accent?"transparent":SB_ACT):"transparent",
+        position:"relative",overflow:"hidden",
+        transition:"background 0.15s",
+      }}
+      onMouseEnter={e=>{if(!a)(e.currentTarget as HTMLElement).style.background=SB_H;}}
+      onMouseLeave={e=>{if(!a)(e.currentTarget as HTMLElement).style.background="transparent";}}>
+      {/* Active indicator */}
+      {a&&<div style={{position:"absolute",left:0,top:"15%",bottom:"15%",width:3,borderRadius:"0 3px 3px 0",background:accent||"#fff"}}/>}
+      {/* Gradient bg for stories */}
+      {a&&isGrad&&<div style={{position:"absolute",inset:0,background:"linear-gradient(135deg,rgba(134,239,172,0.12),rgba(167,139,250,0.12))",borderRadius:6}}/>}
+      {/* Icon with accent */}
+      <div style={{
+        width:22,height:22,borderRadius:5,flexShrink:0,
+        display:"flex",alignItems:"center",justifyContent:"center",
+        background:a?(isGrad?"linear-gradient(135deg,#86EFAC,#A78BFA)":accent?accent+"22":"rgba(255,255,255,0.1)"):"transparent",
+      }}>
+        <I path={n.ic} size={13} color={isGrad&&a?"#fff":iconColor}/>
       </div>
-      <nav style={{flex:1,padding:"6px 10px",display:"flex",flexDirection:"column",gap:1,overflowY:"auto"}}>
-        {NAV.map((n,idx)=>{
-          const a=active===n.id;
-          const gl=(n as any).glow&&!a;
-          const isFirstAI=n.id==="ai";
-          return <React.Fragment key={n.id}>
-            {isFirstAI&&!c&&<div style={{height:1,background:"rgba(255,255,255,0.08)",margin:"6px 4px"}}/>}
-            <button onClick={()=>onNav(n.id)} title={c?n.label:undefined} style={{display:"flex",alignItems:"center",gap:10,padding:c?"9px 0":"7px 12px",justifyContent:c?"center":"flex-start",border:gl?"1px solid rgba(37,99,235,0.4)":"none",borderRadius:8,cursor:"pointer",background:a?C.a:gl?"rgba(37,99,235,0.1)":"transparent",color:"#fff",fontSize:12,fontWeight:a?600:gl?600:400,whiteSpace:"nowrap",overflow:"hidden",boxShadow:gl?"0 0 10px rgba(37,99,235,0.25)":"none",flexShrink:0}}>
-              <I path={n.ic} size={15} color={a?"#fff":gl?"#60a5fa":"rgba(255,255,255,0.55)"}/>
-              {!c&&n.label}
-            </button>
-          </React.Fragment>;
-        })}
-      </nav>
-      <div style={{padding:"16px 10px",borderTop:"1px solid rgba(255,255,255,0.08)"}}>
-        <button onClick={()=>sC(!c)} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"10px 14px",justifyContent:c?"center":"flex-start",border:"none",borderRadius:10,cursor:"pointer",background:"rgba(255,255,255,0.05)",color:"rgba(255,255,255,0.5)",fontSize:13}}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">{c?<polyline points="9 18 15 12 9 6"/>:<polyline points="15 18 9 12 15 6"/>}</svg>{!c&&"Свернуть"}
+      {!c&&<span style={{
+        fontSize:12.5,fontWeight:a?600:400,
+        color:a?(isGrad?"#86EFAC":accent||"#fff"):"rgba(255,255,255,0.75)",
+        overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1,textAlign:"left",
+      }}>{n.label}</span>}
+    </button>;
+  };
+
+  return(
+    <div style={{width:c?56:240,height:"100vh",background:SB,display:"flex",flexDirection:"column",
+      transition:"width 0.25s ease",position:"fixed",left:0,top:0,zIndex:100,
+      overflowX:"hidden",overflowY:"hidden",
+      borderRight:"1px solid rgba(255,255,255,0.06)"}}>
+
+      {/* Logo */}
+      <div style={{padding:c?"16px 0":"14px 16px",display:"flex",alignItems:"center",gap:8,
+        justifyContent:c?"center":"flex-start",
+        borderBottom:"1px solid rgba(255,255,255,0.06)",flexShrink:0}}>
+        <Logo s={22}/>
+        {!c&&<div style={{display:"flex",flexDirection:"column",lineHeight:1.2}}>
+          <span style={{fontSize:13,fontWeight:700,color:"#fff",letterSpacing:0.5}}>VIZZY</span>
+          <span style={{fontSize:9,color:"rgba(255,255,255,0.35)",letterSpacing:0.5}}>by Kirill Scales</span>
+        </div>}
+      </div>
+
+      {/* Nav groups */}
+      <div style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"8px 8px 0"}}>
+        {NAV_GROUPS.map((group,gi)=><div key={gi} style={{marginBottom:4}}>
+          {/* Group label */}
+          {group.label&&!c&&<div style={{fontSize:10,fontWeight:600,color:"rgba(255,255,255,0.28)",
+            padding:"10px 10px 4px",letterSpacing:0.8,textTransform:"uppercase"}}>
+            {group.label}
+          </div>}
+          {/* Divider when collapsed */}
+          {group.label&&c&&gi>0&&<div style={{height:1,background:"rgba(255,255,255,0.07)",margin:"6px 8px"}}/>}
+          {/* Items */}
+          <div style={{display:"flex",flexDirection:"column",gap:1}}>
+            {group.items.map(n=>renderItem(n))}
+          </div>
+        </div>)}
+      </div>
+
+      {/* Bottom */}
+      <div style={{padding:"8px",borderTop:"1px solid rgba(255,255,255,0.06)",flexShrink:0}}>
+        <button onClick={()=>sC(!c)}
+          style={{width:"100%",display:"flex",alignItems:"center",gap:9,padding:c?"8px 0":"6px 10px",
+            justifyContent:c?"center":"flex-start",border:"none",borderRadius:6,cursor:"pointer",
+            background:"transparent",color:"rgba(255,255,255,0.4)",fontSize:12,
+            transition:"background 0.15s"}}
+          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=SB_H;}}
+          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">{c?<polyline points="9 18 15 12 9 6"/>:<polyline points="15 18 9 12 15 6"/>}</svg>
+          {!c&&<span>Свернуть</span>}
         </button>
-        <button onClick={onLogout} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"10px 14px",marginTop:4,justifyContent:c?"center":"flex-start",border:"none",borderRadius:10,cursor:"pointer",background:"transparent",color:"rgba(255,255,255,0.4)",fontSize:13}}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>{!c&&"Выйти"}
+        <button onClick={onLogout}
+          style={{width:"100%",display:"flex",alignItems:"center",gap:9,padding:c?"8px 0":"6px 10px",
+            justifyContent:c?"center":"flex-start",border:"none",borderRadius:6,cursor:"pointer",
+            background:"transparent",color:"rgba(255,255,255,0.3)",fontSize:12,marginTop:1,
+            transition:"background 0.15s"}}
+          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=SB_H;}}
+          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          {!c&&<span>Выйти</span>}
         </button>
       </div>
     </div>
@@ -350,7 +451,7 @@ function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,n
       </> : <>
         {/* Desktop layout */}
         <Side active={page} onNav={setPage} onLogout={logout}/>
-        <div style={{marginLeft:252,minHeight:"100vh"}}>
+        <div style={{marginLeft:240,minHeight:"100vh"}}>
           <Head name={userName}/>
           <div style={{padding:"28px 32px"}}>
             {pageContent}
