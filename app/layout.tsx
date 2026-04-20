@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "FF Consulting",
-  description: "FF Consulting Platform",
+  title: "Vizzy Platform",
+  description: "Vizzy Platform by Kirill Scales",
 };
 
 export const viewport = {
@@ -18,7 +18,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ru">
-      <body>{children}</body>
+      <body style={{ margin: 0, padding: 0 }}>{children}</body>
     </html>
   );
 }
