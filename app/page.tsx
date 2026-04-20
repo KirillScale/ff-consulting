@@ -3370,9 +3370,324 @@ function FilesPage({userId}:{userId:string}){
   </>;
 }
 
-/* ============ AI PAGE ============ */
+/* ============ AI CHAT BASE ============ */
 const AI_AVATAR="/ai-avatar.png";
 const MAX_CHATS=20;
+
+type AIMsg={role:"user"|"assistant",content:string,file?:{name:string,data:string,type:string}};
+type AIChat={id:string,title:string,msgs:AIMsg[],createdAt:number};
+
+interface AIChatTheme{
+  bg:string; sbBg:string; sbActiveBg:string; sbActiveBorder:string;
+  headerBg:string; headerGlow:string; headerBorderColor:string;
+  avatarBorder:string; avatarGlow:string;
+  userMsgBg:string; userMsgBorder:string; userMsgText:string; userMsgGlow:string;
+  aiMsgBg:string; aiMsgBorder:string; aiMsgGlow:string;
+  inputBg:string; inputBorderFocus:string; inputGlow:string;
+  btnBg:string; btnGlow:string;
+  dotColor:string; accentColor:string; textColor:string;
+  onlineDot:string;
+}
+
+const AI_THEMES:Record<string,AIChatTheme>={
+  ai:{
+    bg:"#0A0E1A",sbBg:"#080D18",sbActiveBg:"#111827",sbActiveBorder:"#00C2FF",
+    headerBg:"linear-gradient(180deg,#0D1533,#0A0E1A)",headerGlow:"0 4px 30px rgba(0,194,255,0.15)",headerBorderColor:"rgba(0,194,255,0.15)",
+    avatarBorder:"#00C2FF",avatarGlow:"0 0 16px rgba(0,194,255,0.5)",
+    userMsgBg:"#1A2744",userMsgBorder:"rgba(0,194,255,0.3)",userMsgText:"#E8F4FF",userMsgGlow:"0 2px 12px rgba(0,194,255,0.12)",
+    aiMsgBg:"#0F1628",aiMsgBorder:"rgba(0,194,255,0.15)",aiMsgGlow:"0 2px 20px rgba(0,194,255,0.08)",
+    inputBg:"#111827",inputBorderFocus:"#00C2FF",inputGlow:"0 0 12px rgba(0,194,255,0.25)",
+    btnBg:"linear-gradient(135deg,#0066FF,#00C2FF)",btnGlow:"0 4px 16px rgba(0,194,255,0.4)",
+    dotColor:"#00C2FF",accentColor:"#00C2FF",textColor:"#fff",onlineDot:"#00C2FF",
+  },
+  script:{
+    bg:"#130A00",sbBg:"#0A0500",sbActiveBg:"#1A0D00",sbActiveBorder:"#FF8C00",
+    headerBg:"linear-gradient(180deg,#1F0F00,#130A00)",headerGlow:"0 4px 30px rgba(255,100,0,0.2)",headerBorderColor:"rgba(255,140,0,0.2)",
+    avatarBorder:"#FF8C00",avatarGlow:"0 0 16px rgba(255,140,0,0.5)",
+    userMsgBg:"linear-gradient(135deg,#2A1500,#1F1000)",userMsgBorder:"rgba(255,140,0,0.35)",userMsgText:"#FFE8CC",userMsgGlow:"0 2px 15px rgba(255,100,0,0.15)",
+    aiMsgBg:"#1A0D00",aiMsgBorder:"rgba(255,140,0,0.15)",aiMsgGlow:"0 2px 12px rgba(255,100,0,0.08)",
+    inputBg:"#0F0800",inputBorderFocus:"#FF8C00",inputGlow:"0 0 12px rgba(255,140,0,0.3)",
+    btnBg:"linear-gradient(135deg,#FF8C00,#FF5500)",btnGlow:"0 4px 16px rgba(255,100,0,0.4)",
+    dotColor:"#FF8C00",accentColor:"#FF8C00",textColor:"#fff",onlineDot:"#FF8C00",
+  },
+  product:{
+    bg:"#0C0A1A",sbBg:"#08061A",sbActiveBg:"#13103A",sbActiveBorder:"#7B61FF",
+    headerBg:"linear-gradient(180deg,#130F2A,#0C0A1A)",headerGlow:"0 4px 30px rgba(123,97,255,0.2)",headerBorderColor:"rgba(123,97,255,0.2)",
+    avatarBorder:"#7B61FF",avatarGlow:"0 0 16px rgba(168,255,0,0.3), 0 0 32px rgba(123,97,255,0.3)",
+    userMsgBg:"linear-gradient(135deg,#1A1535,#0F1A10)",userMsgBorder:"rgba(123,97,255,0.4)",userMsgText:"#EEE8FF",userMsgGlow:"0 2px 16px rgba(123,97,255,0.15)",
+    aiMsgBg:"#100E20",aiMsgBorder:"rgba(168,255,0,0.15)",aiMsgGlow:"0 2px 12px rgba(168,255,0,0.08)",
+    inputBg:"#0A0818",inputBorderFocus:"#7B61FF",inputGlow:"0 0 12px rgba(123,97,255,0.3)",
+    btnBg:"linear-gradient(135deg,#7B61FF,#A8FF00)",btnGlow:"0 4px 16px rgba(123,97,255,0.4)",
+    dotColor:"#7B61FF",accentColor:"#A8FF00",textColor:"#fff",onlineDot:"#A8FF00",
+  },
+  stories:{
+    bg:"#120018",sbBg:"#0A0010",sbActiveBg:"#1A0025",sbActiveBorder:"#CC00FF",
+    headerBg:"linear-gradient(180deg,#200030,#120018)",headerGlow:"0 4px 40px rgba(204,0,255,0.25)",headerBorderColor:"rgba(204,0,255,0.2)",
+    avatarBorder:"#CC00FF",avatarGlow:"0 0 20px rgba(204,0,255,0.6)",
+    userMsgBg:"linear-gradient(135deg,#2A0040,#1A0030)",userMsgBorder:"rgba(204,0,255,0.4)",userMsgText:"#F5CCFF",userMsgGlow:"0 2px 20px rgba(204,0,255,0.2)",
+    aiMsgBg:"#180025",aiMsgBorder:"rgba(255,68,204,0.2)",aiMsgGlow:"0 2px 16px rgba(204,0,255,0.1)",
+    inputBg:"#0E0018",inputBorderFocus:"#CC00FF",inputGlow:"0 0 16px rgba(204,0,255,0.35)",
+    btnBg:"linear-gradient(135deg,#CC00FF,#FF44CC)",btnGlow:"0 4px 16px rgba(204,0,255,0.5)",
+    dotColor:"#CC00FF",accentColor:"#FF44CC",textColor:"#fff",onlineDot:"#CC00FF",
+  },
+};
+
+const AI_CONFIG:{[k:string]:{name:string,avatar:string,storageKey:string,system?:string,suggestions?:string[]}}={
+  ai:{name:"Kirill Scales AI",avatar:"/icon-ai.png",storageKey:"ks_ai_chats",
+    suggestions:["Как увеличить конверсию в консалтинге?","Напиши скрипт для первого созвона с лидом","Какие метрики важны для онлайн-бизнеса?","Помоги составить оффер для клиента","Как выстроить систему продаж с нуля?","Идеи для контента про предпринимательство"]},
+  script:{name:"Vizzy Copy AI",avatar:"/icon-copy.png",storageKey:"copy_ai_chats"},
+  product:{name:"Vizzy Product AI",avatar:"/icon-product.png",storageKey:"product_ai_chats"},
+  stories:{name:"Vizzy Stories AI",avatar:"/icon-stories.png",storageKey:"stories_ai_chats"},
+};
+
+function AIChatBase({pageId,system}:{pageId:string,system?:string}){
+  const isMobile=useIsMobile();
+  const theme=AI_THEMES[pageId]||AI_THEMES.ai;
+  const config=AI_CONFIG[pageId]||AI_CONFIG.ai;
+
+  const[chats,setChats]=useState<AIChat[]>([]);
+  const[activeChatId,setActiveChatId]=useState<string|null>(null);
+  const[input,setInput]=useState("");
+  const[loading,setLoading]=useState(false);
+  const[err,setErr]=useState("");
+  const[sidebarOpen,setSidebarOpen]=useState(true);
+  const[fileData,setFileData]=useState<{name:string,data:string,type:string}|null>(null);
+  const bottomRef=useRef<HTMLDivElement>(null);
+  const fileRef=useRef<HTMLInputElement>(null);
+
+  useEffect(()=>{
+    try{const s=localStorage.getItem(config.storageKey);if(s)setChats(JSON.parse(s));}catch{}
+    setSidebarOpen(!isMobile);
+  },[]);
+
+  useEffect(()=>{
+    try{localStorage.setItem(config.storageKey,JSON.stringify(chats));}catch{}
+  },[chats]);
+
+  useEffect(()=>{bottomRef.current?.scrollIntoView({behavior:"smooth"});},[msgs,loading]);
+
+  const activeChat=chats.find(c=>c.id===activeChatId)||null;
+  const msgs=activeChat?.msgs||[];
+
+  const newChat=()=>{
+    if(chats.length>=MAX_CHATS){alert("Лимит 20 диалогов. Удали старый чтобы создать новый");return;}
+    const id=Date.now().toString();
+    const chat:AIChat={id,title:"Новый чат",msgs:[],createdAt:Date.now()};
+    setChats(prev=>[chat,...prev]);
+    setActiveChatId(id);setInput("");setErr("");setFileData(null);
+  };
+
+  const deleteChat=(id:string,e:React.MouseEvent)=>{
+    e.stopPropagation();
+    setChats(prev=>prev.filter(c=>c.id!==id));
+    if(activeChatId===id)setActiveChatId(null);
+  };
+
+  const handleFile=async(file:File)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const result=e.target?.result as string;
+      const isText=file.type.startsWith("text")||file.name.endsWith(".txt")||file.name.endsWith(".md")||file.name.endsWith(".csv")||file.name.endsWith(".docx");
+      setFileData({name:file.name,data:isText?result:(result.split(",")[1]||""),type:isText?"text":file.type});
+    };
+    if(file.type.startsWith("text")||[".txt",".md",".csv"].some(e=>file.name.endsWith(e))){
+      reader.readAsText(file);
+    } else {reader.readAsDataURL(file);}
+  };
+
+  const send=async(text?:string)=>{
+    const q=(text||input).trim();
+    if((!q&&!fileData)||loading)return;
+    let chatId=activeChatId;
+    if(!chatId){
+      if(chats.length>=MAX_CHATS){alert("Лимит 20 диалогов. Удали старый чтобы создать новый");return;}
+      const id=Date.now().toString();chatId=id;
+      const chat:AIChat={id,title:q.slice(0,30)||fileData?.name||"Чат",msgs:[],createdAt:Date.now()};
+      setChats(prev=>[chat,...prev]);setActiveChatId(id);
+    }
+    const userMsg:AIMsg={role:"user",content:q||("Файл: "+(fileData?.name||"")),file:fileData||undefined};
+    const newMsgs:AIMsg[]=[...msgs,userMsg];
+    setChats(prev=>prev.map(c=>c.id===chatId?{...c,msgs:newMsgs,title:c.title==="Новый чат"?(q.slice(0,35)||c.title):c.title}:c));
+    setInput("");setErr("");setFileData(null);setLoading(true);
+    try{
+      const apiMsgs=newMsgs.map(m=>({role:m.role,content:m.file&&m.file.type==="text"?m.content+"\n\nФайл \""+m.file.name+"\":\n"+m.file.data:m.content}));
+      const res=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:apiMsgs,...(system?{system}:{})})});
+      if(!res.ok)throw new Error("API error "+res.status);
+      const data=await res.json();
+      const reply=data.content?.[0]?.text||data.choices?.[0]?.message?.content||"Нет ответа";
+      setChats(prev=>prev.map(c=>c.id===chatId?{...c,msgs:[...newMsgs,{role:"assistant" as const,content:reply}]}:c));
+    }catch(e:any){setErr("Ошибка: "+e.message);setChats(prev=>prev.map(c=>c.id===chatId?{...c,msgs:newMsgs.slice(0,-1)}:c));}
+    finally{setLoading(false);}
+  };
+
+  const formatMsg=(text:string)=>text.split("\n").map((line,i,arr)=>{
+    const parts=line.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).map((part,j)=>{
+      if(part.startsWith("**")&&part.endsWith("**"))return <strong key={j}>{part.slice(2,-2)}</strong>;
+      if(part.startsWith("`")&&part.endsWith("`"))return <code key={j} style={{background:"rgba(255,255,255,0.15)",borderRadius:4,padding:"1px 5px",fontSize:"0.9em",fontFamily:"monospace"}}>{part.slice(1,-1)}</code>;
+      return part;
+    });
+    return <span key={i}>{parts}{i<arr.length-1&&<br/>}</span>;
+  });
+
+  const ac=theme.accentColor;
+
+  return <div style={{display:"flex",height:isMobile?"calc(100vh - 136px)":"calc(100vh - 120px)",overflow:"hidden",borderRadius:16,border:"1px solid rgba(255,255,255,0.06)",background:theme.bg,boxShadow:"0 8px 40px rgba(0,0,0,0.4)"}}>
+    <style>{`
+      @keyframes avatarPulse{0%,100%{opacity:0.6}50%{opacity:1}}
+      @keyframes dotBlink{0%,100%{opacity:1}50%{opacity:0.3}}
+      @keyframes msgSlideIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
+      @keyframes aiMsgIn{from{transform:scale(0.97);opacity:0}to{transform:scale(1);opacity:1}}
+      .ai-chat-input:focus{border-color:${theme.inputBorderFocus}!important;box-shadow:${theme.inputGlow}!important;}
+      .ai-send-btn:hover{transform:scale(1.05);box-shadow:${theme.btnGlow}!important;}
+      .ai-file-btn:hover{transform:scale(1.1);}
+      .ai-chat-item:hover .ai-delete-btn{opacity:1!important;}
+      .ai-suggestion-btn:hover{border-color:${ac}!important;background:${ac}15!important;}
+    `}</style>
+
+    {/* Sidebar */}
+    {(sidebarOpen||!isMobile)&&<div style={{width:isMobile?"100%":220,flexShrink:0,background:theme.sbBg,borderRight:"1px solid rgba(255,255,255,0.06)",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+      <div style={{padding:"14px 12px 10px",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+          <img src={config.avatar} style={{width:30,height:30,borderRadius:8,objectFit:"cover",border:"1.5px solid "+theme.avatarBorder,boxShadow:theme.avatarGlow}} alt=""/>
+          <div>
+            <div style={{fontSize:12,fontWeight:700,color:"#fff"}}>{config.name}</div>
+            <div style={{fontSize:9,color:"rgba(255,255,255,0.35)"}}>История диалогов</div>
+          </div>
+        </div>
+        <button onClick={newChat} style={{width:"100%",padding:"8px",background:theme.btnBg,color:pageId==="product"?"#0A0818":"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,boxShadow:theme.btnGlow}}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Новый диалог
+        </button>
+        <div style={{fontSize:9,color:"rgba(255,255,255,0.25)",textAlign:"right",marginTop:5}}>{chats.length}/{MAX_CHATS}</div>
+      </div>
+      <div style={{flex:1,overflowY:"auto",padding:"6px"}}>
+        {chats.length===0&&<div style={{padding:"20px 8px",textAlign:"center",fontSize:11,color:"rgba(255,255,255,0.25)"}}>Нет диалогов</div>}
+        {chats.map(chat=><div key={chat.id} className="ai-chat-item" onClick={()=>{setActiveChatId(chat.id);if(isMobile)setSidebarOpen(false);}}
+          style={{padding:"9px 10px",borderRadius:7,cursor:"pointer",marginBottom:2,display:"flex",alignItems:"center",gap:7,
+            background:activeChatId===chat.id?theme.sbActiveBg:"transparent",
+            borderLeft:activeChatId===chat.id?"3px solid "+theme.sbActiveBorder:"3px solid transparent",
+            transition:"all 0.15s",position:"relative"}}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={activeChatId===chat.id?theme.sbActiveBorder:"rgba(255,255,255,0.3)"} strokeWidth="2" style={{flexShrink:0}}><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:11,fontWeight:activeChatId===chat.id?600:400,color:activeChatId===chat.id?"#fff":"rgba(255,255,255,0.6)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{chat.title}</div>
+            <div style={{fontSize:9,color:"rgba(255,255,255,0.25)",marginTop:1}}>{chat.msgs.length} сообщ.</div>
+          </div>
+          <button className="ai-delete-btn" onClick={e=>deleteChat(chat.id,e)}
+            style={{width:18,height:18,border:"none",background:"rgba(255,59,48,0.15)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:0,flexShrink:0,borderRadius:4,transition:"opacity 0.15s"}}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#FF3B30" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>)}
+      </div>
+    </div>}
+
+    {/* Main area */}
+    {(!isMobile||!sidebarOpen)&&<div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",background:theme.bg}}>
+      {/* Header */}
+      <div style={{padding:"12px 16px",background:theme.headerBg,borderBottom:"1px solid "+theme.headerBorderColor,display:"flex",alignItems:"center",gap:10,flexShrink:0,boxShadow:theme.headerGlow}}>
+        {isMobile&&<button onClick={()=>setSidebarOpen(true)} style={{width:30,height:30,border:"1px solid rgba(255,255,255,0.1)",borderRadius:7,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>}
+        <div style={{position:"relative",flexShrink:0}}>
+          <img src={config.avatar} style={{width:36,height:36,borderRadius:10,objectFit:"cover",border:"2px solid "+theme.avatarBorder,boxShadow:theme.avatarGlow,animation:"avatarPulse 2s ease-in-out infinite"}} alt=""/>
+          <div style={{position:"absolute",bottom:0,right:0,width:9,height:9,borderRadius:"50%",background:theme.onlineDot,border:"2px solid "+theme.bg,animation:"dotBlink 2s ease-in-out infinite"}}/>
+        </div>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:14,fontWeight:700,color:"#fff"}}>{config.name}</div>
+          <div style={{fontSize:10,color:theme.onlineDot,display:"flex",alignItems:"center",gap:4}}>
+            <div style={{width:5,height:5,borderRadius:"50%",background:theme.onlineDot}}/>
+            онлайн · Powered by the best AI's
+          </div>
+        </div>
+        {activeChat&&<button onClick={()=>{setChats(prev=>prev.map(c=>c.id===activeChatId?{...c,msgs:[]}:c));setErr("");}}
+          style={{padding:"4px 10px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:7,fontSize:10,color:"rgba(255,255,255,0.5)",cursor:"pointer"}}>
+          Очистить
+        </button>}
+      </div>
+
+      {/* Messages */}
+      <div style={{flex:1,overflowY:"auto",padding:"16px",display:"flex",flexDirection:"column",gap:12}}>
+        {!activeChat&&<div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16,padding:"20px 0",minHeight:"60%"}}>
+          <img src={config.avatar} style={{width:68,height:68,borderRadius:18,objectFit:"cover",border:"2px solid "+theme.avatarBorder,boxShadow:theme.avatarGlow}} alt=""/>
+          <div style={{textAlign:"center"}}>
+            <div style={{fontSize:17,fontWeight:700,color:"#fff",marginBottom:4}}>{config.name}</div>
+            <div style={{fontSize:12,color:"rgba(255,255,255,0.4)",lineHeight:1.6}}>Начни новый диалог или выбери из истории</div>
+          </div>
+          {config.suggestions&&<div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:7,width:"100%",maxWidth:520}}>
+            {config.suggestions.map((s,i)=><button key={i} className="ai-suggestion-btn" onClick={()=>send(s)}
+              style={{padding:"9px 12px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,fontSize:11,color:"rgba(255,255,255,0.65)",cursor:"pointer",textAlign:"left",lineHeight:1.4,fontFamily:"'Montserrat',sans-serif",transition:"all 0.15s"}}>
+              {s}
+            </button>)}
+          </div>}
+        </div>}
+
+        {msgs.map((m,i)=><div key={i} style={{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start",alignItems:"flex-start",gap:8,animation:m.role==="user"?"msgSlideIn 0.2s ease-out":"aiMsgIn 0.25s ease-out"}}>
+          {m.role==="assistant"&&<img src={config.avatar} style={{width:26,height:26,borderRadius:7,objectFit:"cover",flexShrink:0,marginTop:2,border:"1.5px solid "+theme.avatarBorder}} alt=""/>}
+          <div style={{maxWidth:"78%"}}>
+            {m.file&&<div style={{fontSize:10,color:"rgba(255,255,255,0.4)",marginBottom:3,display:"flex",alignItems:"center",gap:4,justifyContent:m.role==="user"?"flex-end":"flex-start"}}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              {m.file.name}
+            </div>}
+            <div style={{
+              padding:"11px 14px",
+              borderRadius:m.role==="user"?"18px 18px 4px 18px":"18px 18px 18px 4px",
+              background:m.role==="user"?theme.userMsgBg:theme.aiMsgBg,
+              border:"1px solid "+(m.role==="user"?theme.userMsgBorder:theme.aiMsgBorder),
+              color:m.role==="user"?theme.userMsgText:"#fff",
+              fontSize:13,lineHeight:1.65,wordBreak:"break-word",
+              boxShadow:m.role==="user"?theme.userMsgGlow:theme.aiMsgGlow,
+            }}>
+              {m.role==="assistant"?formatMsg(m.content):m.content}
+            </div>
+          </div>
+          {m.role==="user"&&<div style={{width:26,height:26,borderRadius:7,background:ac+"22",border:"1.5px solid "+ac+"44",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={ac} strokeWidth="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>}
+        </div>)}
+
+        {loading&&<div style={{display:"flex",alignItems:"center",gap:8}}>
+          <img src={config.avatar} style={{width:26,height:26,borderRadius:7,objectFit:"cover",border:"1.5px solid "+theme.avatarBorder}} alt=""/>
+          <div style={{padding:"11px 14px",background:theme.aiMsgBg,border:"1px solid "+theme.aiMsgBorder,borderRadius:"18px 18px 18px 4px",display:"flex",gap:5,alignItems:"center",boxShadow:theme.aiMsgGlow}}>
+            {[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:theme.dotColor,animation:`pulse 1.2s ease-in-out ${i*0.15}s infinite`}}/>)}
+          </div>
+        </div>}
+
+        {err&&<div style={{padding:"10px 14px",background:"rgba(255,59,48,0.1)",borderRadius:10,fontSize:12,color:"#FF3B30",border:"1px solid rgba(255,59,48,0.2)"}}>{err}</div>}
+        <div ref={bottomRef}/>
+      </div>
+
+      {/* Input */}
+      <div style={{padding:"10px 12px",borderTop:"1px solid rgba(255,255,255,0.06)",background:theme.headerBg,flexShrink:0}}>
+        {fileData&&<div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:ac+"15",borderRadius:8,marginBottom:8,border:"1px solid "+ac+"30"}}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={ac} strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span style={{fontSize:11,color:ac,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{fileData.name}</span>
+          <button onClick={()=>setFileData(null)} style={{border:"none",background:"transparent",cursor:"pointer",color:"rgba(255,255,255,0.4)",fontSize:14,lineHeight:1}}>×</button>
+        </div>}
+        <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
+          <input ref={fileRef} type="file" accept=".txt,.md,.csv,.pdf,.docx,image/*" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0])handleFile(e.target.files[0]);e.target.value="";}}/>
+          <button className="ai-file-btn" onClick={()=>fileRef.current?.click()} title="Загрузить файл"
+            style={{width:34,height:34,borderRadius:8,border:"1px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.04)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.15s",color:theme.dotColor}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+          </button>
+          <textarea value={input} onChange={e=>setInput(e.target.value)}
+            onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}}
+            placeholder="Напиши сообщение... (Enter — отправить)"
+            rows={1} className="ai-chat-input"
+            style={{flex:1,border:"1px solid rgba(255,255,255,0.1)",outline:"none",resize:"none",fontSize:13,fontFamily:"'Montserrat',sans-serif",color:"#fff",background:theme.inputBg,lineHeight:1.5,maxHeight:120,overflowY:"auto",borderRadius:10,padding:"9px 12px",transition:"border-color 0.2s,box-shadow 0.2s"}}
+            onInput={e=>{const t=e.currentTarget;t.style.height="auto";t.style.height=Math.min(t.scrollHeight,120)+"px";}}
+          />
+          <button className="ai-send-btn" onClick={()=>send()} disabled={(!input.trim()&&!fileData)||loading}
+            style={{width:34,height:34,borderRadius:8,border:"none",background:((input.trim()||fileData)&&!loading)?theme.btnBg:"rgba(255,255,255,0.08)",cursor:((input.trim()||fileData)&&!loading)?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.15s"}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={pageId==="product"&&(input.trim()||fileData)&&!loading?"#0A0818":"#fff"} strokeWidth="2.5" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>}
+  </div>;
+}
+
+function AIPage(){return <AIChatBase pageId="ai"/>;}
+
+
 
 type AIMsg={role:"user"|"assistant",content:string,file?:{name:string,data:string,type:string}};
 type AIChat={id:string,title:string,msgs:AIMsg[],createdAt:number};
