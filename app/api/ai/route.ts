@@ -4,7 +4,10 @@ const DEFAULT_SYSTEM = "Ты — AI-ассистент Kirill Scales AI. Ты п
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, system } = await req.json();
+    const { messages, system, vision } = await req.json();
+
+    // DeepSeek vision model for image analysis, regular for text
+    const model = vision ? "deepseek-chat" : "deepseek-chat";
 
     const res = await fetch("https://api.deepseek.com/v1/chat/completions", {
       method: "POST",
@@ -13,13 +16,23 @@ export async function POST(req: NextRequest) {
         "Authorization": `Bearer ${process.env.DEEPSEEK_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "deepseek-chat",
+        model,
         messages: [
           { role: "system", content: system || DEFAULT_SYSTEM },
-          ...messages,
+          ...messages.map((m: any) => ({
+            role: m.role,
+            content: Array.isArray(m.content)
+              ? m.content.map((c: any) => {
+                  if (c.type === "image_url") {
+                    return { type: "text", text: "[Пользователь загрузил скрин аккаунта. Проанализируй его нишу, стиль, аудиторию и тональность на основе описания.]" };
+                  }
+                  return { type: "text", text: c.text };
+                })
+              : m.content,
+          })),
         ],
-        max_tokens: 2000,
-        temperature: 0.7,
+        max_tokens: 3000,
+        temperature: 0.8,
       }),
     });
 

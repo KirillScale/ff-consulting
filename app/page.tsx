@@ -31,6 +31,7 @@ const NAV=[
   {id:"ai",label:"Kirill Scales AI",ic:"M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z",glow:true},
   {id:"script",label:"Vissy Сценарий AI",ic:"M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z",glow:true},
   {id:"product",label:"Vizzy Product AI",ic:"M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4",glow:true},
+  {id:"stories",label:"Vizzy Stories AI",ic:"M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z",glow:true},
 ];
 const WD=["Воскресенье","Понедельник","Вторник","Среда","Четверг","Пятница","Суббота"];
 const MR=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
@@ -314,7 +315,8 @@ function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,n
     {page === "ai" && <AIPage/>}
     {page === "script" && <ScriptAIPage/>}
     {page === "product" && <ProductAIPage/>}
-    {!["dashboard","strategy","crm","calls","content","pnl","media","ads","calc","tools","links","files","ai","script","product"].includes(page) && nav && <Placeholder title={nav.label} ic={nav.ic}/>}
+    {page === "stories" && <StoriesAIPage/>}
+    {!["dashboard","strategy","crm","calls","content","pnl","media","ads","calc","tools","links","files","ai","script","product","stories"].includes(page) && nav && <Placeholder title={nav.label} ic={nav.ic}/>}
   </>;
 
   return (
@@ -3741,6 +3743,291 @@ function ProductAIPage(){
       />
       <button onClick={()=>send()} disabled={!input.trim()||loading}
         style={{width:38,height:38,borderRadius:10,border:"none",background:input.trim()&&!loading?ACC:C.bd,cursor:input.trim()&&!loading?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"background 0.2s"}}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>}
+  </div>;
+}
+
+/* ============ STORIES AI PAGE ============ */
+const STORIES_SYSTEM=`Ты — Vizzy Stories AI. Создаёшь серии историй для Instagram и Telegram которые захватывают внимание и ведут к действию.
+
+Правило 1. Только три вопроса — никогда не задаёшь больше. Не уточняешь лишнего. Если чего-то не хватает — додумываешь сам на основе скрина и ответов.
+
+Правило 2. Вопросы строго по одному.
+
+Правило 3. Никаких длинных тире в текстах историй. Никаких точек в конце строк на экране. Текст на экране — максимум 3 строки.
+
+Правило 4. Пишешь умно и деловито. Адаптируешься под нишу пользователя. Психолог звучит иначе чем маркетолог.
+
+Правило 5. Одна история — одна мысль. Никакого перегруза.
+
+Правило 6. Серия от 10 до 15 историй. Подбираешь количество сам.
+
+Правило 7. На нерелевантные запросы: «Я создаю серии историй. Загрузи скрин аккаунта и начнём»
+
+Формат каждой истории строго такой:
+
+История [N] из [TOTAL]
+
+Цель — [одна фраза]
+
+Текст на экране:
+[максимум 3 строки, без точек в конце, без длинных тире]
+
+Голос или текст за кадром:
+[2-4 предложения, живо и цепляюще]
+
+Визуал:
+[конкретное описание — фон, шрифт, элементы]
+
+Интерактив:
+[опрос / вопрос в сторис / реакция / слайдер — конкретно]
+
+Переход:
+[одна фраза тянущая к следующей истории]
+
+---
+
+Что AI определяет сам по скрину: ниша, тон общения, аудитория, визуальный стиль, позиционирование.
+Если скрин не загружен — предупреди что серия будет менее точной и попроси описать себя в двух словах.`;
+
+function StoriesAIPage(){
+  const isMobile=useIsMobile();
+  const WELCOME={role:"assistant" as const,content:"Привет! Я Vizzy Stories AI.\n\nСоздаю серии историй для Instagram и Telegram которые захватывают внимание и продают.\n\n**Вопрос 1 из 3.**\nЗагрузи скрин своего аккаунта — главная страница или несколько постов. AI проанализирует нишу, стиль и аудиторию автоматически.\n\nЕсли нет скрина — напиши о себе в двух словах."};
+
+  const[msgs,setMsgs]=useState<{role:"user"|"assistant",content:string}[]>([WELCOME]);
+  const[input,setInput]=useState("");
+  const[loading,setLoading]=useState(false);
+  const[err,setErr]=useState("");
+  const[copied,setCopied]=useState(false);
+  const[image,setImage]=useState<string|null>(null);
+  const[imageName,setImageName]=useState("");
+  const[rewriteMode,setRewriteMode]=useState(false);
+  const[rewriteInput,setRewriteInput]=useState("");
+  const bottomRef=useRef<HTMLDivElement>(null);
+  const fileRef=useRef<HTMLInputElement>(null);
+
+  useEffect(()=>{bottomRef.current?.scrollIntoView({behavior:"smooth"});},[msgs,loading]);
+
+  const userMsgCount=msgs.filter(m=>m.role==="user").length;
+  const questionNum=Math.min(userMsgCount+1,3);
+  const progress=Math.min(userMsgCount/3,1);
+  const isDone=userMsgCount>=3;
+
+  const lastSeries=useMemo(()=>{
+    const asMsgs=msgs.filter(m=>m.role==="assistant");
+    for(let i=asMsgs.length-1;i>=0;i--){
+      if(asMsgs[i].content.includes("История")&&asMsgs[i].content.length>300)
+        return asMsgs[i].content;
+    }
+    return null;
+  },[msgs]);
+
+  // Convert image file to base64
+  const handleImage=async(file:File)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const b64=(e.target?.result as string).split(",")[1];
+      setImage(b64);
+      setImageName(file.name);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const send=async(text?:string)=>{
+    const q=(text||input).trim();
+    if((!q&&!image)||loading)return;
+    setInput("");setErr("");setRewriteMode(false);
+
+    // Build message with optional image
+    const userContent:any=image
+      ?[{type:"image_url",image_url:{url:`data:image/jpeg;base64,${image}`}},{type:"text",text:q||"Вот скрин моего аккаунта"}]
+      :q;
+
+    const newMsgs:{role:"user"|"assistant",content:any}[]=[...msgs,{role:"user" as const,content:userContent}];
+    // For display — show text version
+    const displayMsgs:{role:"user"|"assistant",content:string}[]=[...msgs,{role:"user" as const,content:image?`📷 ${imageName||"скрин аккаунта"}${q?" — "+q:""}`:q}];
+    setMsgs(displayMsgs);
+    setImage(null);setImageName("");
+    setLoading(true);
+
+    try{
+      // Send to API with image support
+      const apiMessages=newMsgs.map(m=>({
+        role:m.role,
+        content:typeof m.content==="string"
+          ?m.content
+          :(m.content as any[]).map((c:any)=>
+            c.type==="image_url"
+              ?{type:"image_url",image_url:c.image_url}
+              :{type:"text",text:c.text}
+          )
+      }));
+
+      const res=await fetch("/api/ai",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({messages:apiMessages,system:STORIES_SYSTEM,vision:true}),
+      });
+      if(!res.ok)throw new Error("API error "+res.status);
+      const data=await res.json();
+      const reply=data.content?.[0]?.text||data.choices?.[0]?.message?.content||"Нет ответа";
+      setMsgs(prev=>[...prev,{role:"assistant" as const,content:reply}]);
+    }catch(e:any){
+      setErr("Ошибка: "+e.message);
+      setMsgs(prev=>prev.slice(0,-1));
+    }finally{setLoading(false);}
+  };
+
+  const reset=()=>{setMsgs([WELCOME]);setErr("");setInput("");setImage(null);setImageName("");setRewriteMode(false);};
+
+  const copy=async()=>{
+    const text=lastSeries||msgs.filter(m=>m.role==="assistant").map(m=>m.content).join("\n\n");
+    await navigator.clipboard.writeText(text);
+    setCopied(true);setTimeout(()=>setCopied(false),2000);
+  };
+
+  const download=()=>{
+    const text=lastSeries||msgs.filter(m=>m.role==="assistant").map(m=>m.content).join("\n\n");
+    const blob=new Blob([text],{type:"text/plain;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;a.download="stories_vizzy.txt";a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const GOALS=[
+    {key:"А","label":"Продажа","desc":"14 дней — веду к покупке"},
+    {key:"Б","label":"Прогрев","desc":"10 дней — строю доверие"},
+    {key:"В","label":"Полный цикл","desc":"Прогрев + продажа"},
+    {key:"Г","label":"Своя задача","desc":"Опишу сам"},
+  ];
+
+  const formatMsg=(text:string)=>text.split("\n").map((line,i,arr)=>{
+    const isBold=line.startsWith("История ")||line.startsWith("Цель")||line.startsWith("Текст")||line.startsWith("Голос")||line.startsWith("Визуал")||line.startsWith("Интерактив")||line.startsWith("Переход");
+    const parts=line.split(/(\*\*[^*]+\*\*)/g).map((p,j)=>
+      p.startsWith("**")&&p.endsWith("**")?<strong key={j}>{p.slice(2,-2)}</strong>:p
+    );
+    return <span key={i} style={isBold?{color:"#93C5FD",fontWeight:700}:{}}>{parts}{i<arr.length-1&&<br/>}</span>;
+  });
+
+  const GRAD="linear-gradient(135deg,#0a0a1a,#12122a,#0d1117)";
+  const ACC="#E879F9";
+  const ACC2="#C026D3";
+
+  return <div style={{display:"flex",flexDirection:"column",height:isMobile?"calc(100vh - 136px)":"calc(100vh - 120px)",maxWidth:900,margin:"0 auto"}}>
+
+    {/* Header */}
+    <div style={{background:GRAD,borderRadius:16,padding:isMobile?"14px 16px":"20px 28px",marginBottom:16,border:"1px solid rgba(232,121,249,0.2)"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:!isDone&&userMsgCount>0?14:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <div style={{width:42,height:42,borderRadius:12,background:"rgba(232,121,249,0.15)",border:"1px solid rgba(232,121,249,0.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>✨</div>
+          <div>
+            <div style={{fontSize:isMobile?15:18,fontWeight:800,color:"#fff",letterSpacing:0.5}}>Vizzy Stories AI</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.4)",marginTop:2}}>Серии историй которые захватывают и продают</div>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
+          {msgs.length>1&&<>
+            <button onClick={copy} style={{padding:"7px 14px",background:copied?"rgba(16,185,129,0.2)":"rgba(255,255,255,0.06)",color:copied?"#10B981":"rgba(255,255,255,0.6)",border:"1px solid "+(copied?"rgba(16,185,129,0.3)":"rgba(255,255,255,0.12)"),borderRadius:8,fontSize:12,cursor:"pointer",fontWeight:500}}>
+              {copied?"✓ Скопировано":"Скопировать"}
+            </button>
+            {!isMobile&&<button onClick={download} style={{padding:"7px 14px",background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.6)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:8,fontSize:12,cursor:"pointer"}}>Скачать</button>}
+            {isDone&&<button onClick={()=>setRewriteMode(!rewriteMode)} style={{padding:"7px 14px",background:rewriteMode?"rgba(232,121,249,0.2)":"rgba(255,255,255,0.06)",color:rewriteMode?ACC:"rgba(255,255,255,0.6)",border:"1px solid "+(rewriteMode?"rgba(232,121,249,0.4)":"rgba(255,255,255,0.12)"),borderRadius:8,fontSize:12,cursor:"pointer",fontWeight:500}}>Переписать историю</button>}
+            <button onClick={reset} style={{padding:"7px 14px",background:"rgba(232,121,249,0.15)",color:ACC,border:"1px solid rgba(232,121,249,0.3)",borderRadius:8,fontSize:12,cursor:"pointer",fontWeight:600}}>Новая серия</button>
+          </>}
+        </div>
+      </div>
+
+      {/* Progress bar - 3 questions */}
+      {!isDone&&userMsgCount>0&&<div>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+          <span style={{fontSize:11,color:"rgba(255,255,255,0.5)"}}>Вопрос {questionNum} из 3</span>
+          <span style={{fontSize:11,color:ACC}}>{Math.round(progress*100)}%</span>
+        </div>
+        <div style={{height:4,background:"rgba(255,255,255,0.1)",borderRadius:2,overflow:"hidden"}}>
+          <div style={{width:progress*100+"%",height:"100%",background:`linear-gradient(90deg,${ACC2},${ACC})`,borderRadius:2,transition:"width 0.4s ease"}}/>
+        </div>
+        <div style={{display:"flex",gap:6,marginTop:8}}>
+          {[0,1,2].map(i=><div key={i} style={{flex:1,height:4,borderRadius:2,background:i<userMsgCount?"rgba(232,121,249,0.8)":"rgba(255,255,255,0.1)",transition:"background 0.3s"}}/>)}
+        </div>
+      </div>}
+
+      {isDone&&lastSeries&&<div style={{marginTop:10,padding:"8px 12px",background:"rgba(16,185,129,0.1)",border:"1px solid rgba(16,185,129,0.2)",borderRadius:8,fontSize:12,color:"#10B981"}}>✓ Серия готова — скопируй или скачай</div>}
+    </div>
+
+    {/* Rewrite input */}
+    {rewriteMode&&<div style={{background:C.w,borderRadius:12,border:`1px solid ${ACC}44`,padding:"12px 16px",marginBottom:12,display:"flex",gap:10,alignItems:"center"}}>
+      <input value={rewriteInput} onChange={e=>setRewriteInput(e.target.value)}
+        placeholder="Укажи номер истории или что переписать. Например: переписать историю 4..."
+        style={{flex:1,border:"none",outline:"none",fontSize:13,fontFamily:"'Montserrat',sans-serif",color:C.t1,background:"transparent"}}
+        onKeyDown={e=>{if(e.key==="Enter"&&rewriteInput.trim()){send(rewriteInput);setRewriteInput("");}}}
+      />
+      <button onClick={()=>{send(rewriteInput);setRewriteInput("");}} disabled={!rewriteInput.trim()||loading}
+        style={{padding:"7px 16px",background:rewriteInput.trim()?ACC:C.bd,color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer"}}>
+        Отправить
+      </button>
+    </div>}
+
+    {/* Messages */}
+    <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:12,paddingBottom:8}}>
+      {msgs.map((m,i)=><div key={i} style={{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start",alignItems:"flex-start",gap:8}}>
+        {m.role==="assistant"&&<div style={{width:28,height:28,borderRadius:8,background:GRAD,border:"1px solid rgba(232,121,249,0.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0,marginTop:2}}>✨</div>}
+        <div style={{
+          maxWidth:"82%",padding:"12px 16px",
+          borderRadius:m.role==="user"?"16px 16px 4px 16px":"16px 16px 16px 4px",
+          background:m.role==="user"?`linear-gradient(135deg,${ACC2},#7C3AED)`:"#1E293B",
+          color:"#fff",fontSize:13,lineHeight:1.7,wordBreak:"break-word",
+          boxShadow:m.role==="user"?"0 4px 12px rgba(192,38,211,0.3)":"0 4px 12px rgba(0,0,0,0.15)",
+        }}>
+          {formatMsg(m.content)}
+        </div>
+      </div>)}
+
+      {loading&&<div style={{display:"flex",alignItems:"center",gap:8}}>
+        <div style={{width:28,height:28,borderRadius:8,background:GRAD,border:"1px solid rgba(232,121,249,0.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>✨</div>
+        <div style={{padding:"12px 16px",background:"#1E293B",borderRadius:"16px 16px 16px 4px",display:"flex",gap:5,alignItems:"center"}}>
+          {[0,1,2].map(i=><div key={i} style={{width:7,height:7,borderRadius:"50%",background:"rgba(232,121,249,0.7)",animation:`pulse 1.2s ease-in-out ${i*0.2}s infinite`}}/>)}
+        </div>
+      </div>}
+
+      {err&&<div style={{padding:"10px 14px",background:"#FEF2F2",borderRadius:10,fontSize:12,color:C.r,border:"1px solid "+C.r+"22"}}>{err}</div>}
+      <div ref={bottomRef}/>
+    </div>
+
+    {/* Goal quick replies — shown on question 2 */}
+    {userMsgCount===1&&!loading&&<div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)",gap:8,marginBottom:8}}>
+      {GOALS.map(g=><button key={g.key} onClick={()=>send(`${g.key} — ${g.label}. ${g.desc}`)}
+        style={{padding:"10px 12px",background:"#1E293B",border:"1px solid rgba(232,121,249,0.2)",borderRadius:10,fontSize:12,color:"#fff",cursor:"pointer",textAlign:"left",lineHeight:1.4,transition:"all 0.15s"}}
+        onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(232,121,249,0.7)";}}
+        onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(232,121,249,0.2)";}}>
+        <div style={{fontWeight:700,color:ACC,marginBottom:2}}>{g.key} — {g.label}</div>
+        <div style={{fontSize:11,color:"rgba(255,255,255,0.5)"}}>{g.desc}</div>
+      </button>)}
+    </div>}
+
+    {/* Input area */}
+    {!rewriteMode&&<div style={{marginTop:8,background:C.w,borderRadius:16,border:"1px solid "+C.bd,boxShadow:"0 4px 20px rgba(0,0,0,0.08)",padding:"10px 12px",display:"flex",gap:8,alignItems:"flex-end"}}>
+      {/* Image upload button */}
+      <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0])handleImage(e.target.files[0]);}}/>
+      <button onClick={()=>fileRef.current?.click()}
+        style={{width:36,height:36,borderRadius:10,border:"1px solid "+(image?ACC:C.bd),background:image?ACC+"15":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.2s"}}>
+        {image
+          ?<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={ACC} strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
+          :<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        }
+      </button>
+      {image&&<span style={{fontSize:11,color:ACC,flexShrink:0,maxWidth:80,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{imageName}</span>}
+      <textarea value={input} onChange={e=>setInput(e.target.value)}
+        onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}}
+        placeholder={userMsgCount===0?"Загрузи скрин 📷 или напиши о себе...":"Напиши ответ... (Enter — отправить)"}
+        rows={1}
+        style={{flex:1,border:"none",outline:"none",resize:"none",fontSize:13,fontFamily:"'Montserrat',sans-serif",color:C.t1,background:"transparent",lineHeight:1.5,maxHeight:120,overflowY:"auto"}}
+        onInput={e=>{const t=e.currentTarget;t.style.height="auto";t.style.height=Math.min(t.scrollHeight,120)+"px";}}
+      />
+      <button onClick={()=>send()} disabled={(!input.trim()&&!image)||loading}
+        style={{width:36,height:36,borderRadius:10,border:"none",background:(input.trim()||image)&&!loading?ACC:C.bd,cursor:(input.trim()||image)&&!loading?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"background 0.2s"}}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
       </button>
     </div>}
