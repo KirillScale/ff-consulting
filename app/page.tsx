@@ -3636,59 +3636,6 @@ function AIPage(){
   </div>;
 }
 
-
-  const isMobile=useIsMobile();
-  const[msgs,setMsgs]=useState<{role:"user"|"assistant",content:string}[]>([]);
-  const[input,setInput]=useState("");
-  const[loading,setLoading]=useState(false);
-  const[err,setErr]=useState("");
-  const bottomRef=useRef<HTMLDivElement>(null);
-  const inputRef=useRef<HTMLTextAreaElement>(null);
-
-  const SUGGESTIONS=["Как увеличить конверсию в консалтинге?","Напиши скрипт для первого созвона с лидом","Какие метрики важны для онлайн-бизнеса?","Помоги составить оффер для клиента","Как выстроить систему продаж с нуля?","Идеи для контента про предпринимательство"];
-
-  useEffect(()=>{
-    bottomRef.current?.scrollIntoView({behavior:"smooth"});
-  },[msgs,loading]);
-
-  const send=async(text?:string)=>{
-    const q=(text||input).trim();
-    if(!q||loading)return;
-    setInput("");setErr("");
-    const newMsgs:{role:"user"|"assistant",content:string}[]=[...msgs,{role:"user" as const,content:q}];
-    setMsgs(newMsgs);
-    setLoading(true);
-    try{
-      const res=await fetch("/api/ai",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({messages:newMsgs}),
-      });
-      if(!res.ok)throw new Error("API error "+res.status);
-      const data=await res.json();
-      const reply=data.content?.[0]?.text||data.choices?.[0]?.message?.content||"Нет ответа";
-      setMsgs(prev=>[...prev,{role:"assistant",content:reply}]);
-    }catch(e:any){
-      setErr("Ошибка: "+e.message);
-      setMsgs(prev=>prev.slice(0,-1));
-    }finally{setLoading(false);}
-  };
-
-  const clear=()=>{setMsgs([]);setErr("");};
-
-  const formatMsg=(text:string)=>{
-    // Simple markdown: bold, code blocks, newlines
-    return text.split("\n").map((line,i)=>{
-      const parts=line.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).map((part,j)=>{
-        if(part.startsWith("**")&&part.endsWith("**"))return <strong key={j}>{part.slice(2,-2)}</strong>;
-        if(part.startsWith("`")&&part.endsWith("`"))return <code key={j} style={{background:"rgba(255,255,255,0.15)",borderRadius:4,padding:"1px 5px",fontSize:"0.9em",fontFamily:"monospace"}}>{part.slice(1,-1)}</code>;
-        return part;
-      });
-      return <span key={i}>{parts}{i<text.split("\n").length-1&&<br/>}</span>;
-    });
-  };
-
-
 /* ============ SCRIPT AI PAGE ============ */
 const SCRIPT_SYSTEM=`Ты — Vissy Сценарий AI. Твоя единственная задача — помогать писать сценарии для видео. Ты не делаешь ничего другого: не переводишь тексты, не пишешь код, не отвечаешь на общие вопросы, не помогаешь с чем-либо кроме сценариев для видео.
 
