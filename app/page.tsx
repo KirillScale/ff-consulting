@@ -28,6 +28,7 @@ const NAV_GROUPS=[
     items:[
       {id:"crm",label:"CRM",ic:"M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"},
       {id:"calls",label:"Созвоны",ic:"M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"},
+      {id:"mailings",label:"Рассылки",ic:"M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"},
     ]
   },
   {
@@ -423,6 +424,7 @@ function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,n
     {page === "strategy" && <StrategyPage userId={user.id}/>}
     {page === "crm" && <CrmPage userId={user.id}/>}
     {page === "calls" && <CallsPage userId={user.id}/>}
+    {page === "mailings" && <MailingsPage userId={user.id}/>}
     {page === "content" && <ContentPage userId={user.id}/>}
     {page === "pnl" && <PnlPage userId={user.id}/>}
     {page === "media" && <MediaPage userId={user.id}/>}
@@ -435,7 +437,7 @@ function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,n
     {page === "script" && <ScriptAIPage/>}
     {page === "product" && <ProductAIPage/>}
     {page === "stories" && <StoriesAIPage/>}
-    {!["dashboard","strategy","crm","calls","content","pnl","media","ads","calc","tools","links","files","ai","script","product","stories"].includes(page) && nav && <Placeholder title={nav.label} ic={nav.ic}/>}
+    {!["dashboard","strategy","crm","calls","mailings","content","pnl","media","ads","calc","tools","links","files","ai","script","product","stories"].includes(page) && nav && <Placeholder title={nav.label} ic={nav.ic}/>}
   </>;
 
   return (
@@ -4073,6 +4075,318 @@ function StoriesAIPage(){
       }
     </div>}
   </div>;
+}
+
+/* ============ MAILINGS ============ */
+const MAILING_GOALS_AI=["Знакомство с новым лидом","Презентация продукта/услуги","Реактивация «уснувшего» клиента","Специальное предложение/акция","Напоминание о событии/вебинаре","Запрос обратной связи"];
+const MAILING_TONES=["Дружелюбный","Официальный","Продающий","Информационный","Нейтральный"];
+const MAILING_CHANNELS=["Личные сообщения (Соцсети)","Email"];
+const MAILING_STATUSES=[{id:"planned",label:"Запланирована",color:"#F59E0B"},{id:"sent",label:"Отправлена",color:"#10B981"}];
+const msCol=(s:string)=>(MAILING_STATUSES.find(x=>x.id===s)||{color:C.t2}).color;
+const msLbl=(s:string)=>(MAILING_STATUSES.find(x=>x.id===s)||{label:s}).label;
+const EMPTY_MAILING={recipient:"",goal:"",scheduled_at:"",status:"planned",chat_url:"",content:""};
+
+function MailingsPage({userId}:{userId:string}){
+  const{data:mailings,loading,add,update,remove}=useTable("mailings",userId);
+  const[modal,setModal]=useState<any>(null);
+  const[form,setForm]=useState<any>(EMPTY_MAILING);
+  const[deleteId,setDeleteId]=useState<string|null>(null);
+  const[aiOpen,setAiOpen]=useState(false);
+  const[aiGoal,setAiGoal]=useState("");
+  const[aiChannel,setAiChannel]=useState("Личные сообщения (Соцсети)");
+  const[aiTone,setAiTone]=useState("");
+  const[aiCount,setAiCount]=useState(1);
+  const[aiExtra,setAiExtra]=useState("");
+  const[aiLoading,setAiLoading]=useState(false);
+  const[aiResult,setAiResult]=useState<string[]>([]);
+  const[copied,setCopied]=useState<number|null>(null);
+  const AI_ACCENT="#A78BFA";
+
+  const openNew=(prefill?:any)=>{setForm(prefill||{...EMPTY_MAILING});setModal("new");};
+  const openEdit=(m:any)=>{setForm({...m,scheduled_at:m.scheduled_at?m.scheduled_at.slice(0,16):""});setModal(m);};
+  const closeModal=()=>{setModal(null);setForm(EMPTY_MAILING);};
+
+  const save=async()=>{
+    const payload={recipient:form.recipient,goal:form.goal,scheduled_at:form.scheduled_at||null,status:form.status||"planned",chat_url:form.chat_url||"",content:form.content||""};
+    if(modal==="new"){await add(payload);}else{await update(modal.id,payload);}
+    closeModal();
+  };
+
+  const confirmDelete=async()=>{if(deleteId){await remove(deleteId);setDeleteId(null);}};
+
+  const copyText=(i:number)=>{
+    navigator.clipboard.writeText(aiResult[i]).then(()=>{setCopied(i);setTimeout(()=>setCopied(null),2000);});
+  };
+
+  const generateAI=async()=>{
+    if(!aiGoal||!aiTone)return;
+    setAiLoading(true);setAiResult([]);
+    const prompt=`Ты — профессиональный копирайтер. Напиши рассылку для клиента.\nЦель: ${aiGoal}\nКанал: ${aiChannel}\nТон: ${aiTone}\nКоличество сообщений: ${aiCount}\nДополнительно: ${aiExtra||"нет"}\n${aiCount>1?`Раздели рассылку на ${aiCount} отдельных сообщений. Каждое начинай с "Сообщение N:" (где N — номер). Сообщения должны быть логически связаны.`:"Напиши одно чёткое сообщение."}\nТолько текст сообщений, без пояснений.`;
+    try{
+      const res=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:[{role:"user",content:prompt}]})});
+      const data=await res.json();
+      const text=data.content?.[0]?.text||"";
+      if(aiCount>1){
+        const parts=text.split(/Сообщение \d+:/i).filter((p:string)=>p.trim());
+        setAiResult(parts.map((p:string)=>p.trim()));
+      }else{setAiResult([text.trim()]);}
+    }catch(e){setAiResult(["Ошибка генерации. Попробуйте снова."]);}
+    setAiLoading(false);
+  };
+
+  const useGeneratedForNew=()=>{openNew({...EMPTY_MAILING,goal:aiGoal,content:aiResult.join("\n\n---\n\n")});};
+
+  const fmtDt=(s:string)=>{
+    if(!s)return"—";
+    const d=new Date(s);
+    return d.toLocaleDateString("ru-RU",{day:"2-digit",month:"2-digit",year:"numeric"})+" "+d.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"});
+  };
+
+  return(
+    <div style={{position:"relative",minHeight:"calc(100vh - 64px)"}}>
+      <div style={{marginRight:aiOpen?360:0,transition:"margin-right 0.3s ease"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24,flexWrap:"wrap",gap:12}}>
+          <h1 style={{margin:0,fontSize:24,fontWeight:800}}>Рассылки</h1>
+          <Btn onClick={()=>openNew()} style={{display:"flex",alignItems:"center",gap:6}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Создать рассылку
+          </Btn>
+        </div>
+
+        {loading
+          ?<div style={{textAlign:"center",padding:60,color:C.t2}}>Загрузка...</div>
+          :mailings.length===0
+          ?<Card style={{textAlign:"center",padding:"60px 32px"}}>
+              <div style={{fontSize:40,marginBottom:16}}>📬</div>
+              <div style={{fontSize:16,fontWeight:600,color:C.t1,marginBottom:8}}>Рассылок пока нет</div>
+              <div style={{fontSize:14,color:C.t2,marginBottom:24}}>Нажмите «Создать рассылку», чтобы начать</div>
+              <Btn onClick={()=>openNew()}>+ Создать рассылку</Btn>
+            </Card>
+          :<Card style={{padding:0,overflow:"hidden"}}>
+              <div style={{overflowX:"auto"}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:14}}>
+                  <thead>
+                    <tr style={{borderBottom:"1px solid "+C.bd}}>
+                      {["Кому","Цель","Дата","Статус","Контакт / Чат","Действия"].map(h=>(
+                        <th key={h} style={{padding:"14px 16px",textAlign:"left",fontWeight:600,color:C.t2,fontSize:12,whiteSpace:"nowrap"}}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mailings.map((m:any,i:number)=>(
+                      <tr key={m.id} style={{borderBottom:i<mailings.length-1?"1px solid "+C.bd:"none",transition:"background 0.1s"}}
+                        onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.ib;}}
+                        onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}>
+                        <td style={{padding:"14px 16px",fontWeight:600,color:C.t1}}>{m.recipient||"—"}</td>
+                        <td style={{padding:"14px 16px"}}>
+                          <span style={{background:C.a+"14",color:C.a,padding:"3px 10px",borderRadius:6,fontSize:12,fontWeight:500}}>{m.goal||"—"}</span>
+                        </td>
+                        <td style={{padding:"14px 16px",color:C.t2,whiteSpace:"nowrap"}}>{fmtDt(m.scheduled_at)}</td>
+                        <td style={{padding:"14px 16px"}}>
+                          <span onClick={()=>update(m.id,{status:m.status==="planned"?"sent":"planned"})}
+                            style={{background:msCol(m.status)+"20",color:msCol(m.status),padding:"3px 10px",borderRadius:6,fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>
+                            {msLbl(m.status)}
+                          </span>
+                        </td>
+                        <td style={{padding:"14px 16px"}}>
+                          {m.chat_url
+                            ?<a href={m.chat_url} target="_blank" rel="noreferrer"
+                                style={{display:"inline-flex",alignItems:"center",gap:6,padding:"5px 12px",background:C.a+"14",color:C.a,borderRadius:8,fontSize:12,fontWeight:600,textDecoration:"none",whiteSpace:"nowrap"}}>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                Перейти в чат
+                              </a>
+                            :<span style={{color:C.t2,fontSize:12}}>—</span>
+                          }
+                        </td>
+                        <td style={{padding:"14px 16px"}}>
+                          <div style={{display:"flex",gap:8}}>
+                            <button onClick={()=>openEdit(m)} title="Редактировать"
+                              style={{width:32,height:32,borderRadius:8,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}
+                              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.a;}}
+                              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;}}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.a} strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </button>
+                            <button onClick={()=>setDeleteId(m.id)} title="Удалить"
+                              style={{width:32,height:32,borderRadius:8,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}
+                              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.r;}}
+                              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;}}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.r} strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+        }
+      </div>
+
+      {/* AI TAB */}
+      <div onClick={()=>setAiOpen(!aiOpen)} style={{position:"fixed",right:aiOpen?356:0,top:"50%",transform:"translateY(-50%)",background:`linear-gradient(135deg,${AI_ACCENT},#7C3AED)`,width:32,height:120,borderRadius:"12px 0 0 12px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,boxShadow:"-4px 0 20px rgba(167,139,250,0.35)",zIndex:110,transition:"right 0.3s ease"}}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        <div style={{writingMode:"vertical-rl",textOrientation:"mixed",transform:"rotate(180deg)",fontSize:10,fontWeight:700,color:"#fff",letterSpacing:1}}>VIZZY AI</div>
+      </div>
+
+      {/* AI PANEL */}
+      <div style={{position:"fixed",right:0,top:0,bottom:0,width:360,background:"#1A1030",borderLeft:"1px solid rgba(167,139,250,0.2)",transform:aiOpen?"translateX(0)":"translateX(100%)",transition:"transform 0.3s ease",zIndex:105,display:"flex",flexDirection:"column",fontFamily:"'Montserrat',sans-serif",overflowY:"auto"}}>
+        <div style={{padding:"20px 20px 16px",borderBottom:"1px solid rgba(167,139,250,0.15)",flexShrink:0}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:32,height:32,borderRadius:8,background:"linear-gradient(135deg,#A78BFA,#7C3AED)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+              </div>
+              <div>
+                <div style={{fontSize:14,fontWeight:700,color:"#fff"}}>Vizzy AI</div>
+                <div style={{fontSize:11,color:"rgba(167,139,250,0.7)"}}>Генератор рассылок</div>
+              </div>
+            </div>
+            <button onClick={()=>setAiOpen(false)} style={{width:28,height:28,borderRadius:7,border:"none",background:"rgba(255,255,255,0.07)",cursor:"pointer",color:"rgba(255,255,255,0.5)",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+          </div>
+          <div style={{marginTop:10,padding:"10px 14px",background:"rgba(167,139,250,0.1)",borderRadius:10,fontSize:13,color:"rgba(255,255,255,0.75)",lineHeight:1.5}}>
+            👋 Я помогу сделать рассылку! Заполни параметры и нажми «Сгенерировать».
+          </div>
+        </div>
+
+        <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:14,flex:1}}>
+          <div>
+            <label style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.5)",letterSpacing:0.5,textTransform:"uppercase",display:"block",marginBottom:6}}>Цель рассылки *</label>
+            <select value={aiGoal} onChange={e=>setAiGoal(e.target.value)} style={{width:"100%",padding:"10px 12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(167,139,250,0.25)",borderRadius:10,fontSize:13,color:aiGoal?"#fff":"rgba(255,255,255,0.4)",outline:"none",fontFamily:"'Montserrat',sans-serif"}}>
+              <option value="" style={{background:"#1A1030"}}>Выберите цель...</option>
+              {MAILING_GOALS_AI.map(g=><option key={g} value={g} style={{background:"#1A1030"}}>{g}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.5)",letterSpacing:0.5,textTransform:"uppercase",display:"block",marginBottom:8}}>Канал *</label>
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {MAILING_CHANNELS.map(ch=>(
+                <label key={ch} style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}>
+                  <div onClick={()=>setAiChannel(ch)} style={{width:18,height:18,borderRadius:"50%",border:"2px solid "+(aiChannel===ch?AI_ACCENT:"rgba(255,255,255,0.2)"),background:aiChannel===ch?AI_ACCENT:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.15s"}}>
+                    {aiChannel===ch&&<div style={{width:6,height:6,borderRadius:"50%",background:"#fff"}}/>}
+                  </div>
+                  <span style={{fontSize:13,color:"rgba(255,255,255,0.8)"}}>{ch}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.5)",letterSpacing:0.5,textTransform:"uppercase",display:"block",marginBottom:6}}>Тон рассылки *</label>
+            <select value={aiTone} onChange={e=>setAiTone(e.target.value)} style={{width:"100%",padding:"10px 12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(167,139,250,0.25)",borderRadius:10,fontSize:13,color:aiTone?"#fff":"rgba(255,255,255,0.4)",outline:"none",fontFamily:"'Montserrat',sans-serif"}}>
+              <option value="" style={{background:"#1A1030"}}>Выберите тон...</option>
+              {MAILING_TONES.map(t=><option key={t} value={t} style={{background:"#1A1030"}}>{t}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.5)",letterSpacing:0.5,textTransform:"uppercase",display:"block",marginBottom:8}}>Кол-во сообщений: <span style={{color:AI_ACCENT}}>{aiCount}</span></label>
+            <div style={{display:"flex",gap:8}}>
+              {[1,2,3,4,5].map(n=>(
+                <button key={n} onClick={()=>setAiCount(n)} style={{flex:1,padding:"8px 0",borderRadius:8,border:"2px solid "+(aiCount===n?AI_ACCENT:"rgba(255,255,255,0.12)"),background:aiCount===n?"rgba(167,139,250,0.2)":"transparent",color:aiCount===n?AI_ACCENT:"rgba(255,255,255,0.5)",fontWeight:700,fontSize:14,cursor:"pointer",transition:"all 0.15s"}}>{n}</button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.5)",letterSpacing:0.5,textTransform:"uppercase",display:"block",marginBottom:6}}>Доп. информация</label>
+            <textarea value={aiExtra} onChange={e=>setAiExtra(e.target.value)} rows={3}
+              placeholder="Имя клиента, название продукта, условия акции..."
+              style={{width:"100%",padding:"10px 12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(167,139,250,0.2)",borderRadius:10,fontSize:12,color:"#fff",outline:"none",resize:"vertical",fontFamily:"'Montserrat',sans-serif",lineHeight:1.5}}/>
+          </div>
+
+          <button onClick={generateAI} disabled={!aiGoal||!aiTone||aiLoading}
+            style={{padding:"12px 0",background:(!aiGoal||!aiTone||aiLoading)?"rgba(167,139,250,0.2)":`linear-gradient(135deg,${AI_ACCENT},#7C3AED)`,border:"none",borderRadius:12,fontSize:14,fontWeight:700,color:(!aiGoal||!aiTone||aiLoading)?"rgba(255,255,255,0.4)":"#fff",cursor:(!aiGoal||!aiTone||aiLoading)?"not-allowed":"pointer",transition:"all 0.2s"}}>
+            {aiLoading
+              ?<span style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{animation:"spin 0.8s linear infinite"}}><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
+                  Генерирую...
+                </span>
+              :"✨ Сгенерировать текст"
+            }
+          </button>
+
+          {aiResult.length>0&&(
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              <div style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:0.5}}>Результат</div>
+              {aiResult.map((txt,i)=>(
+                <div key={i} style={{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(167,139,250,0.2)",borderRadius:12,padding:"14px 14px 10px"}}>
+                  {aiResult.length>1&&<div style={{fontSize:11,fontWeight:700,color:AI_ACCENT,marginBottom:8,textTransform:"uppercase",letterSpacing:0.5}}>Сообщение {i+1}</div>}
+                  <div style={{fontSize:13,color:"rgba(255,255,255,0.85)",lineHeight:1.7,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{txt}</div>
+                  <button onClick={()=>copyText(i)}
+                    style={{marginTop:10,display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:"rgba(167,139,250,0.12)",border:"1px solid rgba(167,139,250,0.2)",borderRadius:7,fontSize:11,color:copied===i?"#10B981":AI_ACCENT,cursor:"pointer",fontWeight:500}}>
+                    {copied===i
+                      ?<><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Скопировано</>
+                      :<><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Копировать</>
+                    }
+                  </button>
+                </div>
+              ))}
+              <button onClick={useGeneratedForNew}
+                style={{padding:"11px 0",background:"rgba(16,185,129,0.15)",border:"1px solid rgba(16,185,129,0.3)",borderRadius:12,fontSize:13,fontWeight:600,color:"#10B981",cursor:"pointer",marginTop:4}}>
+                📋 Создать рассылку на основе этого
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* MODAL CREATE/EDIT */}
+      {modal&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={closeModal}>
+          <div style={{background:C.w,borderRadius:20,padding:32,width:"100%",maxWidth:500,boxShadow:"0 24px 60px rgba(0,0,0,0.2)"}} onClick={e=>e.stopPropagation()}>
+            <div style={{fontSize:18,fontWeight:700,marginBottom:24}}>{modal==="new"?"Новая рассылка":"Редактировать рассылку"}</div>
+            <div style={{display:"flex",flexDirection:"column",gap:14}}>
+              <div>
+                <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Кому (получатель) *</label>
+                <input placeholder="Иван Петров / Сегмент: Новые лиды" value={form.recipient} onChange={e=>setForm({...form,recipient:e.target.value})} style={iS}/>
+              </div>
+              <div>
+                <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Цель рассылки *</label>
+                <input placeholder="Прогрев, Продажа курса, Реактивация..." value={form.goal} onChange={e=>setForm({...form,goal:e.target.value})} style={iS}/>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                <div>
+                  <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Дата и время</label>
+                  <input type="datetime-local" value={form.scheduled_at} onChange={e=>setForm({...form,scheduled_at:e.target.value})} style={iS}/>
+                </div>
+                <div>
+                  <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Статус</label>
+                  <select value={form.status} onChange={e=>setForm({...form,status:e.target.value})} style={iS}>
+                    {MAILING_STATUSES.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Ссылка на чат (Instagram, Telegram...)</label>
+                <input placeholder="https://t.me/username" value={form.chat_url} onChange={e=>setForm({...form,chat_url:e.target.value})} style={iS}/>
+              </div>
+              <div>
+                <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Текст / Контент рассылки</label>
+                <textarea rows={4} placeholder="Текст сообщения..." value={form.content} onChange={e=>setForm({...form,content:e.target.value})} style={{...iS,resize:"vertical"}}/>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:10,marginTop:24,justifyContent:"flex-end"}}>
+              <Btn onClick={closeModal} primary={false}>Отмена</Btn>
+              <Btn onClick={save} disabled={!form.recipient||!form.goal}>Сохранить</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRM DELETE */}
+      {deleteId&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setDeleteId(null)}>
+          <div style={{background:C.w,borderRadius:16,padding:28,maxWidth:360,width:"100%",textAlign:"center",boxShadow:"0 16px 40px rgba(0,0,0,0.2)"}} onClick={e=>e.stopPropagation()}>
+            <div style={{fontSize:36,marginBottom:12}}>🗑️</div>
+            <div style={{fontSize:16,fontWeight:700,marginBottom:8}}>Удалить рассылку?</div>
+            <div style={{fontSize:14,color:C.t2,marginBottom:24}}>Это действие нельзя отменить.</div>
+            <div style={{display:"flex",gap:10,justifyContent:"center"}}>
+              <Btn onClick={()=>setDeleteId(null)} primary={false}>Отмена</Btn>
+              <Btn onClick={confirmDelete} style={{background:C.r}}>Удалить</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 /* ============ TOOLS (TIMER v2) ============ */
