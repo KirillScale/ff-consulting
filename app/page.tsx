@@ -1063,6 +1063,43 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
   const[priorityMenu,setPriorityMenu]=useState<string|null>(null);
   const[toast,setToast]=useState<string|null>(null);
 
+  // Stable ref for gtf to avoid stale closures in AddTaskForm
+  const gtfRef=useRef(gtf);
+  gtfRef.current=gtf;
+
+  // Separate stable component for add-task form — avoids focus loss on re-render
+  const AddTaskForm=useCallback(({goalId}:{goalId:string})=>{
+    const[localText,setLocalText]=useState(gtfRef.current.text);
+    const[localMins,setLocalMins]=useState(gtfRef.current.mins);
+    const[localType,setLocalType]=useState(gtfRef.current.type);
+    const[localDate,setLocalDate]=useState(gtfRef.current.date);
+    const[localErr,setLocalErr]=useState("");
+    const addLocal=async()=>{
+      if(!localText.trim()){setLocalErr("Введи задачу");return;}
+      if(localMins<30){setLocalErr("Минимум 30 минут");return;}
+      const order=goalTasks.data.filter((t:any)=>t.goal_id===goalId).length;
+      await goalTasks.add({goal_id:goalId,text:localText,mins:localMins,type:localType,date:localDate||null,done:false,status:"todo",sort_order:order});
+      setShowGTF(null);
+    };
+    return<div style={{marginTop:8,padding:12,background:C.w,borderRadius:10,border:"1px solid "+C.bd}}>
+      <input autoFocus placeholder="Название задачи" value={localText} onChange={e=>setLocalText(e.target.value)}
+        onKeyDown={e=>{if(e.key==="Enter")addLocal();if(e.key==="Escape")setShowGTF(null);}}
+        style={{...iS,padding:"8px 10px",fontSize:12,marginBottom:8}}/>
+      <div style={{display:"flex",gap:6,marginBottom:6}}>
+        <input type="number" value={localMins} onChange={e=>setLocalMins(+e.target.value)} min={30} max={480} step={5} style={{...iS,width:75,padding:"6px 8px",fontSize:12}}/>
+        <select value={localType} onChange={e=>setLocalType(e.target.value)} style={{...iS,flex:1,padding:"6px 8px",fontSize:12}}>
+          {TYPES.map((t:any)=><option key={t.id} value={t.id}>{t.label}</option>)}
+        </select>
+        <input type="date" value={localDate} onChange={e=>setLocalDate(e.target.value)} style={{...iS,width:130,padding:"6px 8px",fontSize:12}}/>
+      </div>
+      {localErr&&<div style={{fontSize:11,color:C.r,marginBottom:6}}>{localErr}</div>}
+      <div style={{display:"flex",gap:6}}>
+        <button onClick={addLocal} style={{flex:1,padding:"7px",background:C.a,color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer"}}>Добавить</button>
+        <button onClick={()=>setShowGTF(null)} style={{padding:"7px 12px",background:C.bg,border:"1px solid "+C.bd,borderRadius:8,fontSize:12,cursor:"pointer"}}>Отмена</button>
+      </div>
+    </div>;
+  },[showGTF,goalTasks,TYPES]);
+
   const COLORS=[C.a,"#8B5CF6",C.g,C.r,C.y,C.pk,"#06B6D4","#F97316"];
 
   const showToast=(msg:string)=>{setToast(msg);setTimeout(()=>setToast(null),3500);};
@@ -1242,20 +1279,8 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
           </div>;
         })}
         {showGTF===g.id
-          ? <div style={{marginTop:8,padding:12,background:C.w,borderRadius:10,border:"1px solid "+C.bd}}>
-              <input placeholder="Задача" value={gtf.text} onChange={e=>sGtf({...gtf,text:e.target.value})} style={{...iS,padding:"8px 10px",fontSize:12,marginBottom:8}}/>
-              <div style={{display:"flex",gap:6,marginBottom:6}}>
-                <input type="number" value={gtf.mins} onChange={e=>sGtf({...gtf,mins:+e.target.value})} min={30} max={480} step={5} style={{...iS,width:75,padding:"6px 8px",fontSize:12}}/>
-                <select value={gtf.type} onChange={e=>sGtf({...gtf,type:e.target.value})} style={{...iS,flex:1,padding:"6px 8px",fontSize:12}}>{TYPES.map((t:any)=><option key={t.id} value={t.id}>{t.label}</option>)}</select>
-                <input type="date" value={gtf.date} onChange={e=>sGtf({...gtf,date:e.target.value})} style={{...iS,width:130,padding:"6px 8px",fontSize:12}}/>
-              </div>
-              {tfErr&&<div style={{fontSize:11,color:C.r,marginBottom:6}}>{tfErr}</div>}
-              <div style={{display:"flex",gap:6}}>
-                <button onClick={()=>addGoalTask(g.id)} style={{flex:1,padding:"7px",background:C.a,color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer"}}>Добавить</button>
-                <button onClick={()=>setShowGTF(null)} style={{padding:"7px 12px",background:C.bg,border:"1px solid "+C.bd,borderRadius:8,fontSize:12,cursor:"pointer"}}>Отмена</button>
-              </div>
-            </div>
-          : <button onClick={()=>{setShowGTF(g.id);sGtf({text:"",mins:30,type:"biz",date:""}); }} style={{width:"100%",padding:"8px",background:"transparent",border:"1px dashed "+C.bd,borderRadius:10,fontSize:12,color:C.t2,cursor:"pointer",marginTop:4}}>+ Задача</button>
+          ? <AddTaskForm goalId={g.id}/>
+          : <button onClick={()=>setShowGTF(g.id)} style={{width:"100%",padding:"8px",background:"transparent",border:"1px dashed "+C.bd,borderRadius:10,fontSize:12,color:C.t2,cursor:"pointer",marginTop:4}}>+ Задача</button>
         }
       </div>}
     </div>;
