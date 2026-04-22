@@ -28,7 +28,6 @@ const NAV_GROUPS=[
     items:[
       {id:"crm",label:"CRM",ic:"M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"},
       {id:"calls",label:"Созвоны",ic:"M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"},
-      {id:"mailings",label:"Рассылки",ic:"M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"},
     ]
   },
   {
@@ -424,7 +423,6 @@ function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,n
     {page === "strategy" && <StrategyPage userId={user.id}/>}
     {page === "crm" && <CrmPage userId={user.id}/>}
     {page === "calls" && <CallsPage userId={user.id}/>}
-    {page === "mailings" && <MailingsPage userId={user.id}/>}
     {page === "content" && <ContentPage userId={user.id}/>}
     {page === "pnl" && <PnlPage userId={user.id}/>}
     {page === "media" && <MediaPage userId={user.id}/>}
@@ -437,7 +435,7 @@ function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,n
     {page === "script" && <ScriptAIPage/>}
     {page === "product" && <ProductAIPage/>}
     {page === "stories" && <StoriesAIPage/>}
-    {!["dashboard","strategy","crm","calls","mailings","content","pnl","media","ads","calc","tools","links","files","ai","script","product","stories"].includes(page) && nav && <Placeholder title={nav.label} ic={nav.ic}/>}
+    {!["dashboard","strategy","crm","calls","content","pnl","media","ads","calc","tools","links","files","ai","script","product","stories"].includes(page) && nav && <Placeholder title={nav.label} ic={nav.ic}/>}
   </>;
 
   return (
@@ -1322,7 +1320,7 @@ function StrategyPage({userId}:{userId:string}){
   const goals = useTable("goals", userId);
   const goalTasks = useTable("goal_tasks", userId);
   const isMobile=useIsMobile();
-  const[stratTab,setStratTab]=useState<"sprint"|"yearmap">("sprint");
+  const[stratTab,setStratTab]=useState<"sprint"|"yearmap"|"calendar">("sprint");
   const[showTF,setShowTF]=useState<string|null>(null);
   const[tf,sTf]=useState({text:"",mins:30,type:"biz"});
   const[tfErr,setTfErr]=useState("");
@@ -1536,15 +1534,295 @@ function StrategyPage({userId}:{userId:string}){
     cursor:"pointer",transition:"all 0.2s",
   });
 
+  // ── Vizzy AI state ──
+  const[vizzyOpen,setVizzyOpen]=useState(false);
+  const[vizzyLoading,setVizzyLoading]=useState(false);
+  const[vizzyResult,setVizzyResult]=useState("");
+  const VIZZY_ACCENT="#A78BFA";
+
+  const buildContext=()=>{
+    if(stratTab==="sprint"){
+      const taskList=kanban.data.map((t:any)=>`- ${t.text} (${tsLbl(t.status||"todo")}, ${t.mins}мин, ${t.date})`).join("\n");
+      return`Текущий спринт — задачи на 7 дней:\n${taskList||"Задач нет"}`;
+    }
+    if(stratTab==="yearmap"){
+      const goalList=goals.data.map((g:any)=>{
+        const gTasks=goalTasks.data.filter((t:any)=>t.goal_id===g.id);
+        return`Цель: ${g.name} (дедлайн: ${g.deadline||"нет"})\n  Задачи: ${gTasks.map((t:any)=>t.text).join(", ")||"нет"}`;
+      }).join("\n");
+      return`Карта года — цели и задачи:\n${goalList||"Целей нет"}`;
+    }
+    if(stratTab==="calendar"){
+      const calTasks=[...kanban.data,...goalTasks.data].filter((t:any)=>t.date).map((t:any)=>`- ${t.text} (${t.date}, ${tsLbl(t.status||"todo")})`).join("\n");
+      return`Календарь задач:\n${calTasks||"Задач нет"}`;
+    }
+    return"";
+  };
+
+  const runVizzy=async(action:string)=>{
+    setVizzyLoading(true);setVizzyResult("");
+    const ctx=buildContext();
+    const prompts:Record<string,string>={
+      analyze:`Ты — строгий бизнес-ассистент Vizzy AI. Проанализируй следующий список задач. Проверь: конфликты сроков, реалистичность, чёткость формулировок, равномерность загрузки. Дай краткий структурированный отчёт.\n\n${ctx}`,
+      optimize:`Ты — строгий бизнес-ассистент Vizzy AI. Предложи конкретные изменения для оптимизации плана: перераспределение нагрузки, группировка задач, изменение приоритетов, разбивка крупных задач. Формат: нумерованный список конкретных предложений.\n\n${ctx}`,
+      weaknesses:`Ты — строгий бизнес-ассистент Vizzy AI. Проведи высокоуровневый анализ: найди цели без задач, недостаток ресурсов, риски зависимости от одного человека или события. Выведи структурированный отчёт о рисках и «белых пятнах».\n\n${ctx}`,
+      generate:`Ты — строгий бизнес-ассистент Vizzy AI. На основе анализа слабых мест сгенерируй список задач которых не хватает для достижения целей. Для каждой задачи укажи: название, к какой цели относится, почему важна. Нумерованный список.\n\n${ctx}`,
+    };
+    try{
+      const res=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:[{role:"user",content:prompts[action]}]})});
+      const data=await res.json();
+      setVizzyResult(data.content?.[0]?.text||"Нет ответа");
+    }catch{setVizzyResult("Ошибка. Попробуйте снова.");}
+    setVizzyLoading(false);
+  };
+
+  // ── Calendar state ──
+  const[calMode,setCalMode]=useState<"month"|"week"|"day">("month");
+  const[calDate,setCalDate]=useState(()=>new Date());
+  const[calModal,setCalModal]=useState<any>(null); // null | 'new' | task obj
+  const[calForm,setCalForm]=useState({text:"",description:"",start_date:"",end_date:"",priority:"medium",assignee:""});
+  const[calDeleteId,setCalDeleteId]=useState<string|null>(null);
+
+  const calTasks=useTable("cal_tasks",userId);
+
+  const allCalTasks=useMemo(()=>[
+    ...calTasks.data,
+    ...kanban.data.filter((t:any)=>t.date).map((t:any)=>({...t,start_date:t.date,end_date:t.date,fromKanban:true})),
+    ...goalTasks.data.filter((t:any)=>t.date).map((t:any)=>({...t,start_date:t.date,end_date:t.date,fromGoal:true,priority:"medium"})),
+  ],[calTasks.data,kanban.data,goalTasks.data]);
+
+  const tasksForCalDay=(dateStr:string)=>allCalTasks.filter((t:any)=>t.start_date<=dateStr&&(t.end_date||t.start_date)>=dateStr);
+
+  const navCal=(dir:1|-1)=>{
+    const d=new Date(calDate);
+    if(calMode==="month"){d.setMonth(d.getMonth()+dir);}
+    else if(calMode==="week"){d.setDate(d.getDate()+dir*7);}
+    else{d.setDate(d.getDate()+dir);}
+    setCalDate(d);
+  };
+
+  const PRIORITY_COLORS:Record<string,string>={low:C.g,medium:C.y,high:C.r};
+  const PRIORITY_LABELS:Record<string,string>={low:"Низкий",medium:"Средний",high:"Высокий"};
+
+  const openCalNew=(dateStr?:string)=>{
+    setCalForm({text:"",description:"",start_date:dateStr||today(),end_date:dateStr||today(),priority:"medium",assignee:""});
+    setCalModal("new");
+  };
+  const openCalEdit=(t:any)=>{
+    setCalForm({text:t.text||"",description:t.description||"",start_date:t.start_date||"",end_date:t.end_date||"",priority:t.priority||"medium",assignee:t.assignee||""});
+    setCalModal(t);
+  };
+  const saveCalTask=async()=>{
+    if(!calForm.text.trim())return;
+    const payload={text:calForm.text,description:calForm.description,start_date:calForm.start_date,end_date:calForm.end_date||calForm.start_date,priority:calForm.priority,assignee:calForm.assignee};
+    if(calModal==="new"){await calTasks.add(payload);}
+    else if(calModal&&!calModal.fromKanban&&!calModal.fromGoal){await calTasks.update(calModal.id,payload);}
+    setCalModal(null);
+  };
+  const deleteCalTask=async()=>{
+    if(calDeleteId){await calTasks.remove(calDeleteId);setCalDeleteId(null);}
+  };
+
+  const CalendarView=()=>{
+    const tdStr=today();
+
+    if(calMode==="month"){
+      const y=calDate.getFullYear(),m=calDate.getMonth();
+      const firstDay=new Date(y,m,1).getDay();
+      const daysInMonth=new Date(y,m+1,0).getDate();
+      const cells:Array<{date:string|null}>=[];
+      for(let i=0;i<firstDay;i++)cells.push({date:null});
+      for(let d=1;d<=daysInMonth;d++){
+        const ds2=`${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+        cells.push({date:ds2});
+      }
+      return<div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:4}}>
+          {["Вс","Пн","Вт","Ср","Чт","Пт","Сб"].map(wd=><div key={wd} style={{textAlign:"center",fontSize:11,fontWeight:600,color:C.t2,padding:"6px 0"}}>{wd}</div>)}
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
+          {cells.map((cell,i)=>{
+            if(!cell.date)return<div key={i} style={{minHeight:90,background:"transparent"}}/>;
+            const dayTasks=tasksForCalDay(cell.date);
+            const isToday=cell.date===tdStr;
+            const isPast=cell.date<tdStr;
+            return<div key={cell.date} onClick={()=>openCalNew(cell.date||undefined)}
+              style={{minHeight:90,background:isToday?"rgba(37,99,235,0.06)":C.w,borderRadius:10,padding:"6px 5px",border:"1px solid "+(isToday?C.a:C.bd),cursor:"pointer",transition:"background 0.1s",position:"relative"}}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=isToday?"rgba(37,99,235,0.1)":C.ib;}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=isToday?"rgba(37,99,235,0.06)":C.w;}}>
+              <div style={{fontSize:12,fontWeight:isToday?800:400,color:isToday?C.a:isPast?C.t2:C.t1,marginBottom:3}}>{parseInt(cell.date.split("-")[2])}</div>
+              {dayTasks.slice(0,3).map((t:any)=><div key={t.id} title={`${t.text}\nПриоритет: ${PRIORITY_LABELS[t.priority||"medium"]}\n${t.start_date}${t.end_date&&t.end_date!==t.start_date?" → "+t.end_date:""}`}
+                style={{fontSize:10,fontWeight:500,padding:"2px 5px",borderRadius:4,marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+                  background:(PRIORITY_COLORS[t.priority||"medium"]||C.a)+"22",
+                  color:PRIORITY_COLORS[t.priority||"medium"]||C.a,
+                  borderLeft:"2px solid "+(PRIORITY_COLORS[t.priority||"medium"]||C.a),
+                }}
+                onClick={e=>{e.stopPropagation();if(!t.fromKanban&&!t.fromGoal)openCalEdit(t);}}
+              >{t.text}</div>)}
+              {dayTasks.length>3&&<div style={{fontSize:9,color:C.t2,padding:"1px 4px"}}>+{dayTasks.length-3} ещё</div>}
+            </div>;
+          })}
+        </div>
+      </div>;
+    }
+
+    if(calMode==="week"){
+      const startOfWeek=new Date(calDate);
+      startOfWeek.setDate(calDate.getDate()-calDate.getDay());
+      const weekDays=Array.from({length:7},(_,i)=>{const d=new Date(startOfWeek);d.setDate(startOfWeek.getDate()+i);return ds(d);});
+      return<div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:8}}>
+        {weekDays.map(dateStr=>{
+          const dayTasks=tasksForCalDay(dateStr);
+          const isToday=dateStr===tdStr;
+          const dt=new Date(dateStr);
+          return<div key={dateStr} style={{background:C.w,borderRadius:12,border:"2px solid "+(isToday?C.a:C.bd),minHeight:200}}>
+            <div style={{padding:"10px 10px 6px",borderBottom:"1px solid "+C.bd,background:isToday?"rgba(37,99,235,0.04)":"transparent"}}>
+              <div style={{fontSize:16,fontWeight:700,color:isToday?C.a:C.t1}}>{dt.getDate()}</div>
+              <div style={{fontSize:10,color:C.t2}}>{WDS[dt.getDay()]}</div>
+            </div>
+            <div style={{padding:"8px 6px",display:"flex",flexDirection:"column",gap:4}}>
+              {dayTasks.map((t:any)=><div key={t.id}
+                title={`${t.text}\nПриоритет: ${PRIORITY_LABELS[t.priority||"medium"]}`}
+                onClick={()=>{if(!t.fromKanban&&!t.fromGoal)openCalEdit(t);else openCalNew(dateStr);}}
+                style={{fontSize:11,padding:"4px 7px",borderRadius:6,cursor:"pointer",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+                  background:(PRIORITY_COLORS[t.priority||"medium"]||C.a)+"18",
+                  borderLeft:"2px solid "+(PRIORITY_COLORS[t.priority||"medium"]||C.a),
+                  color:PRIORITY_COLORS[t.priority||"medium"]||C.a}}>{t.text}</div>)}
+              <button onClick={()=>openCalNew(dateStr)} style={{padding:"5px",background:"transparent",border:"1px dashed "+C.bd,borderRadius:6,fontSize:11,color:C.t2,cursor:"pointer",marginTop:2}}>+ добавить</button>
+            </div>
+          </div>;
+        })}
+      </div>;
+    }
+
+    // Day view
+    const dateStr=ds(calDate);
+    const dayTasks=tasksForCalDay(dateStr);
+    return<Card>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <div style={{fontSize:18,fontWeight:700}}>{calDate.getDate()} {MR[calDate.getMonth()]}</div>
+        <button onClick={()=>openCalNew(dateStr)} style={{padding:"8px 16px",background:C.a,color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer"}}>+ Задача</button>
+      </div>
+      {dayTasks.length===0
+        ?<div style={{textAlign:"center",padding:"40px 0",color:C.t2}}>Нет задач на этот день</div>
+        :<div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {dayTasks.map((t:any)=><div key={t.id} onClick={()=>{if(!t.fromKanban&&!t.fromGoal)openCalEdit(t);}}
+            style={{padding:"12px 16px",borderRadius:12,borderLeft:"4px solid "+(PRIORITY_COLORS[t.priority||"medium"]||C.a),background:C.ib,cursor:t.fromKanban||t.fromGoal?"default":"pointer"}}>
+            <div style={{fontWeight:600,fontSize:14}}>{t.text}</div>
+            {t.description&&<div style={{fontSize:12,color:C.t2,marginTop:4}}>{t.description}</div>}
+            <div style={{display:"flex",gap:10,marginTop:6}}>
+              <span style={{fontSize:11,background:(PRIORITY_COLORS[t.priority||"medium"])+"20",color:PRIORITY_COLORS[t.priority||"medium"],padding:"2px 8px",borderRadius:5}}>{PRIORITY_LABELS[t.priority||"medium"]}</span>
+              {t.assignee&&<span style={{fontSize:11,color:C.t2}}>👤 {t.assignee}</span>}
+              {(t.fromKanban||t.fromGoal)&&<span style={{fontSize:11,color:C.t2}}>🔗 {t.fromGoal?"Из Карты года":"Из Спринта"}</span>}
+            </div>
+          </div>)}
+        </div>
+      }
+    </Card>;
+  };
+
+  const calTitle=()=>{
+    if(calMode==="month")return`${MR[calDate.getMonth()].charAt(0).toUpperCase()+MR[calDate.getMonth()].slice(1)} ${calDate.getFullYear()}`;
+    if(calMode==="week"){const s=new Date(calDate);s.setDate(calDate.getDate()-calDate.getDay());const e=new Date(s);e.setDate(s.getDate()+6);return`${s.getDate()} ${MR[s.getMonth()].substring(0,3)} — ${e.getDate()} ${MR[e.getMonth()].substring(0,3)}`;}
+    return`${calDate.getDate()} ${MR[calDate.getMonth()]} ${calDate.getFullYear()}`;
+  };
+
   return <>
+    {/* Vizzy AI toggle tab */}
+    <div onClick={()=>setVizzyOpen(!vizzyOpen)} style={{position:"fixed",right:vizzyOpen?356:0,top:"40%",transform:"translateY(-50%)",background:`linear-gradient(135deg,${VIZZY_ACCENT},#7C3AED)`,width:32,height:120,borderRadius:"12px 0 0 12px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,boxShadow:"-4px 0 20px rgba(167,139,250,0.35)",zIndex:110,transition:"right 0.3s ease"}}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      <div style={{writingMode:"vertical-rl",textOrientation:"mixed",transform:"rotate(180deg)",fontSize:10,fontWeight:700,color:"#fff",letterSpacing:1}}>VIZZY AI</div>
+    </div>
+
+    {/* Vizzy AI panel */}
+    <div style={{position:"fixed",right:0,top:0,bottom:0,width:360,background:"#1A1030",borderLeft:"1px solid rgba(167,139,250,0.2)",transform:vizzyOpen?"translateX(0)":"translateX(100%)",transition:"transform 0.3s ease",zIndex:105,display:"flex",flexDirection:"column",fontFamily:"'Montserrat',sans-serif",overflowY:"auto"}}>
+      <div style={{padding:"20px 20px 16px",borderBottom:"1px solid rgba(167,139,250,0.15)",flexShrink:0}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{width:32,height:32,borderRadius:8,background:"linear-gradient(135deg,#A78BFA,#7C3AED)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            </div>
+            <div>
+              <div style={{fontSize:14,fontWeight:700,color:"#fff"}}>Vizzy AI</div>
+              <div style={{fontSize:11,color:"rgba(167,139,250,0.7)"}}>Стратегический ассистент</div>
+            </div>
+          </div>
+          <button onClick={()=>setVizzyOpen(false)} style={{width:28,height:28,borderRadius:7,border:"none",background:"rgba(255,255,255,0.07)",cursor:"pointer",color:"rgba(255,255,255,0.5)",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+        </div>
+        <div style={{marginTop:10,padding:"8px 12px",background:"rgba(167,139,250,0.1)",borderRadius:8,fontSize:12,color:"rgba(255,255,255,0.6)"}}>
+          Контекст: <span style={{color:VIZZY_ACCENT,fontWeight:600}}>{stratTab==="sprint"?"Текущий спринт":stratTab==="yearmap"?"Карта года":"Календарь задач"}</span>
+        </div>
+      </div>
+
+      <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:10,flex:1}}>
+        {[
+          {id:"analyze",icon:"🔍",label:"Проанализировать список задач"},
+          {id:"optimize",icon:"⚡",label:"Оптимизировать задачи"},
+          {id:"weaknesses",icon:"⚠️",label:"Оценить слабые места стратегии"},
+          {id:"generate",icon:"✨",label:"Сформировать недостающие задачи"},
+        ].map(btn=>(
+          <button key={btn.id} onClick={()=>runVizzy(btn.id)} disabled={vizzyLoading}
+            style={{padding:"12px 14px",background:"rgba(167,139,250,0.1)",border:"1px solid rgba(167,139,250,0.25)",borderRadius:12,fontSize:13,fontWeight:600,color:"#fff",cursor:vizzyLoading?"not-allowed":"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:10,transition:"all 0.15s",opacity:vizzyLoading?0.5:1}}
+            onMouseEnter={e=>{if(!vizzyLoading)(e.currentTarget as HTMLElement).style.background="rgba(167,139,250,0.2)";}}
+            onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="rgba(167,139,250,0.1)";}}>
+            <span style={{fontSize:18}}>{btn.icon}</span>
+            <span>{btn.label}</span>
+          </button>
+        ))}
+
+        {vizzyLoading&&<div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,padding:"20px 0",color:"rgba(255,255,255,0.5)"}}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={VIZZY_ACCENT} strokeWidth="2.5" style={{animation:"spin 0.8s linear infinite"}}><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
+          <span style={{fontSize:13}}>Vizzy AI анализирует...</span>
+        </div>}
+
+        {vizzyResult&&!vizzyLoading&&<div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(167,139,250,0.2)",borderRadius:12,padding:"14px 16px"}}>
+          <div style={{fontSize:11,fontWeight:600,color:VIZZY_ACCENT,marginBottom:10,textTransform:"uppercase",letterSpacing:0.5}}>Результат анализа</div>
+          <div style={{fontSize:13,color:"rgba(255,255,255,0.85)",lineHeight:1.8,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{vizzyResult}</div>
+          <button onClick={()=>{navigator.clipboard.writeText(vizzyResult);}} style={{marginTop:12,display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:"rgba(167,139,250,0.12)",border:"1px solid rgba(167,139,250,0.2)",borderRadius:7,fontSize:11,color:VIZZY_ACCENT,cursor:"pointer",fontWeight:500}}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            Копировать
+          </button>
+        </div>}
+      </div>
+    </div>
+
+    {/* Main content shifts left when panel is open */}
+    <div style={{marginRight:vizzyOpen?360:0,transition:"margin-right 0.3s ease"}}>
+
     {/* Tabs */}
     <div style={{display:"inline-flex",background:C.bg,borderRadius:12,padding:3,gap:2,marginBottom:24,border:"1px solid "+C.bd}}>
       <button style={tabStyle(stratTab==="sprint")} onClick={()=>setStratTab("sprint")}>Текущий спринт</button>
       <button style={tabStyle(stratTab==="yearmap")} onClick={()=>setStratTab("yearmap")}>Карта года</button>
+      <button style={tabStyle(stratTab==="calendar")} onClick={()=>setStratTab("calendar")}>Календарь задач</button>
     </div>
 
     {/* YEAR MAP */}
     {stratTab==="yearmap"&&<YearMap userId={userId} goals={goals} goalUpdate={goals.update} goalAdd={goals.add}/>}
+
+    {/* CALENDAR */}
+    {stratTab==="calendar"&&<>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20,flexWrap:"wrap",gap:12}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <button onClick={()=>navCal(-1)} style={{width:36,height:36,borderRadius:10,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div style={{fontSize:16,fontWeight:700,minWidth:200,textAlign:"center"}}>{calTitle()}</div>
+          <button onClick={()=>navCal(1)} style={{width:36,height:36,borderRadius:10,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+          <button onClick={()=>setCalDate(new Date())} style={{padding:"7px 14px",background:C.a+"14",color:C.a,border:"1px solid "+C.a+"30",borderRadius:9,fontSize:13,fontWeight:600,cursor:"pointer"}}>Сегодня</button>
+        </div>
+        <div style={{display:"flex",gap:6}}>
+          {(["month","week","day"] as const).map(m=>(
+            <button key={m} onClick={()=>setCalMode(m)} style={{padding:"7px 14px",borderRadius:9,border:"1px solid "+(calMode===m?C.a:C.bd),background:calMode===m?C.a:"transparent",color:calMode===m?"#fff":C.t2,fontSize:13,fontWeight:calMode===m?600:400,cursor:"pointer"}}>
+              {m==="month"?"Месяц":m==="week"?"Неделя":"День"}
+            </button>
+          ))}
+          <button onClick={()=>openCalNew()} style={{padding:"7px 16px",background:C.a,color:"#fff",border:"none",borderRadius:9,fontSize:13,fontWeight:600,cursor:"pointer"}}>+ Задача</button>
+        </div>
+      </div>
+      <CalendarView/>
+    </>}
 
     {/* SPRINT */}
     {stratTab==="sprint"&&<>
@@ -1612,6 +1890,57 @@ function StrategyPage({userId}:{userId:string}){
 
     {/* Task modal */}
     {activeModal&&<TaskModal task={activeModal.task} taskType={activeModal.type} userId={userId} onClose={()=>setActiveModal(null)}/>}
+
+    {/* Calendar task modal */}
+    {calModal&&(
+      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setCalModal(null)}>
+        <div style={{background:C.w,borderRadius:20,padding:32,width:"100%",maxWidth:480,boxShadow:"0 24px 60px rgba(0,0,0,0.2)"}} onClick={e=>e.stopPropagation()}>
+          <div style={{fontSize:18,fontWeight:700,marginBottom:20}}>{calModal==="new"?"Новая задача":"Редактировать задачу"}</div>
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            <div><label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:4}}>Название *</label>
+              <input value={calForm.text} onChange={e=>setCalForm({...calForm,text:e.target.value})} placeholder="Название задачи" style={iS}/></div>
+            <div><label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:4}}>Описание</label>
+              <textarea value={calForm.description} onChange={e=>setCalForm({...calForm,description:e.target.value})} rows={2} placeholder="Описание задачи..." style={{...iS,resize:"vertical"}}/></div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+              <div><label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:4}}>Дата начала</label>
+                <input type="date" value={calForm.start_date} onChange={e=>setCalForm({...calForm,start_date:e.target.value})} style={iS}/></div>
+              <div><label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:4}}>Дата окончания</label>
+                <input type="date" value={calForm.end_date} onChange={e=>setCalForm({...calForm,end_date:e.target.value})} style={iS}/></div>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+              <div><label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:4}}>Приоритет</label>
+                <select value={calForm.priority} onChange={e=>setCalForm({...calForm,priority:e.target.value})} style={iS}>
+                  <option value="low">Низкий</option>
+                  <option value="medium">Средний</option>
+                  <option value="high">Высокий</option>
+                </select></div>
+              <div><label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:4}}>Ответственный</label>
+                <input value={calForm.assignee} onChange={e=>setCalForm({...calForm,assignee:e.target.value})} placeholder="Имя..." style={iS}/></div>
+            </div>
+          </div>
+          <div style={{display:"flex",gap:10,marginTop:20,justifyContent:"space-between"}}>
+            <div>{calModal!=="new"&&!calModal?.fromKanban&&!calModal?.fromGoal&&<button onClick={()=>{setCalDeleteId(calModal.id);setCalModal(null);}} style={{padding:"9px 16px",background:"#FEF2F2",color:C.r,border:"1px solid #FCA5A5",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer"}}>Удалить</button>}</div>
+            <div style={{display:"flex",gap:8}}>
+              <Btn onClick={()=>setCalModal(null)} primary={false}>Отмена</Btn>
+              <Btn onClick={saveCalTask} disabled={!calForm.text.trim()}>Сохранить</Btn>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+    {calDeleteId&&(
+      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setCalDeleteId(null)}>
+        <div style={{background:C.w,borderRadius:16,padding:28,maxWidth:340,width:"100%",textAlign:"center"}} onClick={e=>e.stopPropagation()}>
+          <div style={{fontSize:32,marginBottom:12}}>🗑️</div>
+          <div style={{fontSize:16,fontWeight:700,marginBottom:8}}>Удалить задачу?</div>
+          <div style={{display:"flex",gap:10,justifyContent:"center",marginTop:20}}>
+            <Btn onClick={()=>setCalDeleteId(null)} primary={false}>Отмена</Btn>
+            <Btn onClick={deleteCalTask} style={{background:C.r}}>Удалить</Btn>
+          </div>
+        </div>
+      </div>
+    )}
+    </div>{/* end marginRight wrapper */}
   </>;
 }
 
@@ -4075,318 +4404,6 @@ function StoriesAIPage(){
       }
     </div>}
   </div>;
-}
-
-/* ============ MAILINGS ============ */
-const MAILING_GOALS_AI=["Знакомство с новым лидом","Презентация продукта/услуги","Реактивация «уснувшего» клиента","Специальное предложение/акция","Напоминание о событии/вебинаре","Запрос обратной связи"];
-const MAILING_TONES=["Дружелюбный","Официальный","Продающий","Информационный","Нейтральный"];
-const MAILING_CHANNELS=["Личные сообщения (Соцсети)","Email"];
-const MAILING_STATUSES=[{id:"planned",label:"Запланирована",color:"#F59E0B"},{id:"sent",label:"Отправлена",color:"#10B981"}];
-const msCol=(s:string)=>(MAILING_STATUSES.find(x=>x.id===s)||{color:C.t2}).color;
-const msLbl=(s:string)=>(MAILING_STATUSES.find(x=>x.id===s)||{label:s}).label;
-const EMPTY_MAILING={recipient:"",goal:"",scheduled_at:"",status:"planned",chat_url:"",content:""};
-
-function MailingsPage({userId}:{userId:string}){
-  const{data:mailings,loading,add,update,remove}=useTable("mailings",userId);
-  const[modal,setModal]=useState<any>(null);
-  const[form,setForm]=useState<any>(EMPTY_MAILING);
-  const[deleteId,setDeleteId]=useState<string|null>(null);
-  const[aiOpen,setAiOpen]=useState(false);
-  const[aiGoal,setAiGoal]=useState("");
-  const[aiChannel,setAiChannel]=useState("Личные сообщения (Соцсети)");
-  const[aiTone,setAiTone]=useState("");
-  const[aiCount,setAiCount]=useState(1);
-  const[aiExtra,setAiExtra]=useState("");
-  const[aiLoading,setAiLoading]=useState(false);
-  const[aiResult,setAiResult]=useState<string[]>([]);
-  const[copied,setCopied]=useState<number|null>(null);
-  const AI_ACCENT="#A78BFA";
-
-  const openNew=(prefill?:any)=>{setForm(prefill||{...EMPTY_MAILING});setModal("new");};
-  const openEdit=(m:any)=>{setForm({...m,scheduled_at:m.scheduled_at?m.scheduled_at.slice(0,16):""});setModal(m);};
-  const closeModal=()=>{setModal(null);setForm(EMPTY_MAILING);};
-
-  const save=async()=>{
-    const payload={recipient:form.recipient,goal:form.goal,scheduled_at:form.scheduled_at||null,status:form.status||"planned",chat_url:form.chat_url||"",content:form.content||""};
-    if(modal==="new"){await add(payload);}else{await update(modal.id,payload);}
-    closeModal();
-  };
-
-  const confirmDelete=async()=>{if(deleteId){await remove(deleteId);setDeleteId(null);}};
-
-  const copyText=(i:number)=>{
-    navigator.clipboard.writeText(aiResult[i]).then(()=>{setCopied(i);setTimeout(()=>setCopied(null),2000);});
-  };
-
-  const generateAI=async()=>{
-    if(!aiGoal||!aiTone)return;
-    setAiLoading(true);setAiResult([]);
-    const prompt=`Ты — профессиональный копирайтер. Напиши рассылку для клиента.\nЦель: ${aiGoal}\nКанал: ${aiChannel}\nТон: ${aiTone}\nКоличество сообщений: ${aiCount}\nДополнительно: ${aiExtra||"нет"}\n${aiCount>1?`Раздели рассылку на ${aiCount} отдельных сообщений. Каждое начинай с "Сообщение N:" (где N — номер). Сообщения должны быть логически связаны.`:"Напиши одно чёткое сообщение."}\nТолько текст сообщений, без пояснений.`;
-    try{
-      const res=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:[{role:"user",content:prompt}]})});
-      const data=await res.json();
-      const text=data.content?.[0]?.text||"";
-      if(aiCount>1){
-        const parts=text.split(/Сообщение \d+:/i).filter((p:string)=>p.trim());
-        setAiResult(parts.map((p:string)=>p.trim()));
-      }else{setAiResult([text.trim()]);}
-    }catch(e){setAiResult(["Ошибка генерации. Попробуйте снова."]);}
-    setAiLoading(false);
-  };
-
-  const useGeneratedForNew=()=>{openNew({...EMPTY_MAILING,goal:aiGoal,content:aiResult.join("\n\n---\n\n")});};
-
-  const fmtDt=(s:string)=>{
-    if(!s)return"—";
-    const d=new Date(s);
-    return d.toLocaleDateString("ru-RU",{day:"2-digit",month:"2-digit",year:"numeric"})+" "+d.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"});
-  };
-
-  return(
-    <div style={{position:"relative",minHeight:"calc(100vh - 64px)"}}>
-      <div style={{marginRight:aiOpen?360:0,transition:"margin-right 0.3s ease"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24,flexWrap:"wrap",gap:12}}>
-          <h1 style={{margin:0,fontSize:24,fontWeight:800}}>Рассылки</h1>
-          <Btn onClick={()=>openNew()} style={{display:"flex",alignItems:"center",gap:6}}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Создать рассылку
-          </Btn>
-        </div>
-
-        {loading
-          ?<div style={{textAlign:"center",padding:60,color:C.t2}}>Загрузка...</div>
-          :mailings.length===0
-          ?<Card style={{textAlign:"center",padding:"60px 32px"}}>
-              <div style={{fontSize:40,marginBottom:16}}>📬</div>
-              <div style={{fontSize:16,fontWeight:600,color:C.t1,marginBottom:8}}>Рассылок пока нет</div>
-              <div style={{fontSize:14,color:C.t2,marginBottom:24}}>Нажмите «Создать рассылку», чтобы начать</div>
-              <Btn onClick={()=>openNew()}>+ Создать рассылку</Btn>
-            </Card>
-          :<Card style={{padding:0,overflow:"hidden"}}>
-              <div style={{overflowX:"auto"}}>
-                <table style={{width:"100%",borderCollapse:"collapse",fontSize:14}}>
-                  <thead>
-                    <tr style={{borderBottom:"1px solid "+C.bd}}>
-                      {["Кому","Цель","Дата","Статус","Контакт / Чат","Действия"].map(h=>(
-                        <th key={h} style={{padding:"14px 16px",textAlign:"left",fontWeight:600,color:C.t2,fontSize:12,whiteSpace:"nowrap"}}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mailings.map((m:any,i:number)=>(
-                      <tr key={m.id} style={{borderBottom:i<mailings.length-1?"1px solid "+C.bd:"none",transition:"background 0.1s"}}
-                        onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.ib;}}
-                        onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}>
-                        <td style={{padding:"14px 16px",fontWeight:600,color:C.t1}}>{m.recipient||"—"}</td>
-                        <td style={{padding:"14px 16px"}}>
-                          <span style={{background:C.a+"14",color:C.a,padding:"3px 10px",borderRadius:6,fontSize:12,fontWeight:500}}>{m.goal||"—"}</span>
-                        </td>
-                        <td style={{padding:"14px 16px",color:C.t2,whiteSpace:"nowrap"}}>{fmtDt(m.scheduled_at)}</td>
-                        <td style={{padding:"14px 16px"}}>
-                          <span onClick={()=>update(m.id,{status:m.status==="planned"?"sent":"planned"})}
-                            style={{background:msCol(m.status)+"20",color:msCol(m.status),padding:"3px 10px",borderRadius:6,fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>
-                            {msLbl(m.status)}
-                          </span>
-                        </td>
-                        <td style={{padding:"14px 16px"}}>
-                          {m.chat_url
-                            ?<a href={m.chat_url} target="_blank" rel="noreferrer"
-                                style={{display:"inline-flex",alignItems:"center",gap:6,padding:"5px 12px",background:C.a+"14",color:C.a,borderRadius:8,fontSize:12,fontWeight:600,textDecoration:"none",whiteSpace:"nowrap"}}>
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                                Перейти в чат
-                              </a>
-                            :<span style={{color:C.t2,fontSize:12}}>—</span>
-                          }
-                        </td>
-                        <td style={{padding:"14px 16px"}}>
-                          <div style={{display:"flex",gap:8}}>
-                            <button onClick={()=>openEdit(m)} title="Редактировать"
-                              style={{width:32,height:32,borderRadius:8,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}
-                              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.a;}}
-                              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;}}>
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.a} strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                            </button>
-                            <button onClick={()=>setDeleteId(m.id)} title="Удалить"
-                              style={{width:32,height:32,borderRadius:8,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}
-                              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.r;}}
-                              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;}}>
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.r} strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-        }
-      </div>
-
-      {/* AI TAB */}
-      <div onClick={()=>setAiOpen(!aiOpen)} style={{position:"fixed",right:aiOpen?356:0,top:"50%",transform:"translateY(-50%)",background:`linear-gradient(135deg,${AI_ACCENT},#7C3AED)`,width:32,height:120,borderRadius:"12px 0 0 12px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,boxShadow:"-4px 0 20px rgba(167,139,250,0.35)",zIndex:110,transition:"right 0.3s ease"}}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-        <div style={{writingMode:"vertical-rl",textOrientation:"mixed",transform:"rotate(180deg)",fontSize:10,fontWeight:700,color:"#fff",letterSpacing:1}}>VIZZY AI</div>
-      </div>
-
-      {/* AI PANEL */}
-      <div style={{position:"fixed",right:0,top:0,bottom:0,width:360,background:"#1A1030",borderLeft:"1px solid rgba(167,139,250,0.2)",transform:aiOpen?"translateX(0)":"translateX(100%)",transition:"transform 0.3s ease",zIndex:105,display:"flex",flexDirection:"column",fontFamily:"'Montserrat',sans-serif",overflowY:"auto"}}>
-        <div style={{padding:"20px 20px 16px",borderBottom:"1px solid rgba(167,139,250,0.15)",flexShrink:0}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
-            <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <div style={{width:32,height:32,borderRadius:8,background:"linear-gradient(135deg,#A78BFA,#7C3AED)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-              </div>
-              <div>
-                <div style={{fontSize:14,fontWeight:700,color:"#fff"}}>Vizzy AI</div>
-                <div style={{fontSize:11,color:"rgba(167,139,250,0.7)"}}>Генератор рассылок</div>
-              </div>
-            </div>
-            <button onClick={()=>setAiOpen(false)} style={{width:28,height:28,borderRadius:7,border:"none",background:"rgba(255,255,255,0.07)",cursor:"pointer",color:"rgba(255,255,255,0.5)",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
-          </div>
-          <div style={{marginTop:10,padding:"10px 14px",background:"rgba(167,139,250,0.1)",borderRadius:10,fontSize:13,color:"rgba(255,255,255,0.75)",lineHeight:1.5}}>
-            👋 Я помогу сделать рассылку! Заполни параметры и нажми «Сгенерировать».
-          </div>
-        </div>
-
-        <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:14,flex:1}}>
-          <div>
-            <label style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.5)",letterSpacing:0.5,textTransform:"uppercase",display:"block",marginBottom:6}}>Цель рассылки *</label>
-            <select value={aiGoal} onChange={e=>setAiGoal(e.target.value)} style={{width:"100%",padding:"10px 12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(167,139,250,0.25)",borderRadius:10,fontSize:13,color:aiGoal?"#fff":"rgba(255,255,255,0.4)",outline:"none",fontFamily:"'Montserrat',sans-serif"}}>
-              <option value="" style={{background:"#1A1030"}}>Выберите цель...</option>
-              {MAILING_GOALS_AI.map(g=><option key={g} value={g} style={{background:"#1A1030"}}>{g}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.5)",letterSpacing:0.5,textTransform:"uppercase",display:"block",marginBottom:8}}>Канал *</label>
-            <div style={{display:"flex",flexDirection:"column",gap:8}}>
-              {MAILING_CHANNELS.map(ch=>(
-                <label key={ch} style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}>
-                  <div onClick={()=>setAiChannel(ch)} style={{width:18,height:18,borderRadius:"50%",border:"2px solid "+(aiChannel===ch?AI_ACCENT:"rgba(255,255,255,0.2)"),background:aiChannel===ch?AI_ACCENT:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.15s"}}>
-                    {aiChannel===ch&&<div style={{width:6,height:6,borderRadius:"50%",background:"#fff"}}/>}
-                  </div>
-                  <span style={{fontSize:13,color:"rgba(255,255,255,0.8)"}}>{ch}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.5)",letterSpacing:0.5,textTransform:"uppercase",display:"block",marginBottom:6}}>Тон рассылки *</label>
-            <select value={aiTone} onChange={e=>setAiTone(e.target.value)} style={{width:"100%",padding:"10px 12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(167,139,250,0.25)",borderRadius:10,fontSize:13,color:aiTone?"#fff":"rgba(255,255,255,0.4)",outline:"none",fontFamily:"'Montserrat',sans-serif"}}>
-              <option value="" style={{background:"#1A1030"}}>Выберите тон...</option>
-              {MAILING_TONES.map(t=><option key={t} value={t} style={{background:"#1A1030"}}>{t}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.5)",letterSpacing:0.5,textTransform:"uppercase",display:"block",marginBottom:8}}>Кол-во сообщений: <span style={{color:AI_ACCENT}}>{aiCount}</span></label>
-            <div style={{display:"flex",gap:8}}>
-              {[1,2,3,4,5].map(n=>(
-                <button key={n} onClick={()=>setAiCount(n)} style={{flex:1,padding:"8px 0",borderRadius:8,border:"2px solid "+(aiCount===n?AI_ACCENT:"rgba(255,255,255,0.12)"),background:aiCount===n?"rgba(167,139,250,0.2)":"transparent",color:aiCount===n?AI_ACCENT:"rgba(255,255,255,0.5)",fontWeight:700,fontSize:14,cursor:"pointer",transition:"all 0.15s"}}>{n}</button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.5)",letterSpacing:0.5,textTransform:"uppercase",display:"block",marginBottom:6}}>Доп. информация</label>
-            <textarea value={aiExtra} onChange={e=>setAiExtra(e.target.value)} rows={3}
-              placeholder="Имя клиента, название продукта, условия акции..."
-              style={{width:"100%",padding:"10px 12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(167,139,250,0.2)",borderRadius:10,fontSize:12,color:"#fff",outline:"none",resize:"vertical",fontFamily:"'Montserrat',sans-serif",lineHeight:1.5}}/>
-          </div>
-
-          <button onClick={generateAI} disabled={!aiGoal||!aiTone||aiLoading}
-            style={{padding:"12px 0",background:(!aiGoal||!aiTone||aiLoading)?"rgba(167,139,250,0.2)":`linear-gradient(135deg,${AI_ACCENT},#7C3AED)`,border:"none",borderRadius:12,fontSize:14,fontWeight:700,color:(!aiGoal||!aiTone||aiLoading)?"rgba(255,255,255,0.4)":"#fff",cursor:(!aiGoal||!aiTone||aiLoading)?"not-allowed":"pointer",transition:"all 0.2s"}}>
-            {aiLoading
-              ?<span style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{animation:"spin 0.8s linear infinite"}}><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
-                  Генерирую...
-                </span>
-              :"✨ Сгенерировать текст"
-            }
-          </button>
-
-          {aiResult.length>0&&(
-            <div style={{display:"flex",flexDirection:"column",gap:10}}>
-              <div style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:0.5}}>Результат</div>
-              {aiResult.map((txt,i)=>(
-                <div key={i} style={{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(167,139,250,0.2)",borderRadius:12,padding:"14px 14px 10px"}}>
-                  {aiResult.length>1&&<div style={{fontSize:11,fontWeight:700,color:AI_ACCENT,marginBottom:8,textTransform:"uppercase",letterSpacing:0.5}}>Сообщение {i+1}</div>}
-                  <div style={{fontSize:13,color:"rgba(255,255,255,0.85)",lineHeight:1.7,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{txt}</div>
-                  <button onClick={()=>copyText(i)}
-                    style={{marginTop:10,display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:"rgba(167,139,250,0.12)",border:"1px solid rgba(167,139,250,0.2)",borderRadius:7,fontSize:11,color:copied===i?"#10B981":AI_ACCENT,cursor:"pointer",fontWeight:500}}>
-                    {copied===i
-                      ?<><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Скопировано</>
-                      :<><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Копировать</>
-                    }
-                  </button>
-                </div>
-              ))}
-              <button onClick={useGeneratedForNew}
-                style={{padding:"11px 0",background:"rgba(16,185,129,0.15)",border:"1px solid rgba(16,185,129,0.3)",borderRadius:12,fontSize:13,fontWeight:600,color:"#10B981",cursor:"pointer",marginTop:4}}>
-                📋 Создать рассылку на основе этого
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* MODAL CREATE/EDIT */}
-      {modal&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={closeModal}>
-          <div style={{background:C.w,borderRadius:20,padding:32,width:"100%",maxWidth:500,boxShadow:"0 24px 60px rgba(0,0,0,0.2)"}} onClick={e=>e.stopPropagation()}>
-            <div style={{fontSize:18,fontWeight:700,marginBottom:24}}>{modal==="new"?"Новая рассылка":"Редактировать рассылку"}</div>
-            <div style={{display:"flex",flexDirection:"column",gap:14}}>
-              <div>
-                <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Кому (получатель) *</label>
-                <input placeholder="Иван Петров / Сегмент: Новые лиды" value={form.recipient} onChange={e=>setForm({...form,recipient:e.target.value})} style={iS}/>
-              </div>
-              <div>
-                <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Цель рассылки *</label>
-                <input placeholder="Прогрев, Продажа курса, Реактивация..." value={form.goal} onChange={e=>setForm({...form,goal:e.target.value})} style={iS}/>
-              </div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                <div>
-                  <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Дата и время</label>
-                  <input type="datetime-local" value={form.scheduled_at} onChange={e=>setForm({...form,scheduled_at:e.target.value})} style={iS}/>
-                </div>
-                <div>
-                  <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Статус</label>
-                  <select value={form.status} onChange={e=>setForm({...form,status:e.target.value})} style={iS}>
-                    {MAILING_STATUSES.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Ссылка на чат (Instagram, Telegram...)</label>
-                <input placeholder="https://t.me/username" value={form.chat_url} onChange={e=>setForm({...form,chat_url:e.target.value})} style={iS}/>
-              </div>
-              <div>
-                <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Текст / Контент рассылки</label>
-                <textarea rows={4} placeholder="Текст сообщения..." value={form.content} onChange={e=>setForm({...form,content:e.target.value})} style={{...iS,resize:"vertical"}}/>
-              </div>
-            </div>
-            <div style={{display:"flex",gap:10,marginTop:24,justifyContent:"flex-end"}}>
-              <Btn onClick={closeModal} primary={false}>Отмена</Btn>
-              <Btn onClick={save} disabled={!form.recipient||!form.goal}>Сохранить</Btn>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* CONFIRM DELETE */}
-      {deleteId&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setDeleteId(null)}>
-          <div style={{background:C.w,borderRadius:16,padding:28,maxWidth:360,width:"100%",textAlign:"center",boxShadow:"0 16px 40px rgba(0,0,0,0.2)"}} onClick={e=>e.stopPropagation()}>
-            <div style={{fontSize:36,marginBottom:12}}>🗑️</div>
-            <div style={{fontSize:16,fontWeight:700,marginBottom:8}}>Удалить рассылку?</div>
-            <div style={{fontSize:14,color:C.t2,marginBottom:24}}>Это действие нельзя отменить.</div>
-            <div style={{display:"flex",gap:10,justifyContent:"center"}}>
-              <Btn onClick={()=>setDeleteId(null)} primary={false}>Отмена</Btn>
-              <Btn onClick={confirmDelete} style={{background:C.r}}>Удалить</Btn>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
 }
 
 /* ============ TOOLS (TIMER v2) ============ */
