@@ -1062,10 +1062,55 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
   const[editGoalData,setEditGoalData]=useState<any>({});
   const[priorityMenu,setPriorityMenu]=useState<string|null>(null);
   const[toast,setToast]=useState<string|null>(null);
+  const[editingTaskId,setEditingTaskId]=useState<string|null>(null);
 
   // Stable ref for gtf to avoid stale closures in AddTaskForm
   const gtfRef=useRef(gtf);
   gtfRef.current=gtf;
+
+  // Edit task form — stable component, local state, no re-render on parent
+  const EditTaskForm=useCallback(({task,goalId,onClose,goalTasks,TYPES}:any)=>{
+    const[txt,setTxt]=useState(task.text||"");
+    const[mins,setMins]=useState(task.mins||30);
+    const[type,setType]=useState(task.type||"biz");
+    const[date,setDate]=useState(task.date||"");
+    const save=async()=>{
+      if(!txt.trim())return;
+      await goalTasks.update(task.id,{text:txt,mins:+mins,type,date:date||null});
+      onClose();
+    };
+    return<div style={{padding:"12px 14px",borderRadius:10,background:"#EFF6FF",border:"2px solid "+C.a,marginBottom:6}}>
+      <input autoFocus value={txt} onChange={e=>setTxt(e.target.value)}
+        onKeyDown={e=>{if(e.key==="Enter")save();if(e.key==="Escape")onClose();}}
+        style={{...iS,padding:"7px 10px",fontSize:13,marginBottom:8,fontWeight:500}}/>
+      <div style={{display:"flex",gap:6,marginBottom:8}}>
+        <div style={{display:"flex",flexDirection:"column",gap:2,flex:"0 0 75px"}}>
+          <label style={{fontSize:10,color:C.t2,fontWeight:600}}>Минуты</label>
+          <input type="number" value={mins} onChange={e=>setMins(+e.target.value)} min={30} max={480} step={5}
+            style={{...iS,padding:"6px 8px",fontSize:12}}/>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:2,flex:1}}>
+          <label style={{fontSize:10,color:C.t2,fontWeight:600}}>Тип</label>
+          <select value={type} onChange={e=>setType(e.target.value)} style={{...iS,padding:"6px 8px",fontSize:12}}>
+            {TYPES.map((t:any)=><option key={t.id} value={t.id}>{t.label}</option>)}
+          </select>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:2,flex:"0 0 130px"}}>
+          <label style={{fontSize:10,color:C.t2,fontWeight:600}}>Дата</label>
+          <input type="date" value={date} onChange={e=>setDate(e.target.value)}
+            style={{...iS,padding:"6px 8px",fontSize:12}}/>
+        </div>
+      </div>
+      <div style={{display:"flex",gap:6}}>
+        <button onClick={save} style={{flex:1,padding:"7px",background:C.a,color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+          ✓ Сохранить
+        </button>
+        <button onClick={onClose} style={{padding:"7px 14px",background:C.bg,border:"1px solid "+C.bd,borderRadius:8,fontSize:12,cursor:"pointer",color:C.t2}}>
+          Отмена
+        </button>
+      </div>
+    </div>;
+  },[]);
 
   // Separate stable component for add-task form — avoids focus loss on re-render
   const AddTaskForm=useCallback(({goalId}:{goalId:string})=>{
@@ -1258,24 +1303,80 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
 
       {/* Tasks */}
       {isOpen&&<div style={{padding:"10px 18px 14px"}}>
-        {gTasks.map((t:any)=>{
+        {gTasks.map((t:any,ti:number)=>{
           const isDone=t.status==="done"||t.done;
-          const isOver=dndOver===t.id;
-          return <div key={t.id} draggable
-            onDragStart={()=>onGtDragStart(t.id)} onDragOver={(e:React.DragEvent)=>onGtDragOver(t.id,e)}
-            onDrop={()=>onGtDrop(t.id,g.id)} onDragEnd={()=>{setDndDrag(null);setDndOver(null);}}
-            style={{display:"flex",alignItems:"center",gap:8,padding:"9px 12px",borderRadius:10,background:isDone?"#F0FDF4":C.w,marginBottom:6,
+          const isEditing=editingTaskId===t.id;
+
+          if(isEditing){
+            return <EditTaskForm key={t.id} task={t} goalId={g.id} onClose={()=>setEditingTaskId(null)} goalTasks={goalTasks} TYPES={TYPES}/>;
+          }
+
+          return <div key={t.id}
+            style={{display:"flex",alignItems:"center",gap:8,padding:"9px 12px",borderRadius:10,
+              background:isDone?"#F0FDF4":C.w,marginBottom:6,
+              border:"1px solid "+C.bd,
               borderLeft:"3px solid "+(t.type==="biz"?C.a:t.type==="delegate"?C.t2:C.y),
-              opacity:dndDrag===t.id?0.4:1,boxShadow:isOver?"0 0 0 2px "+C.a:"0 1px 3px rgba(0,0,0,0.05)",cursor:"grab",border:"1px solid "+C.bd,borderLeftWidth:3}}>
-            <span style={{fontSize:13,color:C.t2,cursor:"grab",userSelect:"none"}}>⠿</span>
-            <button onClick={()=>goalTasks.update(t.id,{status:nextStatus(t.status||"todo"),done:nextStatus(t.status||"todo")==="done"})} style={{width:18,height:18,minWidth:18,borderRadius:5,border:"2px solid "+(isDone?C.g:(t.status==="inprogress")?C.y:C.bd),background:isDone?C.g:(t.status==="inprogress")?C.y+"33":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{isDone&&<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}</button>
-            <div style={{flex:1,cursor:"pointer",minWidth:0}} onClick={()=>setActiveModal({task:t,type:"goal"})}>
-              <div style={{fontSize:13,textDecoration:isDone?"line-through":"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.text}</div>
-              <div style={{fontSize:10,color:C.t2,marginTop:1}}>{t.mins}м{t.date?` | ${t.date.substring(5)}`:""}</div>
+              transition:"box-shadow 0.15s",
+            }}
+            onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 2px 8px rgba(0,0,0,0.08)";}}
+            onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
+
+            {/* Move up/down buttons */}
+            <div style={{display:"flex",flexDirection:"column",gap:1,flexShrink:0}}>
+              <button onClick={async()=>{
+                if(ti===0)return;
+                const prev=gTasks[ti-1];
+                await goalTasks.update(t.id,{sort_order:(prev.sort_order??ti-1)});
+                await goalTasks.update(prev.id,{sort_order:(t.sort_order??ti)});
+              }} disabled={ti===0}
+                style={{width:16,height:16,border:"1px solid "+C.bd,borderRadius:3,background:C.w,cursor:ti===0?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:ti===0?0.25:0.6,padding:0}}
+                title="Переместить выше">
+                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="18 15 12 9 6 15"/></svg>
+              </button>
+              <button onClick={async()=>{
+                if(ti===gTasks.length-1)return;
+                const next=gTasks[ti+1];
+                await goalTasks.update(t.id,{sort_order:(next.sort_order??ti+1)});
+                await goalTasks.update(next.id,{sort_order:(t.sort_order??ti)});
+              }} disabled={ti===gTasks.length-1}
+                style={{width:16,height:16,border:"1px solid "+C.bd,borderRadius:3,background:C.w,cursor:ti===gTasks.length-1?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:ti===gTasks.length-1?0.25:0.6,padding:0}}
+                title="Переместить ниже">
+                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
             </div>
-            <Tag label={tsLbl(t.status||"todo")} color={tsCol(t.status||"todo")}/>
-            <input type="date" value={t.date||""} onChange={e=>goalTasks.update(t.id,{date:e.target.value||null})} style={{width:110,padding:"3px 6px",border:"1px solid "+C.bd,borderRadius:6,fontSize:11,background:C.ib,flexShrink:0}}/>
-            <button onClick={()=>goalTasks.remove(t.id)} style={{border:"none",background:"transparent",cursor:"pointer",color:C.t2,fontSize:14,flexShrink:0}}>×</button>
+
+            {/* Checkbox */}
+            <button onClick={()=>goalTasks.update(t.id,{status:nextStatus(t.status||"todo"),done:nextStatus(t.status||"todo")==="done"})}
+              style={{width:18,height:18,minWidth:18,borderRadius:5,border:"2px solid "+(isDone?C.g:(t.status==="inprogress")?C.y:C.bd),background:isDone?C.g:(t.status==="inprogress")?C.y+"33":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              {isDone&&<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
+              {t.status==="inprogress"&&<div style={{width:7,height:7,borderRadius:2,background:C.y}}/>}
+            </button>
+
+            {/* Text */}
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:13,fontWeight:500,textDecoration:isDone?"line-through":"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:isDone?C.t2:C.t1}}>{t.text}</div>
+              <div style={{display:"flex",gap:8,marginTop:2,alignItems:"center"}}>
+                <span style={{fontSize:10,color:C.t2}}>{t.mins}м</span>
+                {t.date&&<span style={{fontSize:10,color:C.t2}}>📅 {t.date.substring(5)}</span>}
+                <Tag label={tsLbl(t.status||"todo")} color={tsCol(t.status||"todo")}/>
+              </div>
+            </div>
+
+            {/* Edit button */}
+            <button onClick={()=>setEditingTaskId(t.id)} title="Редактировать"
+              style={{width:26,height:26,borderRadius:7,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,opacity:0.7,transition:"opacity 0.15s"}}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.opacity="1";(e.currentTarget as HTMLElement).style.borderColor=C.a;}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.opacity="0.7";(e.currentTarget as HTMLElement).style.borderColor=C.bd;}}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.a} strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+
+            {/* Delete button */}
+            <button onClick={()=>goalTasks.remove(t.id)} title="Удалить"
+              style={{width:26,height:26,borderRadius:7,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,opacity:0.5,transition:"opacity 0.15s"}}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.opacity="1";(e.currentTarget as HTMLElement).style.borderColor=C.r;}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.opacity="0.5";(e.currentTarget as HTMLElement).style.borderColor=C.bd;}}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.r} strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+            </button>
           </div>;
         })}
         {showGTF===g.id
