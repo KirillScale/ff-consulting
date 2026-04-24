@@ -1232,11 +1232,45 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
     if(!tasks.length)return 0;
     return Math.round(tasks.filter((t:any)=>t.status==="done"||t.done).length/tasks.length*100);
   };
-  const prgColor=(p:number)=>p<30?C.r:p<50?"#F97316":p<70?C.y:p<90?"#84CC16":"#16A34A";
+  const prgColor=(p:number)=>p===100?"#16A34A":p>=75?"#84CC16":p>=50?C.y:p>=25?"#F97316":C.r;
+  const prgGradient=(p:number)=>p===100
+    ?"linear-gradient(90deg,#4ADE80,#16A34A,#4ADE80)"
+    :p>=75?"linear-gradient(90deg,#BEF264,#84CC16)"
+    :p>=50?"linear-gradient(90deg,#FDE68A,#EAB308)"
+    :p>=25?"linear-gradient(90deg,#FED7AA,#F97316)"
+    :"linear-gradient(90deg,#FCA5A5,#EF4444)";
+  const prgSticker=(p:number)=>p===100?"🏆":p>=80?"🔥":p>=60?"💪":p>=40?"📈":p>=20?"🌱":"🎯";
+  const prgStickerLabel=(p:number)=>p===100?"Цель достигнута!":p>=80?"Почти готово!":p>=60?"Хороший темп":p>=40?"В процессе":p>=20?"Начало положено":"Старт";
 
   if(!systemBlock&&goals.loading) return <div style={{padding:40,textAlign:"center",color:C.t2}}>Загрузка...</div>;
 
-  const GoalCard=({g}:{g:any})=>{
+  // Confetti burst for 100% goals
+  const ConfettiBurst=()=>(
+    <div style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden",borderRadius:14,zIndex:10}}>
+      {Array.from({length:18},(_,i)=>{
+        const colors=["#FFD700","#FF6B6B","#4ADE80","#60A5FA","#F472B6","#A78BFA"];
+        const color=colors[i%colors.length];
+        const left=5+Math.random()*90;
+        const delay=Math.random()*0.8;
+        const dur=0.8+Math.random()*0.6;
+        const size=5+Math.random()*7;
+        return <div key={i} style={{
+          position:"absolute",top:-10,left:`${left}%`,
+          width:size,height:size,borderRadius:Math.random()>0.5?"50%":"2px",
+          background:color,
+          animation:`confettiFall ${dur}s ease-in ${delay}s forwards`,
+        }}/>;
+      })}
+      <style>{`
+        @keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(120px) rotate(720deg);opacity:0}}
+        @keyframes glowPulse{0%,100%{box-shadow:0 0 8px 2px rgba(74,222,128,0.4)}50%{box-shadow:0 0 20px 6px rgba(74,222,128,0.7)}}
+        @keyframes progressGlow{0%,100%{opacity:0.6}50%{opacity:1}}
+        @keyframes stickerBounce{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+      `}</style>
+    </div>
+  );
+
+  const GoalCard=({g,isAchieved}:{g:any,isAchieved:boolean})=>{
     const p=goalProgress(g.id);
     const gTasks=[...goalTasks.data.filter((t:any)=>t.goal_id===g.id)].sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));
     const isOpen=openGoal===g.id;
@@ -1245,10 +1279,20 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
     const{days,overdue}=calcAutoPriority(g.end_date||null);
     const isUrgent=pr.id==="urgent";
     const isPriorityMenuOpen=priorityMenu===g.id;
+    const sticker=prgSticker(p);
+    const doneTasks=gTasks.filter((t:any)=>t.status==="done"||t.done).length;
 
-    return <div style={{background:C.bg,borderRadius:14,overflow:"hidden",border:"1px solid "+C.bd,
-      transition:"transform 0.2s,box-shadow 0.2s",
-      borderLeft:`4px solid ${pr.color}`}}>
+    const borderColor=isAchieved?"#4ADE80":pr.color;
+    const cardBg=isAchieved?"linear-gradient(135deg,#F0FDF4,#DCFCE7)":C.w;
+
+    return <div style={{background:isAchieved?"#F0FDF4":C.bg,borderRadius:14,overflow:"hidden",border:"1px solid "+(isAchieved?"#BBF7D0":C.bd),
+      transition:"transform 0.2s,box-shadow 0.2s",borderLeft:`4px solid ${borderColor}`,
+      position:"relative",
+      boxShadow:isAchieved?"0 0 0 1px #BBF7D0, 0 4px 16px rgba(74,222,128,0.12)":"none",
+      animation:isAchieved?"glowPulse 3s ease-in-out infinite":"none",
+    }}>
+      {isAchieved&&<ConfettiBurst/>}
+
       {isEditing&&<div style={{padding:"16px 18px",background:C.w,borderBottom:"1px solid "+C.bd}}>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:10}}>
           <div style={{gridColumn:"span 3"}}><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4,fontWeight:600}}>Название</label><input value={editGoalData.name||""} onChange={e=>setEditGoalData({...editGoalData,name:e.target.value})} style={iS}/></div>
@@ -1261,24 +1305,66 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
       </div>}
 
       {/* Goal header */}
-      <div style={{padding:"14px 18px",display:"flex",alignItems:"center",gap:12,background:C.w,cursor:"pointer"}} onClick={()=>setOpenGoal(isOpen?null:g.id)}>
+      <div style={{padding:"14px 18px",display:"flex",alignItems:"flex-start",gap:12,background:isAchieved?"transparent":C.w,cursor:"pointer"}} onClick={()=>setOpenGoal(isOpen?null:g.id)}>
         <div style={{flex:1,minWidth:0}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,flexWrap:"wrap"}}>
-            <span style={{fontSize:14,fontWeight:700,color:C.t1}}>{g.name}</span>
-            {overdue&&<span style={{fontSize:10,fontWeight:700,background:C.r+"18",color:C.r,borderRadius:20,padding:"2px 8px"}}>Просрочена на {Math.abs(days||0)} дн.</span>}
-            {!overdue&&days!==null&&days<=14&&<span style={{fontSize:10,color:pr.color,fontWeight:600}}>осталось {days} дн.</span>}
-            {g.priority_manual&&<span style={{fontSize:9,background:C.bd,color:C.t2,borderRadius:20,padding:"1px 6px"}}>вручную</span>}
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,flexWrap:"wrap"}}>
+            <span style={{fontSize:14,fontWeight:700,color:isAchieved?"#15803D":C.t1}}>{g.name}</span>
+            {isAchieved&&<span style={{fontSize:10,fontWeight:700,background:"#4ADE8022",color:"#16A34A",borderRadius:20,padding:"2px 10px",border:"1px solid #4ADE8040"}}>✓ Достигнута</span>}
+            {!isAchieved&&overdue&&<span style={{fontSize:10,fontWeight:700,background:C.r+"18",color:C.r,borderRadius:20,padding:"2px 8px"}}>Просрочена на {Math.abs(days||0)} дн.</span>}
+            {!isAchieved&&!overdue&&days!==null&&days<=14&&<span style={{fontSize:10,color:pr.color,fontWeight:600}}>осталось {days} дн.</span>}
           </div>
-          {g.start_date&&g.end_date&&<div style={{fontSize:11,color:C.t2,marginBottom:4}}>{g.start_date.substring(5)} — {g.end_date.substring(5)}</div>}
-          {!g.end_date&&<div style={{fontSize:10,color:C.t2,fontStyle:"italic",marginBottom:4}}>Укажите дедлайн для автоопределения приоритета</div>}
+          {g.start_date&&g.end_date&&<div style={{fontSize:11,color:C.t2,marginBottom:8}}>{g.start_date.substring(5)} — {g.end_date.substring(5)}</div>}
+
+          {/* ── STYLED PROGRESS BAR ── */}
           <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <div style={{flex:1,height:5,background:C.bd,borderRadius:3,overflow:"hidden",maxWidth:180}}><div style={{width:p+"%",height:"100%",background:prgColor(p),borderRadius:3,transition:"width 0.3s"}}/></div>
-            <span style={{fontSize:10,color:C.t2,whiteSpace:"nowrap"}}>{gTasks.filter((t:any)=>t.status==="done"||t.done).length}/{gTasks.length} ({p}%)</span>
+            {/* Sticker */}
+            <div style={{fontSize:20,flexShrink:0,animation:"stickerBounce 2s ease-in-out infinite",filter:isAchieved?"drop-shadow(0 0 6px rgba(74,222,128,0.8))":"none"}}
+              title={prgStickerLabel(p)}>{sticker}</div>
+
+            {/* Bar container */}
+            <div style={{flex:1,position:"relative",height:10,background:isAchieved?"#BBF7D055":"rgba(0,0,0,0.06)",borderRadius:99,overflow:"visible"}}>
+              {/* Glow behind bar */}
+              <div style={{position:"absolute",inset:0,borderRadius:99,background:prgGradient(p),opacity:0.25,filter:"blur(4px)",transform:"scaleY(2.5)",transformOrigin:"center"}}/>
+              {/* Actual bar */}
+              <div style={{
+                position:"absolute",top:0,left:0,height:"100%",
+                width:p+"%",borderRadius:99,
+                background:prgGradient(p),
+                transition:"width 0.6s cubic-bezier(0.34,1.56,0.64,1)",
+                boxShadow:`0 0 8px 1px ${prgColor(p)}66`,
+              }}>
+                {/* Shine */}
+                <div style={{position:"absolute",top:1,left:4,right:8,height:3,borderRadius:99,background:"rgba(255,255,255,0.45)"}}/>
+              </div>
+              {/* Milestone dots */}
+              {[25,50,75].map(m=>(
+                <div key={m} style={{position:"absolute",top:"50%",left:m+"%",transform:"translate(-50%,-50%)",
+                  width:p>=m?8:5,height:p>=m?8:5,borderRadius:"50%",
+                  background:p>=m?prgColor(p):"rgba(0,0,0,0.15)",
+                  border:p>=m?`2px solid white`:"none",
+                  boxShadow:p>=m?`0 0 6px ${prgColor(m)}88`:"none",
+                  transition:"all 0.4s",zIndex:2,
+                }}/>
+              ))}
+            </div>
+
+            {/* Percent badge */}
+            <div style={{
+              flexShrink:0,minWidth:52,textAlign:"center",
+              padding:"3px 10px",borderRadius:20,
+              background:isAchieved?"linear-gradient(135deg,#4ADE80,#16A34A)":prgGradient(p),
+              boxShadow:`0 2px 8px ${prgColor(p)}44`,
+              transition:"all 0.4s",
+            }}>
+              <span style={{fontSize:12,fontWeight:800,color:"#fff",textShadow:"0 1px 3px rgba(0,0,0,0.25)"}}>{p}%</span>
+            </div>
+
+            <span style={{fontSize:10,color:C.t2,whiteSpace:"nowrap",flexShrink:0}}>{doneTasks}/{gTasks.length}</span>
           </div>
         </div>
-        <div style={{display:"flex",gap:6,alignItems:"center"}} onClick={e=>e.stopPropagation()}>
-          {/* Priority badge */}
-          <div style={{position:"relative"}}>
+
+        <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}} onClick={e=>e.stopPropagation()}>
+          {!isAchieved&&<div style={{position:"relative"}}>
             <button onClick={()=>setPriorityMenu(isPriorityMenuOpen?null:g.id)}
               style={{display:"flex",alignItems:"center",gap:4,padding:"5px 10px",borderRadius:20,border:`1px solid ${pr.color}33`,background:pr.color+"10",cursor:"pointer",fontSize:11,fontWeight:600,color:pr.color}}>
               <span style={{animation:isUrgent?"pulse 1.5s ease-in-out infinite":"none"}}>{pr.icon}</span>
@@ -1296,7 +1382,7 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
                 Вернуть автоматическое
               </button>}
             </div>}
-          </div>
+          </div>}
           <button onClick={()=>{setEditGoalId(g.id);setEditGoalData({...g});setOpenGoal(null);}} style={{padding:"5px 10px",fontSize:12,background:C.a+"12",color:C.a,border:"1px solid "+C.a+"22",borderRadius:8,cursor:"pointer",fontWeight:500}}>Изм.</button>
           <button onClick={()=>goals.remove(g.id)} style={{width:26,height:26,fontSize:12,background:C.r+"10",color:C.r,border:"1px solid "+C.r+"22",borderRadius:8,cursor:"pointer"}}>×</button>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points={isOpen?"18 15 12 9 6 15":"6 9 12 15 18 9"}/></svg>
@@ -1420,12 +1506,13 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
       <div style={{display:"flex",gap:8}}><Btn onClick={addChildGoal}>Создать</Btn><Btn primary={false} onClick={()=>setShowNewGoal(false)}>Отмена</Btn></div>
     </div>}
 
-    {/* Goals grouped by priority */}
+    {/* Goals grouped by priority (active only) */}
     <div style={{padding:"16px 24px",display:"flex",flexDirection:"column",gap:16}}>
-      {childGoals.length===0&&<div style={{padding:"32px 0",textAlign:"center",color:C.t2,fontSize:14}}>Создай первую цель</div>}
+      {childGoals.filter((g:any)=>goalProgress(g.id)<100).length===0&&
+        <div style={{padding:"32px 0",textAlign:"center",color:C.t2,fontSize:14}}>Создай первую цель</div>}
 
       {Object.entries(PRIORITIES).map(([pKey,pInfo])=>{
-        const group=groupedGoals[pKey]||[];
+        const group=(groupedGoals[pKey]||[]).filter((g:any)=>goalProgress(g.id)<100);
         if(group.length===0)return null;
         return <div key={pKey}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
@@ -1435,10 +1522,29 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
             <div style={{flex:1,height:1,background:pInfo.color+"20"}}/>
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            {group.map((g:any)=><GoalCard key={g.id} g={g}/>)}
+            {group.map((g:any)=><GoalCard key={g.id} g={g} isAchieved={false}/>)}
           </div>
         </div>;
       })}
+
+      {/* ── Achieved section ── */}
+      {childGoals.filter((g:any)=>goalProgress(g.id)===100).length>0&&(
+        <div style={{marginTop:8}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+            <span style={{fontSize:18}}>🏆</span>
+            <span style={{fontSize:13,fontWeight:700,color:"#16A34A",textTransform:"uppercase",letterSpacing:0.5}}>Достигнутые</span>
+            <span style={{fontSize:11,background:"#4ADE8020",color:"#16A34A",borderRadius:20,padding:"1px 8px",fontWeight:600}}>
+              {childGoals.filter((g:any)=>goalProgress(g.id)===100).length}
+            </span>
+            <div style={{flex:1,height:1,background:"#4ADE8030"}}/>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {childGoals.filter((g:any)=>goalProgress(g.id)===100).map((g:any)=>(
+              <GoalCard key={g.id} g={g} isAchieved={true}/>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   </div>;
 }
