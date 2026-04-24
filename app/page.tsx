@@ -2305,10 +2305,14 @@ function CrmPage({userId}:{userId:string}){
 
   const createFunnel=async()=>{
     if(!newFunnelName.trim())return;
-    const fu=await funnels.add({name:newFunnelName.trim(),description:newFunnelDesc.trim(),color:newFunnelColor,leads_count:0});
-    setNewFunnelModal(false);
-    setNewFunnelName("");setNewFunnelDesc("");setNewFunnelColor(FUNNEL_COLORS[0]);
-    if(fu?.id)openFunnel(fu.id);
+    try{
+      const inserted=await funnels.add({name:newFunnelName.trim(),description:newFunnelDesc.trim(),color:newFunnelColor});
+      setNewFunnelModal(false);
+      setNewFunnelName("");setNewFunnelDesc("");setNewFunnelColor(FUNNEL_COLORS[0]);
+      if(inserted?.id)openFunnel(inserted.id);
+    }catch(e:any){
+      alert("Ошибка создания воронки: "+e.message+"\n\nПроверь что таблица crm_funnels создана в Supabase.");
+    }
   };
 
   const deleteFunnel=async()=>{
