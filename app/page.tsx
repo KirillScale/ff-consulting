@@ -54,6 +54,7 @@ const NAV_GROUPS=[
       {id:"pnl",label:"P&L",ic:"M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"},
       {id:"tools",label:"Инструменты",ic:"M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"},
       {id:"links",label:"База ссылок",ic:"M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"},
+      {id:"board",label:"Доска",ic:"M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"},
     ]
   },
 ];
@@ -432,12 +433,13 @@ function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,n
     {page === "calc" && <CalcPage/>}
     {page === "tools" && <ToolsPage/>}
     {page === "links" && <LinksPage userId={user.id}/>}
+    {page === "board" && <BoardPage userId={user.id}/>}
     {page === "files" && <FilesPage userId={user.id}/>}
     {page === "ai" && <AIPage/>}
     {page === "script" && <ScriptAIPage/>}
     {page === "product" && <ProductAIPage/>}
     {page === "stories" && <StoriesAIPage/>}
-    {!["dashboard","strategy","crm","calls","mailings","content","pnl","media","ads","calc","tools","links","files","ai","script","product","stories"].includes(page) && nav && <Placeholder title={nav.label} ic={nav.ic}/>}
+    {!["dashboard","strategy","crm","calls","mailings","content","pnl","media","ads","calc","tools","links","board","files","ai","script","product","stories"].includes(page) && nav && <Placeholder title={nav.label} ic={nav.ic}/>}
   </>;
 
   return (
@@ -5556,4 +5558,412 @@ function ToolsPage(){
 
     <Card style={{textAlign:"center"}}><div style={{fontSize:48,fontWeight:800,color:C.a}}>{sessions}</div><div style={{fontSize:14,color:C.t2,marginTop:4}}>Сессий сегодня</div></Card>
   </div>;
+}
+
+/* ============ BOARD (MIRO-style) ============ */
+const BOARD_COLORS=["#FEF08A","#BBF7D0","#BFDBFE","#FED7AA","#F9A8D4","#E9D5FF","#fff","#1e293b"];
+const BOARD_CARD_COLORS=["#EFF6FF","#F0FDF4","#FFF7ED","#FDF4FF","#FFF1F2","#F8FAFC"];
+const SHAPE_TYPES=["rect","circle","arrow","diamond","triangle"] as const;
+type ShapeType=typeof SHAPE_TYPES[number];
+type BoardItem={
+  id:string;type:"sticky"|"card"|"shape"|"text";
+  x:number;y:number;w:number;h:number;
+  text?:string;color?:string;
+  shapeType?:ShapeType;
+  fontSize?:number;fontBold?:boolean;
+};
+
+function BoardPage({userId}:{userId:string}){
+  const[items,setItems]=useState<BoardItem[]>([]);
+  const[loading,setLoading]=useState(true);
+  const[tool,setTool]=useState<"select"|"sticky"|"card"|"shape"|"text">("select");
+  const[shapeType,setShapeType]=useState<ShapeType>("rect");
+  const[selectedId,setSelectedId]=useState<string|null>(null);
+  const[editingId,setEditingId]=useState<string|null>(null);
+  const[editText,setEditText]=useState("");
+  const[zoom,setZoom]=useState(1);
+  const[pan,setPan]=useState({x:0,y:0});
+  const[isPanning,setIsPanning]=useState(false);
+  const[panStart,setPanStart]=useState({mx:0,my:0,px:0,py:0});
+  const[draggingId,setDraggingId]=useState<string|null>(null);
+  const[dragStart,setDragStart]=useState({mx:0,my:0,ix:0,iy:0});
+  const[resizingId,setResizingId]=useState<string|null>(null);
+  const[resizeStart,setResizeStart]=useState({mx:0,my:0,iw:0,ih:0});
+  const[colorPick,setColorPick]=useState<string|null>(null);
+  const[saved,setSaved]=useState(true);
+  const saveTimer=useRef<any>(null);
+  const canvasRef=useRef<HTMLDivElement>(null);
+
+  // Load from Supabase
+  useEffect(()=>{
+    (async()=>{
+      const{data}=await supabase.from("board_items").select("*").eq("user_id",userId).order("created_at");
+      if(data)setItems(data.map((d:any)=>({id:d.id,type:d.type,x:d.x,y:d.y,w:d.w,h:d.h,text:d.text,color:d.color,shapeType:d.shape_type,fontSize:d.font_size||14,fontBold:d.font_bold||false})));
+      setLoading(false);
+    })();
+  },[userId]);
+
+  // Auto-save with debounce
+  const saveItems=(newItems:BoardItem[])=>{
+    setSaved(false);
+    clearTimeout(saveTimer.current);
+    saveTimer.current=setTimeout(async()=>{
+      try{
+        await supabase.from("board_items").delete().eq("user_id",userId);
+        if(newItems.length>0){
+          await supabase.from("board_items").insert(newItems.map(it=>({
+            id:it.id,user_id:userId,type:it.type,x:Math.round(it.x),y:Math.round(it.y),
+            w:Math.round(it.w),h:Math.round(it.h),text:it.text||"",color:it.color||"",
+            shape_type:it.shapeType||null,font_size:it.fontSize||14,font_bold:it.fontBold||false,
+          })));
+        }
+        setSaved(true);
+      }catch{setSaved(false);}
+    },1200);
+  };
+
+  const upd=(newItems:BoardItem[])=>{setItems(newItems);saveItems(newItems);};
+
+  const newId=()=>Math.random().toString(36).slice(2);
+
+  // Canvas coords from mouse event
+  const toCanvas=(e:{clientX:number,clientY:number})=>{
+    const rect=canvasRef.current!.getBoundingClientRect();
+    return{x:(e.clientX-rect.left-pan.x)/zoom,y:(e.clientY-rect.top-pan.y)/zoom};
+  };
+
+  const onCanvasClick=(e:React.MouseEvent)=>{
+    if(e.target!==canvasRef.current&&!(e.target as HTMLElement).classList.contains("board-bg"))return;
+    if(tool==="select"){setSelectedId(null);return;}
+    const{x,y}=toCanvas(e);
+    const id=newId();
+    let item:BoardItem;
+    if(tool==="sticky")item={id,type:"sticky",x,y,w:200,h:160,text:"",color:BOARD_COLORS[0],fontSize:14,fontBold:false};
+    else if(tool==="card")item={id,type:"card",x,y,w:240,h:140,text:"Новая карточка",color:BOARD_CARD_COLORS[0],fontSize:14,fontBold:false};
+    else if(tool==="shape")item={id,type:"shape",x,y,w:120,h:80,shapeType,color:"#3B82F6",fontSize:14};
+    else item={id,type:"text",x,y,w:160,h:40,text:"Текст",color:"#1e293b",fontSize:16,fontBold:false};
+    const next=[...items,item];
+    upd(next);
+    setSelectedId(id);
+    setTool("select");
+    if(tool!=="shape"){setTimeout(()=>{setEditingId(id);setEditText(item.text||"");},50);}
+  };
+
+  // Drag item
+  const onItemMouseDown=(e:React.MouseEvent,id:string)=>{
+    if(editingId===id)return;
+    e.stopPropagation();
+    setSelectedId(id);
+    setDraggingId(id);
+    const it=items.find(i=>i.id===id)!;
+    setDragStart({mx:e.clientX,my:e.clientY,ix:it.x,iy:it.y});
+  };
+
+  // Pan canvas
+  const onCanvasMouseDown=(e:React.MouseEvent)=>{
+    if(tool!=="select")return;
+    if(e.target===canvasRef.current||(e.target as HTMLElement).classList.contains("board-bg")){
+      setIsPanning(true);
+      setPanStart({mx:e.clientX,my:e.clientY,px:pan.x,py:pan.y});
+    }
+  };
+
+  const onMouseMove=(e:React.MouseEvent)=>{
+    if(draggingId){
+      const dx=(e.clientX-dragStart.mx)/zoom;
+      const dy=(e.clientY-dragStart.my)/zoom;
+      setItems(prev=>prev.map(it=>it.id===draggingId?{...it,x:dragStart.ix+dx,y:dragStart.iy+dy}:it));
+    } else if(resizingId){
+      const dx=(e.clientX-resizeStart.mx)/zoom;
+      const dy=(e.clientY-resizeStart.my)/zoom;
+      setItems(prev=>prev.map(it=>it.id===resizingId?{...it,w:Math.max(80,resizeStart.iw+dx),h:Math.max(40,resizeStart.ih+dy)}:it));
+    } else if(isPanning){
+      setPan({x:panStart.px+(e.clientX-panStart.mx),y:panStart.py+(e.clientY-panStart.my)});
+    }
+  };
+
+  const onMouseUp=()=>{
+    if(draggingId){const it=items.find(i=>i.id===draggingId);if(it)saveItems(items);}
+    if(resizingId){saveItems(items);}
+    setDraggingId(null);setResizingId(null);setIsPanning(false);
+  };
+
+  const onWheel=(e:React.WheelEvent)=>{
+    e.preventDefault();
+    const delta=e.deltaY>0?0.9:1.1;
+    setZoom(z=>Math.min(3,Math.max(0.2,z*delta)));
+  };
+
+  const deleteSelected=()=>{
+    if(!selectedId)return;
+    const next=items.filter(i=>i.id!==selectedId);
+    upd(next);setSelectedId(null);
+  };
+
+  const setItemColor=(id:string,color:string)=>{
+    const next=items.map(it=>it.id===id?{...it,color}:it);
+    upd(next);setColorPick(null);
+  };
+
+  const saveEdit=(id:string)=>{
+    const next=items.map(it=>it.id===id?{...it,text:editText}:it);
+    upd(next);setEditingId(null);
+  };
+
+  const toggleBold=(id:string)=>{
+    const next=items.map(it=>it.id===id?{...it,fontBold:!it.fontBold}:it);
+    upd(next);
+  };
+
+  const clearBoard=()=>{if(confirm("Очистить всю доску?"))upd([]);};
+
+  const TOOL_BTNS=[
+    {id:"select",icon:"⬜",label:"Выбор (V)"},
+    {id:"sticky",icon:"📌",label:"Стикер (S)"},
+    {id:"card",icon:"🃏",label:"Карточка (C)"},
+    {id:"shape",icon:"⬡",label:"Фигура (F)"},
+    {id:"text",icon:"T",label:"Текст (T)"},
+  ];
+
+  // Keyboard shortcuts
+  useEffect(()=>{
+    const onKey=(e:KeyboardEvent)=>{
+      if(editingId)return;
+      if(e.key==="v"||e.key==="V")setTool("select");
+      if(e.key==="s"||e.key==="S")setTool("sticky");
+      if(e.key==="c"||e.key==="C")setTool("card");
+      if(e.key==="f"||e.key==="F")setTool("shape");
+      if(e.key==="t"||e.key==="T")setTool("text");
+      if((e.key==="Delete"||e.key==="Backspace")&&selectedId)deleteSelected();
+      if(e.key==="Escape"){setSelectedId(null);setEditingId(null);setTool("select");}
+      if((e.ctrlKey||e.metaKey)&&e.key==="=")(e.preventDefault(),setZoom(z=>Math.min(3,z*1.2)));
+      if((e.ctrlKey||e.metaKey)&&e.key==="-")(e.preventDefault(),setZoom(z=>Math.max(0.2,z*0.8)));
+      if((e.ctrlKey||e.metaKey)&&e.key==="0")(e.preventDefault(),setZoom(1),setPan({x:0,y:0}));
+    };
+    window.addEventListener("keydown",onKey);
+    return()=>window.removeEventListener("keydown",onKey);
+  },[editingId,selectedId,items]);
+
+  const renderShape=(it:BoardItem)=>{
+    const{w,h,color="",shapeType:st="rect"}=it;
+    const fill=color||"#3B82F6";
+    switch(st){
+      case"rect":return<div style={{width:"100%",height:"100%",background:fill,borderRadius:8,boxShadow:`0 4px 16px ${fill}44`}}/>;
+      case"circle":return<div style={{width:"100%",height:"100%",background:fill,borderRadius:"50%",boxShadow:`0 4px 16px ${fill}44`}}/>;
+      case"diamond":return<div style={{width:"100%",height:"100%",background:fill,clipPath:"polygon(50% 0%,100% 50%,50% 100%,0% 50%)",boxShadow:`0 4px 16px ${fill}44`}}/>;
+      case"triangle":return<div style={{width:"100%",height:"100%",background:fill,clipPath:"polygon(50% 0%,100% 100%,0% 100%)"}}/>;
+      case"arrow":return<svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}><defs><marker id="ah" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill={fill}/></marker></defs><line x1="8" y1={h/2} x2={w-16} y2={h/2} stroke={fill} strokeWidth="3" markerEnd="url(#ah)"/></svg>;
+      default:return null;
+    }
+  };
+
+  const sel=items.find(i=>i.id===selectedId);
+
+  const cursorStyle=tool==="select"?(isPanning?"grabbing":draggingId?"grabbing":"default"):tool==="sticky"?"copy":tool==="card"?"copy":tool==="shape"?"crosshair":"text";
+
+  if(loading)return<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:400,color:C.t2,fontSize:14}}>Загрузка доски...</div>;
+
+  return(
+    <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 64px)",overflow:"hidden",background:"#F1F5F9",userSelect:"none",position:"relative"}}>
+
+      {/* ── TOOLBAR ── */}
+      <div style={{position:"absolute",top:12,left:"50%",transform:"translateX(-50%)",zIndex:50,display:"flex",gap:4,background:"#fff",borderRadius:16,padding:"6px 10px",boxShadow:"0 4px 24px rgba(0,0,0,0.12)",border:"1px solid rgba(0,0,0,0.06)"}}>
+        {TOOL_BTNS.map(tb=>(
+          <button key={tb.id} onClick={()=>setTool(tb.id as any)} title={tb.label}
+            style={{width:38,height:38,borderRadius:10,border:"none",background:tool===tb.id?"#2563EB":"transparent",color:tool===tb.id?"#fff":C.t1,fontSize:tb.id==="text"?14:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,transition:"all 0.15s"}}>
+            {tb.icon}
+          </button>
+        ))}
+
+        {/* Shape picker when shape tool selected */}
+        {tool==="shape"&&(
+          <div style={{display:"flex",gap:3,padding:"0 6px",borderLeft:"1px solid "+C.bd,alignItems:"center"}}>
+            {(["rect","circle","diamond","triangle","arrow"] as ShapeType[]).map(st=>(
+              <button key={st} onClick={()=>setShapeType(st)}
+                style={{width:30,height:30,borderRadius:7,border:"none",background:shapeType===st?"#DBEAFE":"transparent",cursor:"pointer",fontSize:14,fontWeight:700,color:shapeType===st?"#2563EB":C.t2}}>
+                {st==="rect"?"▬":st==="circle"?"●":st==="diamond"?"◆":st==="triangle"?"▲":"→"}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div style={{width:1,background:C.bd,margin:"2px 4px"}}/>
+
+        {/* Zoom controls */}
+        <button onClick={()=>setZoom(z=>Math.max(0.2,z*0.8))} style={{width:32,height:38,border:"none",background:"transparent",cursor:"pointer",fontSize:16,color:C.t2}}>−</button>
+        <div style={{width:48,height:38,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:600,color:C.t1}}>{Math.round(zoom*100)}%</div>
+        <button onClick={()=>setZoom(z=>Math.min(3,z*1.2))} style={{width:32,height:38,border:"none",background:"transparent",cursor:"pointer",fontSize:16,color:C.t2}}>+</button>
+        <button onClick={()=>{setZoom(1);setPan({x:0,y:0});}} title="Сбросить вид (Ctrl+0)" style={{width:36,height:38,border:"none",background:"transparent",cursor:"pointer",fontSize:10,color:C.t2,fontWeight:600}}>100%</button>
+
+        <div style={{width:1,background:C.bd,margin:"2px 4px"}}/>
+        <div style={{display:"flex",alignItems:"center",gap:6,padding:"0 4px"}}>
+          <div style={{width:6,height:6,borderRadius:"50%",background:saved?"#10B981":"#F59E0B"}}/>
+          <span style={{fontSize:10,color:C.t2}}>{saved?"Сохранено":"Сохранение..."}</span>
+        </div>
+
+        {items.length>0&&<button onClick={clearBoard} title="Очистить доску" style={{width:32,height:38,border:"none",background:"transparent",cursor:"pointer",color:C.r,fontSize:14}}>🗑</button>}
+      </div>
+
+      {/* ── CONTEXT TOOLBAR (selected item) ── */}
+      {sel&&!editingId&&(
+        <div style={{position:"absolute",top:72,left:"50%",transform:"translateX(-50%)",zIndex:50,display:"flex",gap:6,background:"#fff",borderRadius:12,padding:"6px 10px",boxShadow:"0 4px 16px rgba(0,0,0,0.1)",border:"1px solid rgba(0,0,0,0.06)",alignItems:"center"}}>
+          {/* Color picker */}
+          <div style={{position:"relative"}}>
+            <button onClick={()=>setColorPick(colorPick?null:sel.id)}
+              style={{width:28,height:28,borderRadius:8,background:sel.color||"#FEF08A",border:"2px solid rgba(0,0,0,0.15)",cursor:"pointer"}}/>
+            {colorPick===sel.id&&(
+              <div style={{position:"absolute",top:"calc(100% + 6px)",left:0,background:"#fff",borderRadius:12,padding:10,boxShadow:"0 8px 24px rgba(0,0,0,0.15)",display:"flex",flexWrap:"wrap",gap:5,width:148,zIndex:100}}>
+                {[...BOARD_COLORS,...BOARD_CARD_COLORS,"#3B82F6","#8B5CF6","#EF4444","#10B981","#F59E0B","#EC4899"].map(c=>(
+                  <button key={c} onClick={()=>setItemColor(sel.id,c)}
+                    style={{width:26,height:26,borderRadius:7,background:c,border:sel.color===c?"3px solid #2563EB":"1px solid rgba(0,0,0,0.1)",cursor:"pointer"}}/>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Font size */}
+          {sel.type!=="shape"&&<>
+            <button onClick={()=>upd(items.map(it=>it.id===sel.id?{...it,fontSize:Math.max(10,(it.fontSize||14)-2)}:it))}
+              style={{width:26,height:28,border:"1px solid "+C.bd,borderRadius:7,background:"transparent",cursor:"pointer",fontSize:12,fontWeight:700}}>A−</button>
+            <span style={{fontSize:12,color:C.t2,minWidth:20,textAlign:"center"}}>{sel.fontSize||14}</span>
+            <button onClick={()=>upd(items.map(it=>it.id===sel.id?{...it,fontSize:Math.min(48,(it.fontSize||14)+2)}:it))}
+              style={{width:26,height:28,border:"1px solid "+C.bd,borderRadius:7,background:"transparent",cursor:"pointer",fontSize:12,fontWeight:700}}>A+</button>
+            <button onClick={()=>toggleBold(sel.id)}
+              style={{width:28,height:28,border:"1px solid "+C.bd,borderRadius:7,background:sel.fontBold?"#EFF6FF":"transparent",cursor:"pointer",fontSize:13,fontWeight:800,color:sel.fontBold?"#2563EB":C.t1}}>B</button>
+          </>}
+
+          {/* Edit text */}
+          {sel.type!=="shape"&&<button onClick={()=>{setEditingId(sel.id);setEditText(sel.text||"");}}
+            style={{padding:"5px 10px",border:"1px solid "+C.bd,borderRadius:7,background:"transparent",cursor:"pointer",fontSize:11,color:C.t1}}>✏️ Изменить</button>}
+
+          {/* Duplicate */}
+          <button onClick={()=>{
+            const it=items.find(i=>i.id===sel.id)!;
+            const clone={...it,id:newId(),x:it.x+20,y:it.y+20};
+            upd([...items,clone]);setSelectedId(clone.id);
+          }} style={{width:28,height:28,border:"1px solid "+C.bd,borderRadius:7,background:"transparent",cursor:"pointer",fontSize:14}}>⧉</button>
+
+          {/* Delete */}
+          <button onClick={deleteSelected}
+            style={{width:28,height:28,border:"1px solid #FCA5A5",borderRadius:7,background:"#FFF1F1",cursor:"pointer",fontSize:13,color:"#EF4444"}}>🗑</button>
+        </div>
+      )}
+
+      {/* ── CANVAS ── */}
+      <div ref={canvasRef} className="board-bg"
+        style={{flex:1,position:"relative",overflow:"hidden",cursor:cursorStyle}}
+        onClick={onCanvasClick}
+        onMouseDown={onCanvasMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        onMouseLeave={onMouseUp}
+        onWheel={onWheel}>
+
+        {/* Dot grid background */}
+        <svg style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none"}} xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="dots" x={pan.x%((24)*zoom)} y={pan.y%((24)*zoom)} width={24*zoom} height={24*zoom} patternUnits="userSpaceOnUse">
+              <circle cx={12*zoom} cy={12*zoom} r={1*zoom} fill="#CBD5E1" opacity="0.7"/>
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#dots)"/>
+        </svg>
+
+        {/* Items */}
+        <div style={{position:"absolute",top:0,left:0,transformOrigin:"0 0",transform:`translate(${pan.x}px,${pan.y}px) scale(${zoom})`}}>
+          {items.map(it=>{
+            const isSel=selectedId===it.id;
+            const isEdit=editingId===it.id;
+
+            return(
+              <div key={it.id}
+                onMouseDown={e=>onItemMouseDown(e,it.id)}
+                onDoubleClick={e=>{e.stopPropagation();if(it.type!=="shape"){setEditingId(it.id);setEditText(it.text||"");setSelectedId(it.id);}}}
+                style={{
+                  position:"absolute",left:it.x,top:it.y,width:it.w,height:it.h,
+                  cursor:draggingId===it.id?"grabbing":"grab",
+                  zIndex:isSel?10:1,
+                }}>
+
+                {/* Selection ring */}
+                {isSel&&<div style={{position:"absolute",inset:-3,borderRadius:12,border:"2px solid #2563EB",pointerEvents:"none",zIndex:20}}/>}
+
+                {/* ── STICKY ── */}
+                {it.type==="sticky"&&(
+                  <div style={{width:"100%",height:"100%",background:it.color||BOARD_COLORS[0],borderRadius:4,boxShadow:"2px 4px 16px rgba(0,0,0,0.13),0 1px 2px rgba(0,0,0,0.08)",padding:"10px 12px",display:"flex",flexDirection:"column",position:"relative",overflow:"hidden"}}>
+                    {/* Fold corner */}
+                    <div style={{position:"absolute",bottom:0,right:0,width:20,height:20,background:"rgba(0,0,0,0.08)",clipPath:"polygon(100% 0,100% 100%,0 100%)"}}/>
+                    {isEdit
+                      ?<textarea autoFocus value={editText} onChange={e=>setEditText(e.target.value)}
+                          onKeyDown={e=>{if(e.key==="Escape")saveEdit(it.id);if(e.key==="Enter"&&e.ctrlKey)saveEdit(it.id);}}
+                          onBlur={()=>saveEdit(it.id)}
+                          style={{flex:1,border:"none",background:"transparent",resize:"none",outline:"none",fontFamily:"'Montserrat',sans-serif",fontSize:it.fontSize||14,fontWeight:it.fontBold?700:400,color:"rgba(0,0,0,0.75)",lineHeight:1.5}}/>
+                      :<div style={{flex:1,fontSize:it.fontSize||14,fontWeight:it.fontBold?700:400,color:"rgba(0,0,0,0.75)",lineHeight:1.5,wordBreak:"break-word",whiteSpace:"pre-wrap",overflow:"hidden"}}>{it.text||<span style={{opacity:0.4}}>Дважды кликни чтобы редактировать</span>}</div>
+                    }
+                  </div>
+                )}
+
+                {/* ── CARD ── */}
+                {it.type==="card"&&(
+                  <div style={{width:"100%",height:"100%",background:it.color||"#fff",borderRadius:12,boxShadow:"0 4px 20px rgba(0,0,0,0.1),0 1px 4px rgba(0,0,0,0.06)",padding:"14px 16px",display:"flex",flexDirection:"column",gap:8,border:"1px solid rgba(0,0,0,0.06)"}}>
+                    <div style={{width:32,height:4,borderRadius:2,background:"#2563EB"}}/>
+                    {isEdit
+                      ?<textarea autoFocus value={editText} onChange={e=>setEditText(e.target.value)}
+                          onBlur={()=>saveEdit(it.id)}
+                          onKeyDown={e=>{if(e.key==="Escape")saveEdit(it.id);}}
+                          style={{flex:1,border:"none",background:"transparent",resize:"none",outline:"none",fontFamily:"'Montserrat',sans-serif",fontSize:it.fontSize||14,fontWeight:it.fontBold?700:400,color:C.t1,lineHeight:1.5}}/>
+                      :<div style={{flex:1,fontSize:it.fontSize||14,fontWeight:it.fontBold?700:500,color:C.t1,lineHeight:1.5,wordBreak:"break-word",whiteSpace:"pre-wrap",overflow:"hidden"}}>{it.text||<span style={{color:C.t2}}>Нет текста</span>}</div>
+                    }
+                  </div>
+                )}
+
+                {/* ── SHAPE ── */}
+                {it.type==="shape"&&(
+                  <div style={{width:"100%",height:"100%",position:"relative"}}>
+                    {renderShape(it)}
+                  </div>
+                )}
+
+                {/* ── TEXT ── */}
+                {it.type==="text"&&(
+                  <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center"}}>
+                    {isEdit
+                      ?<textarea autoFocus value={editText} onChange={e=>setEditText(e.target.value)}
+                          onBlur={()=>saveEdit(it.id)}
+                          onKeyDown={e=>{if(e.key==="Escape")saveEdit(it.id);}}
+                          style={{flex:1,border:"none",background:"transparent",resize:"none",outline:"none",fontFamily:"'Montserrat',sans-serif",fontSize:it.fontSize||16,fontWeight:it.fontBold?700:400,color:it.color||"#1e293b",lineHeight:1.4,width:"100%"}}/>
+                      :<div style={{fontSize:it.fontSize||16,fontWeight:it.fontBold?700:400,color:it.color||"#1e293b",wordBreak:"break-word",whiteSpace:"pre-wrap",lineHeight:1.4,width:"100%",overflow:"hidden"}}>{it.text||"Текст"}</div>
+                    }
+                  </div>
+                )}
+
+                {/* Resize handle */}
+                {isSel&&!isEdit&&(
+                  <div
+                    onMouseDown={e=>{e.stopPropagation();setResizingId(it.id);setResizeStart({mx:e.clientX,my:e.clientY,iw:it.w,ih:it.h});}}
+                    style={{position:"absolute",bottom:-4,right:-4,width:14,height:14,background:"#2563EB",borderRadius:3,cursor:"se-resize",zIndex:30,border:"2px solid #fff"}}/>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Empty state */}
+        {items.length===0&&(
+          <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
+            <div style={{fontSize:48,marginBottom:12}}>🎨</div>
+            <div style={{fontSize:16,fontWeight:700,color:C.t2,marginBottom:6}}>Доска пуста</div>
+            <div style={{fontSize:13,color:C.t2,textAlign:"center",maxWidth:280,lineHeight:1.6}}>Выбери инструмент в панели сверху и кликни на доску чтобы добавить элемент</div>
+          </div>
+        )}
+      </div>
+
+      {/* ── STATUS BAR ── */}
+      <div style={{position:"absolute",bottom:12,left:16,display:"flex",gap:8,zIndex:40}}>
+        <div style={{background:"rgba(255,255,255,0.9)",backdropFilter:"blur(8px)",borderRadius:10,padding:"6px 12px",fontSize:11,color:C.t2,border:"1px solid rgba(0,0,0,0.06)",boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
+          {items.length} эл. · V-выбор · S-стикер · C-карточка · F-фигура · T-текст · Del-удалить
+        </div>
+      </div>
+    </div>
+  );
 }
