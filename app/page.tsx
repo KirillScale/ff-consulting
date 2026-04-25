@@ -977,26 +977,48 @@ function YearMap({userId,goals,goalUpdate,goalAdd}:{userId:string,goals:any,goal
         const bar=goalToBar(g);
         const isOpen=openGoalId===g.id;
         const isLast=idx===visibleGoals.length-1;
-        return <div key={g.id} style={{borderBottom:isLast?"none":"1px solid "+C.bd+"88"}}>
+        // Goal-level urgency
+        const gEnd=g.end_date?new Date(g.end_date+"T23:59:59"):null;
+        const gDaysLeft=gEnd?Math.ceil((gEnd.getTime()-Date.now())/(1000*60*60*24)):null;
+        const gOverdue=gDaysLeft!==null&&gDaysLeft<0;
+        const gUrgent=gDaysLeft!==null&&gDaysLeft<=5&&!gOverdue;
+        const gAchieved=g.is_achieved;
+        const barBg=gAchieved?"linear-gradient(90deg,#4ADE80,#16A34A)":
+          gOverdue?"linear-gradient(90deg,#FCA5A5,#EF4444)":
+          gUrgent?"linear-gradient(90deg,#FED7AA,#F97316)":
+          g.color||C.a;
+        const barShadow=gAchieved?"0 3px 12px rgba(74,222,128,0.45)":
+          gOverdue?"0 3px 12px rgba(239,68,68,0.4)":
+          `0 3px 10px ${g.color||C.a}40`;
+
+        return <div key={g.id} style={{borderBottom:isLast?"none":"1px solid "+C.bd+"88",
+          background:gAchieved?"#F0FDF4":gOverdue?"#FFF1F1":gUrgent?"#FFFBEB":"transparent",
+          transition:"background 0.3s",
+        }}>
           <div style={{display:"flex",minHeight:56,alignItems:"stretch"}}>
             {/* Label */}
-            <div style={{width:200,flexShrink:0,display:"flex",alignItems:"center",gap:8,padding:"10px 14px",borderRight:"1px solid "+C.bd,cursor:"pointer",background:isOpen?g.color+"08":"transparent",transition:"background 0.15s"}} onClick={()=>setOpenGoalId(isOpen?null:g.id)}>
-              <div style={{width:10,height:10,borderRadius:3,background:g.color||C.a,flexShrink:0}}/>
+            <div style={{width:200,flexShrink:0,display:"flex",alignItems:"center",gap:8,padding:"10px 14px",borderRight:"1px solid "+C.bd,cursor:"pointer",background:isOpen?(gAchieved?"#4ADE8010":g.color+"08"):"transparent",transition:"background 0.15s"}} onClick={()=>setOpenGoalId(isOpen?null:g.id)}>
+              <div style={{width:10,height:10,borderRadius:3,background:gAchieved?"#4ADE80":gOverdue?"#EF4444":gUrgent?"#F97316":g.color||C.a,flexShrink:0,
+                boxShadow:gOverdue?"0 0 6px rgba(239,68,68,0.5)":gUrgent?"0 0 6px rgba(249,115,22,0.4)":"none",
+                animation:gOverdue?"burningGlow 2s ease-in-out infinite":gUrgent?"deferrableGlow 2s ease-in-out infinite":"none",
+              }}/>
               <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:13,fontWeight:600,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{g.name}</div>
+                <div style={{fontSize:13,fontWeight:600,color:gAchieved?"#15803D":gOverdue?"#EF4444":C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{g.name}</div>
                 {g.start_date&&g.end_date&&<div style={{fontSize:10,color:C.t2,marginTop:2}}>{g.start_date.substring(5)} — {g.end_date.substring(5)}</div>}
+                {gAchieved&&<div style={{fontSize:9,fontWeight:700,color:"#16A34A",marginTop:1}}>✓ Достигнута</div>}
+                {gOverdue&&!gAchieved&&<div style={{fontSize:9,fontWeight:800,color:"#EF4444",marginTop:1}}>🔥 ГОРИТ · {Math.abs(gDaysLeft!)} дн. назад</div>}
+                {gUrgent&&!gAchieved&&<div style={{fontSize:9,fontWeight:700,color:"#F97316",marginTop:1}}>⚡ {gDaysLeft} дн. осталось</div>}
               </div>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points={isOpen?"18 15 12 9 6 15":"6 9 12 15 18 9"}/></svg>
             </div>
             {/* Timeline area */}
             <div style={{flex:1,position:"relative",background:idx%2===0?"transparent":"#FAFBFC88"}}>
-              {/* Month separators */}
               {visibleMonths.map((_,i)=><div key={i} style={{position:"absolute",left:`${i*(100/period)}%`,top:0,bottom:0,width:1,background:C.bd,opacity:0.4}}/>)}
-              {/* Today line */}
               {todayCol>=0&&<div style={{position:"absolute",left:`${todayCol}%`,top:0,bottom:0,width:2,background:"#EF4444",zIndex:3,borderRadius:1}}/>}
-              {/* Bar */}
-              {bar?<div style={{position:"absolute",top:"50%",transform:"translateY(-50%)",left:`${bar.left}%`,width:`${bar.width}%`,minWidth:6,height:32,background:g.color||C.a,borderRadius:8,display:"flex",alignItems:"center",padding:"0 10px",boxSizing:"border-box",zIndex:2,boxShadow:`0 3px 10px ${g.color||C.a}40`,cursor:"pointer",overflow:"hidden"}} onClick={()=>{setEditGoal({...g});setOpenGoalId(null);}}>
-                <span style={{fontSize:12,fontWeight:700,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",textShadow:"0 1px 3px rgba(0,0,0,0.35)"}}>{g.name}</span>
+              {bar?<div style={{position:"absolute",top:"50%",transform:"translateY(-50%)",left:`${bar.left}%`,width:`${bar.width}%`,minWidth:6,height:32,background:barBg,borderRadius:8,display:"flex",alignItems:"center",padding:"0 10px",boxSizing:"border-box" as const,zIndex:2,boxShadow:barShadow,cursor:"pointer",overflow:"hidden",
+                animation:gOverdue&&!gAchieved?"burningGlow 2s ease-in-out infinite":"none",
+              }} onClick={()=>{setEditGoal({...g});setOpenGoalId(null);}}>
+                <span style={{fontSize:12,fontWeight:700,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",textShadow:"0 1px 3px rgba(0,0,0,0.35)"}}>{gAchieved?"🏆 ":gOverdue?"🔥 ":""}{g.name}</span>
               </div>
               :<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",paddingLeft:16}}>
                 <span style={{fontSize:11,color:C.t2,fontStyle:"italic"}}>Вне диапазона</span>
@@ -1004,10 +1026,9 @@ function YearMap({userId,goals,goalUpdate,goalAdd}:{userId:string,goals:any,goal
             </div>
           </div>
 
-          {/* Expanded */}
-          {isOpen&&<div style={{borderTop:"1px solid "+C.bd,padding:"14px 18px",background:g.color+"05",display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:16}}>
+          {isOpen&&<div style={{borderTop:"1px solid "+C.bd,padding:"14px 18px",background:gAchieved?"#F0FDF4":g.color+"05",display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:16}}>
             <div style={{flex:1}}>
-              <div style={{fontSize:14,fontWeight:700,color:C.t1,marginBottom:g.description?5:0}}>{g.name}</div>
+              <div style={{fontSize:14,fontWeight:700,color:gAchieved?"#15803D":C.t1,marginBottom:g.description?5:0}}>{g.name}</div>
               {g.description&&<div style={{fontSize:12,color:C.t2,lineHeight:1.5,marginBottom:6}}>{g.description}</div>}
               <div style={{display:"flex",gap:16,fontSize:11,color:C.t2}}>
                 {g.start_date&&<span>Начало: <b style={{color:C.t1}}>{g.start_date}</b></span>}
@@ -1227,6 +1248,16 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
     sGtf({text:"",mins:30,type:"biz",date:""});setShowGTF(null);
   };
 
+  // ── Task urgency helpers ──
+  const taskUrgency=(t:any):{kind:"burning"|"deferrable"|"normal",daysLeft:number|null}=>{
+    if(t.status==="done"||t.done)return{kind:"normal",daysLeft:null};
+    if(!t.date)return{kind:"normal",daysLeft:null};
+    const diff=Math.ceil((new Date(t.date+"T23:59:59").getTime()-Date.now())/(1000*60*60*24));
+    if(diff<0||diff<=1)return{kind:"burning",daysLeft:diff};
+    if(diff>14&&t.status==="todo")return{kind:"deferrable",daysLeft:diff};
+    return{kind:"normal",daysLeft:diff};
+  };
+
   const goalProgress=(gid:string)=>{
     const tasks=goalTasks.data.filter((t:any)=>t.goal_id===gid&&t.type!=="delegate");
     if(!tasks.length)return 0;
@@ -1401,14 +1432,30 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
 
           return <div key={t.id}
             style={{display:"flex",alignItems:"center",gap:8,padding:"9px 12px",borderRadius:10,
-              background:isDone?"#F0FDF4":C.w,marginBottom:6,
-              border:"1px solid "+C.bd,
-              borderLeft:"3px solid "+(t.type==="biz"?C.a:t.type==="delegate"?C.t2:C.y),
+              background:isDone?"#F0FDF4":
+                taskUrgency(t).kind==="burning"?"#FFF1F1":
+                taskUrgency(t).kind==="deferrable"?"#FFFBEB":C.w,
+              marginBottom:6,
+              border:"1px solid "+(
+                taskUrgency(t).kind==="burning"?"#FCA5A5":
+                taskUrgency(t).kind==="deferrable"?"#FDE68A":C.bd),
+              borderLeft:"3px solid "+(
+                taskUrgency(t).kind==="burning"?"#EF4444":
+                taskUrgency(t).kind==="deferrable"?"#F59E0B":
+                t.type==="biz"?C.a:t.type==="delegate"?C.t2:C.y),
               transition:"box-shadow 0.15s",
+              boxShadow:
+                taskUrgency(t).kind==="burning"?"0 0 12px rgba(239,68,68,0.18), 0 0 0 1px rgba(239,68,68,0.12)":
+                taskUrgency(t).kind==="deferrable"?"0 0 8px rgba(245,158,11,0.12)":"none",
+              animation:taskUrgency(t).kind==="burning"?"burningGlow 2s ease-in-out infinite":"none",
             }}
             onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 2px 8px rgba(0,0,0,0.08)";}}
-            onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
-
+            onMouseLeave={e=>{
+              const u=taskUrgency(t);
+              (e.currentTarget as HTMLElement).style.boxShadow=
+                u.kind==="burning"?"0 0 12px rgba(239,68,68,0.18)":
+                u.kind==="deferrable"?"0 0 8px rgba(245,158,11,0.12)":"none";
+            }}>
             {/* Move up/down buttons */}
             <div style={{display:"flex",flexDirection:"column",gap:1,flexShrink:0}}>
               <button onClick={async()=>{
@@ -1442,10 +1489,22 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
 
             {/* Text */}
             <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:13,fontWeight:500,textDecoration:isDone?"line-through":"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:isDone?C.t2:C.t1}}>{t.text}</div>
-              <div style={{display:"flex",gap:8,marginTop:2,alignItems:"center"}}>
+              <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:2}}>
+                <span style={{fontSize:13,fontWeight:500,textDecoration:isDone?"line-through":"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:isDone?C.t2:C.t1}}>{t.text}</span>
+                {taskUrgency(t).kind==="burning"&&!isDone&&(
+                  <span style={{fontSize:10,fontWeight:800,color:"#EF4444",background:"#FEE2E2",borderRadius:6,padding:"1px 7px",whiteSpace:"nowrap",letterSpacing:0.3,border:"1px solid #FCA5A5"}}>
+                    🔥 ГОРИТ{taskUrgency(t).daysLeft!==null&&taskUrgency(t).daysLeft!<0?` (${Math.abs(taskUrgency(t).daysLeft!)} дн. назад)`:taskUrgency(t).daysLeft===0?" (сегодня)":""}
+                  </span>
+                )}
+                {taskUrgency(t).kind==="deferrable"&&!isDone&&(
+                  <span style={{fontSize:10,fontWeight:700,color:"#D97706",background:"#FEF3C7",borderRadius:6,padding:"1px 7px",whiteSpace:"nowrap",letterSpacing:0.3,border:"1px solid #FDE68A"}}>
+                    ⏸ МОЖНО ОТЛОЖИТЬ
+                  </span>
+                )}
+              </div>
+              <div style={{display:"flex",gap:8,alignItems:"center"}}>
                 <span style={{fontSize:10,color:C.t2}}>{t.mins}м</span>
-                {t.date&&<span style={{fontSize:10,color:C.t2}}>📅 {t.date.substring(5)}</span>}
+                {t.date&&<span style={{fontSize:10,color:taskUrgency(t).kind==="burning"?"#EF4444":taskUrgency(t).kind==="deferrable"?"#D97706":C.t2,fontWeight:taskUrgency(t).kind!=="normal"?600:400}}>📅 {t.date.substring(5)}</span>}
                 <Tag label={tsLbl(t.status||"todo")} color={tsCol(t.status||"todo")}/>
               </div>
             </div>
@@ -1476,7 +1535,11 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
   };
 
   return <div style={{background:C.w,borderRadius:20,boxShadow:"0 4px 24px rgba(0,0,0,0.07)",border:"1px solid "+C.bd,overflow:"hidden"}}>
-    <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}`}</style>
+    <style>{`
+      @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+      @keyframes burningGlow{0%,100%{box-shadow:0 0 12px rgba(239,68,68,0.18),0 0 0 1px rgba(239,68,68,0.12)}50%{box-shadow:0 0 22px rgba(239,68,68,0.32),0 0 0 1px rgba(239,68,68,0.22)}}
+      @keyframes deferrableGlow{0%,100%{box-shadow:0 0 8px rgba(245,158,11,0.12)}50%{box-shadow:0 0 16px rgba(245,158,11,0.24)}}
+    `}</style>
     {/* Toast */}
     {toast&&<div style={{position:"fixed",bottom:isMobile?72:24,left:"50%",transform:"translateX(-50%)",background:C.dk,color:"#fff",padding:"12px 20px",borderRadius:12,fontSize:13,fontWeight:500,zIndex:1000,boxShadow:"0 8px 24px rgba(0,0,0,0.2)",maxWidth:360,textAlign:"center"}}>{toast}</div>}
 
@@ -1693,7 +1756,15 @@ function StrategyPage({userId}:{userId:string}){
   };
   const prgColor=(p:number)=>p<30?C.r:p<50?"#F97316":p<70?C.y:p<90?"#84CC16":"#16A34A";
 
-  // DnD handlers for goal tasks
+  // ── Task urgency (shared in StrategyPage) ──
+  const taskUrgency=(t:any):{kind:"burning"|"deferrable"|"normal",daysLeft:number|null}=>{
+    if(t.status==="done"||t.done)return{kind:"normal",daysLeft:null};
+    if(!t.date)return{kind:"normal",daysLeft:null};
+    const diff=Math.ceil((new Date(t.date+"T23:59:59").getTime()-Date.now())/(1000*60*60*24));
+    if(diff<0||diff<=1)return{kind:"burning",daysLeft:diff};
+    if(diff>14&&t.status==="todo")return{kind:"deferrable",daysLeft:diff};
+    return{kind:"normal",daysLeft:diff};
+  };
   const onGtDragStart=(id:string)=>setDndDrag(id);
   const onGtDragOver=(id:string,e:React.DragEvent)=>{e.preventDefault();setDndOver(id);};
   const onGtDrop=async(targetId:string,goalId:string)=>{
@@ -1740,11 +1811,17 @@ function StrategyPage({userId}:{userId:string}){
       onDrop={canDrag&&dayStr?()=>onKanbanDrop(t.id,dayStr):undefined}
       onDragEnd={canDrag?()=>{setKanbanDrag(null);setKanbanOver(null);}:undefined}
       style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:8,
-        background:isDone?"#F0FDF4":C.bg,borderLeft:"3px solid "+typeColor(t.type),
+        background:isDone?"#F0FDF4":
+          (()=>{const u=taskUrgency(t);return u.kind==="burning"?"#FFF1F1":u.kind==="deferrable"?"#FFFBEB":C.bg;})(),
+        borderLeft:"3px solid "+(
+          (()=>{const u=taskUrgency(t);return u.kind==="burning"?"#EF4444":u.kind==="deferrable"?"#F59E0B":typeColor(t.type);})()),
+        border:(()=>{const u=taskUrgency(t);return u.kind==="burning"?"1px solid #FCA5A5":u.kind==="deferrable"?"1px solid #FDE68A":"none";})(),
         opacity:isKanbanDragging?0.4:1,
-        boxShadow:isKanbanOver?"0 0 0 2px "+C.a:isKanbanDragging?"0 4px 16px rgba(0,0,0,0.15)":"none",
+        boxShadow:isKanbanOver?"0 0 0 2px "+C.a:isKanbanDragging?"0 4px 16px rgba(0,0,0,0.15)":
+          (()=>{const u=taskUrgency(t);return u.kind==="burning"?"0 0 10px rgba(239,68,68,0.15)":u.kind==="deferrable"?"0 0 8px rgba(245,158,11,0.1)":"none";})(),
         cursor:canDrag?"grab":"default",
         transition:"opacity 0.15s,box-shadow 0.15s",
+        animation:(()=>{const u=taskUrgency(t);return u.kind==="burning"&&!isDone?"burningGlow 2s ease-in-out infinite":"none";})(),
       }}>
       {canDrag&&<span style={{fontSize:13,color:C.t2,cursor:"grab",userSelect:"none",flexShrink:0,opacity:0.5}}>⠿</span>}
       <button onClick={()=>cycleTaskStatus(t)} title={tsLbl(status)} style={{width:20,height:20,minWidth:20,borderRadius:6,border:"2px solid "+statusColor,background:isDone?C.g:status==="inprogress"?C.y+"33":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
@@ -1752,8 +1829,12 @@ function StrategyPage({userId}:{userId:string}){
         {status==="inprogress"&&<div style={{width:8,height:8,borderRadius:2,background:C.y}}/>}
       </button>
       <div style={{flex:1,minWidth:0,cursor:"pointer"}} onClick={()=>setActiveModal({task:t,type:t.fromGoal?"goal":"kanban"})}>
-        <div style={{fontSize:12,fontWeight:500,textDecoration:isDone?"line-through":"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.text}</div>
-        <div style={{display:"flex",gap:6,marginTop:2}}><span style={{fontSize:10,color:C.t2}}>{t.mins}м</span>{t.fromGoal&&<span style={{fontSize:10,color:t.goalColor}}>★</span>}{showDate&&t.date&&<span style={{fontSize:10,color:C.t2}}>{t.date.substring(5)}</span>}</div>
+        <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap"}}>
+          <span style={{fontSize:12,fontWeight:500,textDecoration:isDone?"line-through":"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.text}</span>
+          {taskUrgency(t).kind==="burning"&&!isDone&&<span style={{fontSize:9,fontWeight:800,color:"#EF4444",background:"#FEE2E2",borderRadius:4,padding:"1px 5px",whiteSpace:"nowrap",border:"1px solid #FCA5A5"}}>🔥 ГОРИТ</span>}
+          {taskUrgency(t).kind==="deferrable"&&!isDone&&<span style={{fontSize:9,fontWeight:700,color:"#D97706",background:"#FEF3C7",borderRadius:4,padding:"1px 5px",whiteSpace:"nowrap",border:"1px solid #FDE68A"}}>⏸ ОТЛОЖИ</span>}
+        </div>
+        <div style={{display:"flex",gap:6,marginTop:2}}><span style={{fontSize:10,color:C.t2}}>{t.mins}м</span>{t.fromGoal&&<span style={{fontSize:10,color:t.goalColor}}>★</span>}{showDate&&t.date&&<span style={{fontSize:10,color:taskUrgency(t).kind==="burning"?"#EF4444":C.t2,fontWeight:taskUrgency(t).kind==="burning"?700:400}}>{t.date.substring(5)}</span>}</div>
       </div>
       <button onClick={()=>startEdit(t)} style={{width:16,height:16,border:"none",background:"transparent",cursor:"pointer",color:C.t2,fontSize:10,opacity:0.6}}>✏️</button>
       {!t.fromGoal&&<button onClick={()=>setDeleteConfirm(t.id)} style={{width:16,height:16,border:"none",background:"transparent",cursor:"pointer",color:C.r,fontSize:11}}>×</button>}
