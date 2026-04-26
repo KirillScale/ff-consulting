@@ -3861,9 +3861,9 @@ function StoriesCarouselTab({userId}:{userId:string}){
         const maxIgViews=Math.max(...slots.map((s:any)=>s.ig_view_count||0),1);
         const maxTgViews=Math.max(...slots.map((s:any)=>s.tg_view_count||0),1);
 
-        return <div key={car.id} style={{background:C.w,borderRadius:20,boxShadow:"0 4px 20px rgba(0,0,0,0.07)",border:"1px solid "+C.bd,overflow:"hidden"}}>
+        return <div key={car.id} style={{background:C.w,borderRadius:20,boxShadow:C.sh,border:"1px solid "+C.bd,overflow:"hidden"}}>
           {/* Header */}
-          <div style={{padding:"14px 20px",borderBottom:"1px solid "+C.bd,display:"flex",alignItems:"center",justifyContent:"space-between",background:"#FAFBFC"}}>
+          <div style={{padding:"14px 20px",borderBottom:"1px solid "+C.bd,display:"flex",alignItems:"center",justifyContent:"space-between",background:C.ib}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
               {editTitleId===car.id
                 ? <input autoFocus value={editTitleVal} onChange={e=>setEditTitleVal(e.target.value)}
@@ -3884,13 +3884,13 @@ function StoriesCarouselTab({userId}:{userId:string}){
 
           <div style={{display:"flex",gap:0}}>
             {/* Analytics panel */}
-            <div style={{width:240,flexShrink:0,padding:"16px 14px",borderRight:"1px solid "+C.bd,display:"flex",flexDirection:"column",gap:12,background:"#FAFBFC"}}>
+            <div style={{width:240,flexShrink:0,padding:"16px 14px",borderRight:"1px solid "+C.bd,display:"flex",flexDirection:"column",gap:12,background:C.ib}}>
               <PlatformAnalytics slots={slots} platform="ig" color={IG_COLOR} icon={<IgIcon/>}/>
               <PlatformAnalytics slots={slots} platform="tg" color={TG_COLOR} icon={<TgIcon/>}/>
             </div>
 
             {/* Stories strip */}
-            <div style={{flex:1,overflowX:"auto",padding:"14px 14px 12px"}}>
+            <div style={{flex:1,overflowX:"auto",padding:"14px 14px 12px",background:C.bg}}>
               <div style={{display:"flex",gap:10,alignItems:"flex-start",minWidth:"max-content"}}>
                 {slots.map((slot:any,idx:number)=>{
                   const igIsMax=igAn&&igAn.maxDrop>0&&idx===igAn.maxDropIdx-1;
@@ -3901,16 +3901,13 @@ function StoriesCarouselTab({userId}:{userId:string}){
                   const anyAfter=igIsAfter||tgIsAfter;
                   const igBarH=slot.ig_view_count?Math.max(4,Math.round(slot.ig_view_count/maxIgViews*36)):0;
                   const tgBarH=slot.tg_view_count?Math.max(4,Math.round(slot.tg_view_count/maxTgViews*36)):0;
-
-                  // Border color based on which platform has max drop
                   const borderColor=igIsMax||igIsAfter?IG_COLOR:tgIsMax||tgIsAfter?TG_COLOR:C.bd;
 
                   return <div key={slot.id} style={{display:"flex",flexDirection:"column",alignItems:"center",position:"relative"}}>
-                    {/* Drop alert markers between cards */}
                     {igIsMax&&<div style={{position:"absolute",right:-14,top:16,zIndex:10,fontSize:13}}>🩷</div>}
                     {tgIsMax&&<div style={{position:"absolute",right:-14,top:igIsMax?32:16,zIndex:10,fontSize:13}}>💙</div>}
 
-                    {/* Dual bar chart */}
+                    {/* Bar chart */}
                     <div style={{width:140,height:48,display:"flex",alignItems:"flex-end",justifyContent:"center",gap:4,marginBottom:4}}>
                       {(slot.ig_view_count>0||slot.tg_view_count>0)&&<>
                         <div style={{width:18,borderRadius:"3px 3px 0 0",background:igIsMax||igIsAfter?IG_COLOR:IG_COLOR+"99",height:igBarH,transition:"height 0.3s",minHeight:slot.ig_view_count>0?4:0}}/>
@@ -3921,10 +3918,16 @@ function StoriesCarouselTab({userId}:{userId:string}){
                     {/* Story card */}
                     <div style={{width:140,borderRadius:16,overflow:"hidden",
                       border:`2px solid ${borderColor}`,
-                      boxShadow:(anyMax||anyAfter)?`0 0 0 3px ${borderColor}22`:"none",
-                      transition:"border 0.2s",background:C.bg}}>
-                      {/* Image */}
-                      <div style={{width:140,height:190,background:(slot.image_url&&slot.image_url.startsWith("http"))?"transparent":"#F1F3F8",cursor:"pointer",position:"relative",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}
+                      boxShadow:(anyMax||anyAfter)?`0 0 0 3px ${borderColor}22`:C.sh,
+                      transition:"border 0.2s",background:C.w}}>
+
+                      {/* Image area */}
+                      <div style={{
+                        width:140,height:190,
+                        background:C.ib,
+                        cursor:"pointer",position:"relative",
+                        display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"
+                      }}
                         onClick={()=>(slot.image_url&&slot.image_url.startsWith("http"))&&!uploading&&setLightbox(slot.image_url)}>
                         {uploading===slot.id
                           ? <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6}}>
@@ -3933,8 +3936,10 @@ function StoriesCarouselTab({userId}:{userId:string}){
                             </div>
                           : (slot.image_url&&slot.image_url.startsWith("http"))
                           ? <img src={slot.image_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt={`Сторис ${idx+1}`}/>
-                          : <label style={{cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6,width:"100%",height:"100%",justifyContent:"center"}}>
-                              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                          : <label style={{cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:8,width:"100%",height:"100%",justifyContent:"center"}}>
+                              <div style={{width:44,height:44,borderRadius:12,background:C.bd,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                              </div>
                               <span style={{fontSize:11,color:C.t2,textAlign:"center",fontWeight:500}}>Загрузить фото</span>
                               <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0])uploadImage(slot.id,e.target.files[0]);}}/>
                             </label>
@@ -3947,25 +3952,22 @@ function StoriesCarouselTab({userId}:{userId:string}){
                         </div>}
                       </div>
 
-                      {/* Number + dual inputs */}
-                      <div style={{padding:"6px 8px 10px",background:C.w}}>
+                      {/* Number + inputs */}
+                      <div style={{padding:"8px 8px 10px",background:C.w,borderTop:"1px solid "+C.bd}}>
                         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
                           <div style={{fontSize:11,fontWeight:700,color:C.t2}}>Сторис #{idx+1}</div>
                           <button onClick={()=>items.remove(slot.id)}
-                            style={{width:18,height:18,borderRadius:5,border:"none",background:C.r+"15",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}
-                            title="Удалить сторис">
+                            style={{width:18,height:18,borderRadius:5,border:"none",background:C.r+"15",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                             <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={C.r} strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
                           </button>
                         </div>
-                        {/* Instagram input */}
-                        <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:5,background:IG_COLOR+"0C",borderRadius:8,padding:"5px 7px",border:`1px solid ${IG_COLOR}22`}}>
+                        <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:5,background:IG_COLOR+"12",borderRadius:8,padding:"5px 7px",border:`1px solid ${IG_COLOR}25`}}>
                           <IgIcon/>
                           <input type="number" value={slot.ig_view_count||""} onChange={e=>items.update(slot.id,{ig_view_count:+e.target.value||0})}
                             placeholder="IG"
                             style={{flex:1,border:"none",background:"transparent",fontSize:11,outline:"none",fontFamily:"'Montserrat',sans-serif",color:C.t1,minWidth:0,textAlign:"center"}}/>
                         </div>
-                        {/* Telegram input */}
-                        <div style={{display:"flex",alignItems:"center",gap:4,background:TG_COLOR+"0C",borderRadius:8,padding:"5px 7px",border:`1px solid ${TG_COLOR}22`}}>
+                        <div style={{display:"flex",alignItems:"center",gap:4,background:TG_COLOR+"12",borderRadius:8,padding:"5px 7px",border:`1px solid ${TG_COLOR}25`}}>
                           <TgIcon/>
                           <input type="number" value={slot.tg_view_count||""} onChange={e=>items.update(slot.id,{tg_view_count:+e.target.value||0})}
                             placeholder="TG"
