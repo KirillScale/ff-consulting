@@ -17,21 +17,21 @@ const LIGHT={
 
 // Deep Dark Glass — референс Quantix
 const DARK={
-  bg:"#080B12",          // глубокий почти-чёрный с синим подтоном
-  w:"rgba(255,255,255,0.04)",  // glassmorphism карточки
-  a:"#4F8EF7",           // синий акцент
+  bg:"#080B12",
+  w:"#0F1420",          // тёмный цвет карточек (не прозрачный — для надёжности)
+  a:"#4F8EF7",
   ah:"#3B82F6",
-  t1:"#F0F4FF",          // почти белый текст
-  t2:"#6B7FA3",          // серо-синий secondary
-  bd:"rgba(255,255,255,0.07)", // едва видимые границы
+  t1:"#E8F0FF",
+  t2:"#5A6A8A",
+  bd:"rgba(255,255,255,0.07)",
   g:"#10B981",r:"#EF4444",y:"#F59E0B",
-  sh:"0 8px 32px rgba(0,0,0,0.5)",
-  ib:"rgba(255,255,255,0.03)",
+  sh:"0 8px 32px rgba(0,0,0,0.6)",
+  ib:"#141927",         // тёмный инпут
   pk:"#EC4899",lb:"#06B6D4",
-  dk:"#060810",           // sidebar bg
+  dk:"#060810",
   da:"#0D1018",
-  glass:"rgba(15,19,32,0.7)",
-  glassBd:"rgba(255,255,255,0.08)",
+  glass:"rgba(15,20,32,0.85)",
+  glassBd:"rgba(255,255,255,0.07)",
 };
 
 let C:{[k:string]:string}={...LIGHT};
@@ -146,17 +146,58 @@ const Btn = ({children,onClick,primary=true,style:sx,disabled}:{children:React.R
   }}>{children}</button>;
 };
 const Tag = ({label,color}:{label:string,color:string}) => <span style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:6,background:color+"18",color}}>{label}</span>;
+
 const Card = ({children,style:sx}:{children:React.ReactNode,style?:React.CSSProperties}) => {
   const{dark}=useTheme();
   return <div style={{
-    background:dark?"rgba(255,255,255,0.03)":C.w,
+    background:dark?"#0F1420":C.w,
     borderRadius:16,padding:24,
-    boxShadow:dark?"0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.04)":C.sh,
+    boxShadow:dark?"0 4px 24px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.04)":C.sh,
     border:dark?"1px solid rgba(255,255,255,0.06)":"none",
-    backdropFilter:dark?"blur(20px)":"none",
-    WebkitBackdropFilter:dark?"blur(20px)":"none",
     ...sx
   }}>{children}</div>;
+};
+
+// Inner panel — for things like kanban columns, table areas, empty states
+const useCardStyle=(overrides?:React.CSSProperties):React.CSSProperties=>{
+  const{dark}=useTheme();
+  return{
+    background:dark?"#0F1420":C.w,
+    border:dark?"1px solid rgba(255,255,255,0.06)":"none",
+    boxShadow:dark?"0 4px 24px rgba(0,0,0,0.4)":C.sh,
+    borderRadius:16,
+    ...overrides,
+  };
+};
+
+// Kanban column style
+const useColStyle=(isOver?:boolean):React.CSSProperties=>{
+  const{dark}=useTheme();
+  return{
+    background:dark
+      ?(isOver?"rgba(79,142,247,0.08)":"#0C1019")
+      :(isOver?"#F0F6FF":"#F2F2F7"),
+    border:dark
+      ?(isOver?"2px solid rgba(79,142,247,0.4)":"2px solid rgba(255,255,255,0.04)")
+      :(isOver?"2px solid #007AFF":"2px solid transparent"),
+    boxShadow:dark
+      ?(isOver?"0 0 20px rgba(79,142,247,0.12)":"0 2px 12px rgba(0,0,0,0.3)")
+      :(isOver?"0 0 0 2px #007AFF,0 4px 20px rgba(0,122,255,0.15)":"0 1px 4px rgba(0,0,0,0.06)"),
+    borderRadius:18,
+  };
+};
+
+// Input style hook
+const useIS=():React.CSSProperties=>{
+  const{dark}=useTheme();
+  return{
+    width:"100%",padding:"11px 14px",
+    border:`1px solid ${dark?"rgba(255,255,255,0.08)":C.bd}`,
+    borderRadius:10,fontSize:14,outline:"none",
+    background:dark?"#141927":C.ib,
+    color:C.t1,boxSizing:"border-box",
+    fontFamily:"'Montserrat',sans-serif",
+  };
 };
 
 /* ============ SUPABASE DATA HOOK ============ */
@@ -661,9 +702,10 @@ export default function App() {
     try{return localStorage.getItem("ff_theme")==="dark";}catch{return false;}
   });
 
-  // Apply theme tokens whenever dark changes
+  // Apply theme tokens + body class
   useEffect(()=>{
     applyTheme(dark);
+    document.body.classList.toggle("dark",dark);
     try{localStorage.setItem("ff_theme",dark?"dark":"light");}catch{}
   },[dark]);
 
@@ -763,32 +805,129 @@ function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,n
         *{box-sizing:border-box;}
         body{overflow-x:hidden;margin:0;}
         *{transition:background-color 0.35s ease,border-color 0.35s ease,color 0.35s ease,box-shadow 0.35s ease;}
-        input,textarea,select,button,svg,img,div[style*="transform"]{transition:none!important;}
+        input,textarea,select,button,svg,img{transition:none!important;}
         button{transition:background 0.15s ease,box-shadow 0.2s ease,transform 0.15s ease!important;}
         .sb-scroll::-webkit-scrollbar{width:2px}
         .sb-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.06);border-radius:2px}
-        .dark-card{
-          background:rgba(255,255,255,0.04);
-          backdrop-filter:blur(20px);
-          -webkit-backdrop-filter:blur(20px);
-          border:1px solid rgba(255,255,255,0.07);
-          border-radius:16px;
+
+        /* ── DARK MODE GLOBAL OVERRIDES ── */
+        body.dark {
+          background:#080B12;
+          color:#E8F0FF;
         }
-        .dark-card:hover{
-          border-color:rgba(79,142,247,0.25);
-          box-shadow:0 0 0 1px rgba(79,142,247,0.1),0 8px 32px rgba(0,0,0,0.4);
+        /* All white/light card surfaces */
+        body.dark [data-card],
+        body.dark .card-surface {
+          background:#0F1420 !important;
+          border:1px solid rgba(255,255,255,0.06) !important;
+          color:#E8F0FF;
         }
-        .glow-btn{
-          position:relative;overflow:hidden;
+        /* Kanban columns */
+        body.dark .kanban-col {
+          background:#0C1019 !important;
+          border-color:rgba(255,255,255,0.05) !important;
         }
-        .glow-btn::before{
-          content:'';position:absolute;inset:0;border-radius:inherit;
-          background:linear-gradient(135deg,rgba(255,255,255,0.1),transparent);
-          opacity:0;transition:opacity 0.2s;
+        /* Segment controls (F2F2F7 backgrounds) */
+        body.dark .seg-ctrl {
+          background:rgba(255,255,255,0.05) !important;
+          border:1px solid rgba(255,255,255,0.06) !important;
         }
-        .glow-btn:hover::before{opacity:1;}
-        .nav-item-active{
-          animation:borderGlow 3s ease-in-out infinite;
+        /* Input fields */
+        body.dark input,
+        body.dark textarea,
+        body.dark select {
+          background:#141927 !important;
+          border-color:rgba(255,255,255,0.08) !important;
+          color:#E8F0FF !important;
+        }
+        body.dark input::placeholder,
+        body.dark textarea::placeholder {
+          color:rgba(255,255,255,0.2) !important;
+        }
+        /* Table rows */
+        body.dark table {
+          background:transparent !important;
+        }
+        body.dark thead tr {
+          border-bottom:1px solid rgba(255,255,255,0.06) !important;
+        }
+        body.dark tbody tr:hover {
+          background:rgba(255,255,255,0.03) !important;
+        }
+        /* Modals */
+        body.dark [data-modal] {
+          background:#0F1420 !important;
+          border:1px solid rgba(255,255,255,0.08) !important;
+          box-shadow:0 24px 60px rgba(0,0,0,0.7) !important;
+        }
+        /* Scrollbars */
+        body.dark ::-webkit-scrollbar {width:4px;height:4px;}
+        body.dark ::-webkit-scrollbar-track {background:rgba(255,255,255,0.02);}
+        body.dark ::-webkit-scrollbar-thumb {background:rgba(255,255,255,0.08);border-radius:4px;}
+        body.dark ::-webkit-scrollbar-thumb:hover {background:rgba(255,255,255,0.14);}
+        /* Lead/task cards */
+        body.dark .lead-card {
+          background:#131926 !important;
+          border:1px solid rgba(255,255,255,0.06) !important;
+          box-shadow:0 2px 12px rgba(0,0,0,0.4) !important;
+        }
+        body.dark .lead-card:hover {
+          border-color:rgba(79,142,247,0.25) !important;
+          box-shadow:0 4px 20px rgba(0,0,0,0.5) !important;
+        }
+        /* Year map table */
+        body.dark .yearmap-table {
+          background:#0C1019 !important;
+          border-color:rgba(255,255,255,0.05) !important;
+        }
+        /* Priority menus, dropdowns */
+        body.dark .dropdown-menu {
+          background:#131926 !important;
+          border:1px solid rgba(255,255,255,0.08) !important;
+          box-shadow:0 12px 40px rgba(0,0,0,0.6) !important;
+        }
+        /* Segment button active state */
+        body.dark .seg-active {
+          background:#0F1420 !important;
+          box-shadow:0 1px 4px rgba(0,0,0,0.5) !important;
+          color:#E8F0FF !important;
+        }
+        /* Stats cards on CRM, Content etc */
+        body.dark .stat-card {
+          background:#0F1420 !important;
+          border:1px solid rgba(255,255,255,0.06) !important;
+        }
+        /* Empty state areas */
+        body.dark .empty-state {
+          background:#0C1019 !important;
+          border:1px solid rgba(255,255,255,0.05) !important;
+        }
+        /* Board preview cards */
+        body.dark .board-preview-card {
+          background:#0F1420 !important;
+          border:1px solid rgba(255,255,255,0.07) !important;
+          box-shadow:0 4px 20px rgba(0,0,0,0.5) !important;
+        }
+        body.dark .board-preview-card:hover {
+          border-color:rgba(79,142,247,0.3) !important;
+          box-shadow:0 8px 32px rgba(79,142,247,0.08),0 0 0 1px rgba(79,142,247,0.15) !important;
+        }
+        /* Funnel cards in CRM */
+        body.dark .funnel-card {
+          background:#0F1420 !important;
+          border:1px solid rgba(255,255,255,0.06) !important;
+          box-shadow:0 4px 20px rgba(0,0,0,0.4) !important;
+        }
+        /* Notification/toast */
+        body.dark .toast-panel {
+          background:#131926 !important;
+          border:1px solid rgba(255,255,255,0.08) !important;
+        }
+        /* Form new-item panels */
+        body.dark .form-panel {
+          background:#0E1521 !important;
+          border:1px solid rgba(255,255,255,0.07) !important;
+          border-radius:16px !important;
         }
       `}</style>
       <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
@@ -1270,11 +1409,11 @@ function YearMap({userId,goals,goalUpdate,goalAdd}:{userId:string,goals:any,goal
       <div style={{fontSize:20,fontWeight:700}}>Карта года</div>
       <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
         {/* Year selector */}
-        <div style={{display:"flex",background:"#F2F2F7",borderRadius:10,padding:3,gap:2}}>
+        <div style={{display:"flex",background:"#F2F2F7",borderRadius:10,padding:3,gap:2}} className="seg-ctrl">
           {YEARS.map(y=><button key={y} onClick={()=>{setViewYear(y);setStartMonth(0);}} style={{padding:"6px 14px",border:"none",borderRadius:8,background:viewYear===y&&period===12?C.a:"transparent",color:viewYear===y&&period===12?"#fff":C.t2,fontSize:13,fontWeight:viewYear===y&&period===12?700:400,cursor:"pointer"}}>{y}</button>)}
         </div>
         {/* Period selector */}
-        {(()=>{const PERIODS:Array<[number,string]>=[[1,"1 мес"],[3,"3 мес"],[6,"6 мес"],[12,"Год"]];return <div style={{display:"flex",background:"#F2F2F7",borderRadius:10,padding:3,gap:2}}>
+        {(()=>{const PERIODS:Array<[number,string]>=[[1,"1 мес"],[3,"3 мес"],[6,"6 мес"],[12,"Год"]];return <div style={{display:"flex",background:"#F2F2F7",borderRadius:10,padding:3,gap:2}} className="seg-ctrl">
           {PERIODS.map(([p,l])=><button key={p} onClick={()=>{setPeriod(p as any);if(p===12)setStartMonth(0);else setStartMonth(now.getMonth());}} style={{padding:"6px 14px",border:"none",borderRadius:8,background:period===p?C.a:"transparent",color:period===p?"#fff":C.t2,fontSize:13,fontWeight:period===p?700:400,cursor:"pointer"}}>{l}</button>)}
         </div>;})()}
         {/* Nav arrows (only for < 12 months) */}
@@ -1739,7 +1878,7 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
               <span style={{animation:isUrgent?"pulse 1.5s ease-in-out infinite":"none"}}>{pr.icon}</span>
               <span>{pr.label}</span>
             </button>
-            {isPriorityMenuOpen&&<div style={{position:"absolute",top:"calc(100% + 4px)",right:0,background:C.w,border:"1px solid "+C.bd,borderRadius:10,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:100,minWidth:200,overflow:"hidden"}}>
+            {isPriorityMenuOpen&&<div className="dropdown-menu" style={{position:"absolute",top:"calc(100% + 4px)",right:0,background:C.w,border:"1px solid "+C.bd,borderRadius:10,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:100,minWidth:200,overflow:"hidden"}}>
               {Object.values(PRIORITIES).map(op=><button key={op.id} onClick={()=>setPriority(g.id,op.id,true)}
                 style={{width:"100%",padding:"10px 14px",background:g.priority===op.id?op.color+"10":"transparent",border:"none",borderBottom:"1px solid "+C.bd,cursor:"pointer",display:"flex",alignItems:"center",gap:8,fontSize:13,color:g.priority===op.id?op.color:C.t1,fontWeight:g.priority===op.id?600:400,textAlign:"left"}}>
                 <span>{op.icon}</span><span>{op.label}</span>
@@ -1872,7 +2011,7 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
     </div>;
   };
 
-  return <div style={{background:C.w,borderRadius:20,boxShadow:"0 4px 24px rgba(0,0,0,0.07)",border:"1px solid "+C.bd,overflow:"hidden"}}>
+  return <div className="yearmap-table" style={{background:C.w,borderRadius:20,boxShadow:"0 4px 24px rgba(0,0,0,0.07)",border:"1px solid "+C.bd,overflow:"hidden"}}>
     <style>{`
       @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
       @keyframes burningGlow{0%,100%{box-shadow:0 0 12px rgba(239,68,68,0.18),0 0 0 1px rgba(239,68,68,0.12)}50%{box-shadow:0 0 22px rgba(239,68,68,0.32),0 0 0 1px rgba(239,68,68,0.22)}}
@@ -2315,7 +2454,7 @@ function StrategyPage({userId}:{userId:string}){
     const nowMin=new Date().getHours()*60+new Date().getMinutes();
     const nowTop=((nowMin-DAY_START*60)/60)*SLOT_H;
 
-    return<div style={{display:"flex",background:C.w,borderRadius:16,border:"1px solid "+C.bd,overflow:"hidden"}}>
+    return<div className="yearmap-table" style={{display:"flex",background:C.w,borderRadius:16,border:"1px solid "+C.bd,overflow:"hidden"}}>
       {/* Time gutter */}
       <div style={{width:52,flexShrink:0,borderRight:"1px solid "+C.bd,paddingTop:48}}>
         {Array.from({length:DAY_HOURS},(_,i)=>i+DAY_START).map(h=>(
@@ -2420,7 +2559,7 @@ function StrategyPage({userId}:{userId:string}){
         const ds2=`${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
         cells.push({date:ds2});
       }
-      return<div style={{background:C.w,borderRadius:16,border:"1px solid "+C.bd,overflow:"hidden"}}>
+      return<div className="yearmap-table" style={{background:C.w,borderRadius:16,border:"1px solid "+C.bd,overflow:"hidden"}}>
         <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",borderBottom:"1px solid "+C.bd}}>
           {["Вс","Пн","Вт","Ср","Чт","Пт","Сб"].map(wd=><div key={wd} style={{textAlign:"center",fontSize:11,fontWeight:700,color:C.t2,padding:"10px 0",letterSpacing:0.5}}>{wd}</div>)}
         </div>
@@ -2682,7 +2821,7 @@ function StrategyPage({userId}:{userId:string}){
     {/* Calendar task modal */}
     {calModal&&(
       <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setCalModal(null)}>
-        <div style={{background:C.w,borderRadius:20,padding:32,width:"100%",maxWidth:480,boxShadow:"0 24px 60px rgba(0,0,0,0.2)"}} onClick={e=>e.stopPropagation()}>
+        <div data-modal="" style={{background:C.w,borderRadius:20,padding:32,width:"100%",maxWidth:480,boxShadow:"0 24px 60px rgba(0,0,0,0.2)"}} onClick={e=>e.stopPropagation()}>
           <div style={{fontSize:18,fontWeight:700,marginBottom:20}}>{calModal==="new"?"Новая задача":"Редактировать задачу"}</div>
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
             <div><label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:4}}>Название *</label>
@@ -2880,7 +3019,8 @@ function CrmPage({userId}:{userId:string}){
       style={{background:"#fff",borderRadius:14,padding:"13px 15px",marginBottom:8,cursor:"grab",userSelect:"none",
         boxShadow:"0 2px 8px rgba(0,0,0,0.08),0 0 0 0.5px rgba(0,0,0,0.06)",
         borderLeft:`3px solid ${stageColor}`,transition:"box-shadow 0.15s,transform 0.15s",
-        opacity:dragId===l.id?0.45:1,transform:dragId===l.id?"scale(0.97)":"scale(1)"}}>
+        opacity:dragId===l.id?0.45:1,transform:dragId===l.id?"scale(0.97)":"scale(1)"}}
+      className="lead-card">
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
         <div style={{fontWeight:600,fontSize:14,color:"#1C1C1E",flex:1}}>{l.name}</div>
         {l.deal&&<div style={{fontSize:12,fontWeight:700,color:"#34C759",marginLeft:8,whiteSpace:"nowrap"}}>{fmt$(l.deal)} ₽</div>}
@@ -2919,7 +3059,7 @@ function CrmPage({userId}:{userId:string}){
       {funnels.loading
         ?<div style={{textAlign:"center",padding:60,color:C.t2}}>Загрузка...</div>
         :funnels.data.length===0
-        ?<div style={{textAlign:"center",padding:"80px 32px",background:"#fff",borderRadius:20,boxShadow:"0 2px 12px rgba(0,0,0,0.06)"}}>
+        ?<div style={{textAlign:"center",padding:"80px 32px",background:"#fff",borderRadius:20,boxShadow:"0 2px 12px rgba(0,0,0,0.06)"}} className="empty-state">
             <div style={{fontSize:48,marginBottom:16}}>🎯</div>
             <div style={{fontSize:18,fontWeight:700,color:C.t1,marginBottom:8}}>Воронок пока нет</div>
             <div style={{fontSize:14,color:C.t2,marginBottom:24}}>Создай первую воронку продаж для управления лидами</div>
@@ -2935,6 +3075,7 @@ function CrmPage({userId}:{userId:string}){
               const convRate=fuLeads.length?Math.round((fuClosed.length/fuLeads.length)*100):0;
               return <div key={fu.id}
                 onClick={()=>openFunnel(fu.id)}
+                className="funnel-card"
                 style={{background:"#fff",borderRadius:20,padding:"22px 24px",cursor:"pointer",
                   boxShadow:"0 2px 12px rgba(0,0,0,0.07),0 0 0 0.5px rgba(0,0,0,0.04)",
                   borderTop:`4px solid ${fu.color||"#007AFF"}`,
@@ -3119,7 +3260,7 @@ function CrmPage({userId}:{userId:string}){
         {l:"Закрыто",v:leads.filter((l:any)=>l.status==="closed").length,c:"#34C759"},
         {l:"Сделки",v:fmt$(totalD)+" ₽",c:"#1C1C1E"},
       ].map((s,i)=>(
-        <div key={i} style={{background:"#fff",borderRadius:16,padding:"16px 18px",boxShadow:"0 2px 8px rgba(0,0,0,0.07),0 0 0 0.5px rgba(0,0,0,0.05)"}}>
+        <div key={i} className="stat-card" style={{background:"#fff",borderRadius:16,padding:"16px 18px",boxShadow:"0 2px 8px rgba(0,0,0,0.07),0 0 0 0.5px rgba(0,0,0,0.05)"}}>
           <div style={{fontSize:22,fontWeight:700,color:s.c,marginBottom:2}}>{s.v}</div>
           <div style={{fontSize:12,color:"#8E8E93"}}>{s.l}</div>
         </div>
@@ -3173,6 +3314,7 @@ function CrmPage({userId}:{userId:string}){
           const stageLeads=leads.filter((l:any)=>l.status===stage.id);
           const isOver=dragOver===stage.id;
           return <div key={stage.id} onDragOver={e=>onDragOver(stage.id,e)} onDrop={()=>onDrop(stage.id)} onDragLeave={()=>setDragOver(null)}
+            className="kanban-col"
             style={{minWidth:240,width:240,flexShrink:0,background:isOver?"#F0F6FF":"#F2F2F7",borderRadius:18,padding:"0 0 12px",
               boxShadow:isOver?"0 0 0 2px #007AFF,0 4px 20px rgba(0,122,255,0.15)":"0 1px 4px rgba(0,0,0,0.06)",
               transition:"box-shadow 0.2s,background 0.2s",border:isOver?"2px solid #007AFF":"2px solid transparent"}}>
@@ -5762,7 +5904,7 @@ function MailingsPage({userId}:{userId:string}){
       {/* MODAL CREATE/EDIT */}
       {modal&&(
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={closeModal}>
-          <div style={{background:C.w,borderRadius:20,padding:32,width:"100%",maxWidth:500,boxShadow:"0 24px 60px rgba(0,0,0,0.2)"}} onClick={e=>e.stopPropagation()}>
+          <div data-modal="" style={{background:C.w,borderRadius:20,padding:32,width:"100%",maxWidth:500,boxShadow:"0 24px 60px rgba(0,0,0,0.2)"}} onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:18,fontWeight:700,marginBottom:24}}>{modal==="new"?"Новая рассылка":"Редактировать рассылку"}</div>
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
               <div>
@@ -6319,7 +6461,7 @@ function BoardPage({userId}:{userId:string}){
         {loadingBoards
           ?<div style={{textAlign:"center",padding:60,color:C.t2}}>Загрузка...</div>
           :boards.length===0
-          ?<div style={{textAlign:"center",padding:"80px 32px",background:"#fff",borderRadius:20,boxShadow:"0 2px 12px rgba(0,0,0,0.06)"}}>
+          ?<div style={{textAlign:"center",padding:"80px 32px",background:"#fff",borderRadius:20,boxShadow:"0 2px 12px rgba(0,0,0,0.06)"}} className="empty-state">
               <div style={{fontSize:48,marginBottom:12}}>🎨</div>
               <div style={{fontSize:18,fontWeight:700,color:C.t1,marginBottom:8}}>Досок пока нет</div>
               <div style={{fontSize:14,color:C.t2,marginBottom:24}}>Создай первую доску для мозговых штурмов и планирования</div>
@@ -6328,6 +6470,7 @@ function BoardPage({userId}:{userId:string}){
           :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:16}}>
               {boards.map(b=>(
                 <div key={b.id} onClick={()=>setActiveBoardId(b.id)}
+                  className="board-preview-card"
                   style={{background:"#fff",borderRadius:16,overflow:"hidden",boxShadow:"0 2px 12px rgba(0,0,0,0.07)",cursor:"pointer",transition:"box-shadow 0.2s,transform 0.15s"}}
                   onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 8px 28px rgba(0,0,0,0.13)";(e.currentTarget as HTMLElement).style.transform="translateY(-2px)";}}
                   onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 2px 12px rgba(0,0,0,0.07)";(e.currentTarget as HTMLElement).style.transform="translateY(0)";}}>
