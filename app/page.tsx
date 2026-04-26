@@ -3018,26 +3018,36 @@ function CrmPage({userId}:{userId:string}){
     const isOpen=openLead===l.id;
     return <div key={l.id} draggable onDragStart={e=>onDragStart(l.id,e)} onDragEnd={onDragEnd}
       onClick={()=>setOpenLead(isOpen?null:l.id)}
-      style={{background:"#fff",borderRadius:14,padding:"13px 15px",marginBottom:8,cursor:"grab",userSelect:"none",
-        boxShadow:"0 2px 8px rgba(0,0,0,0.08),0 0 0 0.5px rgba(0,0,0,0.06)",
-        borderLeft:`3px solid ${stageColor}`,transition:"box-shadow 0.15s,transform 0.15s",
-        opacity:dragId===l.id?0.45:1,transform:dragId===l.id?"scale(0.97)":"scale(1)"}}
-      className="lead-card">
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-        <div style={{fontWeight:600,fontSize:14,color:"#1C1C1E",flex:1}}>{l.name}</div>
-        {l.deal&&<div style={{fontSize:12,fontWeight:700,color:"#34C759",marginLeft:8,whiteSpace:"nowrap"}}>{fmt$(l.deal)} ₽</div>}
+      style={{
+        background:C.w,borderRadius:11,padding:"11px 12px",marginBottom:6,
+        cursor:"grab",userSelect:"none",
+        border:"1px solid "+C.bd,
+        borderLeft:`3px solid ${stageColor}`,
+        transition:"all 0.15s",
+        opacity:dragId===l.id?0.4:1,
+        boxShadow:dragId===l.id?`0 4px 20px rgba(0,0,0,0.15)`:"none",
+      }}
+      onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=stageColor+"50";(e.currentTarget as HTMLElement).style.boxShadow=`0 0 12px ${stageColor}12`;}}
+      onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.borderLeftColor=stageColor;(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,minWidth:0}}>
+        <div style={{fontWeight:600,fontSize:13,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1,minWidth:0}}>{l.name}</div>
+        {l.deal&&<div style={{fontSize:11,fontWeight:600,color:C.g,flexShrink:0}}>{fmt$(l.deal)}₽</div>}
       </div>
-      {(l.phone||l.email||l.contact)&&<div style={{fontSize:12,color:"#8E8E93",marginTop:4}}>{l.phone||l.email||l.contact}</div>}
-      {isOpen&&<div style={{marginTop:10,paddingTop:10,borderTop:"0.5px solid #E5E5EA"}}>
-        {l.source&&<div style={{fontSize:11,color:"#8E8E93",marginBottom:4}}>Источник: {l.source}</div>}
-        {l.note&&<div style={{fontSize:12,color:"#3C3C43",marginBottom:4}}>{l.note}</div>}
-        <div style={{display:"flex",gap:6,marginTop:8,flexWrap:"wrap"}}>
+      {(l.phone||l.email||l.contact)&&<div style={{fontSize:11,color:C.t2,marginTop:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.phone||l.email||l.contact}</div>}
+      {isOpen&&<div style={{marginTop:10,paddingTop:10,borderTop:"1px solid "+C.bd}}>
+        {l.source&&<div style={{fontSize:10,color:C.t2,marginBottom:5}}>Источник: {l.source}</div>}
+        {l.note&&<div style={{fontSize:11,color:C.t1,marginBottom:6,lineHeight:1.5,wordBreak:"break-word"}}>{l.note}</div>}
+        <div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:6}}>
           {stages.filter(s=>s.id!==l.status).map(s=>(
             <button key={s.id} onClick={e=>{e.stopPropagation();allLeads.update(l.id,{status:s.id});}}
-              style={{fontSize:11,padding:"4px 10px",borderRadius:20,border:"none",background:s.color+"18",color:s.color,fontWeight:600,cursor:"pointer"}}>{s.label}</button>
+              style={{fontSize:10,padding:"3px 9px",borderRadius:20,border:"1px solid "+s.color+"30",background:s.color+"10",color:s.color,fontWeight:600,cursor:"pointer"}}>
+              {s.label}
+            </button>
           ))}
-          <button onClick={e=>{e.stopPropagation();if(confirm("Удалить лида?"))allLeads.remove(l.id);}}
-            style={{fontSize:11,padding:"4px 10px",borderRadius:20,border:"none",background:"#FF3B3018",color:"#FF3B30",fontWeight:600,cursor:"pointer",marginLeft:"auto"}}>Удалить</button>
+          <button onClick={e=>{e.stopPropagation();if(confirm("Удалить?"))allLeads.remove(l.id);}}
+            style={{fontSize:10,padding:"3px 9px",borderRadius:20,border:"1px solid "+C.r+"30",background:C.r+"10",color:C.r,fontWeight:600,cursor:"pointer",marginLeft:"auto"}}>
+            Удалить
+          </button>
         </div>
       </div>}
     </div>;
@@ -3061,11 +3071,11 @@ function CrmPage({userId}:{userId:string}){
       {funnels.loading
         ?<div style={{textAlign:"center",padding:60,color:C.t2}}>Загрузка...</div>
         :funnels.data.length===0
-        ?<div style={{textAlign:"center",padding:"80px 32px",background:"#fff",borderRadius:20,boxShadow:"0 2px 12px rgba(0,0,0,0.06)"}} className="empty-state">
+        ?<div style={{textAlign:"center",padding:"80px 32px",background:C.w,borderRadius:20,border:"1px solid "+C.bd}} className="empty-state">
             <div style={{fontSize:48,marginBottom:16}}>🎯</div>
             <div style={{fontSize:18,fontWeight:700,color:C.t1,marginBottom:8}}>Воронок пока нет</div>
             <div style={{fontSize:14,color:C.t2,marginBottom:24}}>Создай первую воронку продаж для управления лидами</div>
-            <button onClick={()=>setNewFunnelModal(true)} style={{padding:"12px 24px",background:"#007AFF",color:"#fff",border:"none",borderRadius:12,fontSize:14,fontWeight:700,cursor:"pointer"}}>
+            <button onClick={()=>setNewFunnelModal(true)} style={{padding:"12px 24px",background:C.a,color:"#fff",border:"none",borderRadius:12,fontSize:14,fontWeight:700,cursor:"pointer"}}>
               + Создать воронку
             </button>
           </div>
@@ -3075,82 +3085,124 @@ function CrmPage({userId}:{userId:string}){
               const fuClosed=fuLeads.filter((l:any)=>l.status==="closed");
               const fuRevenue=fuClosed.reduce((s:number,l:any)=>s+(l.deal||0),0);
               const convRate=fuLeads.length?Math.round((fuClosed.length/fuLeads.length)*100):0;
+              const accentColor=fu.color||C.a;
               return <div key={fu.id}
                 onClick={()=>openFunnel(fu.id)}
-                className="funnel-card"
-                style={{background:"#fff",borderRadius:20,padding:"22px 24px",cursor:"pointer",
-                  boxShadow:"0 2px 12px rgba(0,0,0,0.07),0 0 0 0.5px rgba(0,0,0,0.04)",
-                  borderTop:`4px solid ${fu.color||"#007AFF"}`,
-                  transition:"box-shadow 0.2s,transform 0.15s",position:"relative"}}
-                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 8px 28px rgba(0,0,0,0.13)";(e.currentTarget as HTMLElement).style.transform="translateY(-2px)";}}
-                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 2px 12px rgba(0,0,0,0.07),0 0 0 0.5px rgba(0,0,0,0.04)";(e.currentTarget as HTMLElement).style.transform="translateY(0)";}}>
+                style={{
+                  background:C.w,borderRadius:18,padding:"20px",cursor:"pointer",
+                  border:"1px solid "+C.bd,
+                  transition:"all 0.25s ease",position:"relative",overflow:"hidden",
+                  boxShadow:`0 4px 20px rgba(0,0,0,0.08)`,
+                }}
+                onMouseEnter={e=>{
+                  const el=e.currentTarget as HTMLElement;
+                  el.style.transform="translateY(-3px)";
+                  el.style.boxShadow=`0 8px 32px rgba(0,0,0,0.12), 0 0 0 1px ${accentColor}30, 0 0 20px ${accentColor}15`;
+                  el.style.borderColor=accentColor+"40";
+                }}
+                onMouseLeave={e=>{
+                  const el=e.currentTarget as HTMLElement;
+                  el.style.transform="translateY(0)";
+                  el.style.boxShadow="0 4px 20px rgba(0,0,0,0.08)";
+                  el.style.borderColor=C.bd;
+                }}>
 
-                {/* Context menu */}
-                <div style={{position:"absolute",top:14,right:14,display:"flex",gap:4}} onClick={e=>e.stopPropagation()}>
+                {/* Top accent line */}
+                <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${accentColor},${accentColor}88,transparent)`,borderRadius:"18px 18px 0 0"}}/>
+
+                {/* Top right actions */}
+                <div style={{position:"absolute",top:12,right:12,display:"flex",gap:4}} onClick={e=>e.stopPropagation()}>
                   <button onClick={()=>{setEditFunnelId(fu.id);setEditFunnelName(fu.name);}}
-                    style={{width:28,height:28,borderRadius:8,border:"1px solid #E5E5EA",background:"#F2F2F7",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#8E8E93",fontSize:13}}>✎</button>
+                    style={{width:26,height:26,borderRadius:8,border:"1px solid "+C.bd,background:C.ib,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.t2,fontSize:12,transition:"all 0.15s"}}
+                    onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.a;(e.currentTarget as HTMLElement).style.color=C.a;}}
+                    onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.color=C.t2;}}>✎</button>
                   <button onClick={()=>setDeleteFunnelId(fu.id)}
-                    style={{width:28,height:28,borderRadius:8,border:"1px solid #FFD1D1",background:"#FFF0F0",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FF3B30" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+                    style={{width:26,height:26,borderRadius:8,border:"1px solid "+C.bd,background:C.ib,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.15s"}}
+                    onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.r+"60";(e.currentTarget as HTMLElement).style.background=C.r+"10";}}
+                    onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.background=C.ib;}}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={C.r} strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
                   </button>
                 </div>
 
-                {/* Funnel name */}
-                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,paddingRight:70}}>
-                  <div style={{width:38,height:38,borderRadius:11,background:fu.color||"#007AFF",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+                {/* Funnel icon + name */}
+                <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16,paddingRight:64}}>
+                  <div style={{
+                    width:36,height:36,borderRadius:10,flexShrink:0,
+                    background:`linear-gradient(135deg,${accentColor}20,${accentColor}08)`,
+                    border:`1px solid ${accentColor}30`,
+                    display:"flex",alignItems:"center",justifyContent:"center",
+                    boxShadow:`0 0 12px ${accentColor}20`,
+                  }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={accentColor} strokeWidth="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
                   </div>
-                  <div>
-                    <div style={{fontSize:15,fontWeight:700,color:"#1C1C1E"}}>{fu.name}</div>
-                    {fu.description&&<div style={{fontSize:11,color:"#8E8E93",marginTop:1}}>{fu.description}</div>}
+                  <div style={{minWidth:0}}>
+                    <div style={{fontSize:14,fontWeight:700,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{fu.name}</div>
+                    {fu.description&&<div style={{fontSize:11,color:C.t2,marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{fu.description}</div>}
                   </div>
                 </div>
 
-                {/* Stats row */}
+                {/* Stats — minimal */}
                 <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:14}}>
                   {[
-                    {label:"Лидов",value:fuLeads.length,color:"#007AFF"},
-                    {label:"Закрыто",value:fuClosed.length,color:"#34C759"},
-                    {label:"Конверсия",value:convRate+"%",color:convRate>30?"#34C759":convRate>10?"#FF9500":"#FF3B30"},
+                    {label:"Лидов",value:fuLeads.length},
+                    {label:"Закрыто",value:fuClosed.length},
+                    {label:"Конверсия",value:convRate+"%"},
                   ].map((s,i)=>(
-                    <div key={i} style={{background:"#F2F2F7",borderRadius:10,padding:"10px 8px",textAlign:"center"}}>
-                      <div style={{fontSize:18,fontWeight:700,color:s.color}}>{s.value}</div>
-                      <div style={{fontSize:10,color:"#8E8E93",marginTop:1}}>{s.label}</div>
+                    <div key={i} style={{background:C.ib,borderRadius:10,padding:"10px 8px",textAlign:"center",border:"1px solid "+C.bd}}>
+                      <div style={{fontSize:17,fontWeight:700,color:C.t1,lineHeight:1.2}}>{s.value}</div>
+                      <div style={{fontSize:10,color:C.t2,marginTop:3}}>{s.label}</div>
                     </div>
                   ))}
                 </div>
 
-                {fuRevenue>0&&<div style={{fontSize:13,color:"#34C759",fontWeight:600,marginBottom:12}}>
-                  💰 {fmt$(fuRevenue)} ₽ закрытых сделок
+                {/* Revenue */}
+                {fuRevenue>0&&<div style={{fontSize:12,color:C.g,fontWeight:600,marginBottom:12,display:"flex",alignItems:"center",gap:5}}>
+                  <div style={{width:5,height:5,borderRadius:"50%",background:C.g,boxShadow:`0 0 6px ${C.g}`}}/>
+                  {fmt$(fuRevenue)} ₽ закрытых сделок
                 </div>}
 
-                {/* Mini stage bar */}
-                <div style={{display:"flex",gap:3,height:4,borderRadius:4,overflow:"hidden",marginBottom:14}}>
+                {/* Stage distribution bar */}
+                <div style={{display:"flex",gap:2,height:3,borderRadius:4,overflow:"hidden",marginBottom:14}}>
                   {CRM_DEFAULT_STAGES.map(stage=>{
                     const cnt=fuLeads.filter((l:any)=>l.status===stage.id).length;
                     const pct=fuLeads.length?cnt/fuLeads.length:0;
-                    return pct>0?<div key={stage.id} style={{flex:pct,background:stage.color,borderRadius:4,minWidth:3}}/>:null;
+                    return pct>0?<div key={stage.id} style={{flex:pct,background:stage.color,borderRadius:4,opacity:0.7}}/>:null;
                   })}
-                  {fuLeads.length===0&&<div style={{flex:1,background:"#E5E5EA",borderRadius:4}}/>}
+                  {fuLeads.length===0&&<div style={{flex:1,background:C.bd,borderRadius:4}}/>}
                 </div>
 
+                {/* Footer */}
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                  <span style={{fontSize:11,color:"#8E8E93"}}>Нажми чтобы открыть</span>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#007AFF" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                  <span style={{fontSize:11,color:C.t2}}>Открыть воронку</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={accentColor} strokeWidth="2.5" style={{opacity:0.7}}><polyline points="9 18 15 12 9 6"/></svg>
                 </div>
               </div>;
             })}
 
-            {/* Add more card */}
+            {/* Add card */}
             <div onClick={()=>setNewFunnelModal(true)}
-              style={{background:"transparent",borderRadius:20,padding:"22px 24px",cursor:"pointer",
-                border:"2px dashed #C6C6C8",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,minHeight:200,transition:"border-color 0.15s,background 0.15s"}}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="#007AFF";(e.currentTarget as HTMLElement).style.background="#F0F6FF";}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor="#C6C6C8";(e.currentTarget as HTMLElement).style.background="transparent";}}>
-              <div style={{width:44,height:44,borderRadius:14,background:"#F2F2F7",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              style={{
+                background:"transparent",borderRadius:18,padding:"20px",cursor:"pointer",
+                border:"1px dashed "+C.bd,
+                display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+                gap:10,minHeight:200,transition:"all 0.2s",
+              }}
+              onMouseEnter={e=>{
+                const el=e.currentTarget as HTMLElement;
+                el.style.borderColor=C.a;
+                el.style.background=C.a+"06";
+                el.style.boxShadow=`0 0 20px ${C.a}10`;
+              }}
+              onMouseLeave={e=>{
+                const el=e.currentTarget as HTMLElement;
+                el.style.borderColor=C.bd;
+                el.style.background="transparent";
+                el.style.boxShadow="none";
+              }}>
+              <div style={{width:40,height:40,borderRadius:12,background:C.ib,border:"1px solid "+C.bd,display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s"}}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </div>
-              <div style={{fontSize:13,fontWeight:600,color:"#8E8E93"}}>Новая воронка</div>
+              <div style={{fontSize:13,fontWeight:500,color:C.t2}}>Новая воронка</div>
             </div>
           </div>
       }
@@ -3225,175 +3277,186 @@ function CrmPage({userId}:{userId:string}){
   // ── SCREEN: FUNNEL INNER ─────────────────────────────────────────
   return <>
     {/* Breadcrumb + funnel switcher */}
-    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20,flexWrap:"wrap"}}>
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20,flexWrap:"wrap"}}>
       <button onClick={backToList}
-        style={{display:"flex",alignItems:"center",gap:6,padding:"7px 14px",background:"#F2F2F7",border:"none",borderRadius:10,fontSize:13,fontWeight:600,color:"#8E8E93",cursor:"pointer"}}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",background:C.ib,border:"1px solid "+C.bd,borderRadius:9,fontSize:12,fontWeight:600,color:C.t2,cursor:"pointer",flexShrink:0,transition:"all 0.15s"}}
+        onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.a;(e.currentTarget as HTMLElement).style.color=C.a;}}
+        onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.color=C.t2;}}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
         Воронки
       </button>
-
-      {/* Funnel quick-switch tabs */}
-      <div style={{display:"flex",gap:6,overflowX:"auto",flex:1}}>
-        {funnels.data.map((fu:any)=>(
-          <button key={fu.id} onClick={()=>openFunnel(fu.id)}
-            style={{padding:"7px 14px",borderRadius:10,border:"none",whiteSpace:"nowrap",fontSize:13,fontWeight:600,cursor:"pointer",flexShrink:0,
-              background:fu.id===activeFunnelId?fu.color||"#007AFF":"#F2F2F7",
-              color:fu.id===activeFunnelId?"#fff":"#8E8E93",
-              boxShadow:fu.id===activeFunnelId?"0 2px 8px rgba(0,0,0,0.15)":"none",
-              transition:"all 0.15s"}}>
+      <div style={{display:"flex",gap:6,overflowX:"auto",flex:1,scrollbarWidth:"none"}}>
+        {funnels.data.map((fu:any)=>{
+          const isAct=fu.id===activeFunnelId;
+          const cnt=allLeads.data.filter((l:any)=>l.funnel_id===fu.id).length;
+          const ac=fu.color||C.a;
+          return <button key={fu.id} onClick={()=>openFunnel(fu.id)}
+            style={{padding:"6px 14px",borderRadius:9,border:"1px solid "+(isAct?ac+"50":C.bd),whiteSpace:"nowrap",fontSize:12,fontWeight:isAct?700:400,cursor:"pointer",flexShrink:0,background:isAct?ac+"12":"transparent",color:isAct?ac:C.t2,boxShadow:isAct?`0 0 12px ${ac}20`:"none",transition:"all 0.15s"}}>
             {fu.name}
-            <span style={{marginLeft:6,fontSize:11,opacity:0.8}}>
-              {allLeads.data.filter((l:any)=>l.funnel_id===fu.id).length}
-            </span>
-          </button>
-        ))}
+            <span style={{marginLeft:5,fontSize:10,opacity:0.7,background:isAct?ac+"25":C.bd,borderRadius:10,padding:"1px 6px"}}>{cnt}</span>
+          </button>;
+        })}
         <button onClick={()=>setNewFunnelModal(true)}
-          style={{padding:"7px 12px",borderRadius:10,border:"1.5px dashed #C6C6C8",background:"transparent",fontSize:13,color:"#8E8E93",cursor:"pointer",flexShrink:0,whiteSpace:"nowrap"}}>
+          style={{padding:"6px 12px",borderRadius:9,border:"1px dashed "+C.bd,background:"transparent",fontSize:12,color:C.t2,cursor:"pointer",flexShrink:0,whiteSpace:"nowrap",transition:"all 0.15s"}}
+          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.a;(e.currentTarget as HTMLElement).style.color=C.a;}}
+          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.color=C.t2;}}>
           + Воронка
         </button>
       </div>
     </div>
 
     {/* Stats */}
-    <div style={{display:"grid",gridTemplateColumns:isMobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:12,marginBottom:20}}>
+    <div style={{display:"grid",gridTemplateColumns:isMobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:10,marginBottom:20}}>
       {[
-        {l:"Всего",v:leads.length,c:"#007AFF"},
-        {l:"В работе",v:leads.filter((l:any)=>!["closed","rejected"].includes(l.status)).length,c:"#FF9500"},
-        {l:"Закрыто",v:leads.filter((l:any)=>l.status==="closed").length,c:"#34C759"},
-        {l:"Сделки",v:fmt$(totalD)+" ₽",c:"#1C1C1E"},
+        {l:"Всего",v:leads.length},
+        {l:"В работе",v:leads.filter((l:any)=>!["closed","rejected"].includes(l.status)).length},
+        {l:"Закрыто",v:leads.filter((l:any)=>l.status==="closed").length},
+        {l:"Сделки",v:fmt$(totalD)+" ₽"},
       ].map((s,i)=>(
-        <div key={i} className="stat-card" style={{background:"#fff",borderRadius:16,padding:"16px 18px",boxShadow:"0 2px 8px rgba(0,0,0,0.07),0 0 0 0.5px rgba(0,0,0,0.05)"}}>
-          <div style={{fontSize:22,fontWeight:700,color:s.c,marginBottom:2}}>{s.v}</div>
-          <div style={{fontSize:12,color:"#8E8E93"}}>{s.l}</div>
+        <div key={i} style={{background:C.w,borderRadius:14,padding:"14px 16px",border:"1px solid "+C.bd,transition:"all 0.2s"}}
+          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.a+"30";(e.currentTarget as HTMLElement).style.boxShadow=`0 0 16px ${C.a}10`;}}
+          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
+          <div style={{fontSize:20,fontWeight:700,color:C.t1,marginBottom:2,lineHeight:1.2}}>{s.v}</div>
+          <div style={{fontSize:11,color:C.t2}}>{s.l}</div>
         </div>
       ))}
     </div>
 
     {/* Tabs */}
-    <div style={{display:"flex",background:"#F2F2F7",borderRadius:10,padding:2,marginBottom:20,gap:2}}>
+    <div style={{display:"flex",background:C.ib,borderRadius:10,padding:3,marginBottom:20,gap:2,border:"1px solid "+C.bd}}>
       <button style={tabSt(tab==="kanban")} onClick={()=>setTab("kanban")}>Канбан</button>
       <button style={tabSt(tab==="list")} onClick={()=>setTab("list")}>Список лидов</button>
     </div>
 
     {/* KANBAN */}
     {tab==="kanban"&&<>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-        <div style={{fontSize:12,color:"#8E8E93"}}>Перетаскивай карточки между этапами. Нажми ✎ чтобы переименовать.</div>
-        <button onClick={()=>setShow(!show)} style={{padding:"9px 18px",background:"#007AFF",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer"}}>+ Лид</button>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+        <div style={{fontSize:11,color:C.t2}}>Перетаскивай карточки между этапами. Нажми ✎ чтобы переименовать.</div>
+        <button onClick={()=>setShow(!show)} style={{padding:"8px 16px",background:C.a,color:"#fff",border:"none",borderRadius:9,fontSize:12,fontWeight:600,cursor:"pointer",boxShadow:`0 0 16px ${C.a}30`,transition:"all 0.2s"}}
+          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow=`0 0 24px ${C.a}50`;(e.currentTarget as HTMLElement).style.transform="translateY(-1px)";}}
+          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow=`0 0 16px ${C.a}30`;(e.currentTarget as HTMLElement).style.transform="none";}}>
+          + Лид
+        </button>
       </div>
 
-      {show&&<div style={{background:"#fff",borderRadius:16,padding:20,marginBottom:20,boxShadow:"0 2px 12px rgba(0,0,0,0.08)"}}>
-        <div style={{fontSize:15,fontWeight:600,marginBottom:14,color:"#1C1C1E"}}>Новый лид</div>
-        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:12}}>
+      {show&&<div style={{background:C.w,borderRadius:14,padding:18,marginBottom:18,border:"1px solid "+C.bd}} className="form-panel">
+        <div style={{fontSize:14,fontWeight:600,marginBottom:14,color:C.t1}}>Новый лид</div>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:10}}>
           {([["name","Имя *"],["contact","Контакт"],["phone","Телефон"],["email","Email"],["note","Заметка"],["deal","Сделка, ₽"]] as const).map(([k,l])=>(
             <div key={k}>
-              <label style={{fontSize:11,color:"#8E8E93",display:"block",marginBottom:5,fontWeight:500}}>{l}</label>
+              <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4,fontWeight:500}}>{l}</label>
               <input type={k==="deal"?"number":"text"} value={(f as any)[k]} onChange={e=>sF({...f,[k]:e.target.value})}
-                style={{width:"100%",padding:"10px 12px",border:"0.5px solid #C6C6C8",borderRadius:10,fontSize:13,outline:"none",background:"#FAFAFA",boxSizing:"border-box" as const,fontFamily:"'Montserrat',sans-serif"}}/>
+                style={{width:"100%",padding:"9px 11px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"'Montserrat',sans-serif"}}/>
             </div>
           ))}
           <div>
-            <label style={{fontSize:11,color:"#8E8E93",display:"block",marginBottom:5,fontWeight:500}}>Источник</label>
-            <select value={f.source} onChange={e=>sF({...f,source:e.target.value})} style={{width:"100%",padding:"10px 12px",border:"0.5px solid #C6C6C8",borderRadius:10,fontSize:13,outline:"none",background:"#FAFAFA",boxSizing:"border-box" as const}}>
+            <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4,fontWeight:500}}>Источник</label>
+            <select value={f.source} onChange={e=>sF({...f,source:e.target.value})} style={{width:"100%",padding:"9px 11px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const}}>
               {SRCS.map(s=><option key={s}>{s}</option>)}
             </select>
           </div>
           <div>
-            <label style={{fontSize:11,color:"#8E8E93",display:"block",marginBottom:5,fontWeight:500}}>Этап</label>
-            <select value={f.status} onChange={e=>sF({...f,status:e.target.value})} style={{width:"100%",padding:"10px 12px",border:"0.5px solid #C6C6C8",borderRadius:10,fontSize:13,outline:"none",background:"#FAFAFA",boxSizing:"border-box" as const}}>
+            <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4,fontWeight:500}}>Этап</label>
+            <select value={f.status} onChange={e=>sF({...f,status:e.target.value})} style={{width:"100%",padding:"9px 11px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const}}>
               {stages.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}
             </select>
           </div>
         </div>
         <div style={{display:"flex",gap:8,marginTop:14}}>
-          <button onClick={sub} style={{padding:"10px 20px",background:"#007AFF",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer"}}>Добавить</button>
-          <button onClick={()=>setShow(false)} style={{padding:"10px 16px",background:"#F2F2F7",color:"#8E8E93",border:"none",borderRadius:10,fontSize:13,cursor:"pointer"}}>Отмена</button>
+          <button onClick={sub} style={{padding:"9px 18px",background:C.a,color:"#fff",border:"none",borderRadius:9,fontSize:12,fontWeight:600,cursor:"pointer"}}>Добавить</button>
+          <button onClick={()=>setShow(false)} style={{padding:"9px 14px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:9,fontSize:12,cursor:"pointer"}}>Отмена</button>
         </div>
       </div>}
 
-      <div style={{display:"flex",gap:isMobile?10:14,overflowX:"auto",paddingBottom:16,alignItems:"flex-start"}}>
+      <div style={{display:"flex",gap:12,overflowX:"auto",paddingBottom:16,alignItems:"flex-start",scrollbarWidth:"none"}}>
         {stages.map(stage=>{
           const stageLeads=leads.filter((l:any)=>l.status===stage.id);
           const isOver=dragOver===stage.id;
           return <div key={stage.id} onDragOver={e=>onDragOver(stage.id,e)} onDrop={()=>onDrop(stage.id)} onDragLeave={()=>setDragOver(null)}
-            className="kanban-col"
-            style={{minWidth:240,width:240,flexShrink:0,background:isOver?"#F0F6FF":"#F2F2F7",borderRadius:18,padding:"0 0 12px",
-              boxShadow:isOver?"0 0 0 2px #007AFF,0 4px 20px rgba(0,122,255,0.15)":"0 1px 4px rgba(0,0,0,0.06)",
-              transition:"box-shadow 0.2s,background 0.2s",border:isOver?"2px solid #007AFF":"2px solid transparent"}}>
-            <div style={{padding:"14px 14px 10px",borderBottom:"0.5px solid rgba(0,0,0,0.06)"}}>
+            style={{minWidth:228,width:228,flexShrink:0,background:isOver?C.a+"06":C.ib,borderRadius:14,padding:"0 0 10px",border:"1px solid "+(isOver?C.a+"40":C.bd),boxShadow:isOver?`0 0 20px ${C.a}15`:"none",transition:"all 0.2s"}}>
+            <div style={{padding:"11px 11px 8px",borderBottom:"1px solid "+C.bd}}>
               {editStageId===stage.id
                 ?<input autoFocus defaultValue={stage.label}
-                    onBlur={e=>{setStageLabels(p=>({...p,[activeFunnelId!]:{...(p[activeFunnelId!]||{}),[stage.id]:e.target.value||stage.label}}));setEditStageId(null);}}
-                    onKeyDown={e=>{if(e.key==="Enter"){setStageLabels(p=>({...p,[activeFunnelId!]:{...(p[activeFunnelId!]||{}),[stage.id]:(e.target as HTMLInputElement).value||stage.label}}));setEditStageId(null);}if(e.key==="Escape")setEditStageId(null);}}
-                    style={{width:"100%",fontSize:13,fontWeight:600,padding:"4px 8px",border:"1.5px solid "+stage.color,borderRadius:8,outline:"none",background:"#fff"}}/>
+                    onBlur={e=>{setStageLabels((p:any)=>({...p,[activeFunnelId!]:{...(p[activeFunnelId!]||{}),[stage.id]:e.target.value||stage.label}}));setEditStageId(null);}}
+                    onKeyDown={e=>{if(e.key==="Enter"){setStageLabels((p:any)=>({...p,[activeFunnelId!]:{...(p[activeFunnelId!]||{}),[stage.id]:(e.target as HTMLInputElement).value||stage.label}}));setEditStageId(null);}if(e.key==="Escape")setEditStageId(null);}}
+                    style={{width:"100%",fontSize:12,fontWeight:600,padding:"3px 7px",border:"1px solid "+stage.color,borderRadius:7,outline:"none",background:C.ib,color:C.t1}}/>
                 :<div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:7}}>
-                      <div style={{width:9,height:9,borderRadius:"50%",background:stage.color,flexShrink:0}}/>
-                      <span style={{fontSize:13,fontWeight:600,color:"#1C1C1E"}}>{stage.label}</span>
-                    </div>
                     <div style={{display:"flex",alignItems:"center",gap:6}}>
-                      <span style={{fontSize:12,fontWeight:600,color:"#fff",background:stage.color,borderRadius:20,padding:"2px 8px",minWidth:22,textAlign:"center"}}>{stageLeads.length}</span>
-                      <button onClick={()=>setEditStageId(stage.id)} style={{width:24,height:24,border:"none",background:"transparent",cursor:"pointer",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",color:"#8E8E93",fontSize:13}}>✎</button>
+                      <div style={{width:7,height:7,borderRadius:"50%",background:stage.color,boxShadow:`0 0 6px ${stage.color}80`,flexShrink:0}}/>
+                      <span style={{fontSize:12,fontWeight:600,color:C.t1}}>{stage.label}</span>
+                    </div>
+                    <div style={{display:"flex",alignItems:"center",gap:4}}>
+                      <span style={{fontSize:10,fontWeight:700,color:stage.color,background:stage.color+"18",borderRadius:20,padding:"1px 6px"}}>{stageLeads.length}</span>
+                      <button onClick={()=>setEditStageId(stage.id)} style={{width:20,height:20,border:"none",background:"transparent",cursor:"pointer",borderRadius:5,display:"flex",alignItems:"center",justifyContent:"center",color:C.t2,fontSize:11,opacity:0.5}}>✎</button>
                     </div>
                   </div>
               }
             </div>
-            <div style={{padding:"10px 10px 0"}}>
-              {stageLeads.length===0&&!isOver&&<div style={{padding:"20px 0",textAlign:"center",color:"#C7C7CC",fontSize:12}}>Нет лидов</div>}
+            <div style={{padding:"8px 8px 0"}}>
+              {stageLeads.length===0&&!isOver&&<div style={{padding:"18px 0",textAlign:"center",color:C.t2,fontSize:11,opacity:0.4}}>Нет лидов</div>}
               {stageLeads.map(l=>leadCard(l,stage.color))}
-              {isOver&&dragId&&<div style={{height:56,borderRadius:12,border:"2px dashed "+stage.color,background:stage.color+"0A",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:12,color:stage.color,fontWeight:500}}>Перетащи сюда</span></div>}
+              {isOver&&dragId&&<div style={{height:44,borderRadius:9,border:"1px dashed "+stage.color,background:stage.color+"08",marginBottom:6,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:11,color:stage.color}}>Перетащи сюда</span></div>}
             </div>
           </div>;
         })}
       </div>
     </>}
 
+
     {/* LIST */}
     {tab==="list"&&<>
-      <div style={{display:"flex",justifyContent:"space-between",marginBottom:16,gap:12}}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:14,gap:12}}>
         <input placeholder="Поиск по имени, телефону, email..." value={search} onChange={e=>setSearch(e.target.value)}
-          style={{...iS,width:280,borderRadius:10,background:"#F2F2F7",border:"none",fontSize:13}}/>
-        <button onClick={()=>setShow(!show)} style={{padding:"9px 18px",background:"#007AFF",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer"}}>+ Лид</button>
+          style={{...iS,maxWidth:300,borderRadius:9,fontSize:12,padding:"8px 12px",background:C.ib,border:"1px solid "+C.bd}}/>
+        <button onClick={()=>setShow(!show)} style={{padding:"8px 16px",background:C.a,color:"#fff",border:"none",borderRadius:9,fontSize:12,fontWeight:600,cursor:"pointer",boxShadow:`0 0 16px ${C.a}30`,transition:"all 0.2s"}}
+          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(-1px)";(e.currentTarget as HTMLElement).style.boxShadow=`0 0 24px ${C.a}50`;}}
+          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform="none";(e.currentTarget as HTMLElement).style.boxShadow=`0 0 16px ${C.a}30`;}}>
+          + Лид
+        </button>
       </div>
-      {show&&<div style={{background:"#fff",borderRadius:16,padding:20,marginBottom:20,boxShadow:"0 2px 12px rgba(0,0,0,0.08)"}}>
-        <div style={{fontSize:15,fontWeight:600,marginBottom:14}}>Новый лид</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
+      {show&&<div style={{background:C.w,borderRadius:14,padding:18,marginBottom:16,border:"1px solid "+C.bd}} className="form-panel">
+        <div style={{fontSize:14,fontWeight:600,marginBottom:14,color:C.t1}}>Новый лид</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
           {([["name","Имя *"],["contact","Контакт"],["phone","Телефон"],["email","Email"],["note","Заметка"],["deal","Сделка, ₽"]] as const).map(([k,l])=>(
             <div key={k}>
-              <label style={{fontSize:11,color:"#8E8E93",display:"block",marginBottom:5,fontWeight:500}}>{l}</label>
+              <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4,fontWeight:500}}>{l}</label>
               <input type={k==="deal"?"number":"text"} value={(f as any)[k]} onChange={e=>sF({...f,[k]:e.target.value})}
-                style={{width:"100%",padding:"10px 12px",border:"0.5px solid #C6C6C8",borderRadius:10,fontSize:13,outline:"none",background:"#FAFAFA",boxSizing:"border-box" as const,fontFamily:"'Montserrat',sans-serif"}}/>
+                style={{width:"100%",padding:"9px 11px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"'Montserrat',sans-serif"}}/>
             </div>
           ))}
           <div>
-            <label style={{fontSize:11,color:"#8E8E93",display:"block",marginBottom:5,fontWeight:500}}>Источник</label>
-            <select value={f.source} onChange={e=>sF({...f,source:e.target.value})} style={{width:"100%",padding:"10px 12px",border:"0.5px solid #C6C6C8",borderRadius:10,fontSize:13,outline:"none",background:"#FAFAFA",boxSizing:"border-box" as const}}>
+            <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4,fontWeight:500}}>Источник</label>
+            <select value={f.source} onChange={e=>sF({...f,source:e.target.value})} style={{width:"100%",padding:"9px 11px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const}}>
               {SRCS.map(s=><option key={s}>{s}</option>)}
             </select>
           </div>
         </div>
         <div style={{display:"flex",gap:8,marginTop:14}}>
-          <button onClick={sub} style={{padding:"10px 20px",background:"#007AFF",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer"}}>Добавить</button>
-          <button onClick={()=>setShow(false)} style={{padding:"10px 16px",background:"#F2F2F7",color:"#8E8E93",border:"none",borderRadius:10,fontSize:13,cursor:"pointer"}}>Отмена</button>
+          <button onClick={sub} style={{padding:"9px 18px",background:C.a,color:"#fff",border:"none",borderRadius:9,fontSize:12,fontWeight:600,cursor:"pointer"}}>Добавить</button>
+          <button onClick={()=>setShow(false)} style={{padding:"9px 14px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:9,fontSize:12,cursor:"pointer"}}>Отмена</button>
         </div>
       </div>}
-      <div style={{background:"#fff",borderRadius:16,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.07)"}}>
+      <div style={{background:C.w,borderRadius:14,overflow:"hidden",border:"1px solid "+C.bd}}>
         {found.length===0
-          ?<div style={{padding:48,textAlign:"center",color:"#8E8E93",fontSize:14}}>Нет лидов</div>
+          ?<div style={{padding:48,textAlign:"center",color:C.t2,fontSize:13}}>Нет лидов</div>
           :found.map((l:any,i:number)=>(
-            <div key={l.id} style={{display:"flex",alignItems:"center",gap:14,padding:"14px 18px",borderBottom:i<found.length-1?"0.5px solid #E5E5EA":"none"}}>
-              <div style={{width:36,height:36,borderRadius:"50%",background:stCol(l.status)+"22",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                <span style={{fontSize:15,fontWeight:700,color:stCol(l.status)}}>{l.name[0]?.toUpperCase()}</span>
+            <div key={l.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderBottom:i<found.length-1?"1px solid "+C.bd:"none",transition:"background 0.1s"}}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.ib;}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}>
+              <div style={{width:32,height:32,borderRadius:"50%",background:stCol(l.status)+"18",border:`1px solid ${stCol(l.status)}25`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <span style={{fontSize:13,fontWeight:700,color:stCol(l.status)}}>{l.name[0]?.toUpperCase()}</span>
               </div>
               <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:14,fontWeight:600,color:"#1C1C1E"}}>{l.name}</div>
-                <div style={{fontSize:12,color:"#8E8E93",marginTop:2}}>{l.phone||l.email||l.contact||l.source}</div>
+                <div style={{fontSize:13,fontWeight:600,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.name}</div>
+                <div style={{fontSize:11,color:C.t2,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.phone||l.email||l.contact||l.source}</div>
               </div>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                {l.deal&&<span style={{fontSize:12,fontWeight:600,color:"#34C759"}}>{fmt$(l.deal)} ₽</span>}
-                <span style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:20,background:stCol(l.status)+"18",color:stCol(l.status)}}>{stLbl(l.status)}</span>
-                <button onClick={()=>allLeads.remove(l.id)} style={{width:26,height:26,borderRadius:8,border:"none",background:"#FF3B3012",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#FF3B30" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+                {l.deal&&<span style={{fontSize:11,fontWeight:600,color:C.g}}>{fmt$(l.deal)}₽</span>}
+                <span style={{fontSize:10,fontWeight:600,padding:"2px 9px",borderRadius:20,background:stCol(l.status)+"14",color:stCol(l.status),border:`1px solid ${stCol(l.status)}25`}}>{stLbl(l.status)}</span>
+                <button onClick={()=>allLeads.remove(l.id)} style={{width:24,height:24,borderRadius:7,border:"1px solid "+C.bd,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.15s"}}
+                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.r+"50";(e.currentTarget as HTMLElement).style.background=C.r+"10";}}
+                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.background="transparent";}}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={C.r} strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
                 </button>
               </div>
             </div>
