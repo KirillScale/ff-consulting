@@ -1,13 +1,33 @@
 "use client";
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } from "react";
 import { supabase } from "@/lib/supabase";
 
-/* ============ CONSTANTS ============ */
-const C = {
-  bg:"#F5F7FA",w:"#FFFFFF",a:"#2563EB",ah:"#1D4ED8",dk:"#1F1F1F",da:"#2F2F2F",
-  t1:"#111827",t2:"#6B7280",bd:"#E5E7EB",g:"#10B981",r:"#EF4444",y:"#F59E0B",
-  sh:"0 2px 12px rgba(0,0,0,0.06)",ib:"#F9FAFB",pk:"#EC4899",lb:"#06B6D4"
+/* ============ THEME SYSTEM ============ */
+const ThemeCtx=createContext<{dark:boolean;toggle:()=>void}>({dark:false,toggle:()=>{}});
+const useTheme=()=>useContext(ThemeCtx);
+
+// Light theme tokens
+const LIGHT={
+  bg:"#F5F7FA",w:"#FFFFFF",a:"#2563EB",ah:"#1D4ED8",
+  t1:"#111827",t2:"#6B7280",bd:"#E5E7EB",
+  g:"#10B981",r:"#EF4444",y:"#F59E0B",
+  sh:"0 2px 12px rgba(0,0,0,0.06)",ib:"#F9FAFB",
+  pk:"#EC4899",lb:"#06B6D4",dk:"#1F1F1F",da:"#2F2F2F",
 };
+// Dark theme tokens
+const DARK={
+  bg:"#0D0F14",w:"#141720",a:"#3B82F6",ah:"#2563EB",
+  t1:"#F1F5F9",t2:"#94A3B8",bd:"rgba(255,255,255,0.08)",
+  g:"#10B981",r:"#EF4444",y:"#F59E0B",
+  sh:"0 4px 24px rgba(0,0,0,0.4)",ib:"#1E2130",
+  pk:"#EC4899",lb:"#06B6D4",dk:"#080A0E",da:"#141720",
+};
+
+// C is a dynamic proxy — we mutate it in place so all components re-read it
+let C:{[k:string]:string}={...LIGHT};
+const applyTheme=(dark:boolean)=>{Object.assign(C,dark?DARK:LIGHT);};
+
+/* ============ CONSTANTS ============ */
 const PLATS=[{id:"instagram",label:"Instagram",color:C.pk},{id:"telegram",label:"Telegram",color:C.a},{id:"youtube",label:"YouTube",color:C.r},{id:"vk",label:"VK",color:C.lb},{id:"other",label:"Другое",color:C.t2}];
 const CTYPES=["Пост","Reels","Stories","Текст","Видео","Другое"];
 const CSTATS=[{id:"idea",label:"Идея",color:C.t2},{id:"progress",label:"В работе",color:C.y},{id:"ready",label:"Готово",color:C.a},{id:"published",label:"Опубликовано",color:C.g}];
@@ -184,116 +204,217 @@ function useIsMobile(){
 }
 
 /* ============ SIDEBAR (desktop) ============ */
-const SB="#1F1F1F"; // Notion-style dark gray
-const SB_H="#2F2F2F"; // hover
-const SB_ACT="#3B3B3B"; // active bg
-
 function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onLogout:()=>void}){
-  const[c,sC]=useState(false);
+  const{dark,toggle}=useTheme();
+  const[collapsed,setCollapsed]=useState(false);
 
-  const getAccentColor=(n:any)=>{
-    if((n as any).accent==="gradient")return null;
-    return (n as any).accent||null;
+  // Which group is the active page in?
+  const activeGroupIdx=NAV_GROUPS.findIndex(g=>g.items.some(i=>i.id===active));
+  const[openGroups,setOpenGroups]=useState<number[]>(()=>[activeGroupIdx>=0?activeGroupIdx:0]);
+
+  const toggleGroup=(idx:number)=>{
+    setOpenGroups(p=>p.includes(idx)?p.filter(i=>i!==idx):[...p,idx]);
   };
+
+  // SB colors — always dark regardless of theme
+  const SB_BG=dark?"#0A0C12":"#12141A";
+  const SB_H="rgba(255,255,255,0.05)";
+  const SB_ACT="rgba(59,130,246,0.15)";
 
   const AI_ICONS:Record<string,string>={
-    ai:"/icon-ai.png",
-    script:"/icon-copy.png",
-    product:"/icon-product.png",
-    stories:"/icon-stories.png",
+    ai:"/icon-ai.png",script:"/icon-copy.png",product:"/icon-product.png",stories:"/icon-stories.png",
   };
 
+  const getAccent=(n:any)=>(n.accent==="gradient"?null:n.accent||null);
+
   const renderItem=(n:any)=>{
-    const a=active===n.id;
-    const accent=getAccentColor(n);
-    const isGrad=(n as any).accent==="gradient";
-    const iconColor=a?"#fff":accent||"rgba(255,255,255,0.55)";
+    const isActive=active===n.id;
+    const accent=getAccent(n);
+    const isGrad=n.accent==="gradient";
     const customIcon=AI_ICONS[n.id];
-    return <button key={n.id} onClick={()=>onNav(n.id)} title={c?n.label:undefined}
-      style={{display:"flex",alignItems:"center",gap:9,padding:c?"8px 0":"6px 10px",justifyContent:c?"center":"flex-start",
-        border:"none",borderRadius:6,cursor:"pointer",width:"100%",
-        background:a?(accent?"transparent":SB_ACT):"transparent",
-        position:"relative",overflow:"hidden",
-        transition:"background 0.15s",
-      }}
-      onMouseEnter={e=>{if(!a)(e.currentTarget as HTMLElement).style.background=SB_H;}}
-      onMouseLeave={e=>{if(!a)(e.currentTarget as HTMLElement).style.background="transparent";}}>
-      {/* Active indicator */}
-      {a&&<div style={{position:"absolute",left:0,top:"15%",bottom:"15%",width:3,borderRadius:"0 3px 3px 0",background:accent||"#fff"}}/>}
-      {/* Gradient bg for stories */}
-      {a&&isGrad&&<div style={{position:"absolute",inset:0,background:"linear-gradient(135deg,rgba(134,239,172,0.12),rgba(167,139,250,0.12))",borderRadius:6}}/>}
-      {/* Icon — custom image or SVG */}
-      <div style={{width:22,height:22,borderRadius:5,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",
-        background:customIcon?"transparent":(a?(isGrad?"linear-gradient(135deg,#86EFAC,#A78BFA)":accent?accent+"22":"rgba(255,255,255,0.1)"):"transparent"),
-      }}>
-        {customIcon
-          ? <img src={customIcon} width={22} height={22} style={{borderRadius:5,objectFit:"cover",opacity:a?1:0.7,transition:"opacity 0.15s"}} alt={n.label}/>
-          : <I path={n.ic} size={13} color={isGrad&&a?"#fff":iconColor}/>
-        }
-      </div>
-      {!c&&<span style={{
-        fontSize:12.5,fontWeight:a?600:400,
-        color:a?(isGrad?"#86EFAC":accent||"#fff"):"rgba(255,255,255,0.75)",
-        overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1,textAlign:"left",
-      }}>{n.label}</span>}
-    </button>;
+    const iconColor=isActive?"#fff":accent||"rgba(255,255,255,0.5)";
+
+    return(
+      <button key={n.id} onClick={()=>onNav(n.id)} title={collapsed?n.label:undefined}
+        style={{
+          display:"flex",alignItems:"center",gap:10,
+          padding:collapsed?"10px 0":"8px 12px",
+          justifyContent:collapsed?"center":"flex-start",
+          border:"none",borderRadius:10,cursor:"pointer",width:"100%",
+          background:isActive?SB_ACT:"transparent",
+          position:"relative",overflow:"hidden",
+          transition:"all 0.2s",
+          boxShadow:isActive&&accent?`0 0 16px ${accent}30`:"none",
+        }}
+        onMouseEnter={e=>{
+          const el=e.currentTarget as HTMLElement;
+          if(!isActive)el.style.background=SB_H;
+          if(accent)el.style.boxShadow=`0 0 12px ${accent}25`;
+        }}
+        onMouseLeave={e=>{
+          const el=e.currentTarget as HTMLElement;
+          el.style.background=isActive?SB_ACT:"transparent";
+          el.style.boxShadow=isActive&&accent?`0 0 16px ${accent}30`:"none";
+        }}>
+
+        {/* Active glow bar */}
+        {isActive&&<div style={{position:"absolute",left:0,top:"20%",bottom:"20%",width:3,borderRadius:"0 3px 3px 0",background:accent||"#3B82F6",boxShadow:`0 0 8px ${accent||"#3B82F6"}`}}/>}
+
+        {/* Icon */}
+        <div style={{
+          width:24,height:24,borderRadius:7,flexShrink:0,
+          display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",
+          background:customIcon?"transparent":isActive?(isGrad?"linear-gradient(135deg,#86EFAC,#A78BFA)":accent?accent+"25":"rgba(255,255,255,0.12)"):"rgba(255,255,255,0.06)",
+          boxShadow:isActive&&accent?`0 0 10px ${accent}40`:"none",
+          transition:"all 0.2s",
+        }}>
+          {customIcon
+            ?<img src={customIcon} width={24} height={24} style={{borderRadius:7,objectFit:"cover",opacity:isActive?1:0.65}} alt={n.label}/>
+            :<I path={n.ic} size={13} color={isGrad&&isActive?"#fff":iconColor}/>
+          }
+        </div>
+
+        {!collapsed&&<span style={{
+          fontSize:12.5,fontWeight:isActive?600:400,flex:1,textAlign:"left",
+          color:isActive?(isGrad?"#86EFAC":accent||"#fff"):"rgba(255,255,255,0.7)",
+          overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+          transition:"color 0.2s",
+        }}>{n.label}</span>}
+
+        {!collapsed&&isActive&&<div style={{width:6,height:6,borderRadius:"50%",background:accent||"#3B82F6",flexShrink:0,boxShadow:`0 0 6px ${accent||"#3B82F6"}`}}/>}
+      </button>
+    );
   };
 
   return(
-    <div style={{width:c?56:240,height:"100vh",background:SB,display:"flex",flexDirection:"column",
-      transition:"width 0.25s ease",position:"fixed",left:0,top:0,zIndex:100,
+    <div style={{
+      width:collapsed?60:240,height:"100vh",
+      background:SB_BG,
+      display:"flex",flexDirection:"column",
+      transition:"width 0.25s cubic-bezier(0.4,0,0.2,1)",
+      position:"fixed",left:0,top:0,zIndex:100,
       overflowX:"hidden",overflowY:"hidden",
-      borderRight:"1px solid rgba(255,255,255,0.06)"}}>
+      borderRight:"1px solid rgba(255,255,255,0.06)",
+      backdropFilter:"blur(20px)",
+    }}>
+      <style>{`
+        @keyframes sideGlow{0%,100%{box-shadow:0 0 20px rgba(59,130,246,0.1)}50%{box-shadow:0 0 30px rgba(59,130,246,0.2)}}
+        .sb-scroll::-webkit-scrollbar{width:3px}
+        .sb-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:3px}
+      `}</style>
 
       {/* Logo */}
-      <div style={{padding:c?"16px 0":"14px 16px",display:"flex",alignItems:"center",gap:8,
-        justifyContent:c?"center":"flex-start",
-        borderBottom:"1px solid rgba(255,255,255,0.06)",flexShrink:0}}>
-        <Logo s={36}/>
-        {!c&&<div style={{display:"flex",flexDirection:"column",lineHeight:1.2}}>
-          <span style={{fontSize:13,fontWeight:700,color:"#fff",letterSpacing:0.5}}>VIZZY</span>
-          <span style={{fontSize:9,color:"rgba(255,255,255,0.35)",letterSpacing:0.5}}>by Kirill Scales</span>
+      <div style={{
+        padding:collapsed?"16px 0":"16px",
+        display:"flex",alignItems:"center",gap:10,
+        justifyContent:collapsed?"center":"flex-start",
+        borderBottom:"1px solid rgba(255,255,255,0.06)",
+        flexShrink:0,
+      }}>
+        <Logo s={34}/>
+        {!collapsed&&<div style={{display:"flex",flexDirection:"column",lineHeight:1.2}}>
+          <span style={{fontSize:13,fontWeight:800,color:"#fff",letterSpacing:1}}>VIZZY</span>
+          <span style={{fontSize:8,color:"rgba(255,255,255,0.3)",letterSpacing:0.8}}>by Kirill Scales</span>
         </div>}
       </div>
 
       {/* Nav groups */}
-      <div style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"8px 8px 0"}}>
-        {NAV_GROUPS.map((group,gi)=><div key={gi} style={{marginBottom:4}}>
-          {/* Group label */}
-          {group.label&&!c&&<div style={{fontSize:10,fontWeight:600,color:"rgba(255,255,255,0.28)",
-            padding:"10px 10px 4px",letterSpacing:0.8,textTransform:"uppercase"}}>
-            {group.label}
-          </div>}
-          {/* Divider when collapsed */}
-          {group.label&&c&&gi>0&&<div style={{height:1,background:"rgba(255,255,255,0.07)",margin:"6px 8px"}}/>}
-          {/* Items */}
-          <div style={{display:"flex",flexDirection:"column",gap:1}}>
-            {group.items.map(n=>renderItem(n))}
-          </div>
-        </div>)}
+      <div className="sb-scroll" style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"8px 8px 0"}}>
+        {NAV_GROUPS.map((group,gi)=>{
+          const isOpen=collapsed||openGroups.includes(gi);
+          const hasActiveItem=group.items.some(i=>i.id===active);
+          const hasLabel=!!group.label;
+
+          return(
+            <div key={gi} style={{marginBottom:4}}>
+              {/* Group header (accordion toggle) */}
+              {hasLabel&&!collapsed&&(
+                <button onClick={()=>toggleGroup(gi)}
+                  style={{
+                    width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",
+                    padding:"8px 10px 5px",border:"none",background:"transparent",cursor:"pointer",
+                    borderRadius:8,transition:"background 0.15s",
+                  }}
+                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=SB_H;}}
+                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}>
+                  <span style={{
+                    fontSize:9.5,fontWeight:700,
+                    color:hasActiveItem?"rgba(255,255,255,0.55)":"rgba(255,255,255,0.28)",
+                    letterSpacing:1.2,textTransform:"uppercase",
+                  }}>{group.label}</span>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2.5"
+                    style={{transform:isOpen?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s"}}>
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </button>
+              )}
+
+              {/* Collapsed divider */}
+              {hasLabel&&collapsed&&gi>0&&<div style={{height:1,background:"rgba(255,255,255,0.06)",margin:"6px 8px"}}/>}
+
+              {/* Items — animated open/close */}
+              <div style={{
+                display:"flex",flexDirection:"column",gap:2,
+                maxHeight:isOpen?"500px":"0",
+                overflow:"hidden",
+                transition:"max-height 0.3s cubic-bezier(0.4,0,0.2,1)",
+              }}>
+                {group.items.map(n=>renderItem(n))}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Bottom */}
-      <div style={{padding:"8px",borderTop:"1px solid rgba(255,255,255,0.06)",flexShrink:0}}>
-        <button onClick={()=>sC(!c)}
-          style={{width:"100%",display:"flex",alignItems:"center",gap:9,padding:c?"8px 0":"6px 10px",
-            justifyContent:c?"center":"flex-start",border:"none",borderRadius:6,cursor:"pointer",
-            background:"transparent",color:"rgba(255,255,255,0.4)",fontSize:12,
-            transition:"background 0.15s"}}
+      {/* Bottom: theme toggle + collapse + logout */}
+      <div style={{padding:"8px",borderTop:"1px solid rgba(255,255,255,0.06)",flexShrink:0,display:"flex",flexDirection:"column",gap:2}}>
+
+        {/* Theme toggle */}
+        <div style={{display:"flex",alignItems:"center",justifyContent:collapsed?"center":"space-between",padding:collapsed?"8px 0":"8px 10px"}}>
+          {!collapsed&&<span style={{fontSize:11,color:"rgba(255,255,255,0.35)"}}>Тема</span>}
+          <button onClick={toggle}
+            style={{
+              width:44,height:24,borderRadius:12,
+              background:dark?"linear-gradient(90deg,#3B82F6,#8B5CF6)":"rgba(255,255,255,0.12)",
+              border:"none",cursor:"pointer",position:"relative",
+              transition:"background 0.4s",flexShrink:0,
+            }}>
+            <div style={{
+              position:"absolute",top:2,
+              left:dark?22:2,
+              width:20,height:20,borderRadius:"50%",
+              background:"#fff",
+              transition:"left 0.3s cubic-bezier(0.4,0,0.2,1)",
+              display:"flex",alignItems:"center",justifyContent:"center",
+              fontSize:10,boxShadow:"0 1px 4px rgba(0,0,0,0.3)",
+            }}>
+              {dark?"🌙":"☀️"}
+            </div>
+          </button>
+        </div>
+
+        {/* Collapse button */}
+        <button onClick={()=>setCollapsed(!collapsed)}
+          style={{width:"100%",display:"flex",alignItems:"center",gap:9,padding:collapsed?"8px 0":"6px 10px",
+            justifyContent:collapsed?"center":"flex-start",border:"none",borderRadius:8,cursor:"pointer",
+            background:"transparent",color:"rgba(255,255,255,0.35)",fontSize:12,transition:"background 0.15s"}}
           onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=SB_H;}}
           onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">{c?<polyline points="9 18 15 12 9 6"/>:<polyline points="15 18 9 12 15 6"/>}</svg>
-          {!c&&<span>Свернуть</span>}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            {collapsed?<polyline points="9 18 15 12 9 6"/>:<polyline points="15 18 9 12 15 6"/>}
+          </svg>
+          {!collapsed&&<span>Свернуть</span>}
         </button>
+
+        {/* Logout */}
         <button onClick={onLogout}
-          style={{width:"100%",display:"flex",alignItems:"center",gap:9,padding:c?"8px 0":"6px 10px",
-            justifyContent:c?"center":"flex-start",border:"none",borderRadius:6,cursor:"pointer",
-            background:"transparent",color:"rgba(255,255,255,0.3)",fontSize:12,marginTop:1,
-            transition:"background 0.15s"}}
-          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=SB_H;}}
-          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}>
+          style={{width:"100%",display:"flex",alignItems:"center",gap:9,padding:collapsed?"8px 0":"6px 10px",
+            justifyContent:collapsed?"center":"flex-start",border:"none",borderRadius:8,cursor:"pointer",
+            background:"transparent",color:"rgba(255,255,255,0.28)",fontSize:12,transition:"background 0.15s"}}
+          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(239,68,68,0.1)";(e.currentTarget as HTMLElement).style.color="#EF4444";}}
+          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";(e.currentTarget as HTMLElement).style.color="rgba(255,255,255,0.28)";}}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          {!c&&<span>Выйти</span>}
+          {!collapsed&&<span>Выйти</span>}
         </button>
       </div>
     </div>
@@ -356,6 +477,7 @@ function MobileNav({active,onNav,onLogout}:{active:string,onNav:(id:string)=>voi
 
 const Head=({name,onMenuOpen}:{name:string,onMenuOpen?:()=>void})=>{
   const isMobile=useIsMobile();
+  const{dark}=useTheme();
   const greeting = getGreeting();
   const displayName = name && name !== "User" ? name : "";
   if(isMobile) return <div style={{height:56,background:C.dk,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px",position:"sticky",top:0,zIndex:50}}>
@@ -368,9 +490,23 @@ const Head=({name,onMenuOpen}:{name:string,onMenuOpen?:()=>void})=>{
     </div>
     <div style={{fontSize:13,fontWeight:500,color:"rgba(255,255,255,0.7)"}}>{greeting}{displayName?", "+displayName:""}</div>
   </div>;
-  return <div style={{height:64,background:C.w,borderBottom:"1px solid "+C.bd,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 32px",position:"sticky",top:0,zIndex:50}}>
-    <div style={{fontSize:15,fontWeight:600}}>{greeting}{displayName?", "+displayName:""}</div>
-    <div style={{display:"inline-flex",alignItems:"center",gap:10,background:C.dk,padding:"8px 20px",borderRadius:10}}><Logo s={28}/><div style={{display:"flex",flexDirection:"column",lineHeight:1.15}}><span style={{color:"#fff",fontSize:11,fontWeight:800,letterSpacing:1.5}}>VIZZY</span><span style={{color:"rgba(255,255,255,0.5)",fontSize:8,fontWeight:300,letterSpacing:1}}>by Kirill Scales</span></div></div>
+  return <div style={{
+    height:64,
+    background:dark?"rgba(20,23,32,0.8)":C.w,
+    backdropFilter:dark?"blur(20px)":"none",
+    borderBottom:"1px solid "+(dark?"rgba(255,255,255,0.06)":C.bd),
+    display:"flex",alignItems:"center",justifyContent:"space-between",
+    padding:"0 32px",position:"sticky",top:0,zIndex:50,
+    transition:"background 0.4s,border-color 0.4s",
+  }}>
+    <div style={{fontSize:15,fontWeight:600,color:C.t1}}>{greeting}{displayName?", "+displayName:""}</div>
+    <div style={{display:"inline-flex",alignItems:"center",gap:10,background:C.dk,padding:"8px 20px",borderRadius:10}}>
+      <Logo s={28}/>
+      <div style={{display:"flex",flexDirection:"column",lineHeight:1.15}}>
+        <span style={{color:"#fff",fontSize:11,fontWeight:800,letterSpacing:1.5}}>VIZZY</span>
+        <span style={{color:"rgba(255,255,255,0.5)",fontSize:8,fontWeight:300,letterSpacing:1}}>by Kirill Scales</span>
+      </div>
+    </div>
     <div style={{fontSize:14,color:C.t2}}>{fmtDate(new Date())}</div>
   </div>;
 };
@@ -384,6 +520,17 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState("");
   const [userAvatar, setUserAvatar] = useState("");
+  const [dark, setDark] = useState<boolean>(()=>{
+    try{return localStorage.getItem("ff_theme")==="dark";}catch{return false;}
+  });
+
+  // Apply theme tokens whenever dark changes
+  useEffect(()=>{
+    applyTheme(dark);
+    try{localStorage.setItem("ff_theme",dark?"dark":"light");}catch{}
+  },[dark]);
+
+  const toggleTheme=()=>setDark(d=>!d);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -414,11 +561,17 @@ export default function App() {
 
   const nav = NAV.find(n => n.id === page);
 
-  return <AppLayout user={user} page={page} setPage={setPage} userName={userName} userAvatar={userAvatar} setUserAvatar={setUserAvatar} logout={logout} nav={nav}/>;
+  return(
+    <ThemeCtx.Provider value={{dark,toggle:toggleTheme}}>
+      <AppLayout user={user} page={page} setPage={setPage} userName={userName} userAvatar={userAvatar} setUserAvatar={setUserAvatar} logout={logout} nav={nav} dark={dark}/>
+    </ThemeCtx.Provider>
+  );
 }
 
-function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,nav}:any){
+function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,nav,dark}:any){
   const isMobile=useIsMobile();
+  const[sideCollapsed,setSideCollapsed]=useState(false);
+  const sideW=sideCollapsed?60:240;
 
   const pageContent=<>
     {page === "dashboard" && <DashPage userId={user.id} name={userName} avatar={userAvatar} onNav={setPage} onAvatarChange={async(url:string)=>{setUserAvatar(url);await supabase.from("profiles").upsert({id:user.id,avatar_url:url},{onConflict:"id"});}}/>}
@@ -443,37 +596,44 @@ function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,n
   </>;
 
   return (
-    <div style={{fontFamily:"'Montserrat',-apple-system,BlinkMacSystemFont,sans-serif",background:C.bg,minHeight:"100vh",color:C.t1}}>
+    <div style={{
+      fontFamily:"'Montserrat',-apple-system,BlinkMacSystemFont,sans-serif",
+      background:C.bg,minHeight:"100vh",color:C.t1,
+      transition:"background 0.4s ease, color 0.4s ease",
+    }}>
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+        @keyframes burningGlow{0%,100%{box-shadow:0 0 12px rgba(239,68,68,0.18),0 0 0 1px rgba(239,68,68,0.12)}50%{box-shadow:0 0 22px rgba(239,68,68,0.32),0 0 0 1px rgba(239,68,68,0.22)}}
+        @keyframes deferrableGlow{0%,100%{box-shadow:0 0 8px rgba(245,158,11,0.12)}50%{box-shadow:0 0 16px rgba(245,158,11,0.24)}}
+        @keyframes glowPulse{0%,100%{box-shadow:0 0 8px 2px rgba(74,222,128,0.4)}50%{box-shadow:0 0 20px 6px rgba(74,222,128,0.7)}}
+        @keyframes progressGlow{0%,100%{opacity:0.6}50%{opacity:1}}
+        @keyframes stickerBounce{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+        @keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(120px) rotate(720deg);opacity:0}}
         *{box-sizing:border-box;}
         body{overflow-x:hidden;}
+        *{transition:background-color 0.3s ease,border-color 0.3s ease,color 0.3s ease;}
+        input,textarea,select,button{transition:none!important;}
       `}</style>
       <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 
       {isMobile ? <>
-        {/* Mobile layout */}
         <MobileNav active={page} onNav={setPage} onLogout={logout}/>
         <div style={{minHeight:"100vh",paddingBottom:80}}>
           <Head name={userName}/>
-          <div style={{padding:"16px 16px 0"}}>
-            {pageContent}
-          </div>
+          <div style={{padding:"16px 16px 0"}}>{pageContent}</div>
         </div>
       </> : <>
-        {/* Desktop layout */}
         <Side active={page} onNav={setPage} onLogout={logout}/>
-        <div style={{marginLeft:240,minHeight:"100vh"}}>
+        <div style={{marginLeft:sideW,minHeight:"100vh",transition:"margin-left 0.25s cubic-bezier(0.4,0,0.2,1)"}}>
           <Head name={userName}/>
-          <div style={{padding:"28px 32px"}}>
-            {pageContent}
-          </div>
+          <div style={{padding:"28px 32px"}}>{pageContent}</div>
         </div>
       </>}
     </div>
   );
 }
+
 
 /* ============ DASHBOARD ============ */
 function DonutChart({done,total,size=140}:{done:number,total:number,size?:number}){
