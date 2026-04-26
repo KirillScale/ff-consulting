@@ -6,24 +6,34 @@ import { supabase } from "@/lib/supabase";
 const ThemeCtx=createContext<{dark:boolean;toggle:()=>void}>({dark:false,toggle:()=>{}});
 const useTheme=()=>useContext(ThemeCtx);
 
-// Light theme tokens
 const LIGHT={
   bg:"#F5F7FA",w:"#FFFFFF",a:"#2563EB",ah:"#1D4ED8",
   t1:"#111827",t2:"#6B7280",bd:"#E5E7EB",
   g:"#10B981",r:"#EF4444",y:"#F59E0B",
   sh:"0 2px 12px rgba(0,0,0,0.06)",ib:"#F9FAFB",
   pk:"#EC4899",lb:"#06B6D4",dk:"#1F1F1F",da:"#2F2F2F",
-};
-// Dark theme tokens
-const DARK={
-  bg:"#0D0F14",w:"#141720",a:"#3B82F6",ah:"#2563EB",
-  t1:"#F1F5F9",t2:"#94A3B8",bd:"rgba(255,255,255,0.08)",
-  g:"#10B981",r:"#EF4444",y:"#F59E0B",
-  sh:"0 4px 24px rgba(0,0,0,0.4)",ib:"#1E2130",
-  pk:"#EC4899",lb:"#06B6D4",dk:"#080A0E",da:"#141720",
+  glass:"rgba(255,255,255,0.8)",glassBd:"rgba(0,0,0,0.08)",
 };
 
-// C is a dynamic proxy — we mutate it in place so all components re-read it
+// Deep Dark Glass — референс Quantix
+const DARK={
+  bg:"#080B12",          // глубокий почти-чёрный с синим подтоном
+  w:"rgba(255,255,255,0.04)",  // glassmorphism карточки
+  a:"#4F8EF7",           // синий акцент
+  ah:"#3B82F6",
+  t1:"#F0F4FF",          // почти белый текст
+  t2:"#6B7FA3",          // серо-синий secondary
+  bd:"rgba(255,255,255,0.07)", // едва видимые границы
+  g:"#10B981",r:"#EF4444",y:"#F59E0B",
+  sh:"0 8px 32px rgba(0,0,0,0.5)",
+  ib:"rgba(255,255,255,0.03)",
+  pk:"#EC4899",lb:"#06B6D4",
+  dk:"#060810",           // sidebar bg
+  da:"#0D1018",
+  glass:"rgba(15,19,32,0.7)",
+  glassBd:"rgba(255,255,255,0.08)",
+};
+
 let C:{[k:string]:string}={...LIGHT};
 const applyTheme=(dark:boolean)=>{Object.assign(C,dark?DARK:LIGHT);};
 
@@ -118,9 +128,36 @@ const Brand = ({size="md"}:{size?:string}) => {
   const s=sz[size]||sz.md;
   return <div style={{display:"flex",flexDirection:"column",alignItems:"center",lineHeight:1.2}}><span style={{fontSize:s.f,fontWeight:800,color:"#fff",letterSpacing:2}}>VIZZY</span><span style={{fontSize:s.sub,fontWeight:300,color:"rgba(255,255,255,0.6)",letterSpacing:1.5,marginTop:s.gap}}>by Kirill Scales</span></div>;
 };
-const Btn = ({children,onClick,primary=true,style:sx,disabled}:{children:React.ReactNode,onClick?:()=>void,primary?:boolean,style?:React.CSSProperties,disabled?:boolean}) => <button onClick={onClick} disabled={disabled} style={{padding:"10px 20px",background:primary?C.a:C.bg,color:primary?"#fff":C.t2,border:primary?"none":"1px solid "+C.bd,borderRadius:10,fontSize:14,fontWeight:600,cursor:disabled?"not-allowed":"pointer",opacity:disabled?0.5:1,...sx}}>{children}</button>;
+const Btn = ({children,onClick,primary=true,style:sx,disabled}:{children:React.ReactNode,onClick?:()=>void,primary?:boolean,style?:React.CSSProperties,disabled?:boolean}) => {
+  const{dark}=useTheme();
+  return <button onClick={onClick} disabled={disabled} style={{
+    padding:"10px 20px",
+    background:primary
+      ?(dark?"linear-gradient(135deg,#1E3A8A,#2563EB)":C.a)
+      :(dark?"rgba(255,255,255,0.05)":C.bg),
+    color:primary?"#fff":(dark?"rgba(255,255,255,0.6)":C.t2),
+    border:primary?"none":`1px solid ${C.bd}`,
+    borderRadius:10,fontSize:14,fontWeight:600,
+    cursor:disabled?"not-allowed":"pointer",
+    opacity:disabled?0.5:1,
+    boxShadow:primary&&dark?"0 0 20px rgba(37,99,235,0.3),inset 0 1px 0 rgba(255,255,255,0.1)":"none",
+    transition:"all 0.2s ease",
+    ...sx
+  }}>{children}</button>;
+};
 const Tag = ({label,color}:{label:string,color:string}) => <span style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:6,background:color+"18",color}}>{label}</span>;
-const Card = ({children,style:sx}:{children:React.ReactNode,style?:React.CSSProperties}) => <div style={{background:C.w,borderRadius:16,padding:24,boxShadow:C.sh,...sx}}>{children}</div>;
+const Card = ({children,style:sx}:{children:React.ReactNode,style?:React.CSSProperties}) => {
+  const{dark}=useTheme();
+  return <div style={{
+    background:dark?"rgba(255,255,255,0.03)":C.w,
+    borderRadius:16,padding:24,
+    boxShadow:dark?"0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.04)":C.sh,
+    border:dark?"1px solid rgba(255,255,255,0.06)":"none",
+    backdropFilter:dark?"blur(20px)":"none",
+    WebkitBackdropFilter:dark?"blur(20px)":"none",
+    ...sx
+  }}>{children}</div>;
+};
 
 /* ============ SUPABASE DATA HOOK ============ */
 function useTable(table:string, userId:string|null) {
@@ -203,12 +240,10 @@ function useIsMobile(){
   return m;
 }
 
-/* ============ SIDEBAR (desktop) ============ */
+/* ============ SIDEBAR — Deep Dark Glass ============ */
 function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onLogout:()=>void}){
   const{dark,toggle}=useTheme();
   const[collapsed,setCollapsed]=useState(false);
-
-  // Which group is the active page in?
   const activeGroupIdx=NAV_GROUPS.findIndex(g=>g.items.some(i=>i.id===active));
   const[openGroups,setOpenGroups]=useState<number[]>(()=>[activeGroupIdx>=0?activeGroupIdx:0]);
 
@@ -216,13 +251,9 @@ function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onL
     setOpenGroups(p=>p.includes(idx)?p.filter(i=>i!==idx):[...p,idx]);
   };
 
-  // SB colors — always dark regardless of theme
-  const SB_BG=dark?"#0A0C12":"#12141A";
-  const SB_H="rgba(255,255,255,0.05)";
-  const SB_ACT="rgba(59,130,246,0.15)";
-
   const AI_ICONS:Record<string,string>={
-    ai:"/icon-ai.png",script:"/icon-copy.png",product:"/icon-product.png",stories:"/icon-stories.png",
+    ai:"/icon-ai.png",script:"/icon-copy.png",
+    product:"/icon-product.png",stories:"/icon-stories.png",
   };
 
   const getAccent=(n:any)=>(n.accent==="gradient"?null:n.accent||null);
@@ -232,132 +263,203 @@ function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onL
     const accent=getAccent(n);
     const isGrad=n.accent==="gradient";
     const customIcon=AI_ICONS[n.id];
-    const iconColor=isActive?"#fff":accent||"rgba(255,255,255,0.5)";
+    const iconColor=isActive?"#fff":accent||"rgba(255,255,255,0.45)";
 
     return(
       <button key={n.id} onClick={()=>onNav(n.id)} title={collapsed?n.label:undefined}
         style={{
           display:"flex",alignItems:"center",gap:10,
-          padding:collapsed?"10px 0":"8px 12px",
+          padding:collapsed?"10px 0":"8px 10px",
           justifyContent:collapsed?"center":"flex-start",
-          border:"none",borderRadius:10,cursor:"pointer",width:"100%",
-          background:isActive?SB_ACT:"transparent",
+          border:"none",
+          borderRadius:12,
+          cursor:"pointer",width:"100%",
+          background:isActive
+            ? `rgba(${accent?hexToRgb(accent):"79,142,247"},0.12)`
+            : "transparent",
           position:"relative",overflow:"hidden",
-          transition:"all 0.2s",
-          boxShadow:isActive&&accent?`0 0 16px ${accent}30`:"none",
+          transition:"all 0.2s ease",
+          outline:"none",
         }}
         onMouseEnter={e=>{
           const el=e.currentTarget as HTMLElement;
-          if(!isActive)el.style.background=SB_H;
-          if(accent)el.style.boxShadow=`0 0 12px ${accent}25`;
+          if(!isActive){
+            el.style.background="rgba(255,255,255,0.04)";
+            el.style.transform="translateX(2px)";
+          }
+          const c=accent||"#4F8EF7";
+          el.style.boxShadow=`0 0 16px ${c}18`;
         }}
         onMouseLeave={e=>{
           const el=e.currentTarget as HTMLElement;
-          el.style.background=isActive?SB_ACT:"transparent";
-          el.style.boxShadow=isActive&&accent?`0 0 16px ${accent}30`:"none";
+          el.style.background=isActive?`rgba(79,142,247,0.12)`:"transparent";
+          el.style.transform="translateX(0)";
+          el.style.boxShadow=isActive?`0 0 20px rgba(79,142,247,0.15)`:"none";
         }}>
 
-        {/* Active glow bar */}
-        {isActive&&<div style={{position:"absolute",left:0,top:"20%",bottom:"20%",width:3,borderRadius:"0 3px 3px 0",background:accent||"#3B82F6",boxShadow:`0 0 8px ${accent||"#3B82F6"}`}}/>}
+        {/* Active left glow bar */}
+        {isActive&&<div style={{
+          position:"absolute",left:0,top:"18%",bottom:"18%",width:3,
+          borderRadius:"0 3px 3px 0",
+          background:accent||"#4F8EF7",
+          boxShadow:`0 0 10px ${accent||"#4F8EF7"},0 0 20px ${accent||"#4F8EF7"}66`,
+        }}/>}
 
-        {/* Icon */}
+        {/* Shimmer overlay on active */}
+        {isActive&&<div style={{
+          position:"absolute",inset:0,borderRadius:12,
+          background:"linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.03) 50%,transparent 100%)",
+          backgroundSize:"200% 100%",
+          animation:"shimmer 3s ease-in-out infinite",
+          pointerEvents:"none",
+        }}/>}
+
+        {/* Icon wrapper */}
         <div style={{
-          width:24,height:24,borderRadius:7,flexShrink:0,
-          display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",
-          background:customIcon?"transparent":isActive?(isGrad?"linear-gradient(135deg,#86EFAC,#A78BFA)":accent?accent+"25":"rgba(255,255,255,0.12)"):"rgba(255,255,255,0.06)",
-          boxShadow:isActive&&accent?`0 0 10px ${accent}40`:"none",
+          width:26,height:26,borderRadius:8,flexShrink:0,
+          display:"flex",alignItems:"center",justifyContent:"center",
+          overflow:"hidden",
+          background:customIcon?"transparent"
+            :isActive
+              ?(isGrad?"linear-gradient(135deg,#86EFAC,#A78BFA)":accent?accent+"30":"rgba(79,142,247,0.25)")
+              :"rgba(255,255,255,0.04)",
+          border:isActive?`1px solid ${accent||"#4F8EF7"}33`:"1px solid rgba(255,255,255,0.04)",
+          boxShadow:isActive&&accent?`0 0 12px ${accent}40,inset 0 1px 0 rgba(255,255,255,0.1)`
+            :isActive?"0 0 12px rgba(79,142,247,0.4),inset 0 1px 0 rgba(255,255,255,0.1)":"none",
           transition:"all 0.2s",
         }}>
           {customIcon
-            ?<img src={customIcon} width={24} height={24} style={{borderRadius:7,objectFit:"cover",opacity:isActive?1:0.65}} alt={n.label}/>
-            :<I path={n.ic} size={13} color={isGrad&&isActive?"#fff":iconColor}/>
+            ?<img src={customIcon} width={26} height={26} style={{borderRadius:8,objectFit:"cover",opacity:isActive?1:0.55}} alt={n.label}/>
+            :<I path={n.ic} size={13} color={isGrad&&isActive?"#fff":iconColor} sw={isActive?2:1.5}/>
           }
         </div>
 
         {!collapsed&&<span style={{
           fontSize:12.5,fontWeight:isActive?600:400,flex:1,textAlign:"left",
-          color:isActive?(isGrad?"#86EFAC":accent||"#fff"):"rgba(255,255,255,0.7)",
+          color:isActive?(isGrad?"#86EFAC":accent||"#E0EAFF"):"rgba(255,255,255,0.6)",
           overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
-          transition:"color 0.2s",
+          letterSpacing:isActive?0.1:0,
         }}>{n.label}</span>}
 
-        {!collapsed&&isActive&&<div style={{width:6,height:6,borderRadius:"50%",background:accent||"#3B82F6",flexShrink:0,boxShadow:`0 0 6px ${accent||"#3B82F6"}`}}/>}
+        {/* Active dot */}
+        {!collapsed&&isActive&&<div style={{
+          width:5,height:5,borderRadius:"50%",
+          background:accent||"#4F8EF7",flexShrink:0,
+          boxShadow:`0 0 6px ${accent||"#4F8EF7"},0 0 12px ${accent||"#4F8EF7"}88`,
+        }}/>}
       </button>
     );
   };
 
+  // helper: hex color → "r,g,b"
+  function hexToRgb(hex:string){
+    const r=parseInt(hex.slice(1,3),16);
+    const g=parseInt(hex.slice(3,5),16);
+    const b=parseInt(hex.slice(5,7),16);
+    return`${r},${g},${b}`;
+  }
+
+  const SB_BG=dark
+    ?"linear-gradient(180deg,#06080F 0%,#080B14 50%,#060810 100%)"
+    :"linear-gradient(180deg,#111420 0%,#12141A 100%)";
+
   return(
     <div style={{
-      width:collapsed?60:240,height:"100vh",
+      width:collapsed?64:248,height:"100vh",
       background:SB_BG,
       display:"flex",flexDirection:"column",
-      transition:"width 0.25s cubic-bezier(0.4,0,0.2,1)",
+      transition:"width 0.3s cubic-bezier(0.4,0,0.2,1)",
       position:"fixed",left:0,top:0,zIndex:100,
       overflowX:"hidden",overflowY:"hidden",
-      borderRight:"1px solid rgba(255,255,255,0.06)",
-      backdropFilter:"blur(20px)",
+      borderRight:"1px solid rgba(255,255,255,0.05)",
     }}>
       <style>{`
-        @keyframes sideGlow{0%,100%{box-shadow:0 0 20px rgba(59,130,246,0.1)}50%{box-shadow:0 0 30px rgba(59,130,246,0.2)}}
-        .sb-scroll::-webkit-scrollbar{width:3px}
-        .sb-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:3px}
+        @keyframes shimmer{
+          0%{background-position:-200% center}
+          100%{background-position:200% center}
+        }
+        @keyframes borderGlow{
+          0%,100%{border-color:rgba(79,142,247,0.15)}
+          50%{border-color:rgba(79,142,247,0.4)}
+        }
+        .sb-scroll::-webkit-scrollbar{width:2px}
+        .sb-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.05);border-radius:2px}
       `}</style>
+
+      {/* Top ambient glow */}
+      <div style={{
+        position:"absolute",top:-60,left:"50%",transform:"translateX(-50%)",
+        width:200,height:120,
+        background:"radial-gradient(ellipse,rgba(79,142,247,0.12) 0%,transparent 70%)",
+        pointerEvents:"none",
+      }}/>
 
       {/* Logo */}
       <div style={{
-        padding:collapsed?"16px 0":"16px",
+        padding:collapsed?"18px 0":"18px 16px",
         display:"flex",alignItems:"center",gap:10,
         justifyContent:collapsed?"center":"flex-start",
-        borderBottom:"1px solid rgba(255,255,255,0.06)",
-        flexShrink:0,
+        borderBottom:"1px solid rgba(255,255,255,0.05)",
+        flexShrink:0,position:"relative",
       }}>
-        <Logo s={34}/>
+        <div style={{
+          width:36,height:36,borderRadius:10,
+          background:"linear-gradient(135deg,#1a2340,#0d1428)",
+          border:"1px solid rgba(79,142,247,0.3)",
+          display:"flex",alignItems:"center",justifyContent:"center",
+          boxShadow:"0 0 16px rgba(79,142,247,0.2),inset 0 1px 0 rgba(255,255,255,0.05)",
+          flexShrink:0,
+        }}>
+          <Logo s={26}/>
+        </div>
         {!collapsed&&<div style={{display:"flex",flexDirection:"column",lineHeight:1.2}}>
-          <span style={{fontSize:13,fontWeight:800,color:"#fff",letterSpacing:1}}>VIZZY</span>
-          <span style={{fontSize:8,color:"rgba(255,255,255,0.3)",letterSpacing:0.8}}>by Kirill Scales</span>
+          <span style={{fontSize:14,fontWeight:800,color:"#E8F0FF",letterSpacing:1.5}}>VIZZY</span>
+          <span style={{fontSize:8,color:"rgba(255,255,255,0.25)",letterSpacing:1}}>by Kirill Scales</span>
         </div>}
       </div>
 
-      {/* Nav groups */}
-      <div className="sb-scroll" style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"8px 8px 0"}}>
+      {/* Nav */}
+      <div className="sb-scroll" style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"10px 8px 0"}}>
         {NAV_GROUPS.map((group,gi)=>{
           const isOpen=collapsed||openGroups.includes(gi);
           const hasActiveItem=group.items.some(i=>i.id===active);
-          const hasLabel=!!group.label;
 
           return(
-            <div key={gi} style={{marginBottom:4}}>
-              {/* Group header (accordion toggle) */}
-              {hasLabel&&!collapsed&&(
+            <div key={gi} style={{marginBottom:6}}>
+              {group.label&&!collapsed&&(
                 <button onClick={()=>toggleGroup(gi)}
                   style={{
-                    width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",
-                    padding:"8px 10px 5px",border:"none",background:"transparent",cursor:"pointer",
-                    borderRadius:8,transition:"background 0.15s",
+                    width:"100%",display:"flex",alignItems:"center",
+                    justifyContent:"space-between",
+                    padding:"7px 10px 4px",border:"none",
+                    background:"transparent",cursor:"pointer",borderRadius:8,
+                    transition:"background 0.15s",
                   }}
-                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=SB_H;}}
+                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.03)";}}
                   onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}>
                   <span style={{
-                    fontSize:9.5,fontWeight:700,
-                    color:hasActiveItem?"rgba(255,255,255,0.55)":"rgba(255,255,255,0.28)",
-                    letterSpacing:1.2,textTransform:"uppercase",
+                    fontSize:9,fontWeight:700,
+                    color:hasActiveItem?"rgba(79,142,247,0.7)":"rgba(255,255,255,0.22)",
+                    letterSpacing:1.5,textTransform:"uppercase",
                   }}>{group.label}</span>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2.5"
-                    style={{transform:isOpen?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.2s"}}>
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none"
+                    stroke={hasActiveItem?"rgba(79,142,247,0.5)":"rgba(255,255,255,0.2)"}
+                    strokeWidth="2.5"
+                    style={{transform:isOpen?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.25s ease"}}>
                     <polyline points="6 9 12 15 18 9"/>
                   </svg>
                 </button>
               )}
 
-              {/* Collapsed divider */}
-              {hasLabel&&collapsed&&gi>0&&<div style={{height:1,background:"rgba(255,255,255,0.06)",margin:"6px 8px"}}/>}
+              {group.label&&collapsed&&gi>0&&(
+                <div style={{height:1,background:"rgba(255,255,255,0.04)",margin:"6px 10px"}}/>
+              )}
 
-              {/* Items — animated open/close */}
               <div style={{
                 display:"flex",flexDirection:"column",gap:2,
-                maxHeight:isOpen?"500px":"0",
+                maxHeight:isOpen?"600px":"0",
                 overflow:"hidden",
-                transition:"max-height 0.3s cubic-bezier(0.4,0,0.2,1)",
+                transition:"max-height 0.35s cubic-bezier(0.4,0,0.2,1)",
               }}>
                 {group.items.map(n=>renderItem(n))}
               </div>
@@ -366,40 +468,58 @@ function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onL
         })}
       </div>
 
-      {/* Bottom: theme toggle + collapse + logout */}
-      <div style={{padding:"8px",borderTop:"1px solid rgba(255,255,255,0.06)",flexShrink:0,display:"flex",flexDirection:"column",gap:2}}>
-
+      {/* Bottom */}
+      <div style={{
+        padding:"10px 8px 12px",
+        borderTop:"1px solid rgba(255,255,255,0.04)",
+        flexShrink:0,display:"flex",flexDirection:"column",gap:4,
+      }}>
         {/* Theme toggle */}
-        <div style={{display:"flex",alignItems:"center",justifyContent:collapsed?"center":"space-between",padding:collapsed?"8px 0":"8px 10px"}}>
-          {!collapsed&&<span style={{fontSize:11,color:"rgba(255,255,255,0.35)"}}>Тема</span>}
+        <div style={{
+          display:"flex",alignItems:"center",
+          justifyContent:collapsed?"center":"space-between",
+          padding:collapsed?"10px 0":"8px 10px",
+        }}>
+          {!collapsed&&<span style={{fontSize:10,color:"rgba(255,255,255,0.25)",letterSpacing:0.5}}>Тема интерфейса</span>}
           <button onClick={toggle}
             style={{
-              width:44,height:24,borderRadius:12,
-              background:dark?"linear-gradient(90deg,#3B82F6,#8B5CF6)":"rgba(255,255,255,0.12)",
-              border:"none",cursor:"pointer",position:"relative",
-              transition:"background 0.4s",flexShrink:0,
+              width:48,height:26,borderRadius:13,flexShrink:0,
+              background:dark
+                ?"linear-gradient(90deg,#1E3A8A,#4F46E5)"
+                :"rgba(255,255,255,0.1)",
+              border:`1px solid ${dark?"rgba(79,142,247,0.4)":"rgba(255,255,255,0.1)"}`,
+              cursor:"pointer",position:"relative",
+              boxShadow:dark?"0 0 12px rgba(79,142,247,0.25)":"none",
+              transition:"all 0.4s ease",
+              outline:"none",
             }}>
             <div style={{
               position:"absolute",top:2,
-              left:dark?22:2,
+              left:dark?24:2,
               width:20,height:20,borderRadius:"50%",
-              background:"#fff",
-              transition:"left 0.3s cubic-bezier(0.4,0,0.2,1)",
+              background:dark?"#E0EAFF":"rgba(255,255,255,0.7)",
+              transition:"left 0.35s cubic-bezier(0.4,0,0.2,1)",
               display:"flex",alignItems:"center",justifyContent:"center",
-              fontSize:10,boxShadow:"0 1px 4px rgba(0,0,0,0.3)",
+              fontSize:11,
+              boxShadow:dark?"0 0 8px rgba(79,142,247,0.6)":"0 1px 4px rgba(0,0,0,0.2)",
             }}>
               {dark?"🌙":"☀️"}
             </div>
           </button>
         </div>
 
-        {/* Collapse button */}
+        {/* Collapse */}
         <button onClick={()=>setCollapsed(!collapsed)}
-          style={{width:"100%",display:"flex",alignItems:"center",gap:9,padding:collapsed?"8px 0":"6px 10px",
-            justifyContent:collapsed?"center":"flex-start",border:"none",borderRadius:8,cursor:"pointer",
-            background:"transparent",color:"rgba(255,255,255,0.35)",fontSize:12,transition:"background 0.15s"}}
-          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=SB_H;}}
-          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}>
+          style={{
+            width:"100%",display:"flex",alignItems:"center",gap:8,
+            padding:collapsed?"10px 0":"7px 10px",
+            justifyContent:collapsed?"center":"flex-start",
+            border:"none",borderRadius:10,cursor:"pointer",
+            background:"transparent",color:"rgba(255,255,255,0.25)",
+            fontSize:12,transition:"all 0.15s",outline:"none",
+          }}
+          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.04)";(e.currentTarget as HTMLElement).style.color="rgba(255,255,255,0.55)";}}
+          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";(e.currentTarget as HTMLElement).style.color="rgba(255,255,255,0.25)";}}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             {collapsed?<polyline points="9 18 15 12 9 6"/>:<polyline points="15 18 9 12 15 6"/>}
           </svg>
@@ -408,12 +528,21 @@ function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onL
 
         {/* Logout */}
         <button onClick={onLogout}
-          style={{width:"100%",display:"flex",alignItems:"center",gap:9,padding:collapsed?"8px 0":"6px 10px",
-            justifyContent:collapsed?"center":"flex-start",border:"none",borderRadius:8,cursor:"pointer",
-            background:"transparent",color:"rgba(255,255,255,0.28)",fontSize:12,transition:"background 0.15s"}}
-          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(239,68,68,0.1)";(e.currentTarget as HTMLElement).style.color="#EF4444";}}
-          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";(e.currentTarget as HTMLElement).style.color="rgba(255,255,255,0.28)";}}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          style={{
+            width:"100%",display:"flex",alignItems:"center",gap:8,
+            padding:collapsed?"10px 0":"7px 10px",
+            justifyContent:collapsed?"center":"flex-start",
+            border:"none",borderRadius:10,cursor:"pointer",
+            background:"transparent",color:"rgba(255,255,255,0.2)",
+            fontSize:12,transition:"all 0.15s",outline:"none",
+          }}
+          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(239,68,68,0.08)";(e.currentTarget as HTMLElement).style.color="#EF4444";}}
+          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";(e.currentTarget as HTMLElement).style.color="rgba(255,255,255,0.2)";}}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
           {!collapsed&&<span>Выйти</span>}
         </button>
       </div>
@@ -492,22 +621,30 @@ const Head=({name,onMenuOpen}:{name:string,onMenuOpen?:()=>void})=>{
   </div>;
   return <div style={{
     height:64,
-    background:dark?"rgba(20,23,32,0.8)":C.w,
-    backdropFilter:dark?"blur(20px)":"none",
-    borderBottom:"1px solid "+(dark?"rgba(255,255,255,0.06)":C.bd),
+    background:dark
+      ?"rgba(8,11,18,0.85)"
+      :C.w,
+    backdropFilter:dark?"blur(24px)":"none",
+    WebkitBackdropFilter:dark?"blur(24px)":"none",
+    borderBottom:`1px solid ${dark?"rgba(255,255,255,0.05)":C.bd}`,
     display:"flex",alignItems:"center",justifyContent:"space-between",
     padding:"0 32px",position:"sticky",top:0,zIndex:50,
-    transition:"background 0.4s,border-color 0.4s",
+    boxShadow:dark?"0 1px 0 rgba(255,255,255,0.03), 0 4px 20px rgba(0,0,0,0.3)":"none",
   }}>
     <div style={{fontSize:15,fontWeight:600,color:C.t1}}>{greeting}{displayName?", "+displayName:""}</div>
-    <div style={{display:"inline-flex",alignItems:"center",gap:10,background:C.dk,padding:"8px 20px",borderRadius:10}}>
+    <div style={{display:"inline-flex",alignItems:"center",gap:10,
+      background:dark?"rgba(255,255,255,0.04)":"#1F1F1F",
+      border:dark?"1px solid rgba(255,255,255,0.08)":"none",
+      padding:"8px 20px",borderRadius:12,
+      boxShadow:dark?"0 0 20px rgba(79,142,247,0.1),inset 0 1px 0 rgba(255,255,255,0.04)":"none",
+    }}>
       <Logo s={28}/>
       <div style={{display:"flex",flexDirection:"column",lineHeight:1.15}}>
         <span style={{color:"#fff",fontSize:11,fontWeight:800,letterSpacing:1.5}}>VIZZY</span>
         <span style={{color:"rgba(255,255,255,0.5)",fontSize:8,fontWeight:300,letterSpacing:1}}>by Kirill Scales</span>
       </div>
     </div>
-    <div style={{fontSize:14,color:C.t2}}>{fmtDate(new Date())}</div>
+    <div style={{fontSize:13,color:C.t2}}>{fmtDate(new Date())}</div>
   </div>;
 };
 
@@ -598,22 +735,61 @@ function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,n
   return (
     <div style={{
       fontFamily:"'Montserrat',-apple-system,BlinkMacSystemFont,sans-serif",
-      background:C.bg,minHeight:"100vh",color:C.t1,
-      transition:"background 0.4s ease, color 0.4s ease",
+      background:dark?"#080B12":C.bg,
+      minHeight:"100vh",color:C.t1,
+      position:"relative",
+      transition:"background 0.5s ease, color 0.4s ease",
     }}>
+      {/* Ambient glows — dark mode only */}
+      {dark&&<>
+        <div style={{position:"fixed",top:-200,left:"30%",width:700,height:700,borderRadius:"50%",background:"radial-gradient(ellipse,rgba(37,99,235,0.07) 0%,transparent 65%)",pointerEvents:"none",zIndex:0}}/>
+        <div style={{position:"fixed",bottom:-200,right:"5%",width:500,height:500,borderRadius:"50%",background:"radial-gradient(ellipse,rgba(139,92,246,0.06) 0%,transparent 65%)",pointerEvents:"none",zIndex:0}}/>
+        <div style={{position:"fixed",top:"40%",left:"50%",width:400,height:400,borderRadius:"50%",background:"radial-gradient(ellipse,rgba(6,182,212,0.03) 0%,transparent 60%)",pointerEvents:"none",zIndex:0}}/>
+      </>}
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap');
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
-        @keyframes burningGlow{0%,100%{box-shadow:0 0 12px rgba(239,68,68,0.18),0 0 0 1px rgba(239,68,68,0.12)}50%{box-shadow:0 0 22px rgba(239,68,68,0.32),0 0 0 1px rgba(239,68,68,0.22)}}
-        @keyframes deferrableGlow{0%,100%{box-shadow:0 0 8px rgba(245,158,11,0.12)}50%{box-shadow:0 0 16px rgba(245,158,11,0.24)}}
-        @keyframes glowPulse{0%,100%{box-shadow:0 0 8px 2px rgba(74,222,128,0.4)}50%{box-shadow:0 0 20px 6px rgba(74,222,128,0.7)}}
-        @keyframes progressGlow{0%,100%{opacity:0.6}50%{opacity:1}}
+        @keyframes burningGlow{0%,100%{box-shadow:0 0 12px rgba(239,68,68,0.2)}50%{box-shadow:0 0 24px rgba(239,68,68,0.4)}}
+        @keyframes deferrableGlow{0%,100%{box-shadow:0 0 8px rgba(245,158,11,0.12)}50%{box-shadow:0 0 16px rgba(245,158,11,0.28)}}
+        @keyframes glowPulse{0%,100%{box-shadow:0 0 8px 2px rgba(74,222,128,0.3)}50%{box-shadow:0 0 20px 6px rgba(74,222,128,0.6)}}
         @keyframes stickerBounce{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
         @keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(120px) rotate(720deg);opacity:0}}
+        @keyframes progressGlow{0%,100%{opacity:0.6}50%{opacity:1}}
+        @keyframes accentPulse{0%,100%{opacity:0.6;transform:scale(1)}50%{opacity:1;transform:scale(1.05)}}
+        @keyframes floatUp{0%{transform:translateY(4px);opacity:0}100%{transform:translateY(0);opacity:1}}
+        @keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+        @keyframes borderGlow{0%,100%{border-color:rgba(79,142,247,0.2)}50%{border-color:rgba(79,142,247,0.5)}}
         *{box-sizing:border-box;}
-        body{overflow-x:hidden;}
-        *{transition:background-color 0.3s ease,border-color 0.3s ease,color 0.3s ease;}
-        input,textarea,select,button{transition:none!important;}
+        body{overflow-x:hidden;margin:0;}
+        *{transition:background-color 0.35s ease,border-color 0.35s ease,color 0.35s ease,box-shadow 0.35s ease;}
+        input,textarea,select,button,svg,img,div[style*="transform"]{transition:none!important;}
+        button{transition:background 0.15s ease,box-shadow 0.2s ease,transform 0.15s ease!important;}
+        .sb-scroll::-webkit-scrollbar{width:2px}
+        .sb-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.06);border-radius:2px}
+        .dark-card{
+          background:rgba(255,255,255,0.04);
+          backdrop-filter:blur(20px);
+          -webkit-backdrop-filter:blur(20px);
+          border:1px solid rgba(255,255,255,0.07);
+          border-radius:16px;
+        }
+        .dark-card:hover{
+          border-color:rgba(79,142,247,0.25);
+          box-shadow:0 0 0 1px rgba(79,142,247,0.1),0 8px 32px rgba(0,0,0,0.4);
+        }
+        .glow-btn{
+          position:relative;overflow:hidden;
+        }
+        .glow-btn::before{
+          content:'';position:absolute;inset:0;border-radius:inherit;
+          background:linear-gradient(135deg,rgba(255,255,255,0.1),transparent);
+          opacity:0;transition:opacity 0.2s;
+        }
+        .glow-btn:hover::before{opacity:1;}
+        .nav-item-active{
+          animation:borderGlow 3s ease-in-out infinite;
+        }
       `}</style>
       <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 
