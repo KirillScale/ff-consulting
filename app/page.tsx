@@ -82,6 +82,7 @@ const NAV_GROUPS=[
     label:"Остальное",
     items:[
       {id:"pnl",label:"P&L",ic:"M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"},
+      {id:"sheets",label:"Таблицы",ic:"M3 10h18M3 6h18M3 14h18M3 18h18M10 3v18M6 3v18"},
       {id:"tools",label:"Инструменты",ic:"M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"},
       {id:"links",label:"База ссылок",ic:"M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"},
       {id:"board",label:"Доска",ic:"M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"},
@@ -760,6 +761,7 @@ function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,n
     {page === "mailings" && <MailingsPage userId={user.id}/>}
     {page === "content" && <ContentPage userId={user.id}/>}
     {page === "pnl" && <PnlPage userId={user.id}/>}
+    {page === "sheets" && <SheetsPage userId={user.id}/>}
     {page === "media" && <MediaPage userId={user.id}/>}
     {page === "ads" && <AdsPage userId={user.id}/>}
     {page === "calc" && <CalcPage/>}
@@ -771,7 +773,7 @@ function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,n
     {page === "script" && <ScriptAIPage/>}
     {page === "product" && <ProductAIPage/>}
     {page === "stories" && <StoriesAIPage/>}
-    {!["dashboard","strategy","crm","calls","mailings","content","pnl","media","ads","calc","tools","links","board","files","ai","script","product","stories"].includes(page) && nav && <Placeholder title={nav.label} ic={nav.ic}/>}
+    {!["dashboard","strategy","crm","calls","mailings","content","pnl","sheets","media","ads","calc","tools","links","board","files","ai","script","product","stories"].includes(page) && nav && <Placeholder title={nav.label} ic={nav.ic}/>}
   </>;
 
   return (
@@ -5964,7 +5966,772 @@ function MailingsPage({userId}:{userId:string}){
   );
 }
 
-/* ============ TOOLS (TIMER v2) ============ */
+/* ============ SHEETS (Google Sheets–style v2) ============ */
+// Virtual scrolling, formula engine, xlsx export, full dark/light support
+
+const MAX_SHEETS_PER_WB=5;
+const MAX_WB=30;
+const TOTAL_ROWS=2000;
+const TOTAL_COLS=500;
+const DEF_COL_W=100;
+const DEF_ROW_H=24;
+const HDR_H=26;
+const HDR_W=52;
+
+// Column name: 0→A, 25→Z, 26→AA etc
+function shColName(i:number):string{
+  let s="";let n=i;
+  do{s=String.fromCharCode(65+(n%26))+s;n=Math.floor(n/26)-1;}while(n>=0);
+  return s;
+}
+function shColIdx(name:string):number{
+  let n=0;
+  for(let i=0;i<name.length;i++)n=n*26+(name.charCodeAt(i)-64);
+  return n-1;
+}
+function shCellKey(r:number,c:number):string{return`${r},${c}`;}
+function shCellRef(r:number,c:number):string{return`${shColName(c)}${r+1}`;}
+
+type ShCellFmt={bold?:boolean;italic?:boolean;align?:"left"|"center"|"right";bg?:string;color?:string;};
+type ShCell={value:string;formula:string|null;fmt:ShCellFmt;};
+type ShSheet={id:string;name:string;data:Record<string,ShCell>;colWidths:Record<number,number>;};
+type ShWb={id:string;name:string;sheets:ShSheet[];activeSheet:number;};
+
+function shBid():string{return Math.random().toString(36).slice(2)+Date.now().toString(36);}
+function shMakeCell(v:string="",f:string|null=null,fmt:ShCellFmt={}):ShCell{return{value:v,formula:f,fmt};}
+function shMakeSheet(name:string):ShSheet{return{id:shBid(),name,data:{},colWidths:{}};}
+function shMakeWb(name:string):ShWb{return{id:shBid(),name,sheets:[shMakeSheet("Лист 1")],activeSheet:0};}
+
+// ── Formula Engine ──────────────────────────────────────────
+function shEval(formula:string,data:Record<string,ShCell>,depth=0):string{
+  if(depth>30)return"#CIRC!";
+  if(!formula.startsWith("="))return formula;
+  let expr=formula.slice(1).trim();
+
+  const resolveRef=(ref:string):number=>{
+    const m=ref.match(/^([A-Z]+)(\d+)$/);
+    if(!m)return 0;
+    const c=shColIdx(m[1]),r=parseInt(m[2])-1;
+    const k=shCellKey(r,c);
+    const cell=data[k];
+    if(!cell)return 0;
+    const raw=cell.formula?shEval(cell.formula,data,depth+1):cell.value;
+    const n=parseFloat(raw);
+    return isNaN(n)?0:n;
+  };
+
+  const expandRange=(a:string,b:string):number[]=>{
+    const ma=a.match(/^([A-Z]+)(\d+)$/),mb=b.match(/^([A-Z]+)(\d+)$/);
+    if(!ma||!mb)return[];
+    const c1=shColIdx(ma[1]),r1=parseInt(ma[2])-1;
+    const c2=shColIdx(mb[1]),r2=parseInt(mb[2])-1;
+    const vals:number[]=[];
+    for(let r=Math.min(r1,r2);r<=Math.max(r1,r2);r++)
+      for(let c=Math.min(c1,c2);c<=Math.max(c1,c2);c++)
+        vals.push(resolveRef(`${shColName(c)}${r+1}`));
+    return vals;
+  };
+
+  // Normalise: СУММ→SUM, СРЗНАЧ→AVG etc
+  expr=expr.replace(/СУММ/gi,"SUM").replace(/СРЗНАЧ|СРЕДНЕЕ/gi,"AVG")
+    .replace(/МАКС/gi,"MAX").replace(/МИН/gi,"MIN").replace(/СЧЁТ/gi,"COUNT");
+
+  // Function with range: SUM(A1:B5)
+  const fnRange=/^(SUM|AVG|AVERAGE|MAX|MIN|COUNT|COUNTA)\(([A-Z]+\d+):([A-Z]+\d+)\)$/i;
+  const mfr=expr.match(fnRange);
+  if(mfr){
+    const fn=mfr[1].toUpperCase(),vals=expandRange(mfr[2].toUpperCase(),mfr[3].toUpperCase());
+    if(fn==="SUM")return String(vals.reduce((s,v)=>s+v,0));
+    if(fn==="AVG"||fn==="AVERAGE")return vals.length?String(+(vals.reduce((s,v)=>s+v,0)/vals.length).toFixed(8)):"0";
+    if(fn==="MAX")return String(Math.max(...vals,0));
+    if(fn==="MIN")return String(Math.min(...vals,0));
+    if(fn==="COUNT"||fn==="COUNTA")return String(vals.filter(v=>v!==0).length);
+  }
+
+  // Function with semicolon list: SUM(A1;B2;C3)
+  const fnList=/^(SUM|AVG|MAX|MIN)\((.+)\)$/i;
+  const mfl=expr.match(fnList);
+  if(mfl){
+    const parts=mfl[2].split(/[;,]/).map(s=>s.trim());
+    const vals=parts.map(p=>{
+      if(/^[A-Z]+\d+$/i.test(p))return resolveRef(p.toUpperCase());
+      return parseFloat(p)||0;
+    });
+    const fn=mfl[1].toUpperCase();
+    if(fn==="SUM")return String(vals.reduce((s,v)=>s+v,0));
+    if(fn==="AVG")return String(+(vals.reduce((s,v)=>s+v,0)/vals.length).toFixed(8));
+    if(fn==="MAX")return String(Math.max(...vals));
+    if(fn==="MIN")return String(Math.min(...vals));
+  }
+
+  // IF(cond,t,f)
+  const mif=expr.match(/^IF\((.+?),(.*),(.*)\)$/i);
+  if(mif){
+    try{
+      const cond=mif[1].replace(/([A-Z]+\d+)/gi,r=>String(resolveRef(r)));
+      // eslint-disable-next-line no-new-func
+      const ok=new Function("return "+cond)();
+      return ok?mif[2].trim():mif[3].trim();
+    }catch{return"#ERR!";}
+  }
+
+  // General math: A1+B2*3 etc
+  try{
+    const math=expr.toUpperCase().replace(/([A-Z]+\d+)/g,r=>`(${resolveRef(r)})`);
+    // eslint-disable-next-line no-new-func
+    const result=new Function("return "+math)();
+    if(!isFinite(result))return"#DIV/0!";
+    if(isNaN(result))return"#VALUE!";
+    return String(+result.toFixed(10));
+  }catch{return"#ERR!";}
+}
+
+// Relative ref shift for copy-paste
+function shShiftFormula(formula:string,dr:number,dc:number):string{
+  if(!formula.startsWith("="))return formula;
+  return formula.replace(/(\$?)([A-Z]+)(\$?)(\d+)/g,(_,ac,col,ar,row)=>{
+    const newCol=ac?col:shColName(shColIdx(col)+dc);
+    const newRow=ar?row:String(parseInt(row)+dr);
+    return`${ac}${newCol}${ar}${newRow}`;
+  });
+}
+
+function SheetsPage({userId}:{userId:string}){
+  const{dark}=useTheme();
+  const[workbooks,setWorkbooks]=useState<ShWb[]>([]);
+  const[activeWbId,setActiveWbId]=useState<string|null>(null);
+  const[loading,setLoading]=useState(true);
+  const[newWbModal,setNewWbModal]=useState(false);
+  const[newWbName,setNewWbName]=useState("");
+  const[toast,setToast]=useState<string|null>(null);
+  const saveTimer=useRef<any>(null);
+  const toastTimer=useRef<any>(null);
+
+  // Selection
+  const[sel,setSel]=useState<{r:number;c:number}>({r:0,c:0});
+  const[selRange,setSelRange]=useState<{r1:number;c1:number;r2:number;c2:number}|null>(null);
+  const[editing,setEditing]=useState(false);
+  const[editVal,setEditVal]=useState("");
+  const[isDragging,setIsDragging]=useState(false);
+  const[dragStart,setDragStart]=useState<{r:number;c:number}|null>(null);
+
+  // Clipboard
+  const clipRef=useRef<{cells:Record<string,ShCell>;r1:number;c1:number;r2:number;c2:number}|null>(null);
+
+  // Scroll / virtual
+  const[scrollTop,setScrollTop]=useState(0);
+  const[scrollLeft,setScrollLeft]=useState(0);
+  const gridRef=useRef<HTMLDivElement>(null);
+  const cellInputRef=useRef<HTMLInputElement>(null);
+  const formulaInputRef=useRef<HTMLInputElement>(null);
+
+  // Visible range
+  const containerH=window.innerHeight-64-48-38-46-36-2; // rough
+  const containerW=window.innerWidth-248-HDR_W-2;
+  const visRowStart=Math.max(0,Math.floor(scrollTop/DEF_ROW_H)-2);
+  const visRowEnd=Math.min(TOTAL_ROWS-1,visRowStart+Math.ceil(containerH/DEF_ROW_H)+4);
+  const visColStart=Math.max(0,Math.floor(scrollLeft/DEF_COL_W)-1);
+  const visColEnd=Math.min(TOTAL_COLS-1,visColStart+Math.ceil(containerW/DEF_COL_W)+3);
+
+  const wb=workbooks.find(w=>w.id===activeWbId)||null;
+  const sheet=wb?wb.sheets[wb.activeSheet]||wb.sheets[0]:null;
+  const data=sheet?.data||{};
+
+  const showToast=(msg:string)=>{
+    setToast(msg);clearTimeout(toastTimer.current);
+    toastTimer.current=setTimeout(()=>setToast(null),2500);
+  };
+
+  // ── Persist ──
+  useEffect(()=>{
+    const saved=localStorage.getItem(`ff_sheets2_${userId}`);
+    if(saved){try{const d=JSON.parse(saved);setWorkbooks(d);if(d.length)setActiveWbId(d[0].id);}catch{}}
+    setLoading(false);
+  },[userId]);
+
+  const persist=(wbs:ShWb[])=>{
+    clearTimeout(saveTimer.current);
+    saveTimer.current=setTimeout(()=>{
+      try{localStorage.setItem(`ff_sheets2_${userId}`,JSON.stringify(wbs));}catch{}
+    },800);
+  };
+
+  const updWbs=(fn:(p:ShWb[])=>ShWb[])=>{
+    setWorkbooks(p=>{const n=fn(p);persist(n);return n;});
+  };
+
+  const updSheet=(fn:(s:ShSheet)=>ShSheet)=>{
+    if(!activeWbId||!wb)return;
+    const si=wb.activeSheet;
+    updWbs(wbs=>wbs.map(w=>w.id===activeWbId?{...w,sheets:w.sheets.map((s,i)=>i===si?fn(s):s)}:w));
+  };
+
+  const getCell=(r:number,c:number):ShCell=>data[shCellKey(r,c)]||{value:"",formula:null,fmt:{}};
+  const display=(r:number,c:number):string=>{
+    const cell=data[shCellKey(r,c)];
+    if(!cell||!cell.value&&!cell.formula)return"";
+    return cell.formula?shEval(cell.formula,data):cell.value;
+  };
+
+  // ── WB management ──
+  const createWb=()=>{
+    if(workbooks.length>=MAX_WB){showToast(`⚠ Лимит ${MAX_WB} таблиц`);return;}
+    const w=shMakeWb(newWbName.trim()||`Таблица ${workbooks.length+1}`);
+    loadDemoData(w.sheets[0]);
+    updWbs(p=>[...p,w]);
+    setActiveWbId(w.id);setNewWbModal(false);setNewWbName("");
+  };
+
+  const deleteWb=(id:string)=>{
+    if(!confirm("Удалить таблицу?"))return;
+    updWbs(p=>p.filter(w=>w.id!==id));
+    if(activeWbId===id)setActiveWbId(null);
+  };
+
+  // Demo data
+  const loadDemoData=(s:ShSheet)=>{
+    const headers=["Продукт","Январь","Февраль","Март","Q1 Итого","Рост %"];
+    headers.forEach((h,c)=>{s.data[shCellKey(0,c)]={value:h,formula:null,fmt:{bold:true}};});
+    const products=["FF Consulting","VIZZY APP","PRO Consulting","Game Plan","Kirill Scales"];
+    const nums=[[120,140,160],[80,95,112],[200,185,220],[45,60,75],[300,310,340]];
+    products.forEach((p,i)=>{
+      const r=i+1;
+      s.data[shCellKey(r,0)]={value:p,formula:null,fmt:{}};
+      nums[i].forEach((v,c)=>{s.data[shCellKey(r,c+1)]={value:String(v),formula:null,fmt:{align:"right"}};});
+      const f=`=СУММ(${shColName(1)}${r+1}:${shColName(3)}${r+1})`;
+      s.data[shCellKey(r,4)]={value:shEval(f,s.data),formula:f,fmt:{align:"right"}};
+      const g=`${(((nums[i][2]-nums[i][0])/nums[i][0])*100).toFixed(1)}%`;
+      s.data[shCellKey(r,5)]={value:g,formula:null,fmt:{align:"right",color:nums[i][2]>nums[i][0]?"#10B981":"#EF4444"}};
+    });
+    const tr=products.length+1;
+    s.data[shCellKey(tr,0)]={value:"ИТОГО",formula:null,fmt:{bold:true}};
+    [1,2,3,4].forEach(c=>{
+      const f=`=СУММ(${shColName(c)}2:${shColName(c)}${products.length+1})`;
+      s.data[shCellKey(tr,c)]={value:shEval(f,s.data),formula:f,fmt:{bold:true,align:"right"}};
+    });
+  };
+
+  // ── Sheet tabs ──
+  const addSheet=()=>{
+    if(!wb)return;
+    if(wb.sheets.length>=MAX_SHEETS_PER_WB){showToast(`⚠ Лимит ${MAX_SHEETS_PER_WB} листов`);return;}
+    const s=shMakeSheet(`Лист ${wb.sheets.length+1}`);
+    updWbs(wbs=>wbs.map(w=>w.id===activeWbId?{...w,sheets:[...w.sheets,s],activeSheet:w.sheets.length}:w));
+  };
+
+  const switchSheet=(i:number)=>{
+    updWbs(wbs=>wbs.map(w=>w.id===activeWbId?{...w,activeSheet:i}:w));
+    setSel({r:0,c:0});setSelRange(null);setEditing(false);
+  };
+
+  const deleteSheetTab=(i:number)=>{
+    if(!wb||wb.sheets.length<=1){showToast("⚠ Нельзя удалить единственный лист");return;}
+    updWbs(wbs=>wbs.map(w=>w.id===activeWbId?{...w,sheets:w.sheets.filter((_,j)=>j!==i),activeSheet:Math.min(w.activeSheet,w.sheets.length-2)}:w));
+  };
+
+  // ── Cell edit ──
+  const commitEdit=useCallback(()=>{
+    if(!editing)return;
+    const k=shCellKey(sel.r,sel.c);
+    const isFormula=editVal.startsWith("=");
+    updSheet(s=>{
+      const cell:ShCell={...(s.data[k]||{value:"",formula:null,fmt:{}}),value:isFormula?shEval(editVal,s.data):editVal,formula:isFormula?editVal:null};
+      return{...s,data:{...s.data,[k]:cell}};
+    });
+    setEditing(false);
+  },[editing,editVal,sel,data]);
+
+  const startEdit=(r:number,c:number,init?:string)=>{
+    const cell=getCell(r,c);
+    setSel({r,c});setSelRange(null);
+    setEditVal(init!==undefined?init:(cell.formula||cell.value||""));
+    setEditing(true);
+    setTimeout(()=>cellInputRef.current?.focus(),10);
+  };
+
+  // ── Format ──
+  const fmtSel=(key:keyof ShCellFmt,val:any)=>{
+    const{r1=sel.r,c1=sel.c,r2=sel.r,c2=sel.c}=selRange||{r1:sel.r,c1:sel.c,r2:sel.r,c2:sel.c};
+    updSheet(s=>{
+      const nd={...s.data};
+      for(let r=Math.min(r1,r2);r<=Math.max(r1,r2);r++)
+        for(let c=Math.min(c1,c2);c<=Math.max(c1,c2);c++){
+          const k=shCellKey(r,c);
+          nd[k]={...(nd[k]||{value:"",formula:null,fmt:{}}),fmt:{...(nd[k]?.fmt||{}),[key]:val}};
+        }
+      return{...s,data:nd};
+    });
+  };
+
+  // ── Sort ──
+  const sortCol=(c:number,asc:boolean)=>{
+    if(!sheet)return;
+    // Find max row with data
+    let maxR=0;
+    Object.keys(data).forEach(k=>{const[r]=k.split(",").map(Number);if(r>maxR)maxR=r;});
+    const rows:ShCell[][]=[];
+    for(let r=0;r<=maxR;r++){
+      const row:ShCell[]=[];
+      for(let cc=0;cc<TOTAL_COLS;cc++)row.push(data[shCellKey(r,cc)]||{value:"",formula:null,fmt:{}});
+      rows.push(row);
+    }
+    rows.sort((a,b)=>{
+      const av=a[c]?.value||"",bv=b[c]?.value||"";
+      const an=parseFloat(av),bn=parseFloat(bv);
+      if(!isNaN(an)&&!isNaN(bn))return asc?an-bn:bn-an;
+      return asc?av.localeCompare(bv,undefined,{numeric:true}):bv.localeCompare(av,undefined,{numeric:true});
+    });
+    updSheet(s=>{
+      const nd:Record<string,ShCell>={};
+      rows.forEach((row,r)=>row.forEach((cell,cc)=>{if(cell.value||cell.formula)nd[shCellKey(r,cc)]=cell;}));
+      return{...s,data:nd};
+    });
+    showToast(`↕ Сортировка по ${shColName(c)}`);
+  };
+
+  // ── Copy / Paste ──
+  const copySelection=()=>{
+    const{r1=sel.r,c1=sel.c,r2=sel.r,c2=sel.c}=selRange||{r1:sel.r,c1:sel.c,r2:sel.r,c2:sel.c};
+    const cells:Record<string,ShCell>={};
+    for(let r=Math.min(r1,r2);r<=Math.max(r1,r2);r++)
+      for(let c=Math.min(c1,c2);c<=Math.max(c1,c2);c++){
+        const k=shCellKey(r,c);
+        if(data[k])cells[shCellKey(r-Math.min(r1,r2),c-Math.min(c1,c2))]=data[k];
+      }
+    clipRef.current={cells,r1:Math.min(r1,r2),c1:Math.min(c1,c2),r2:Math.max(r1,r2),c2:Math.max(c1,c2)};
+    showToast("📋 Скопировано");
+  };
+
+  const pasteClipboard=()=>{
+    if(!clipRef.current)return;
+    const{cells,r1:or1,c1:oc1}=clipRef.current;
+    updSheet(s=>{
+      const nd={...s.data};
+      Object.entries(cells).forEach(([k,cell])=>{
+        const[dr,dc]=k.split(",").map(Number);
+        const nr=sel.r+dr,nc=sel.c+dc;
+        if(nr<TOTAL_ROWS&&nc<TOTAL_COLS){
+          const newFormula=cell.formula?shShiftFormula(cell.formula,dr,dc):null;
+          nd[shCellKey(nr,nc)]={...cell,formula:newFormula,value:newFormula?shEval(newFormula,nd):cell.value};
+        }
+      });
+      return{...s,data:nd};
+    });
+    showToast("📌 Вставлено");
+  };
+
+  // ── Excel export ──
+  const exportExcel=()=>{
+    if(!wb)return;
+    const script=document.createElement("script");
+    script.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+    script.onload=()=>{
+      const XLSX=(window as any).XLSX;
+      const xlWb=XLSX.utils.book_new();
+      wb.sheets.forEach(s=>{
+        let maxR=0,maxC=0;
+        Object.keys(s.data).forEach(k=>{const[r,c]=k.split(",").map(Number);if(r>maxR)maxR=r;if(c>maxC)maxC=c;});
+        const arr:any[][]=[];
+        for(let r=0;r<=maxR;r++){
+          const row:any[]=[];
+          for(let c=0;c<=maxC;c++){
+            const cell=s.data[shCellKey(r,c)];
+            const val=cell?(cell.formula?shEval(cell.formula,s.data):cell.value):"";
+            const n=parseFloat(val);
+            row.push(val===""?null:!isNaN(n)?n:val);
+          }
+          arr.push(row);
+        }
+        const xlSheet=XLSX.utils.aoa_to_sheet(arr);
+        xlSheet["!cols"]=Array(maxC+1).fill({wch:14});
+        XLSX.utils.book_append_sheet(xlWb,xlSheet,s.name);
+      });
+      XLSX.writeFile(xlWb,`${wb.name}.xlsx`);
+      showToast(`✅ Выгружено: ${wb.name}.xlsx`);
+    };
+    if((window as any).XLSX){script.onload!(null as any);}
+    else document.head.appendChild(script);
+  };
+
+  // ── Keyboard ──
+  useEffect(()=>{
+    const h=(e:KeyboardEvent)=>{
+      if(!wb||!sheet)return;
+      const tag=(e.target as HTMLElement).tagName;
+      if(editing){
+        if(e.key==="Enter"){e.preventDefault();commitEdit();setSel(s=>({r:Math.min(TOTAL_ROWS-1,s.r+1),c:s.c}));}
+        if(e.key==="Tab"){e.preventDefault();commitEdit();setSel(s=>({r:s.r,c:Math.min(TOTAL_COLS-1,s.c+1)}));}
+        if(e.key==="Escape"){setEditing(false);}
+        return;
+      }
+      if(tag==="INPUT"||tag==="TEXTAREA")return;
+      if((e.ctrlKey||e.metaKey)&&e.key==="c"){copySelection();return;}
+      if((e.ctrlKey||e.metaKey)&&e.key==="v"){pasteClipboard();return;}
+      if((e.ctrlKey||e.metaKey)&&e.key==="e"){e.preventDefault();exportExcel();return;}
+      const mv=(dr:number,dc:number)=>setSel(s=>({r:Math.max(0,Math.min(TOTAL_ROWS-1,s.r+dr)),c:Math.max(0,Math.min(TOTAL_COLS-1,s.c+dc))}));
+      if(e.key==="ArrowUp"){e.preventDefault();mv(-1,0);}
+      if(e.key==="ArrowDown"){e.preventDefault();mv(1,0);}
+      if(e.key==="ArrowLeft"){e.preventDefault();mv(0,-1);}
+      if(e.key==="ArrowRight"){e.preventDefault();mv(0,1);}
+      if(e.key==="Enter"||e.key==="F2"){e.preventDefault();startEdit(sel.r,sel.c);}
+      if(e.key==="Delete"||e.key==="Backspace"){
+        updSheet(s=>({...s,data:{...s.data,[shCellKey(sel.r,sel.c)]:{value:"",formula:null,fmt:{}}}}));
+      }
+      if(e.key.length===1&&!e.ctrlKey&&!e.metaKey){startEdit(sel.r,sel.c,e.key);}
+    };
+    window.addEventListener("keydown",h);
+    return()=>window.removeEventListener("keydown",h);
+  },[editing,editVal,sel,selRange,wb,sheet,data]);
+
+  // Auto-scroll to selected cell
+  useEffect(()=>{
+    if(!gridRef.current)return;
+    const colOffset=sel.c*DEF_COL_W;
+    const rowOffset=sel.r*DEF_ROW_H;
+    const el=gridRef.current;
+    if(colOffset<el.scrollLeft)el.scrollLeft=colOffset;
+    else if(colOffset+DEF_COL_W>el.scrollLeft+el.clientWidth-HDR_W)el.scrollLeft=colOffset+DEF_COL_W-el.clientWidth+HDR_W+20;
+    if(rowOffset<el.scrollTop)el.scrollTop=rowOffset;
+    else if(rowOffset+DEF_ROW_H>el.scrollTop+el.clientHeight-HDR_H)el.scrollTop=rowOffset+DEF_ROW_H-el.clientHeight+HDR_H+10;
+  },[sel]);
+
+  // ── Colors ──
+  const bg=dark?"#080B12":"#F8FAFC";
+  const surfBg=dark?"#0C1019":"#FFFFFF";
+  const surf2=dark?"#0F1420":"#F1F5F9";
+  const hdrBg=dark?"#0C1019":"#F1F5F9";
+  const cellBd=dark?"rgba(255,255,255,0.05)":"#E2E8F0";
+  const hdrBd=dark?"rgba(255,255,255,0.08)":"#CBD5E1";
+  const selBg=dark?"rgba(79,142,247,0.18)":"rgba(37,99,235,0.1)";
+  const selBd=dark?"#4F8EF7":"#2563EB";
+  const rangeBg=dark?"rgba(79,142,247,0.07)":"rgba(37,99,235,0.04)";
+  const formulaBar=editing?editVal:(data[shCellKey(sel.r,sel.c)]?.formula||data[shCellKey(sel.r,sel.c)]?.value||"");
+
+  // ── LIST SCREEN ──
+  if(!activeWbId||!wb){
+    return <div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24}}>
+        <div>
+          <h1 style={{margin:0,fontSize:24,fontWeight:800,color:C.t1}}>Таблицы</h1>
+          <div style={{fontSize:13,color:C.t2,marginTop:2}}>{workbooks.length}/{MAX_WB} таблиц · Excel-совместимые с формулами</div>
+        </div>
+        <div style={{display:"flex",gap:12,alignItems:"center"}}>
+          {/* Glowing Export button — shown when wb selected */}
+          <button onClick={()=>setNewWbModal(true)} disabled={workbooks.length>=MAX_WB}
+            style={{padding:"10px 20px",background:workbooks.length>=MAX_WB?"#374151":C.a,color:"#fff",border:"none",borderRadius:12,fontSize:13,fontWeight:700,cursor:workbooks.length>=MAX_WB?"not-allowed":"pointer",display:"flex",alignItems:"center",gap:8}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Новая таблица
+          </button>
+        </div>
+      </div>
+
+      {loading?<div style={{textAlign:"center",padding:60,color:C.t2}}>Загрузка...</div>
+      :workbooks.length===0
+      ?<div style={{textAlign:"center",padding:"80px 32px",background:surfBg,borderRadius:20,border:"1px solid "+C.bd}}>
+          <div style={{fontSize:48,marginBottom:12}}>📊</div>
+          <div style={{fontSize:18,fontWeight:700,color:C.t1,marginBottom:8}}>Таблиц пока нет</div>
+          <div style={{fontSize:14,color:C.t2,marginBottom:24}}>Создай первую таблицу — поддержка формул, сортировка и экспорт в Excel</div>
+          <button onClick={()=>setNewWbModal(true)} style={{padding:"12px 28px",background:C.a,color:"#fff",border:"none",borderRadius:12,fontSize:14,fontWeight:700,cursor:"pointer"}}>+ Создать таблицу</button>
+        </div>
+      :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:16}}>
+          {workbooks.map(w=>(
+            <div key={w.id} onClick={()=>setActiveWbId(w.id)}
+              style={{background:surfBg,borderRadius:16,overflow:"hidden",border:"1px solid "+C.bd,cursor:"pointer",transition:"all 0.2s",boxShadow:dark?"0 4px 20px rgba(0,0,0,0.4)":C.sh}}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(-2px)";(e.currentTarget as HTMLElement).style.boxShadow=dark?"0 8px 32px rgba(79,142,247,0.12)":"0 8px 28px rgba(0,0,0,0.12)";}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform="none";(e.currentTarget as HTMLElement).style.boxShadow=dark?"0 4px 20px rgba(0,0,0,0.4)":C.sh;}}>
+              {/* Mini grid preview */}
+              <div style={{height:110,background:dark?"#0C1019":"#F0FDF4",padding:"10px",display:"flex",flexDirection:"column",gap:3,overflow:"hidden",borderBottom:"1px solid "+C.bd}}>
+                {[0,1,2,3].map(r=>(
+                  <div key={r} style={{display:"flex",gap:2}}>
+                    {[0,1,2,3,4].map(c=>{
+                      const v=display(r,c);
+                      return <div key={c} style={{flex:1,height:16,borderRadius:2,border:"0.5px solid "+cellBd,background:v?(dark?"rgba(79,142,247,0.06)":"rgba(37,99,235,0.04)"):"transparent",fontSize:8,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",padding:"0 2px",lineHeight:"16px",color:C.t2,fontFamily:"monospace"}}>
+                        {w.sheets[0]?.data?v:""}
+                      </div>;
+                    })}
+                  </div>
+                ))}
+              </div>
+              <div style={{padding:"14px 16px"}}>
+                <div style={{fontSize:15,fontWeight:700,color:C.t1,marginBottom:3}}>{w.name}</div>
+                <div style={{fontSize:11,color:C.t2,marginBottom:14}}>{w.sheets.length} лист{w.sheets.length===1?"":"а"} · {Object.keys(w.sheets[0]?.data||{}).length} ячеек</div>
+                <div style={{display:"flex",gap:8}} onClick={e=>e.stopPropagation()}>
+                  <button onClick={()=>setActiveWbId(w.id)}
+                    style={{flex:1,padding:"7px",fontSize:12,background:C.a+"12",color:C.a,border:"1px solid "+C.a+"25",borderRadius:9,cursor:"pointer",fontWeight:600}}>
+                    ✏️ Открыть
+                  </button>
+                  <button onClick={()=>deleteWb(w.id)}
+                    style={{padding:"7px 12px",fontSize:12,background:C.r+"10",color:C.r,border:"1px solid "+C.r+"25",borderRadius:9,cursor:"pointer"}}>
+                    🗑
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>}
+
+      {newWbModal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setNewWbModal(false)}>
+        <div style={{background:surfBg,borderRadius:20,padding:32,width:380,border:"1px solid "+C.bd,boxShadow:"0 24px 60px rgba(0,0,0,0.4)"}} onClick={e=>e.stopPropagation()}>
+          <div style={{fontSize:18,fontWeight:700,marginBottom:16,color:C.t1}}>📊 Новая таблица</div>
+          <input autoFocus value={newWbName} onChange={e=>setNewWbName(e.target.value)}
+            onKeyDown={e=>{if(e.key==="Enter")createWb();if(e.key==="Escape")setNewWbModal(false);}}
+            placeholder="Название таблицы..." style={{width:"100%",padding:"11px 14px",border:"1px solid "+C.bd,borderRadius:10,fontSize:14,outline:"none",background:dark?"#141927":C.ib,color:C.t1,fontFamily:"'Montserrat',sans-serif",boxSizing:"border-box"}}/>
+          <div style={{display:"flex",gap:10,marginTop:20,justifyContent:"flex-end"}}>
+            <Btn onClick={()=>setNewWbModal(false)} primary={false}>Отмена</Btn>
+            <Btn onClick={createWb}>Создать</Btn>
+          </div>
+        </div>
+      </div>}
+
+      {toast&&<div style={{position:"fixed",bottom:24,right:24,background:dark?"#1E293B":"#1F2937",color:"#fff",padding:"10px 18px",borderRadius:10,fontSize:13,fontWeight:500,zIndex:500,boxShadow:"0 4px 20px rgba(0,0,0,0.3)",animation:"floatUp 0.3s ease"}}>{toast}</div>}
+    </div>;
+  }
+
+  // ── GRID SCREEN ──
+  const selCell=getCell(sel.r,sel.c);
+
+  return <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 64px)",margin:"-28px -32px",overflow:"hidden",fontFamily:"'Montserrat',monospace"}}>
+
+    {/* ── TOPBAR ── */}
+    <div style={{height:46,background:surfBg,borderBottom:"1px solid "+C.bd,display:"flex",alignItems:"center",padding:"0 12px",gap:10,flexShrink:0,zIndex:50}}>
+      {/* Back */}
+      <button onClick={()=>{commitEdit();setActiveWbId(null);setSel({r:0,c:0});setEditing(false);}}
+        style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",background:"transparent",border:"1px solid "+C.bd,borderRadius:8,fontSize:12,fontWeight:600,color:C.t2,cursor:"pointer"}}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        Таблицы
+      </button>
+
+      {/* WB name */}
+      <input value={wb.name} onChange={e=>{updWbs(wbs=>wbs.map(w=>w.id===activeWbId?{...w,name:e.target.value}:w));}}
+        style={{fontSize:14,fontWeight:700,color:C.t1,background:"transparent",border:"1px solid transparent",borderRadius:7,padding:"4px 8px",outline:"none",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",minWidth:140}}
+        onFocus={e=>{(e.target as HTMLInputElement).style.borderColor=C.bd;}}
+        onBlur={e=>{(e.target as HTMLInputElement).style.borderColor="transparent";}}/>
+
+      <div style={{width:1,height:20,background:C.bd,flexShrink:0}}/>
+
+      {/* Format toolbar */}
+      {([
+        {l:"B",tip:"Жирный",fn:()=>fmtSel("bold",!selCell.fmt.bold),on:selCell.fmt.bold,s:{fontWeight:800}},
+        {l:"I",tip:"Курсив",fn:()=>fmtSel("italic",!selCell.fmt.italic),on:selCell.fmt.italic,s:{fontStyle:"italic"}},
+      ] as any[]).map((b,i)=>(
+        <button key={i} onClick={b.fn} title={b.tip}
+          style={{width:28,height:28,border:"1px solid "+(b.on?C.a:C.bd),borderRadius:7,background:b.on?C.a+"20":"transparent",color:b.on?C.a:C.t2,cursor:"pointer",fontSize:13,...b.s}}>
+          {b.l}
+        </button>
+      ))}
+
+      {/* Align */}
+      {(["left","center","right"] as const).map(a=>(
+        <button key={a} onClick={()=>fmtSel("align",a)}
+          style={{width:28,height:28,border:"1px solid "+(selCell.fmt.align===a?C.a:C.bd),borderRadius:7,background:selCell.fmt.align===a?C.a+"20":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:selCell.fmt.align===a?C.a:C.t2}}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            {a==="left"&&<><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></>}
+            {a==="center"&&<><line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></>}
+            {a==="right"&&<><line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="6" y1="18" x2="21" y2="18"/></>}
+          </svg>
+        </button>
+      ))}
+
+      {/* Cell bg colors */}
+      <div style={{display:"flex",gap:3,alignItems:"center"}}>
+        <span style={{fontSize:10,color:C.t2}}>Фон:</span>
+        {(["","#FEF08A","#BBF7D0","#BFDBFE","#FED7AA","#FECACA","#E9D5FF"] as string[]).map(c=>(
+          <button key={c} onClick={()=>fmtSel("bg",c||undefined)}
+            style={{width:16,height:16,borderRadius:3,background:c||"transparent",border:selCell.fmt.bg===c?"2px solid "+C.a:"1px solid "+C.bd,cursor:"pointer"}}/>
+        ))}
+      </div>
+
+      <div style={{width:1,height:20,background:C.bd,flexShrink:0}}/>
+
+      {/* Sort */}
+      <button onClick={()=>sortCol(sel.c,true)} title="A→Z"
+        style={{padding:"4px 8px",border:"1px solid "+C.bd,borderRadius:7,background:"transparent",cursor:"pointer",fontSize:11,color:C.t2}}>↑ A→Z</button>
+      <button onClick={()=>sortCol(sel.c,false)} title="Z→A"
+        style={{padding:"4px 8px",border:"1px solid "+C.bd,borderRadius:7,background:"transparent",cursor:"pointer",fontSize:11,color:C.t2}}>↓ Z→A</button>
+
+      <div style={{flex:1}}/>
+
+      {/* Autosave indicator */}
+      <div style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:C.g}}>
+        <div style={{width:5,height:5,borderRadius:"50%",background:C.g}}/>
+        Сохранено
+      </div>
+
+      {/* Excel export — glowing green */}
+      <button onClick={exportExcel}
+        style={{
+          display:"flex",alignItems:"center",gap:7,
+          padding:"0 16px",height:32,
+          borderRadius:8,border:"none",
+          background:"linear-gradient(135deg,#16A34A,#15803D)",
+          color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",
+          boxShadow:"0 0 16px rgba(22,163,74,0.45),0 0 32px rgba(22,163,74,0.2)",
+          animation:"excelGlow 2.5s ease-in-out infinite",
+          whiteSpace:"nowrap",
+        }}
+        onMouseEnter={e=>{const el=e.currentTarget as HTMLElement;el.style.transform="translateY(-1px)";el.style.boxShadow="0 0 24px rgba(22,163,74,0.65),0 4px 16px rgba(0,0,0,0.3)";el.style.animationPlayState="paused";}}
+        onMouseLeave={e=>{const el=e.currentTarget as HTMLElement;el.style.transform="none";el.style.boxShadow="0 0 16px rgba(22,163,74,0.45),0 0 32px rgba(22,163,74,0.2)";el.style.animationPlayState="running";}}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Выгрузить в Excel
+      </button>
+
+      <style>{`
+        @keyframes excelGlow{
+          0%,100%{box-shadow:0 0 14px rgba(22,163,74,0.4),0 0 28px rgba(22,163,74,0.15)}
+          50%{box-shadow:0 0 22px rgba(22,163,74,0.65),0 0 44px rgba(22,163,74,0.25)}
+        }
+      `}</style>
+    </div>
+
+    {/* ── FORMULA BAR ── */}
+    <div style={{height:32,background:surfBg,borderBottom:"1px solid "+C.bd,display:"flex",alignItems:"center",padding:"0 10px",gap:8,flexShrink:0}}>
+      <div style={{minWidth:56,height:22,background:C.a+"15",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:C.a,flexShrink:0,fontFamily:"monospace"}}>
+        {shColName(sel.c)}{sel.r+1}
+      </div>
+      <div style={{width:1,height:18,background:C.bd}}/>
+      <span style={{fontSize:12,color:C.t2,fontFamily:"monospace",fontStyle:"italic",flexShrink:0}}>fx</span>
+      <input ref={formulaInputRef}
+        value={formulaBar}
+        onChange={e=>{
+          if(!editing){setEditing(true);}
+          setEditVal(e.target.value);
+        }}
+        onFocus={()=>{if(!editing){setEditVal(data[shCellKey(sel.r,sel.c)]?.formula||data[shCellKey(sel.r,sel.c)]?.value||"");setEditing(true);}}}
+        onBlur={commitEdit}
+        onKeyDown={e=>{
+          if(e.key==="Enter"){e.preventDefault();commitEdit();}
+          if(e.key==="Escape"){setEditing(false);}
+        }}
+        placeholder={'Введи значение или формулу: =СУММ(A1:A10), =A1+B1*2, =ЕСЛИ(A1>0;"Да";"Нет")'}
+        style={{flex:1,border:"none",background:"transparent",outline:"none",fontSize:12,fontFamily:"monospace",color:C.t1,padding:0}}
+      />
+    </div>
+
+    {/* ── GRID ── */}
+    <div ref={gridRef} style={{flex:1,overflow:"auto",position:"relative",background:bg}}
+      tabIndex={0}
+      onScroll={e=>{setScrollTop((e.target as HTMLDivElement).scrollTop);setScrollLeft((e.target as HTMLDivElement).scrollLeft);}}
+      onMouseUp={()=>{setIsDragging(false);setDragStart(null);}}>
+
+      {/* Total canvas size for scrollbar */}
+      <div style={{width:HDR_W+TOTAL_COLS*DEF_COL_W,height:HDR_H+TOTAL_ROWS*DEF_ROW_H,position:"relative"}}>
+
+        {/* ── Column headers (sticky top) ── */}
+        <div style={{position:"sticky",top:0,zIndex:25,display:"flex",left:0}}>
+          {/* Corner */}
+          <div style={{width:HDR_W,height:HDR_H,background:hdrBg,border:"1px solid "+hdrBd,flexShrink:0,position:"sticky",left:0,zIndex:30}}/>
+          {/* Visible col headers */}
+          <div style={{display:"flex",position:"relative",left:visColStart*DEF_COL_W}}>
+            {Array.from({length:visColEnd-visColStart+1},(_,i)=>{
+              const c=visColStart+i;
+              const isSel=sel.c===c;
+              const inRange=selRange&&c>=Math.min(selRange.c1,selRange.c2)&&c<=Math.max(selRange.c1,selRange.c2);
+              return <div key={c}
+                style={{width:DEF_COL_W,height:HDR_H,background:isSel||inRange?C.a+"14":hdrBg,border:"1px solid "+hdrBd,borderLeft:"none",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:600,color:isSel||inRange?C.a:C.t2,userSelect:"none",cursor:"pointer",flexShrink:0}}
+                onClick={()=>{setSel(s=>({...s,c}));setSelRange({r1:0,c1:c,r2:TOTAL_ROWS-1,c2:c});}}>
+                {shColName(c)}
+              </div>;
+            })}
+          </div>
+        </div>
+
+        {/* ── Rows ── */}
+        <div style={{position:"absolute",top:HDR_H,left:0,width:"100%"}}>
+          <div style={{position:"relative",left:0,top:visRowStart*DEF_ROW_H}}>
+            {Array.from({length:visRowEnd-visRowStart+1},(_,ri)=>{
+              const r=visRowStart+ri;
+              const isSel=sel.r===r;
+              const inRangeRow=selRange&&r>=Math.min(selRange.r1,selRange.r2)&&r<=Math.max(selRange.r1,selRange.r2);
+              return <div key={r} style={{display:"flex",height:DEF_ROW_H}}>
+                {/* Row header — sticky left */}
+                <div style={{width:HDR_W,height:DEF_ROW_H,background:isSel||inRangeRow?C.a+"14":hdrBg,border:"1px solid "+hdrBd,borderTop:"none",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:isSel||inRangeRow?C.a:C.t2,flexShrink:0,userSelect:"none",cursor:"pointer",position:"sticky",left:0,zIndex:15}}
+                  onClick={()=>{setSel(s=>({...s,r}));setSelRange({r1:r,c1:0,r2:r,c2:TOTAL_COLS-1});}}>
+                  {r+1}
+                </div>
+
+                {/* Cells — only visible cols */}
+                <div style={{position:"relative",left:visColStart*DEF_COL_W,display:"flex"}}>
+                  {Array.from({length:visColEnd-visColStart+1},(_,ci)=>{
+                    const c=visColStart+ci;
+                    const k=shCellKey(r,c);
+                    const cell=data[k]||{value:"",formula:null,fmt:{}};
+                    const isSel2=sel.r===r&&sel.c===c;
+                    const inRange=selRange&&r>=Math.min(selRange.r1,selRange.r2)&&r<=Math.max(selRange.r1,selRange.r2)&&c>=Math.min(selRange.c1,selRange.c2)&&c<=Math.max(selRange.c1,selRange.c2);
+                    const val=display(r,c);
+
+                    return <div key={c}
+                      style={{
+                        width:DEF_COL_W,height:DEF_ROW_H,flexShrink:0,
+                        border:"1px solid "+cellBd,borderLeft:c===visColStart?"1px solid "+cellBd:"none",borderTop:"none",
+                        background:isSel2?selBg:inRange?rangeBg:(cell.fmt.bg||"transparent"),
+                        outline:isSel2?`2px solid ${selBd}`:"none",outlineOffset:-1,
+                        position:"relative",cursor:"cell",overflow:"hidden",
+                      }}
+                      onClick={e=>{
+                        if(isDragging)return;
+                        if(e.shiftKey&&sel){setSelRange({r1:sel.r,c1:sel.c,r2:r,c2:c});return;}
+                        commitEdit();setSel({r,c});setSelRange(null);setEditing(false);
+                      }}
+                      onDoubleClick={()=>startEdit(r,c)}
+                      onMouseDown={e=>{
+                        if(e.shiftKey)return;
+                        commitEdit();setSel({r,c});setSelRange(null);setEditing(false);
+                        setIsDragging(true);setDragStart({r,c});
+                      }}
+                      onMouseEnter={()=>{if(isDragging&&dragStart)setSelRange({r1:dragStart.r,c1:dragStart.c,r2:r,c2:c});}}>
+
+                      {isSel2&&editing
+                        ?<input ref={cellInputRef} autoFocus value={editVal}
+                            onChange={e=>setEditVal(e.target.value)}
+                            onBlur={commitEdit}
+                            onKeyDown={e=>{
+                              if(e.key==="Enter"){e.preventDefault();commitEdit();setSel(s=>({r:Math.min(TOTAL_ROWS-1,s.r+1),c:s.c}));}
+                              if(e.key==="Tab"){e.preventDefault();commitEdit();setSel(s=>({r:s.r,c:Math.min(TOTAL_COLS-1,s.c+1)}));}
+                              if(e.key==="Escape")setEditing(false);
+                              e.stopPropagation();
+                            }}
+                            style={{position:"absolute",inset:0,width:"100%",height:"100%",border:"none",outline:"none",background:dark?"#141927":"#fff",fontFamily:"monospace",fontSize:12,padding:"0 4px",color:C.t1,zIndex:10,fontWeight:cell.fmt.bold?700:400,fontStyle:cell.fmt.italic?"italic":"normal",textAlign:cell.fmt.align||"left"}}/>
+                        :<div style={{padding:"0 4px",fontSize:12,lineHeight:`${DEF_ROW_H}px`,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontWeight:cell.fmt.bold?700:400,fontStyle:cell.fmt.italic?"italic":"normal",textAlign:cell.fmt.align||"left",color:cell.fmt.color||(val.startsWith("#ERR")||val.startsWith("#DIV")||val.startsWith("#VALUE")?"#EF4444":C.t1),fontFamily:"monospace"}}>
+                            {val}
+                          </div>
+                      }
+                    </div>;
+                  })}
+                </div>
+              </div>;
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* ── SHEET TABS ── */}
+    <div style={{height:34,background:surfBg,borderTop:"1px solid "+C.bd,display:"flex",alignItems:"center",overflowX:"auto",flexShrink:0}}>
+      {wb.sheets.map((s,i)=>(
+        <div key={s.id}
+          style={{display:"flex",alignItems:"center",gap:5,padding:"0 14px",height:"100%",fontSize:12,fontWeight:wb.activeSheet===i?600:400,color:wb.activeSheet===i?C.a:C.t2,borderRight:"1px solid "+C.bd,borderBottom:wb.activeSheet===i?"2px solid "+C.a:"2px solid transparent",cursor:"pointer",userSelect:"none",whiteSpace:"nowrap",background:wb.activeSheet===i?(dark?"rgba(79,142,247,0.08)":"rgba(37,99,235,0.05)"):"transparent",flexShrink:0}}
+          onClick={()=>switchSheet(i)}
+          onDoubleClick={()=>{const n=prompt("Переименовать лист:",s.name);if(n){updWbs(wbs=>wbs.map(w=>w.id===activeWbId?{...w,sheets:w.sheets.map((sh,j)=>j===i?{...sh,name:n}:sh)}:w));}}}>
+          {s.name}
+          {wb.sheets.length>1&&<button onClick={e=>{e.stopPropagation();deleteSheetTab(i);}}
+            style={{width:14,height:14,border:"none",background:"transparent",cursor:"pointer",color:C.t2,fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",borderRadius:3,padding:0,lineHeight:1}}>×</button>}
+        </div>
+      ))}
+      <button onClick={addSheet} style={{padding:"0 12px",height:"100%",fontSize:13,color:C.t2,background:"transparent",border:"none",cursor:"pointer",flexShrink:0,borderRight:"1px solid "+C.bd}}>
+        + Лист
+      </button>
+      <div style={{flex:1}}/>
+      <div style={{padding:"0 12px",fontSize:10,color:C.t2,fontFamily:"monospace"}}>
+        {shColName(sel.c)}{sel.r+1} · Ctrl+C/V · Ctrl+E=Excel · Del=очистить
+      </div>
+    </div>
+
+    {/* Toast */}
+    {toast&&<div style={{position:"fixed",bottom:24,right:24,background:dark?"#1E293B":"#1F2937",color:"#fff",padding:"10px 18px",borderRadius:10,fontSize:13,fontWeight:500,zIndex:500,boxShadow:"0 4px 20px rgba(0,0,0,0.4)",animation:"floatUp 0.3s ease"}}>{toast}</div>}
+  </div>;
+}
+
+/* ============ TOOLS (TIMER v2) ============ *//* ============ TOOLS (TIMER v2) ============ */
 function ToolsPage(){
   const PRESETS=[15,25,45,60];
   const[selectedPreset,setSelectedPreset]=useState(25);
