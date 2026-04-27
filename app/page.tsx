@@ -3007,49 +3007,155 @@ function CrmPage({userId}:{userId:string}){
   const stCol=(id:string)=>stages.find(s=>s.id===id)?.color||C.t2;
   const stLbl=(id:string)=>stages.find(s=>s.id===id)?.label||id;
 
+  const{dark:isDark}=useTheme();
+
   const tabSt=(active:boolean):React.CSSProperties=>({
     flex:1,padding:"8px 0",border:"none",borderRadius:8,
-    background:active?"#fff":"transparent",color:active?C.t1:C.t2,
+    background:active?(isDark?"rgba(79,142,247,0.15)":"#fff"):"transparent",
+    color:active?(isDark?"#4F8EF7":C.t1):C.t2,
     fontSize:13,fontWeight:active?600:400,cursor:"pointer",
-    boxShadow:active?"0 1px 4px rgba(0,0,0,0.12)":"none",transition:"all 0.2s",
+    boxShadow:active?(isDark?`0 0 16px rgba(79,142,247,0.2)`:"0 1px 4px rgba(0,0,0,0.12)"):"none",
+    transition:"all 0.2s",
+    borderBottom:active?(isDark?"2px solid #4F8EF7":"2px solid transparent"):"2px solid transparent",
   });
+
+  // Edit lead state
+  const[editLeadId,setEditLeadId]=useState<string|null>(null);
+  const[editLeadData,setEditLeadData]=useState<any>({});
+  const[deleteConfirmId,setDeleteConfirmId]=useState<string|null>(null);
+
+  const openEditLead=(l:any)=>{
+    setEditLeadId(l.id);
+    setEditLeadData({name:l.name||"",contact:l.contact||"",phone:l.phone||"",email:l.email||"",note:l.note||"",deal:l.deal||"",source:l.source||"Instagram"});
+  };
+
+  const saveEditLead=async()=>{
+    if(!editLeadId)return;
+    await allLeads.update(editLeadId,{...editLeadData,deal:editLeadData.deal?+editLeadData.deal:null});
+    setEditLeadId(null);
+  };
 
   const leadCard=(l:any,stageColor:string)=>{
     const isOpen=openLead===l.id;
-    return <div key={l.id} draggable onDragStart={e=>onDragStart(l.id,e)} onDragEnd={onDragEnd}
-      onClick={()=>setOpenLead(isOpen?null:l.id)}
-      style={{
-        background:C.w,borderRadius:11,padding:"11px 12px",marginBottom:6,
-        cursor:"grab",userSelect:"none",
-        border:"1px solid "+C.bd,
-        borderLeft:`3px solid ${stageColor}`,
-        transition:"all 0.15s",
-        opacity:dragId===l.id?0.4:1,
-        boxShadow:dragId===l.id?`0 4px 20px rgba(0,0,0,0.15)`:"none",
-      }}
-      onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=stageColor+"50";(e.currentTarget as HTMLElement).style.boxShadow=`0 0 12px ${stageColor}12`;}}
-      onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.borderLeftColor=stageColor;(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,minWidth:0}}>
-        <div style={{fontWeight:600,fontSize:13,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1,minWidth:0}}>{l.name}</div>
-        {l.deal&&<div style={{fontSize:11,fontWeight:600,color:C.g,flexShrink:0}}>{fmt$(l.deal)}₽</div>}
-      </div>
-      {(l.phone||l.email||l.contact)&&<div style={{fontSize:11,color:C.t2,marginTop:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.phone||l.email||l.contact}</div>}
-      {isOpen&&<div style={{marginTop:10,paddingTop:10,borderTop:"1px solid "+C.bd}}>
-        {l.source&&<div style={{fontSize:10,color:C.t2,marginBottom:5}}>Источник: {l.source}</div>}
-        {l.note&&<div style={{fontSize:11,color:C.t1,marginBottom:6,lineHeight:1.5,wordBreak:"break-word"}}>{l.note}</div>}
-        <div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:6}}>
-          {stages.filter(s=>s.id!==l.status).map(s=>(
-            <button key={s.id} onClick={e=>{e.stopPropagation();allLeads.update(l.id,{status:s.id});}}
-              style={{fontSize:10,padding:"3px 9px",borderRadius:20,border:"1px solid "+s.color+"30",background:s.color+"10",color:s.color,fontWeight:600,cursor:"pointer"}}>
-              {s.label}
-            </button>
-          ))}
-          <button onClick={e=>{e.stopPropagation();if(confirm("Удалить?"))allLeads.remove(l.id);}}
-            style={{fontSize:10,padding:"3px 9px",borderRadius:20,border:"1px solid "+C.r+"30",background:C.r+"10",color:C.r,fontWeight:600,cursor:"pointer",marginLeft:"auto"}}>
-            Удалить
-          </button>
+    const isEditing=editLeadId===l.id;
+
+    return <div key={l.id}>
+      {/* ── Edit modal ── */}
+      {isEditing&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setEditLeadId(null)}>
+          <div style={{background:C.w,borderRadius:18,padding:28,width:"100%",maxWidth:480,border:"1px solid "+C.bd,boxShadow:"0 24px 60px rgba(0,0,0,0.4)"}} onClick={e=>e.stopPropagation()}>
+            <div style={{fontSize:16,fontWeight:700,color:C.t1,marginBottom:20}}>✏️ Редактировать лида</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+              {([["name","Имя *"],["contact","Контакт"],["phone","Телефон"],["email","Email"],["deal","Сделка, ₽"],["source","Источник"]] as const).map(([k,label])=>(
+                <div key={k}>
+                  <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4,fontWeight:500}}>{label}</label>
+                  <input type={k==="deal"?"number":"text"} value={editLeadData[k]||""} onChange={e=>setEditLeadData({...editLeadData,[k]:e.target.value})}
+                    style={{width:"100%",padding:"9px 11px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"'Montserrat',sans-serif"}}/>
+                </div>
+              ))}
+            </div>
+            <div style={{marginBottom:16}}>
+              <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4,fontWeight:500}}>Заметка</label>
+              <textarea value={editLeadData.note||""} onChange={e=>setEditLeadData({...editLeadData,note:e.target.value})} rows={3}
+                style={{width:"100%",padding:"9px 11px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,outline:"none",background:C.ib,color:C.t1,resize:"vertical",fontFamily:"'Montserrat',sans-serif",boxSizing:"border-box" as const}}/>
+            </div>
+            <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+              <button onClick={()=>setEditLeadId(null)} style={{padding:"9px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:10,fontSize:13,cursor:"pointer"}}>Отмена</button>
+              <button onClick={saveEditLead} style={{padding:"9px 20px",background:C.a,color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer",boxShadow:`0 0 16px ${C.a}40`}}>Сохранить</button>
+            </div>
+          </div>
         </div>
-      </div>}
+      )}
+
+      {/* ── Delete confirm modal ── */}
+      {deleteConfirmId===l.id&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setDeleteConfirmId(null)}>
+          <div style={{background:C.w,borderRadius:18,padding:28,width:"100%",maxWidth:380,textAlign:"center",border:"1px solid "+C.bd,boxShadow:"0 24px 60px rgba(0,0,0,0.5)"}} onClick={e=>e.stopPropagation()}>
+            <div style={{fontSize:36,marginBottom:12}}>🗑️</div>
+            <div style={{fontSize:16,fontWeight:700,color:C.t1,marginBottom:8}}>Удалить лида «{l.name}»?</div>
+            <div style={{fontSize:13,color:C.t2,marginBottom:6,lineHeight:1.6}}>Это действие <strong>нельзя отменить</strong>.<br/>Все данные по этому лиду будут удалены безвозвратно.</div>
+            <div style={{display:"flex",gap:10,marginTop:22,justifyContent:"center"}}>
+              <button onClick={()=>setDeleteConfirmId(null)} style={{padding:"10px 20px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:10,fontSize:13,fontWeight:500,cursor:"pointer"}}>Отмена</button>
+              <button onClick={()=>{allLeads.remove(l.id);setDeleteConfirmId(null);setOpenLead(null);}}
+                style={{padding:"10px 22px",background:"linear-gradient(135deg,#FF6B9D,#E91E8C)",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 0 20px rgba(233,30,140,0.4)"}}>
+                🗑 Удалить навсегда
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Lead card ── */}
+      <div draggable onDragStart={e=>onDragStart(l.id,e)} onDragEnd={onDragEnd}
+        onClick={()=>setOpenLead(isOpen?null:l.id)}
+        style={{
+          background:C.w,borderRadius:11,padding:"11px 12px",marginBottom:6,
+          cursor:"grab",userSelect:"none",
+          border:"1px solid "+C.bd,
+          borderLeft:`3px solid ${stageColor}`,
+          opacity:dragId===l.id?0.4:1,
+          animation:"leadPulse 4s ease-in-out infinite",
+          position:"relative",overflow:"hidden",
+        }}
+        onMouseEnter={e=>{
+          const el=e.currentTarget as HTMLElement;
+          el.style.borderColor=stageColor+"60";
+          el.style.boxShadow=`0 0 16px ${stageColor}18`;
+          el.style.animationPlayState="paused";
+        }}
+        onMouseLeave={e=>{
+          const el=e.currentTarget as HTMLElement;
+          el.style.borderColor=C.bd;
+          el.style.borderLeftColor=stageColor;
+          el.style.boxShadow="none";
+          el.style.animationPlayState="running";
+        }}>
+
+        {/* Subtle shimmer bg */}
+        <div style={{position:"absolute",inset:0,background:`linear-gradient(135deg,${stageColor}04,transparent)`,pointerEvents:"none",borderRadius:11}}/>
+
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,minWidth:0,position:"relative"}}>
+          <div style={{fontWeight:600,fontSize:13,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1,minWidth:0}}>{l.name}</div>
+          {l.deal&&<div style={{fontSize:11,fontWeight:600,color:C.g,flexShrink:0,whiteSpace:"nowrap"}}>{fmt$(l.deal)}₽</div>}
+        </div>
+        {(l.phone||l.email||l.contact)&&<div style={{fontSize:11,color:C.t2,marginTop:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",position:"relative"}}>{l.phone||l.email||l.contact}</div>}
+
+        {isOpen&&<div style={{marginTop:10,paddingTop:10,borderTop:"1px solid "+C.bd,position:"relative"}}>
+          {l.source&&<div style={{fontSize:10,color:C.t2,marginBottom:5}}>Источник: {l.source}</div>}
+          {l.note&&<div style={{fontSize:11,color:C.t1,marginBottom:8,lineHeight:1.5,wordBreak:"break-word"}}>{l.note}</div>}
+
+          {/* Status change buttons */}
+          <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:8}}>
+            {stages.filter(s=>s.id!==l.status).map(s=>(
+              <button key={s.id} onClick={e=>{e.stopPropagation();allLeads.update(l.id,{status:s.id});}}
+                style={{fontSize:10,padding:"3px 9px",borderRadius:20,border:"1px solid "+s.color+"30",background:s.color+"10",color:s.color,fontWeight:600,cursor:"pointer",transition:"all 0.15s"}}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=s.color+"25";}}
+                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=s.color+"10";}}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Action row */}
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            {/* Edit button */}
+            <button onClick={e=>{e.stopPropagation();openEditLead(l);}}
+              style={{flex:1,padding:"7px 12px",background:C.a+"12",color:C.a,border:"1px solid "+C.a+"30",borderRadius:9,fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,transition:"all 0.15s"}}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.a+"20";(e.currentTarget as HTMLElement).style.boxShadow=`0 0 12px ${C.a}20`;}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=C.a+"12";(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
+              ✏️ Редактировать
+            </button>
+
+            {/* Delete button — pink gradient */}
+            <button onClick={e=>{e.stopPropagation();setDeleteConfirmId(l.id);}}
+              style={{flex:1,padding:"7px 12px",background:"linear-gradient(135deg,#FF6B9D22,#E91E8C14)",color:"#E91E8C",border:"1px solid #E91E8C30",borderRadius:9,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,transition:"all 0.15s"}}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#FF6B9D,#E91E8C)";(e.currentTarget as HTMLElement).style.color="#fff";(e.currentTarget as HTMLElement).style.boxShadow="0 0 16px rgba(233,30,140,0.4)";}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#FF6B9D22,#E91E8C14)";(e.currentTarget as HTMLElement).style.color="#E91E8C";(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
+              🗑 Удалить
+            </button>
+          </div>
+        </div>}
+      </div>
     </div>;
   };
 
@@ -6975,7 +7081,7 @@ function ToolsPage(){
 const BOARD_PALETTE=["#FEF08A","#BBF7D0","#BFDBFE","#FED7AA","#F9A8D4","#E9D5FF","#FECACA","#A7F3D0","#ffffff","#F1F5F9","#1E293B","#7C3AED","#2563EB","#DC2626","#16A34A","#D97706"];
 const MAX_BOARDS=20;
 
-type BItemType="sticky"|"text"|"image"|"link"|"shape";
+type BItemType="sticky"|"text"|"image"|"link"|"shape"|"draw";
 type LineStyle="solid"|"dashed";
 type ArrowTip="none"|"arrow";
 
@@ -6985,14 +7091,17 @@ interface BItem{
   text?:string; color?:string;
   fontSize?:number; fontBold?:boolean; fontItalic?:boolean;
   shapeKind?:"rect"|"circle"|"diamond"|"triangle";
-  imageUrl?:string;
+  imageUrl?:string; imageW?:number; imageH?:number;
   linkUrl?:string; linkTitle?:string; linkFavicon?:string;
   zIndex?:number;
+  drawPath?:string; drawColor?:string; drawThickness?:number;
 }
 
 interface BLine{
   id:string;
   fromId:string; toId:string;
+  fromAnchor?:"top"|"bottom"|"left"|"right";
+  toAnchor?:"top"|"bottom"|"left"|"right";
   color?:string; thickness?:number; style?:LineStyle; arrow?:ArrowTip;
 }
 
@@ -7024,8 +7133,21 @@ function BoardPage({userId}:{userId:string}){
   const saveTimer=useRef<any>(null);
 
   // Tool state
-  const[tool,setTool]=useState<"select"|"pan"|"sticky"|"text"|"image"|"link"|"shape"|"line">("select");
+  const[tool,setTool]=useState<"select"|"pan"|"sticky"|"text"|"image"|"link"|"shape"|"line"|"draw">("select");
   const[shapeKind,setShapeKind]=useState<"rect"|"circle"|"diamond"|"triangle">("rect");
+  const[drawColor,setDrawColor]=useState("#2563EB");
+  const[drawThickness,setDrawThickness]=useState(3);
+  const drawingRef=useRef<{path:string;startX:number;startY:number}|null>(null);
+  const[isDrawing,setIsDrawing]=useState(false);
+  const[drawPreview,setDrawPreview]=useState("");
+
+  // Anchor hover for smart connectors
+  const[hoverAnchor,setHoverAnchor]=useState<{id:string;side:"top"|"bottom"|"left"|"right"}|null>(null);
+  const[connectorDrag,setConnectorDrag]=useState<{fromId:string;fromAnchor:"top"|"bottom"|"left"|"right";mx:number;my:number}|null>(null);
+
+  // Custom color picker for sticky
+  const[stickyColorPick,setStickyColorPick]=useState<string|null>(null);
+  const[customColorInput,setCustomColorInput]=useState("#FEF08A");
 
   // Selection
   const[selectedIds,setSelectedIds]=useState<Set<string>>(new Set());
@@ -7086,6 +7208,7 @@ function BoardPage({userId}:{userId:string}){
         shapeKind:d.shape_kind||"rect",imageUrl:d.image_url||"",
         linkUrl:d.link_url||"",linkTitle:d.link_title||"",linkFavicon:d.link_favicon||"",
         zIndex:d.z_index||0,
+        drawPath:d.draw_path||undefined,drawColor:d.draw_color||undefined,drawThickness:d.draw_thickness||undefined,
       })));
       setLines((lns||[]).map((d:any):BLine=>({
         id:d.id,fromId:d.from_id,toId:d.to_id,
@@ -7114,7 +7237,7 @@ function BoardPage({userId}:{userId:string}){
           font_bold:it.fontBold||false,font_italic:it.fontItalic||false,
           shape_kind:it.shapeKind||null,image_url:it.imageUrl||"",
           link_url:it.linkUrl||"",link_title:it.linkTitle||"",link_favicon:it.linkFavicon||"",
-          z_index:i,
+          z_index:i,draw_path:it.drawPath||null,draw_color:it.drawColor||null,draw_thickness:it.drawThickness||null,
         })));
         if(newLines.length>0)await supabase.from("board_lines").insert(newLines.map(ln=>({
           id:ln.id,board_id:activeBoardId,user_id:userId,
@@ -7226,6 +7349,12 @@ function BoardPage({userId}:{userId:string}){
   const onCanvasDown=(e:React.MouseEvent)=>{
     const tgt=e.target as HTMLElement;
     const onBg=tgt===canvasRef.current||tgt.classList.contains("board-bg-dot");
+    if(tool==="draw"&&onBg){
+      const{x,y}=toCanvas(e.clientX,e.clientY);
+      drawingRef.current={path:`M0,0`,startX:x,startY:y};
+      setIsDrawing(true);setDrawPreview("M0,0");
+      return;
+    }
     if((tool==="select"||tool==="pan")&&onBg){
       panState.current={startMx:e.clientX,startMy:e.clientY,startPx:pan.x,startPy:pan.y};
     }
@@ -7239,15 +7368,65 @@ function BoardPage({userId}:{userId:string}){
     } else if(resizeState.current){
       const dx=(e.clientX-resizeState.current.startMx)/zoom;
       const dy=(e.clientY-resizeState.current.startMy)/zoom;
-      setItems(prev=>prev.map(it=>it.id===resizeState.current!.id?{...it,w:Math.max(60,resizeState.current!.startW+dx),h:Math.max(40,resizeState.current!.startH+dy)}:it));
+      const it0=items.find(i=>i.id===resizeState.current!.id);
+      // Preserve aspect ratio for images
+      if(it0?.type==="image"&&it0.imageW&&it0.imageH){
+        const ratio=it0.imageW/it0.imageH;
+        const newW=Math.max(60,resizeState.current.startW+dx);
+        setItems(prev=>prev.map(it=>it.id===resizeState.current!.id?{...it,w:newW,h:Math.max(40,newW/ratio)}:it));
+      } else {
+        setItems(prev=>prev.map(it=>it.id===resizeState.current!.id?{...it,w:Math.max(60,resizeState.current!.startW+dx),h:Math.max(40,resizeState.current!.startH+dy)}:it));
+      }
     } else if(panState.current){
       setPan({x:panState.current.startPx+(e.clientX-panState.current.startMx),y:panState.current.startPy+(e.clientY-panState.current.startMy)});
+    } else if(isDrawing&&drawingRef.current){
+      const{x,y}=toCanvas(e.clientX,e.clientY);
+      const dx=x-drawingRef.current.startX;
+      const dy=y-drawingRef.current.startY;
+      const newPath=drawingRef.current.path+` L${dx.toFixed(1)},${dy.toFixed(1)}`;
+      drawingRef.current.path=newPath;
+      setDrawPreview(newPath);
+    } else if(connectorDrag){
+      // Update live connector preview via state
+      const{x,y}=toCanvas(e.clientX,e.clientY);
+      setConnectorDrag(d=>d?{...d,mx:x,my:y}:null);
     }
   };
 
-  const onMouseUp=()=>{
+  const onMouseUp=(e:React.MouseEvent)=>{
     if(dragState.current||resizeState.current)triggerSave(items,lines);
     dragState.current=null;resizeState.current=null;panState.current=null;
+
+    // Finish drawing
+    if(isDrawing&&drawingRef.current&&drawPreview.length>4){
+      const{startX,startY}=drawingRef.current;
+      // Compute bounding box of path
+      const coords=drawPreview.match(/-?\d+\.?\d*/g)?.map(Number)||[];
+      const xs=coords.filter((_,i)=>i%2===0),ys=coords.filter((_,i)=>i%2===1);
+      const minX=Math.min(0,...xs),minY=Math.min(0,...ys);
+      const maxX=Math.max(0,...xs),maxY=Math.max(0,...ys);
+      const w=Math.max(40,maxX-minX),h=Math.max(40,maxY-minY);
+      const it:BItem={id:bid(),type:"draw",x:startX+minX,y:startY+minY,w,h,drawPath:drawPreview,drawColor,drawThickness,zIndex:items.length};
+      updItems([...items,it]);
+    }
+    setIsDrawing(false);drawingRef.current=null;setDrawPreview("");
+
+    // Finish connector drag — snap to nearest anchor
+    if(connectorDrag){
+      const{fromId,fromAnchor,mx,my}=connectorDrag;
+      type AnchorHit={id:string;side:"top"|"bottom"|"left"|"right";dist:number};
+      let best:AnchorHit|null=null;
+      items.filter(i=>i.id!==fromId).forEach(it=>{
+        const{side,dist}=nearestAnchor(it,mx,my);
+        if(dist<40&&(!best||dist<best.dist))best={id:it.id,side,dist};
+      });
+      if(best!==null){
+        const b=best as AnchorHit;
+        const nl:BLine={id:bid(),fromId,toId:b.id,fromAnchor,toAnchor:b.side,color:"#64748B",thickness:2,style:"solid",arrow:"arrow"};
+        updLines([...lines,nl]);
+      }
+      setConnectorDrag(null);
+    }
   };
 
   const onWheel=(e:React.WheelEvent)=>{
@@ -7284,12 +7463,33 @@ function BoardPage({userId}:{userId:string}){
     const file=e.target.files?.[0];
     if(!file)return;
     if(file.size>10*1024*1024){alert("Файл слишком большой (макс 10 МБ)");return;}
-    const reader=new FileReader();
-    reader.onload=ev=>{
-      const url=ev.target?.result as string;
-      addItem({type:"image",imageUrl:url,w:240,h:180},imgClickPos.x,imgClickPos.y);
-    };
-    reader.readAsDataURL(file);
+    if(!["image/jpeg","image/png","image/gif","image/svg+xml","image/webp"].includes(file.type)){
+      alert("Неподдерживаемый формат. Используй JPG, PNG, GIF, SVG, WebP");return;
+    }
+    try{
+      const reader=new FileReader();
+      reader.onload=ev=>{
+        try{
+          const url=ev.target?.result as string;
+          // Detect natural size to preserve aspect ratio
+          const img=new window.Image();
+          img.onload=()=>{
+            const natW=img.naturalWidth||400;
+            const natH=img.naturalHeight||300;
+            // Fit into max 320px wide
+            const maxW=320;
+            const scale=natW>maxW?maxW/natW:1;
+            const w=Math.round(natW*scale);
+            const h=Math.round(natH*scale);
+            addItem({type:"image",imageUrl:url,imageW:natW,imageH:natH,w,h},imgClickPos.x,imgClickPos.y);
+          };
+          img.onerror=()=>alert("Не удалось загрузить изображение");
+          img.src=url;
+        }catch(err){alert("Ошибка обработки изображения");}
+      };
+      reader.onerror=()=>alert("Ошибка чтения файла");
+      reader.readAsDataURL(file);
+    }catch(err){alert("Ошибка загрузки изображения");}
     e.target.value="";
   };
 
@@ -7324,6 +7524,7 @@ function BoardPage({userId}:{userId:string}){
       if(k==="l"||k==="L")setTool("link");
       if(k==="f"||k==="F")setTool("shape");
       if(k==="c"||k==="C")setTool("line");
+      if(k==="m"||k==="M")setTool("draw");
       if((k==="Delete"||k==="Backspace"))deleteSelected();
       if(k==="Escape"){setSelectedIds(new Set());setSelectedLineId(null);setEditingId(null);setLineFrom(null);setTool("select");}
       if((e.ctrlKey||e.metaKey)&&k==="d"){e.preventDefault();duplicateSelected();}
@@ -7334,13 +7535,32 @@ function BoardPage({userId}:{userId:string}){
     window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h);
   },[editingId,selectedIds,selectedLineId,items,lines]);
 
+  // Get anchor point position on item
+  const anchorPos=(it:BItem,side:"top"|"bottom"|"left"|"right")=>{
+    if(side==="top")return{x:it.x+it.w/2,y:it.y};
+    if(side==="bottom")return{x:it.x+it.w/2,y:it.y+it.h};
+    if(side==="left")return{x:it.x,y:it.y+it.h/2};
+    return{x:it.x+it.w,y:it.y+it.h/2};
+  };
+
+  // Find nearest anchor on item to a point
+  const nearestAnchor=(it:BItem,px:number,py:number):{side:"top"|"bottom"|"left"|"right",dist:number}=>{
+    const sides=(["top","bottom","left","right"] as const).map(side=>{
+      const p=anchorPos(it,side);
+      return{side,dist:Math.hypot(p.x-px,p.y-py)};
+    });
+    return sides.reduce((a,b)=>a.dist<b.dist?a:b);
+  };
+
   // ── SVG line rendering ──
   const svgLines=useMemo(()=>{
     return lines.map(ln=>{
       const from=items.find(i=>i.id===ln.fromId);
       const to=items.find(i=>i.id===ln.toId);
       if(!from||!to)return null;
-      const a=itemCenter(from),b=itemCenter(to);
+      // Use anchor points if defined, else centers
+      const a=ln.fromAnchor?anchorPos(from,ln.fromAnchor):itemCenter(from);
+      const b=ln.toAnchor?anchorPos(to,ln.toAnchor):itemCenter(to);
       const col=ln.color||"#64748B";
       const thick=ln.thickness||2;
       const dashArr=ln.style==="dashed"?`${thick*4} ${thick*3}`:"none";
@@ -7371,7 +7591,7 @@ function BoardPage({userId}:{userId:string}){
   const sel1=selectedIds.size===1?items.find(i=>i.id==[...selectedIds][0]):null;
   const selLine=lines.find(l=>l.id===selectedLineId);
 
-  const cursorMap:Record<string,string>={select:"default",pan:"grab",sticky:"cell",text:"text",image:"cell",link:"cell",shape:"crosshair",line:"crosshair"};
+  const cursorMap:Record<string,string>={select:"default",pan:"grab",sticky:"cell",text:"text",image:"cell",link:"cell",shape:"crosshair",line:"crosshair",draw:"crosshair"};
 
   // ── If no board selected → show board list ──
   const activeBoard=boards.find(b=>b.id===activeBoardId);
@@ -7498,6 +7718,7 @@ function BoardPage({userId}:{userId:string}){
             {id:"link",icon:"🔗",tip:"Ссылка (L)"},
             {id:"shape",icon:"⬡",tip:"Фигура (F)"},
             {id:"line",icon:"↗",tip:"Линия (C)"},
+            {id:"draw",icon:"✏️",tip:"Маркер (M)"},
           ] as {id:string;icon:string;tip:string}[]).map(tb=>(
             <button key={tb.id} onClick={()=>{setTool(tb.id as any);if(tb.id==="image"){setImgClickPos({x:400,y:300});imgInputRef.current?.click();}}} title={tb.tip}
               style={{width:34,height:34,borderRadius:8,border:"none",background:tool===tb.id?"#fff":"transparent",color:tool===tb.id?C.t1:C.t2,fontSize:tb.id==="text"||tb.id==="line"?13:17,cursor:"pointer",fontWeight:tool===tb.id?700:400,boxShadow:tool===tb.id?"0 1px 4px rgba(0,0,0,0.1)":"none",transition:"all 0.12s"}}>
@@ -7505,6 +7726,33 @@ function BoardPage({userId}:{userId:string}){
             </button>
           ))}
         </div>
+
+        {/* Draw tool options */}
+        {tool==="draw"&&(
+          <div style={{display:"flex",gap:6,alignItems:"center",background:"#F1F5F9",borderRadius:10,padding:"4px 8px"}}>
+            {/* Color swatch → opens picker */}
+            <div style={{position:"relative"}}>
+              <button onClick={()=>setStickyColorPick(stickyColorPick==="__draw__"?null:"__draw__")}
+                style={{width:24,height:24,borderRadius:6,background:drawColor,border:"2px solid rgba(0,0,0,0.15)",cursor:"pointer",flexShrink:0}}/>
+              {stickyColorPick==="__draw__"&&(
+                <div style={{position:"absolute",top:"calc(100%+6px)",left:0,background:"#fff",borderRadius:12,padding:10,boxShadow:"0 8px 24px rgba(0,0,0,0.15)",zIndex:300,width:160,border:"1px solid #E2E8F0"}}>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:8}}>
+                    {BOARD_PALETTE.map(c=><button key={c} onClick={()=>{setDrawColor(c);setStickyColorPick(null);}}
+                      style={{width:22,height:22,borderRadius:5,background:c,border:drawColor===c?"2px solid #2563EB":"1px solid #E2E8F0",cursor:"pointer"}}/>)}
+                  </div>
+                  <input type="color" value={drawColor} onChange={e=>setDrawColor(e.target.value)} style={{width:"100%",height:26,border:"none",cursor:"pointer",borderRadius:5}}/>
+                </div>
+              )}
+            </div>
+            <span style={{fontSize:10,color:C.t2}}>Толщина:</span>
+            {([{v:2,label:"Тонкая"},{v:4,label:"Средняя"},{v:8,label:"Толстая"}] as {v:number,label:string}[]).map(t=>(
+              <button key={t.v} onClick={()=>setDrawThickness(t.v)} title={t.label}
+                style={{width:30,height:28,borderRadius:7,border:"1px solid "+(drawThickness===t.v?"#2563EB":"#E2E8F0"),background:drawThickness===t.v?"#EFF6FF":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <div style={{width:16,height:t.v,background:drawThickness===t.v?"#2563EB":"#64748B",borderRadius:t.v,transition:"all 0.15s"}}/>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Shape kind picker */}
         {tool==="shape"&&(
@@ -7545,14 +7793,29 @@ function BoardPage({userId}:{userId:string}){
             <button onClick={()=>setColorTarget(colorTarget?null:sel1?"item":"line")}
               style={{width:26,height:26,borderRadius:8,background:sel1?sel1.color||"#FEF08A":selLine?.color||"#64748B",border:"2px solid rgba(0,0,0,0.15)",cursor:"pointer"}}/>
             {colorTarget&&(
-              <div style={{position:"absolute",top:"calc(100% + 6px)",left:0,background:"#fff",borderRadius:12,padding:10,boxShadow:"0 8px 24px rgba(0,0,0,0.14)",display:"flex",flexWrap:"wrap",gap:5,width:160,zIndex:200}}>
-                {BOARD_PALETTE.map(c=>(
-                  <button key={c} onClick={()=>{
-                    if(sel1)updItems(items.map(it=>it.id===sel1.id?{...it,color:c}:it));
-                    else if(selLine)updLines(lines.map(l=>l.id===selLine.id?{...l,color:c}:l));
-                    setColorTarget(null);
-                  }} style={{width:24,height:24,borderRadius:6,background:c,border:"1px solid rgba(0,0,0,0.1)",cursor:"pointer"}}/>
-                ))}
+              <div style={{position:"absolute",top:"calc(100% + 6px)",left:0,background:"#fff",borderRadius:12,padding:10,boxShadow:"0 8px 24px rgba(0,0,0,0.14)",width:172,zIndex:200,border:"1px solid #E2E8F0"}}>
+                <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:8}}>
+                  {BOARD_PALETTE.map(c=>(
+                    <button key={c} onClick={()=>{
+                      if(sel1)updItems(items.map(it=>it.id===sel1.id?{...it,color:c}:it));
+                      else if(selLine)updLines(lines.map(l=>l.id===selLine.id?{...l,color:c}:l));
+                      setColorTarget(null);
+                    }} style={{width:24,height:24,borderRadius:6,background:c,border:"1px solid rgba(0,0,0,0.1)",cursor:"pointer"}}/>
+                  ))}
+                </div>
+                {/* HEX input */}
+                <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:6}}>
+                  <span style={{fontSize:10,color:"#64748B",fontWeight:500}}>HEX</span>
+                  <input value={customColorInput} onChange={e=>setCustomColorInput(e.target.value)}
+                    onKeyDown={e=>{if(e.key==="Enter"){if(sel1)updItems(items.map(it=>it.id===sel1.id?{...it,color:customColorInput}:it));else if(selLine)updLines(lines.map(l=>l.id===selLine.id?{...l,color:customColorInput}:l));setColorTarget(null);}}}
+                    style={{flex:1,padding:"4px 7px",border:"1px solid #E2E8F0",borderRadius:7,fontSize:12,outline:"none",fontFamily:"monospace"}} placeholder="#000000"/>
+                </div>
+                {/* Native color picker */}
+                <input type="color" value={customColorInput} onChange={e=>{
+                  setCustomColorInput(e.target.value);
+                  if(sel1)updItems(items.map(it=>it.id===sel1.id?{...it,color:e.target.value}:it));
+                  else if(selLine)updLines(lines.map(l=>l.id===selLine.id?{...l,color:e.target.value}:l));
+                }} style={{width:"100%",height:28,border:"none",cursor:"pointer",borderRadius:7}}/>
               </div>
             )}
           </div>
@@ -7637,6 +7900,24 @@ function BoardPage({userId}:{userId:string}){
           <svg style={{position:"absolute",top:-5000,left:-5000,width:20000,height:20000,pointerEvents:"none",overflow:"visible"}} xmlns="http://www.w3.org/2000/svg">
             <g transform="translate(5000,5000)" style={{pointerEvents:"visibleStroke"}}>
               {svgLines}
+
+              {/* Connector drag preview */}
+              {connectorDrag&&(()=>{
+                const from=items.find(i=>i.id===connectorDrag.fromId);
+                if(!from)return null;
+                const a=anchorPos(from,connectorDrag.fromAnchor);
+                return <g>
+                  <line x1={a.x} y1={a.y} x2={connectorDrag.mx} y2={connectorDrag.my} stroke="#2563EB" strokeWidth="2" strokeDasharray="6 3" strokeLinecap="round"/>
+                  <circle cx={connectorDrag.mx} cy={connectorDrag.my} r="5" fill="#2563EB" opacity="0.7"/>
+                </g>;
+              })()}
+
+              {/* Draw preview */}
+              {isDrawing&&drawPreview&&drawingRef.current&&(
+                <g transform={`translate(${drawingRef.current.startX},${drawingRef.current.startY})`}>
+                  <path d={drawPreview} fill="none" stroke={drawColor} strokeWidth={drawThickness} strokeLinecap="round" strokeLinejoin="round"/>
+                </g>
+              )}
             </g>
           </svg>
 
@@ -7690,8 +7971,15 @@ function BoardPage({userId}:{userId:string}){
                 {/* ── IMAGE ── */}
                 {it.type==="image"&&it.imageUrl&&(
                   <div style={{width:"100%",height:"100%",borderRadius:10,overflow:"hidden",boxShadow:"0 4px 20px rgba(0,0,0,0.12)"}}>
-                    <img src={it.imageUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover",display:"block",pointerEvents:"none"}}/>
+                    <img src={it.imageUrl} alt="" style={{width:"100%",height:"100%",objectFit:"contain",display:"block",pointerEvents:"none",imageRendering:"auto"}}/>
                   </div>
+                )}
+
+                {/* ── DRAW ── */}
+                {it.type==="draw"&&it.drawPath&&(
+                  <svg width={it.w} height={it.h} viewBox={`0 0 ${it.w} ${it.h}`} style={{overflow:"visible",pointerEvents:"none"}}>
+                    <path d={it.drawPath} fill="none" stroke={it.drawColor||"#2563EB"} strokeWidth={it.drawThickness||3} strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
                 )}
 
                 {/* ── LINK ── */}
@@ -7711,9 +7999,38 @@ function BoardPage({userId}:{userId:string}){
                 {it.type==="shape"&&renderShapeFill(it)}
 
                 {/* Resize handle */}
-                {isSel&&!isEdit&&(
+                {isSel&&!isEdit&&it.type!=="draw"&&(
                   <div onMouseDown={e=>{e.stopPropagation();resizeState.current={id:it.id,startMx:e.clientX,startMy:e.clientY,startW:it.w,startH:it.h};}}
                     style={{position:"absolute",bottom:-5,right:-5,width:14,height:14,background:"#2563EB",borderRadius:3,cursor:"se-resize",zIndex:50,border:"2px solid #fff",boxShadow:"0 1px 4px rgba(0,0,0,0.2)"}}/>
+                )}
+
+                {/* Smart connector anchor points — show on hover/select */}
+                {(isSel||hoverAnchor?.id===it.id)&&tool!=="draw"&&(
+                  <>
+                    {(["top","bottom","left","right"] as const).map(side=>{
+                      const isTop=side==="top",isBot=side==="bottom",isLeft=side==="left";
+                      const sx=isLeft?-6:side==="right"?it.w-8:it.w/2-6;
+                      const sy=isTop?-6:isBot?it.h-8:it.h/2-6;
+                      const isHov=hoverAnchor?.id===it.id&&hoverAnchor?.side===side;
+                      return <div key={side}
+                        onMouseEnter={()=>setHoverAnchor({id:it.id,side})}
+                        onMouseLeave={()=>setHoverAnchor(null)}
+                        onMouseDown={e=>{
+                          e.stopPropagation();
+                          const{x,y}=toCanvas(e.clientX,e.clientY);
+                          setConnectorDrag({fromId:it.id,fromAnchor:side,mx:x,my:y});
+                        }}
+                        style={{
+                          position:"absolute",left:sx,top:sy,
+                          width:14,height:14,borderRadius:"50%",
+                          background:isHov?"#2563EB":"#fff",
+                          border:"2px solid #2563EB",
+                          cursor:"crosshair",zIndex:60,
+                          boxShadow:isHov?"0 0 8px rgba(37,99,235,0.5)":"0 1px 3px rgba(0,0,0,0.2)",
+                          transition:"all 0.12s",
+                        }}/>;
+                    })}
+                  </>
                 )}
               </div>
             );
@@ -7756,7 +8073,7 @@ function BoardPage({userId}:{userId:string}){
 
       {/* Status bar */}
       <div style={{position:"absolute",bottom:10,left:16,zIndex:50,background:"rgba(255,255,255,0.88)",backdropFilter:"blur(6px)",borderRadius:10,padding:"5px 12px",fontSize:10,color:C.t2,border:"1px solid rgba(0,0,0,0.06)",boxShadow:"0 2px 8px rgba(0,0,0,0.05)"}}>
-        V-выбор · H-пан · S-стикер · T-текст · I-фото · L-ссылка · F-фигура · C-линия · Del-удалить · Ctrl+D-дублировать
+        V-выбор · H-пан · S-стикер · T-текст · I-фото · L-ссылка · F-фигура · C-линия · M-маркер · Del-удалить · Ctrl+D-дублировать
       </div>
     </div>
   );
