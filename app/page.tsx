@@ -1309,6 +1309,7 @@ function TaskModal({task,taskType,userId,onClose}:{task:any,taskType:"kanban"|"g
 
 // Year map (Gantt-style) — full rewrite
 function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goals:any,goalUpdate:any,goalAdd:any,goalTasks:any}){
+  // v3 — progress colors, drag reorder, resize bars, default 3 months
   const currentYear=new Date().getFullYear();
   const MONTHS_RU=["Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"];
   const[showForm,setShowForm]=useState(false);
