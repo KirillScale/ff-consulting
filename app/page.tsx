@@ -2549,7 +2549,7 @@ function StrategyPage({userId}:{userId:string}){
   const[calMode,setCalMode]=useState<"month"|"week"|"day">("week");
   const[calDate,setCalDate]=useState(()=>new Date());
   const[calModal,setCalModal]=useState<any>(null);
-  const[calForm,setCalForm]=useState({text:"",description:"",start_date:"",end_date:"",start_time:"09:00",end_time:"10:00",priority:"medium",assignee:""});
+  const[calForm,setCalForm]=useState({text:"",description:"",start_date:"",end_date:"",start_time:"09:00",end_time:"10:00",priority:"medium",assignee:"",auto_placed:false});
   const[calDeleteId,setCalDeleteId]=useState<string|null>(null);
   const[dragCalId,setDragCalId]=useState<string|null>(null);
 
@@ -2588,20 +2588,52 @@ function StrategyPage({userId}:{userId:string}){
   const timeDiff=(s:string,e:string)=>{const d=timeToMin(e)-timeToMin(s);return d>0?d:0;};
   const fmtDur=(mins:number)=>mins>=60?`${Math.floor(mins/60)}ч${mins%60?` ${mins%60}м`:""}`:` ${mins}м`;
 
+  // Find first free slot in working hours for a given date
+  const findFreeSlot=(dateStr:string,durMin=60):{start:string;end:string;auto:boolean}=>{
+    const WORK_START=10*60; // 10:00
+    const WORK_END=19*60;   // 19:00
+    const dayTasks=allCalTasks.filter((t:any)=>(t.start_date||"")<=dateStr&&(t.end_date||t.start_date||"")>=dateStr);
+    const busy=dayTasks.map((t:any)=>({s:timeToMin(t.start_time||"09:00"),e:timeToMin(t.end_time||"10:00")}))
+      .sort((a:any,b:any)=>a.s-b.s);
+    // Try every 15-min slot
+    for(let s=WORK_START;s+durMin<=WORK_END;s+=15){
+      const e=s+durMin;
+      const overlap=busy.some((b:any)=>s<b.e&&e>b.s);
+      if(!overlap)return{start:minToTime(s),end:minToTime(e),auto:true};
+    }
+    // All busy — fallback to 10:00 with overlap
+    return{start:"10:00",end:minToTime(WORK_START+durMin),auto:true};
+  };
+
   const openCalNew=(dateStr?:string,hour?:number)=>{
-    const h=hour??9;
-    setCalForm({text:"",description:"",start_date:dateStr||today(),end_date:dateStr||today(),start_time:`${String(h).padStart(2,"0")}:00`,end_time:`${String(h+1).padStart(2,"0")}:00`,priority:"medium",assignee:""});
+    const d=dateStr||today();
+    if(hour!=null){
+      // Clicked a specific hour slot — use exact time
+      setCalForm({text:"",description:"",start_date:d,end_date:d,start_time:`${String(hour).padStart(2,"0")}:00`,end_time:`${String(hour+1).padStart(2,"0")}:00`,priority:"medium",assignee:"",auto_placed:false});
+    } else {
+      // Smart placement
+      const slot=findFreeSlot(d);
+      setCalForm({text:"",description:"",start_date:d,end_date:d,start_time:slot.start,end_time:slot.end,priority:"medium",assignee:"",auto_placed:true});
+    }
     setCalModal("new");
   };
   const openCalEdit=(t:any)=>{
-    setCalForm({text:t.text||"",description:t.description||"",start_date:t.start_date||"",end_date:t.end_date||t.start_date||"",start_time:t.start_time||"09:00",end_time:t.end_time||"10:00",priority:t.priority||"medium",assignee:t.assignee||""});
+    setCalForm({text:t.text||"",description:t.description||"",start_date:t.start_date||"",end_date:t.end_date||t.start_date||"",start_time:t.start_time||"09:00",end_time:t.end_time||"10:00",priority:t.priority||"medium",assignee:t.assignee||"",auto_placed:t.auto_placed||false});
     setCalModal(t);
   };
   const saveCalTask=async()=>{
     if(!calForm.text.trim())return;
-    const payload={text:calForm.text,description:calForm.description,start_date:calForm.start_date,end_date:calForm.end_date||calForm.start_date,start_time:calForm.start_time,end_time:calForm.end_time,priority:calForm.priority,assignee:calForm.assignee};
+    const isEdit=calModal&&calModal!=="new";
+    const payload={
+      text:calForm.text,description:calForm.description,
+      start_date:calForm.start_date,end_date:calForm.end_date||calForm.start_date,
+      start_time:calForm.start_time,end_time:calForm.end_time,
+      priority:calForm.priority,assignee:calForm.assignee,
+      auto_placed:false, // once saved from modal = intentionally placed
+      manually_placed:true,
+    };
     if(calModal==="new"){await calTasks.add(payload);}
-    else if(calModal&&!calModal.fromKanban&&!calModal.fromGoal){await calTasks.update(calModal.id,payload);}
+    else if(isEdit&&!calModal.fromKanban&&!calModal.fromGoal){await calTasks.update(calModal.id,payload);}
     setCalModal(null);
   };
   const deleteCalTask=async()=>{if(calDeleteId){await calTasks.remove(calDeleteId);setCalDeleteId(null);}};
@@ -2714,7 +2746,7 @@ function StrategyPage({userId}:{userId:string}){
             const newEnd=minToTime(Math.max(DAY_START*60+30,drop.min+Math.max(30,dur)));
             if(t.fromKanban)await kanban.update(id,{date:drop.dateStr,start_time:newStart,end_time:newEnd});
             else if(t.fromGoal)await goalTasks.update(id,{date:drop.dateStr,start_time:newStart,end_time:newEnd});
-            else await calTasks.update(id,{start_date:drop.dateStr,end_date:drop.dateStr,start_time:newStart,end_time:newEnd});
+            else await calTasks.update(id,{start_date:drop.dateStr,end_date:drop.dateStr,start_time:newStart,end_time:newEnd,auto_placed:false,manually_placed:true});
           }
         }
         calDragRef.current=null;
@@ -2805,6 +2837,7 @@ function StrategyPage({userId}:{userId:string}){
                 const top=Math.max(0,((st-DAY_START*60)/60)*SLOT_H);
                 const height=Math.max(24,((et-st)/60)*SLOT_H-2);
                 const isDone=t.status==="done"||t.done;
+                const isAuto=t.auto_placed&&!t.fromKanban&&!t.fromGoal;
                 const color=isDone?"#22C55E":(PRIORITY_COLORS[t.priority||"medium"]||C.a);
                 const dur=et-st;
                 const overlap=dayTaskList.filter((_:any,j:number)=>j<ti&&tasksOverlap(t,dayTaskList[j])).length;
@@ -2816,13 +2849,14 @@ function StrategyPage({userId}:{userId:string}){
                 return<div key={t.id} id={`cal-block-${t.id}`}
                   style={{
                     position:"absolute",top,left:lPct,width:wPct,height,
-                    background:isDone?"rgba(34,197,94,0.09)":`${color}15`,
-                    border:`1.5px solid ${color}40`,
+                    background:isDone?"rgba(34,197,94,0.09)":isAuto?`${color}0A`:`${color}14`,
+                    border:isAuto?`1.5px dashed ${color}55`:`1.5px solid ${color}40`,
                     borderLeft:`3px solid ${color}`,
                     borderRadius:7,padding:"4px 6px 4px 8px",
                     cursor:canDrag?"grab":"default",
                     overflow:"hidden",zIndex:ti+1,
-                    transition:"box-shadow 0.15s",
+                    opacity:isAuto?0.85:1,
+                    transition:"box-shadow 0.15s,opacity 0.2s",
                     boxShadow:isDone?`0 0 8px rgba(34,197,94,0.15)`:"0 1px 4px rgba(0,0,0,0.08)",
                   }}
                   onMouseDown={e=>{
@@ -2914,40 +2948,59 @@ function StrategyPage({userId}:{userId:string}){
       const y=calDate.getFullYear(),m=calDate.getMonth();
       const firstDay=new Date(y,m,1).getDay();
       const daysInMonth=new Date(y,m+1,0).getDate();
+      const startOffset=firstDay===0?6:firstDay-1; // Mon-first
       const cells:Array<{date:string|null}>=[];
-      for(let i=0;i<firstDay;i++)cells.push({date:null});
+      for(let i=0;i<startOffset;i++)cells.push({date:null});
       for(let d=1;d<=daysInMonth;d++){
         const ds2=`${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
         cells.push({date:ds2});
       }
+      while(cells.length%7!==0)cells.push({date:null});
+
       return<div className="yearmap-table" style={{background:C.w,borderRadius:16,border:"1px solid "+C.bd,overflow:"hidden"}}>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",borderBottom:"1px solid "+C.bd}}>
-          {["Вс","Пн","Вт","Ср","Чт","Пт","Сб"].map(wd=><div key={wd} style={{textAlign:"center",fontSize:11,fontWeight:700,color:C.t2,padding:"10px 0",letterSpacing:0.5}}>{wd}</div>)}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",borderBottom:"1px solid "+C.bd,background:C.ib}}>
+          {["Пн","Вт","Ср","Чт","Пт","Сб","Вс"].map(wd=>(
+            <div key={wd} style={{textAlign:"center",fontSize:11,fontWeight:700,color:C.t2,padding:"10px 0",letterSpacing:0.5}}>{wd}</div>
+          ))}
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)"}}>
           {cells.map((cell,i)=>{
-            if(!cell.date)return<div key={i} style={{minHeight:100,borderRight:"1px solid "+C.bd,borderBottom:"1px solid "+C.bd,background:"rgba(0,0,0,0.01)"}}/>;
+            if(!cell.date)return<div key={i} style={{minHeight:110,borderRight:"1px solid "+C.bd+"66",borderBottom:"1px solid "+C.bd+"66",background:C.ib,opacity:0.5}}/>;
             const dayTasks=tasksForCalDay(cell.date);
             const isToday=cell.date===tdStr;
             const isPast=cell.date<tdStr;
-            return<div key={cell.date} onClick={()=>openCalNew(cell.date||undefined)}
-              style={{minHeight:100,borderRight:"1px solid "+C.bd,borderBottom:"1px solid "+C.bd,padding:"6px 4px",cursor:"pointer",background:isToday?"rgba(37,99,235,0.03)":"transparent",transition:"background 0.1s"}}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=isToday?"rgba(37,99,235,0.06)":"rgba(0,0,0,0.02)";}}
+            return<div key={cell.date}
+              onClick={()=>openCalNew(cell.date||undefined)}
+              style={{minHeight:110,borderRight:"1px solid "+C.bd+"66",borderBottom:"1px solid "+C.bd+"66",padding:"6px 4px",cursor:"pointer",
+                background:isToday?"rgba(37,99,235,0.03)":"transparent",transition:"background 0.1s"}}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=isToday?"rgba(37,99,235,0.06)":C.ib;}}
               onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=isToday?"rgba(37,99,235,0.03)":"transparent";}}>
-              <div style={{display:"flex",justifyContent:"center",marginBottom:3}}>
+              <div style={{display:"flex",justifyContent:"center",marginBottom:4}}>
                 <div style={{width:24,height:24,borderRadius:"50%",background:isToday?C.a:"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>
                   <span style={{fontSize:12,fontWeight:isToday?700:400,color:isToday?"#fff":isPast?C.t2:C.t1}}>{parseInt(cell.date.split("-")[2])}</span>
                 </div>
               </div>
               {dayTasks.slice(0,3).map((t:any)=>{
-                const color=PRIORITY_COLORS[t.priority||"medium"]||C.a;
+                const color=t.status==="done"||t.done?"#22C55E":(PRIORITY_COLORS[t.priority||"medium"]||C.a);
+                const isAuto=t.auto_placed&&!t.manually_placed;
+                const isDone=t.status==="done"||t.done;
                 return<div key={t.id}
-                  onClick={e=>{e.stopPropagation();if(!t.fromKanban&&!t.fromGoal)openCalEdit(t);}}
-                  style={{fontSize:10,fontWeight:500,padding:"2px 5px",borderRadius:4,marginBottom:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",background:color+"18",color,borderLeft:`2px solid ${color}`}}>
-                  {t.start_time&&<span style={{opacity:0.7}}>{t.start_time} </span>}{t.text}
+                  onClick={e=>{e.stopPropagation();openCalEdit(t);}}
+                  style={{
+                    fontSize:10,fontWeight:500,padding:"2px 5px",borderRadius:4,marginBottom:2,
+                    overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+                    background:isDone?"rgba(34,197,94,0.08)":isAuto?color+"10":color+"16",
+                    color:isDone?"#22C55E":color,
+                    borderLeft:`2px solid ${isDone?"#22C55E":color}`,
+                    border:isAuto?`1px dashed ${color}50`:undefined,
+                    textDecoration:isDone?"line-through":"none",
+                    opacity:isDone?0.7:1,
+                  }}>
+                  {isDone&&"✓ "}{t.start_time&&<span style={{opacity:0.6}}>{t.start_time} </span>}{t.text}
                 </div>;
               })}
-              {dayTasks.length>3&&<div style={{fontSize:9,color:C.t2,paddingLeft:4}}>+{dayTasks.length-3} ещё</div>}
+              {dayTasks.length>3&&<div style={{fontSize:9,color:C.t2,paddingLeft:4,cursor:"pointer"}} onClick={e=>{e.stopPropagation();setCalMode("day");setCalDate(new Date(cell.date!));}}
+                >+{dayTasks.length-3} ещё</div>}
             </div>;
           })}
         </div>
@@ -2956,7 +3009,8 @@ function StrategyPage({userId}:{userId:string}){
 
     if(calMode==="week"){
       const startOfWeek=new Date(calDate);
-      startOfWeek.setDate(calDate.getDate()-calDate.getDay());
+      const dow=startOfWeek.getDay()===0?6:startOfWeek.getDay()-1; // Mon-based
+      startOfWeek.setDate(calDate.getDate()-dow);
       const weekDays=Array.from({length:7},(_,i)=>{const d=new Date(startOfWeek);d.setDate(startOfWeek.getDate()+i);return ds(d);});
       return<div style={{overflowX:"auto"}}><div style={{minWidth:640}}><TimeGrid days={weekDays}/></div></div>;
     }
@@ -3084,31 +3138,64 @@ function StrategyPage({userId}:{userId:string}){
 
     {/* CALENDAR */}
     {stratTab==="calendar"&&<>
+      {/* Controls row */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,flexWrap:"wrap",gap:10}}>
+        {/* Left: nav */}
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <button onClick={()=>navCal(-1)} style={{width:34,height:34,borderRadius:9,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+          <button onClick={()=>navCal(-1)} style={{width:34,height:34,borderRadius:9,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
-          <button onClick={()=>navCal(1)} style={{width:34,height:34,borderRadius:9,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+          <button onClick={()=>navCal(1)} style={{width:34,height:34,borderRadius:9,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
-          <span style={{fontSize:16,fontWeight:700,minWidth:220}}>{calTitle()}</span>
-          <button onClick={()=>setCalDate(new Date())} style={{padding:"6px 14px",background:C.a+"14",color:C.a,border:"1px solid "+C.a+"30",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer"}}>Сегодня</button>
+          <span style={{fontSize:16,fontWeight:700,color:C.t1,minWidth:200}}>{calTitle()}</span>
+          <button onClick={()=>setCalDate(new Date())}
+            style={{padding:"6px 14px",background:C.a+"14",color:C.a,border:"1px solid "+C.a+"30",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer"}}>Сегодня</button>
         </div>
-        <div style={{display:"flex",gap:6,alignItems:"center"}}>
-          <div style={{display:"flex",background:C.bg,borderRadius:9,padding:2,border:"1px solid "+C.bd}}>
+
+        {/* Right: view switcher + add */}
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          <div style={{display:"flex",background:C.ib,borderRadius:9,padding:3,border:"1px solid "+C.bd,gap:2}}>
             {(["month","week","day"] as const).map(m=>(
-              <button key={m} onClick={()=>setCalMode(m)} style={{padding:"6px 14px",borderRadius:7,border:"none",background:calMode===m?C.w:"transparent",color:calMode===m?C.t1:C.t2,fontSize:12,fontWeight:calMode===m?600:400,cursor:"pointer",boxShadow:calMode===m?C.sh:"none",transition:"all 0.15s"}}>
+              <button key={m} onClick={()=>setCalMode(m)}
+                style={{padding:"6px 14px",borderRadius:7,border:"none",
+                  background:calMode===m?C.w:"transparent",
+                  color:calMode===m?C.t1:C.t2,
+                  fontSize:12,fontWeight:calMode===m?600:400,cursor:"pointer",
+                  boxShadow:calMode===m?"0 1px 4px rgba(0,0,0,0.08)":"none",transition:"all 0.15s"}}>
                 {m==="month"?"Месяц":m==="week"?"Неделя":"День"}
               </button>
             ))}
           </div>
-          <button onClick={()=>openCalNew()} style={{padding:"7px 16px",background:C.a,color:"#fff",border:"none",borderRadius:9,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Задача
+          <button onClick={()=>openCalNew()}
+            style={{padding:"8px 18px",background:C.a,color:"#fff",border:"none",borderRadius:9,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,boxShadow:`0 0 16px ${C.a}30`,transition:"all 0.2s"}}
+            onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(-1px)";(e.currentTarget as HTMLElement).style.boxShadow=`0 0 24px ${C.a}50`;}}
+            onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform="none";(e.currentTarget as HTMLElement).style.boxShadow=`0 0 16px ${C.a}30`;}}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            + Задача
           </button>
         </div>
       </div>
+
+      {/* Unscheduled tasks bar — tasks without time */}
+      {(()=>{
+        const unscheduled=allCalTasks.filter((t:any)=>t.auto_placed&&!t.manually_placed);
+        if(!unscheduled.length)return null;
+        return <div style={{background:C.y+"10",border:"1px solid "+C.y+"30",borderRadius:12,padding:"10px 14px",marginBottom:14,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+          <span style={{fontSize:12,fontWeight:600,color:C.y}}>⚡ {unscheduled.length} незапланированных задач</span>
+          <span style={{fontSize:11,color:C.t2}}>Перетащи их на нужное время в календаре</span>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginLeft:"auto"}}>
+            {unscheduled.slice(0,4).map((t:any)=>(
+              <div key={t.id} style={{fontSize:11,padding:"3px 10px",borderRadius:20,background:C.y+"18",color:C.y,border:"1px dashed "+C.y+"50",fontWeight:500,cursor:"pointer"}}
+                onClick={()=>openCalEdit(t)}>
+                {t.text}
+              </div>
+            ))}
+          </div>
+        </div>;
+      })()}
+
+      {/* Calendar grid */}
       <CalendarView/>
     </>}
 
@@ -3181,48 +3268,93 @@ function StrategyPage({userId}:{userId:string}){
 
     {/* Calendar task modal */}
     {calModal&&(
-      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setCalModal(null)}>
-        <div data-modal="" style={{background:C.w,borderRadius:20,padding:32,width:"100%",maxWidth:480,boxShadow:"0 24px 60px rgba(0,0,0,0.2)"}} onClick={e=>e.stopPropagation()}>
-          <div style={{fontSize:18,fontWeight:700,marginBottom:20}}>{calModal==="new"?"Новая задача":"Редактировать задачу"}</div>
-          <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            <div><label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:4}}>Название *</label>
-              <input autoFocus value={calForm.text} onChange={e=>setCalForm({...calForm,text:e.target.value})} onKeyDown={e=>{if(e.key==="Enter")saveCalTask();}} placeholder="Название задачи" style={iS}/></div>
-            <div><label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:4}}>Описание</label>
-              <textarea value={calForm.description} onChange={e=>setCalForm({...calForm,description:e.target.value})} rows={2} placeholder="Описание..." style={{...iS,resize:"vertical"}}/></div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-              <div><label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:4}}>Дата начала</label>
-                <input type="date" value={calForm.start_date} onChange={e=>setCalForm({...calForm,start_date:e.target.value,end_date:calForm.end_date||e.target.value})} style={iS}/></div>
-              <div><label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:4}}>Дата окончания</label>
-                <input type="date" value={calForm.end_date} onChange={e=>setCalForm({...calForm,end_date:e.target.value})} style={iS}/></div>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-              <div><label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:4}}>⏰ Начало</label>
-                <input type="time" value={calForm.start_time} onChange={e=>setCalForm({...calForm,start_time:e.target.value})} style={iS}/></div>
-              <div><label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:4}}>⏰ Конец</label>
-                <input type="time" value={calForm.end_time} onChange={e=>setCalForm({...calForm,end_time:e.target.value})} style={iS}/></div>
-            </div>
-            {calForm.start_time&&calForm.end_time&&timeDiff(calForm.start_time,calForm.end_time)>0&&(
-              <div style={{fontSize:12,color:C.a,fontWeight:600,background:C.a+"10",padding:"6px 12px",borderRadius:8}}>
-                ⏱ Длительность: {fmtDur(timeDiff(calForm.start_time,calForm.end_time))}
+      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setCalModal(null)}>
+        <div data-modal="" style={{background:C.w,borderRadius:20,padding:28,width:"100%",maxWidth:500,boxShadow:"0 24px 60px rgba(0,0,0,0.25)",border:"1px solid "+C.bd}} onClick={e=>e.stopPropagation()}>
+          {/* Header */}
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+            <div style={{fontSize:17,fontWeight:700,color:C.t1}}>{calModal==="new"?"✨ Новая задача":"✏️ Редактировать задачу"}</div>
+            {calForm.auto_placed&&calModal==="new"&&(
+              <div style={{fontSize:10,fontWeight:600,background:C.y+"15",color:C.y,border:`1px dashed ${C.y}60`,borderRadius:8,padding:"3px 10px",display:"flex",alignItems:"center",gap:5}}>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
+                Авто-размещение
               </div>
             )}
+          </div>
+
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            {/* Title */}
+            <div>
+              <label style={{fontSize:11,fontWeight:600,color:C.t2,display:"block",marginBottom:5,letterSpacing:0.3}}>Название *</label>
+              <input autoFocus value={calForm.text} onChange={e=>setCalForm({...calForm,text:e.target.value})}
+                onKeyDown={e=>{if(e.key==="Enter")saveCalTask();}}
+                placeholder="Что нужно сделать?" style={{...iS,fontSize:14,fontWeight:500}}/>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label style={{fontSize:11,fontWeight:600,color:C.t2,display:"block",marginBottom:5,letterSpacing:0.3}}>Описание <span style={{fontWeight:400,opacity:0.6}}>(необязательно)</span></label>
+              <textarea value={calForm.description} onChange={e=>setCalForm({...calForm,description:e.target.value})} rows={2}
+                placeholder="Дополнительные детали..." style={{...iS,resize:"vertical"}}/>
+            </div>
+
+            {/* Dates */}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-              <div><label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:4}}>Приоритет</label>
-                <select value={calForm.priority} onChange={e=>setCalForm({...calForm,priority:e.target.value})} style={iS}>
-                  <option value="low">🟢 Низкий</option>
-                  <option value="medium">🔵 Средний</option>
-                  <option value="high">🔴 Высокий</option>
-                </select></div>
-              <div><label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:4}}>Ответственный</label>
-                <input value={calForm.assignee} onChange={e=>setCalForm({...calForm,assignee:e.target.value})} placeholder="Имя..." style={iS}/></div>
+              <div>
+                <label style={{fontSize:11,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>📅 Дата начала</label>
+                <input type="date" value={calForm.start_date} onChange={e=>setCalForm({...calForm,start_date:e.target.value,end_date:calForm.end_date||e.target.value})} style={iS}/>
+              </div>
+              <div>
+                <label style={{fontSize:11,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>📅 Дата окончания</label>
+                <input type="date" value={calForm.end_date} onChange={e=>setCalForm({...calForm,end_date:e.target.value})} style={iS}/>
+              </div>
+            </div>
+
+            {/* Time */}
+            <div>
+              <label style={{fontSize:11,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>⏰ Время <span style={{fontWeight:400,opacity:0.6}}>(необязательно — автоматически найдём свободный слот)</span></label>
+              <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:8,alignItems:"center"}}>
+                <input type="time" value={calForm.start_time} onChange={e=>{setCalForm({...calForm,start_time:e.target.value,auto_placed:false});}} style={iS}/>
+                <span style={{fontSize:12,color:C.t2,textAlign:"center"}}>→</span>
+                <input type="time" value={calForm.end_time} onChange={e=>{setCalForm({...calForm,end_time:e.target.value,auto_placed:false});}} style={iS}/>
+              </div>
+              {calForm.start_time&&calForm.end_time&&timeDiff(calForm.start_time,calForm.end_time)>0&&(
+                <div style={{fontSize:11,color:C.a,fontWeight:600,marginTop:6,display:"flex",alignItems:"center",gap:5}}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  {fmtDur(timeDiff(calForm.start_time,calForm.end_time))}
+                </div>
+              )}
+            </div>
+
+            {/* Priority */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+              <div>
+                <label style={{fontSize:11,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Приоритет</label>
+                <div style={{display:"flex",gap:6}}>
+                  {[{v:"low",l:"Низкий",c:"#10B981"},{v:"medium",l:"Средний",c:"#2563EB"},{v:"high",l:"Высокий",c:"#EF4444"}].map(p=>(
+                    <button key={p.v} onClick={()=>setCalForm({...calForm,priority:p.v})}
+                      style={{flex:1,padding:"7px 4px",border:`1px solid ${calForm.priority===p.v?p.c:C.bd}`,borderRadius:9,background:calForm.priority===p.v?p.c+"14":"transparent",color:calForm.priority===p.v?p.c:C.t2,fontSize:10,fontWeight:600,cursor:"pointer",transition:"all 0.15s"}}>
+                      {p.l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label style={{fontSize:11,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Ответственный</label>
+                <input value={calForm.assignee} onChange={e=>setCalForm({...calForm,assignee:e.target.value})} placeholder="Имя..." style={iS}/>
+              </div>
             </div>
           </div>
-          <div style={{display:"flex",gap:10,marginTop:20,justifyContent:"space-between"}}>
-            <div>{calModal!=="new"&&!calModal?.fromKanban&&!calModal?.fromGoal&&
-              <button onClick={()=>{setCalDeleteId(calModal.id);setCalModal(null);}}
-                style={{padding:"9px 16px",background:"#FEF2F2",color:C.r,border:"1px solid #FCA5A5",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer"}}>
-                🗑 Удалить
-              </button>}
+
+          {/* Actions */}
+          <div style={{display:"flex",gap:10,marginTop:22,justifyContent:"space-between",alignItems:"center"}}>
+            <div>
+              {calModal!=="new"&&!calModal?.fromKanban&&!calModal?.fromGoal&&(
+                <button onClick={()=>{setCalDeleteId(calModal.id);setCalModal(null);}}
+                  style={{padding:"8px 14px",background:C.r+"10",color:C.r,border:"1px solid "+C.r+"30",borderRadius:9,fontSize:12,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+                  Удалить
+                </button>
+              )}
             </div>
             <div style={{display:"flex",gap:8}}>
               <Btn onClick={()=>setCalModal(null)} primary={false}>Отмена</Btn>
