@@ -1308,22 +1308,53 @@ function TaskModal({task,taskType,userId,onClose}:{task:any,taskType:"kanban"|"g
 }
 
 // Year map (Gantt-style) — full rewrite
-function YearMap({userId,goals,goalUpdate,goalAdd}:{userId:string,goals:any,goalUpdate:any,goalAdd:any}){
+function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goals:any,goalUpdate:any,goalAdd:any,goalTasks:any}){
   const currentYear=new Date().getFullYear();
   const MONTHS_RU=["Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"];
   const[showForm,setShowForm]=useState(false);
   const[gf,sGf]=useState({name:"",description:"",color:C.a,start_date:"",end_date:""});
   const[editGoal,setEditGoal]=useState<any|null>(null);
   const[openGoalId,setOpenGoalId]=useState<string|null>(null);
-  const[period,setPeriod]=useState<1|3|6|12>(12);
+  const[period,setPeriod]=useState<1|3|6|12>(3); // default 3 months
   const[viewYear,setViewYear]=useState(currentYear);
-  const[startMonth,setStartMonth]=useState(0); // 0-based month offset for 1/3/6 month views
+  const[startMonth,setStartMonth]=useState(()=>Math.max(0,new Date().getMonth()-1));
+
+  // Row reorder drag
+  const[rowDrag,setRowDrag]=useState<string|null>(null);
+  const[rowOver,setRowOver]=useState<string|null>(null);
+  const[goalOrder,setGoalOrder]=useState<string[]>([]);
+
+  // Bar resize drag: {id, side:'left'|'right', startX, origDate}
+  const barResizeRef=useRef<{id:string;side:"left"|"right";startX:number;origDate:string;containerW:number;containerLeft:number}|null>(null);
+  const[resizingId,setResizingId]=useState<string|null>(null);
 
   const YEARS=[currentYear, currentYear+1, currentYear+2];
   const COLORS=[C.a,"#8B5CF6",C.g,C.r,C.y,C.pk,"#06B6D4","#F97316"];
+  const PERIODS:Array<[number,string]>=[[1,"1 мес"],[3,"3 мес"],[6,"6 мес"],[12,"Год"]];
 
-  // Only non-system goals
-  const visibleGoals=useMemo(()=>goals.data.filter((g:any)=>!g.is_system_pinned),[goals.data]);
+  const visibleGoals=useMemo(()=>{
+    const all=goals.data.filter((g:any)=>!g.is_system_pinned);
+    if(goalOrder.length===0)return all;
+    const ordered=[...all].sort((a:any,b:any)=>{
+      const ai=goalOrder.indexOf(a.id);
+      const bi=goalOrder.indexOf(b.id);
+      if(ai===-1&&bi===-1)return 0;
+      if(ai===-1)return 1;
+      if(bi===-1)return -1;
+      return ai-bi;
+    });
+    return ordered;
+  },[goals.data,goalOrder]);
+
+  // Sync order when goals change
+  useEffect(()=>{
+    setGoalOrder(p=>{
+      const ids=goals.data.filter((g:any)=>!g.is_system_pinned).map((g:any)=>g.id);
+      if(p.length===0)return ids;
+      const merged=[...p.filter((id:string)=>ids.includes(id)),...ids.filter((id:string)=>!p.includes(id))];
+      return merged;
+    });
+  },[goals.data]);
 
   const addGoal=async()=>{
     if(!gf.name.trim()||!gf.start_date||!gf.end_date)return;
@@ -1338,7 +1369,7 @@ function YearMap({userId,goals,goalUpdate,goalAdd}:{userId:string,goals:any,goal
     setEditGoal(null);
   };
 
-  // Visible months based on period & startMonth
+  const now=new Date();
   const visibleMonths=useMemo(()=>{
     const months=[];
     for(let i=0;i<period;i++){
@@ -1349,190 +1380,318 @@ function YearMap({userId,goals,goalUpdate,goalAdd}:{userId:string,goals:any,goal
     return months;
   },[period,startMonth,viewYear]);
 
-  // Navigate period
-  const shiftPeriod=(dir:1|-1)=>{
+  const navigatePeriod=(dir:number)=>{
     const next=startMonth+dir*period;
-    if(next<0){setStartMonth(12+next%12);setViewYear(v=>v-1);}
-    else if(next>=12){setStartMonth(next%12);setViewYear(v=>v+1);}
-    else setStartMonth(next);
+    if(next<0)setStartMonth(Math.max(0,startMonth-period));
+    else setStartMonth(Math.min(11,next));
   };
 
-  // Compute bar within visible range
   const goalToBar=(g:any)=>{
     if(!g.start_date||!g.end_date)return null;
-    const s=new Date(g.start_date);
-    const e=new Date(g.end_date);
-    // Total visible range
-    const firstVis=new Date(visibleMonths[0].y,visibleMonths[0].m,1);
-    const lastVis=new Date(visibleMonths[visibleMonths.length-1].y,visibleMonths[visibleMonths.length-1].m+1,0);
-    if(e<firstVis||s>lastVis)return null;
-    const rangeMs=lastVis.getTime()-firstVis.getTime();
-    const leftMs=Math.max(0,s.getTime()-firstVis.getTime());
-    const rightMs=Math.min(rangeMs,e.getTime()-firstVis.getTime());
-    const left=leftMs/rangeMs*100;
-    const width=Math.max(0.8,(rightMs-leftMs)/rangeMs*100);
-    return{left,width};
+    const start=new Date(g.start_date);
+    const end=new Date(g.end_date);
+    const vm=visibleMonths;
+    if(!vm.length)return null;
+    const rangeStart=new Date(vm[0].y,vm[0].m,1);
+    const rangeEnd=new Date(vm[vm.length-1].y,vm[vm.length-1].m+1,0);
+    if(end<rangeStart||start>rangeEnd)return null;
+    const totalDays=(rangeEnd.getTime()-rangeStart.getTime())/(1000*60*60*24)+1;
+    const barStart=Math.max(0,(start.getTime()-rangeStart.getTime())/(1000*60*60*24));
+    const barEnd=Math.min(totalDays,(end.getTime()-rangeStart.getTime())/(1000*60*60*24)+1);
+    return{left:(barStart/totalDays)*100,width:((barEnd-barStart)/totalDays)*100};
   };
 
-  const now=new Date();
   const todayCol=useMemo(()=>{
-    if(visibleMonths.length===0)return -1;
-    const firstVis=new Date(visibleMonths[0].y,visibleMonths[0].m,1);
-    const lastVis=new Date(visibleMonths[visibleMonths.length-1].y,visibleMonths[visibleMonths.length-1].m+1,0);
-    const rangeMs=lastVis.getTime()-firstVis.getTime();
-    const nowMs=now.getTime()-firstVis.getTime();
-    if(nowMs<0||nowMs>rangeMs)return -1;
-    return nowMs/rangeMs*100;
+    const vm=visibleMonths;
+    if(!vm.length)return -1;
+    const rangeStart=new Date(vm[0].y,vm[0].m,1);
+    const rangeEnd=new Date(vm[vm.length-1].y,vm[vm.length-1].m+1,0);
+    if(now<rangeStart||now>rangeEnd)return -1;
+    const total=(rangeEnd.getTime()-rangeStart.getTime())/(1000*60*60*24)+1;
+    const elapsed=(now.getTime()-rangeStart.getTime())/(1000*60*60*24);
+    return(elapsed/total)*100;
   },[visibleMonths]);
 
-  // Period label
+  // Progress-based bar color: 0%=red, 50%=orange/yellow, 100%=green
+  const progressColor=(pct:number,achieved:boolean)=>{
+    if(achieved||pct>=100)return{bg:"linear-gradient(90deg,#4ADE80,#16A34A)",shadow:"0 3px 14px rgba(74,222,128,0.5)"};
+    if(pct>=75)return{bg:"linear-gradient(90deg,#86EFAC,#22C55E)",shadow:"0 3px 12px rgba(34,197,94,0.35)"};
+    if(pct>=50)return{bg:"linear-gradient(90deg,#FDE68A,#F59E0B)",shadow:"0 3px 12px rgba(245,158,11,0.35)"};
+    if(pct>=25)return{bg:"linear-gradient(90deg,#FCA5A5,#F97316)",shadow:"0 3px 12px rgba(249,115,22,0.35)"};
+    return{bg:"linear-gradient(90deg,#FCA5A5,#EF4444)",shadow:"0 3px 12px rgba(239,68,68,0.35)"};
+  };
+
+  const goalProgress=(gid:string)=>{
+    const tasks=(goalTasks?.data||[]).filter((t:any)=>t.goal_id===gid&&t.type!=="delegate");
+    if(!tasks.length)return 0;
+    return Math.round(tasks.filter((t:any)=>t.status==="done"||t.done).length/tasks.length*100);
+  };
+
+  // Convert pixel delta to date change
+  const dateDeltaFromPx=(px:number,containerW:number)=>{
+    const vm=visibleMonths;
+    if(!vm.length)return 0;
+    const rangeStart=new Date(vm[0].y,vm[0].m,1);
+    const rangeEnd=new Date(vm[vm.length-1].y,vm[vm.length-1].m+1,0);
+    const totalDays=(rangeEnd.getTime()-rangeStart.getTime())/(1000*60*60*24)+1;
+    return Math.round((px/containerW)*totalDays);
+  };
+
+  const addDays=(dateStr:string,days:number)=>{
+    const d=new Date(dateStr);
+    d.setDate(d.getDate()+days);
+    return d.toISOString().split("T")[0];
+  };
+
   const periodLabel=useMemo(()=>{
-    if(period===12)return `${viewYear}`;
-    const first=visibleMonths[0];
-    const last=visibleMonths[visibleMonths.length-1];
-    if(first.y===last.y)return `${MONTHS_RU[first.m]} — ${MONTHS_RU[last.m]} ${first.y}`;
-    return `${MONTHS_RU[first.m]} ${first.y} — ${MONTHS_RU[last.m]} ${last.y}`;
+    if(period===12)return`${viewYear}`;
+    if(!visibleMonths.length)return"";
+    const first=visibleMonths[0],last=visibleMonths[visibleMonths.length-1];
+    return`${MONTHS_RU[first.m]} ${first.y} — ${MONTHS_RU[last.m]} ${last.y}`;
   },[period,visibleMonths,viewYear]);
 
-  const GoalForm=({value,onChange,onSave,onCancel,saveLabel}:{value:any,onChange:(v:any)=>void,onSave:()=>void,onCancel:()=>void,saveLabel:string})=><Card style={{marginBottom:16,padding:20}}>
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
-      <div style={{gridColumn:"span 2"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Название *</label><input value={value.name} onChange={e=>onChange({...value,name:e.target.value})} style={iS} placeholder="Запуск продукта..."/></div>
-      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Начало *</label><input type="date" value={value.start_date} onChange={e=>onChange({...value,start_date:e.target.value})} style={iS}/></div>
-      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Конец *</label><input type="date" value={value.end_date} onChange={e=>onChange({...value,end_date:e.target.value})} style={iS}/></div>
-      <div style={{gridColumn:"span 2"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Описание</label><textarea value={value.description||""} onChange={e=>onChange({...value,description:e.target.value})} rows={2} style={{...iS,resize:"none"}}/></div>
-      <div style={{gridColumn:"span 2"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Цвет</label><div style={{display:"flex",gap:6,marginTop:2}}>{COLORS.map(c=><button key={c} onClick={()=>onChange({...value,color:c})} style={{width:28,height:28,borderRadius:8,background:c,border:value.color===c?"3px solid #111":"3px solid transparent",cursor:"pointer"}}/>)}</div></div>
-    </div>
-    <div style={{display:"flex",gap:10}}><Btn onClick={onSave}>{saveLabel}</Btn><Btn primary={false} onClick={onCancel}>Отмена</Btn></div>
-  </Card>;
+  // Row reorder handlers
+  const onRowDrop=(targetId:string)=>{
+    if(!rowDrag||rowDrag===targetId)return;
+    setGoalOrder(p=>{
+      const arr=[...p];
+      const fromIdx=arr.indexOf(rowDrag);
+      const toIdx=arr.indexOf(targetId);
+      if(fromIdx===-1||toIdx===-1)return arr;
+      arr.splice(fromIdx,1);arr.splice(toIdx,0,rowDrag);
+      return arr;
+    });
+    setRowDrag(null);setRowOver(null);
+  };
 
   return <>
-    {/* Header controls */}
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,gap:12,flexWrap:"wrap"}}>
-      <div style={{fontSize:20,fontWeight:700}}>Карта года</div>
-      <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-        {/* Year selector */}
-        <div style={{display:"flex",background:"#F2F2F7",borderRadius:10,padding:3,gap:2}} className="seg-ctrl">
-          {YEARS.map(y=><button key={y} onClick={()=>{setViewYear(y);setStartMonth(0);}} style={{padding:"6px 14px",border:"none",borderRadius:8,background:viewYear===y&&period===12?C.a:"transparent",color:viewYear===y&&period===12?"#fff":C.t2,fontSize:13,fontWeight:viewYear===y&&period===12?700:400,cursor:"pointer"}}>{y}</button>)}
-        </div>
-        {/* Period selector */}
-        {(()=>{const PERIODS:Array<[number,string]>=[[1,"1 мес"],[3,"3 мес"],[6,"6 мес"],[12,"Год"]];return <div style={{display:"flex",background:"#F2F2F7",borderRadius:10,padding:3,gap:2}} className="seg-ctrl">
-          {PERIODS.map(([p,l])=><button key={p} onClick={()=>{setPeriod(p as any);if(p===12)setStartMonth(0);else setStartMonth(now.getMonth());}} style={{padding:"6px 14px",border:"none",borderRadius:8,background:period===p?C.a:"transparent",color:period===p?"#fff":C.t2,fontSize:13,fontWeight:period===p?700:400,cursor:"pointer"}}>{l}</button>)}
-        </div>;})()}
-        {/* Nav arrows (only for < 12 months) */}
-        {period<12&&<div style={{display:"flex",gap:4}}>
-          <button onClick={()=>shiftPeriod(-1)} style={{width:32,height:32,border:"1px solid "+C.bd,borderRadius:8,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg></button>
-          <button onClick={()=>shiftPeriod(1)} style={{width:32,height:32,border:"1px solid "+C.bd,borderRadius:8,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg></button>
-        </div>}
-        <button onClick={()=>{setShowForm(!showForm);setEditGoal(null);}} style={{padding:"8px 18px",background:C.a,color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer"}}>+ Цель</button>
+    {/* Controls */}
+    <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20,flexWrap:"wrap"}}>
+      <h2 style={{margin:0,fontSize:20,fontWeight:700,color:C.t1}}>Карта года</h2>
+      <div style={{flex:1}}/>
+      {/* Year tabs */}
+      <div style={{display:"flex",gap:4,background:C.ib,borderRadius:10,padding:3,border:"1px solid "+C.bd}}>
+        {YEARS.map(y=><button key={y} onClick={()=>{setViewYear(y);setStartMonth(0);}} style={{padding:"5px 12px",border:"none",borderRadius:7,background:viewYear===y&&period===12?C.a:"transparent",color:viewYear===y&&period===12?"#fff":C.t2,fontSize:12,fontWeight:700,cursor:"pointer"}}>{y}</button>)}
       </div>
+      {/* Period tabs */}
+      <div style={{display:"flex",gap:4,background:C.ib,borderRadius:10,padding:3,border:"1px solid "+C.bd}}>
+        {PERIODS.map(([p,l])=><button key={p} onClick={()=>{setPeriod(p as any);if(p===12)setStartMonth(0);else setStartMonth(Math.max(0,now.getMonth()-1));}} style={{padding:"5px 12px",border:"none",borderRadius:7,background:period===p?C.a:"transparent",color:period===p?"#fff":C.t2,fontSize:12,fontWeight:700,cursor:"pointer"}}>{l}</button>)}
+      </div>
+      <button onClick={()=>{setShowForm(!showForm);setEditGoal(null);}}
+        style={{padding:"8px 18px",background:C.a,color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer",boxShadow:`0 0 16px ${C.a}30`}}>
+        + Цель
+      </button>
     </div>
 
-    {/* Period label */}
-    {period<12&&<div style={{fontSize:14,fontWeight:600,color:C.t2,marginBottom:12}}>{periodLabel}</div>}
+    {/* Nav arrows for sub-year periods */}
+    {period<12&&<div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+      <button onClick={()=>navigatePeriod(-1)} style={{width:28,height:28,border:"1px solid "+C.bd,borderRadius:8,background:C.ib,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.t2}}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span style={{fontSize:13,fontWeight:600,color:C.t1}}>{periodLabel}</span>
+      <button onClick={()=>navigatePeriod(1)} style={{width:28,height:28,border:"1px solid "+C.bd,borderRadius:8,background:C.ib,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.t2}}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>}
 
-    {showForm&&!editGoal&&<GoalForm value={gf} onChange={sGf} onSave={addGoal} onCancel={()=>setShowForm(false)} saveLabel="Создать"/>}
-    {editGoal&&<GoalForm value={editGoal} onChange={setEditGoal} onSave={saveEdit} onCancel={()=>setEditGoal(null)} saveLabel="Сохранить"/>}
-
-    {/* Timeline */}
-    <Card style={{padding:0,overflow:"hidden",marginBottom:24}}>
-      {/* Month headers */}
-      <div style={{display:"flex",borderBottom:"2px solid "+C.bd,background:"#FAFBFC"}}>
-        <div style={{width:200,flexShrink:0,padding:"11px 16px",fontSize:11,fontWeight:700,color:C.t2,borderRight:"1px solid "+C.bd,letterSpacing:0.5}}>ЦЕЛЬ</div>
-        <div style={{flex:1,display:"flex"}}>
-          {visibleMonths.map((vm,i)=><div key={i} style={{flex:1,textAlign:"center",padding:"11px 0",fontSize:11,fontWeight:700,color:C.t2,borderRight:i<visibleMonths.length-1?"1px solid "+C.bd:"none",whiteSpace:"nowrap"}}>
-            {vm.label}{period===12?"":(" "+vm.y.toString().slice(2))}
-          </div>)}
+    {/* Add/Edit form */}
+    {(showForm||editGoal)&&<div style={{background:C.w,borderRadius:14,padding:20,marginBottom:16,border:"1px solid "+C.bd}}>
+      <div style={{fontSize:14,fontWeight:700,marginBottom:14,color:C.t1}}>{editGoal?"Изменить цель":"Новая цель"}</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:12}}>
+        <div style={{gridColumn:"span 3"}}><label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4}}>Название</label>
+          <input value={editGoal?editGoal.name:gf.name} onChange={e=>editGoal?setEditGoal({...editGoal,name:e.target.value}):sGf({...gf,name:e.target.value})} style={{...iS,fontSize:13}}/></div>
+        <div><label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4}}>Начало</label>
+          <input type="date" value={editGoal?editGoal.start_date:gf.start_date} onChange={e=>editGoal?setEditGoal({...editGoal,start_date:e.target.value}):sGf({...gf,start_date:e.target.value})} style={{...iS,fontSize:13}}/></div>
+        <div><label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4}}>Конец (дедлайн)</label>
+          <input type="date" value={editGoal?editGoal.end_date:gf.end_date} onChange={e=>editGoal?setEditGoal({...editGoal,end_date:e.target.value}):sGf({...gf,end_date:e.target.value})} style={{...iS,fontSize:13}}/></div>
+        <div><label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4}}>Цвет</label>
+          <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+            {COLORS.map(c=><button key={c} onClick={()=>editGoal?setEditGoal({...editGoal,color:c}):sGf({...gf,color:c})} style={{width:22,height:22,borderRadius:6,background:c,border:(editGoal?editGoal.color:gf.color)===c?"3px solid "+C.t1:"3px solid transparent",cursor:"pointer"}}/>)}
+          </div>
         </div>
       </div>
+      <div style={{display:"flex",gap:8}}>
+        <button onClick={editGoal?saveEdit:addGoal} style={{padding:"8px 18px",background:C.a,color:"#fff",border:"none",borderRadius:9,fontSize:13,fontWeight:600,cursor:"pointer"}}>
+          {editGoal?"Сохранить":"Создать"}
+        </button>
+        <button onClick={()=>{setShowForm(false);setEditGoal(null);}} style={{padding:"8px 14px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:9,fontSize:13,cursor:"pointer"}}>Отмена</button>
+      </div>
+    </div>}
 
-      {/* Empty state */}
+    {/* Grid */}
+    <div className="yearmap-table" style={{background:C.w,borderRadius:16,border:"1px solid "+C.bd,overflow:"hidden"}}
+      onMouseMove={e=>{
+        if(!barResizeRef.current)return;
+        const{id,side,startX,origDate,containerW}=barResizeRef.current;
+        const dx=e.clientX-startX;
+        const days=dateDeltaFromPx(dx,containerW);
+        if(days===0)return;
+        const g=goals.data.find((gg:any)=>gg.id===id);
+        if(!g)return;
+        const newDate=addDays(origDate,days);
+        if(side==="right"){
+          if(newDate<=g.start_date)return;
+          goalUpdate(id,{end_date:newDate,deadline:newDate});
+        } else {
+          if(newDate>=g.end_date)return;
+          goalUpdate(id,{start_date:newDate});
+        }
+        barResizeRef.current.origDate=newDate;
+        barResizeRef.current.startX=e.clientX;
+      }}
+      onMouseUp={()=>{barResizeRef.current=null;setResizingId(null);}}
+      onMouseLeave={()=>{barResizeRef.current=null;setResizingId(null);}}>
+
+      {/* Column headers */}
+      <div style={{display:"flex",background:C.ib,borderBottom:"1px solid "+C.bd}}>
+        <div style={{width:200,flexShrink:0,padding:"10px 14px",fontSize:11,fontWeight:700,color:C.t2,letterSpacing:0.5,borderRight:"1px solid "+C.bd}}>ЦЕЛЬ</div>
+        {visibleMonths.map((vm,i)=>(
+          <div key={i} style={{flex:1,textAlign:"center",padding:"10px 4px",fontSize:11,fontWeight:600,color:C.t2,borderRight:i<visibleMonths.length-1?"1px solid "+C.bd+"66":"none"}}>
+            {vm.label}{period===12?"":" "+vm.y.toString().slice(2)}
+          </div>
+        ))}
+      </div>
+
       {visibleGoals.length===0&&<div style={{padding:"60px 0",textAlign:"center",color:C.t2,fontSize:14}}>
-        <div style={{marginBottom:8}}>Нет целей на таймлайне</div>
-        <div style={{fontSize:12}}>Добавь цель с датами начала и конца</div>
+        Нет целей. Нажми «+ Цель» чтобы добавить.
       </div>}
 
-      {/* Goal rows */}
       {visibleGoals.map((g:any,idx:number)=>{
         const bar=goalToBar(g);
         const isOpen=openGoalId===g.id;
         const isLast=idx===visibleGoals.length-1;
-        // Goal-level urgency
-        const gEnd=g.end_date?new Date(g.end_date+"T23:59:59"):null;
-        const gDaysLeft=gEnd?Math.ceil((gEnd.getTime()-Date.now())/(1000*60*60*24)):null;
-        const gOverdue=gDaysLeft!==null&&gDaysLeft<0;
-        const gUrgent=gDaysLeft!==null&&gDaysLeft<=5&&!gOverdue;
-        const gAchieved=g.is_achieved;
-        const barBg=gAchieved?"linear-gradient(90deg,#4ADE80,#16A34A)":
-          gOverdue?"linear-gradient(90deg,#FCA5A5,#EF4444)":
-          gUrgent?"linear-gradient(90deg,#FED7AA,#F97316)":
-          g.color||C.a;
-        const barShadow=gAchieved?"0 3px 12px rgba(74,222,128,0.45)":
-          gOverdue?"0 3px 12px rgba(239,68,68,0.4)":
-          `0 3px 10px ${g.color||C.a}40`;
+        const pct=goalProgress(g.id);
+        const gAchieved=g.is_achieved||pct>=100;
+        const{bg:barBg,shadow:barShadow}=progressColor(pct,gAchieved);
+        const isRowDragOver=rowOver===g.id&&rowDrag!==g.id;
 
-        return <div key={g.id} style={{borderBottom:isLast?"none":"1px solid "+C.bd+"88",
-          background:gAchieved?"#F0FDF4":gOverdue?"#FFF1F1":gUrgent?"#FFFBEB":"transparent",
-          transition:"background 0.3s",
-        }}>
-          <div style={{display:"flex",minHeight:56,alignItems:"stretch"}}>
-            {/* Label */}
-            <div style={{width:200,flexShrink:0,display:"flex",alignItems:"center",gap:8,padding:"10px 14px",borderRight:"1px solid "+C.bd,cursor:"pointer",background:isOpen?(gAchieved?"#4ADE8010":g.color+"08"):"transparent",transition:"background 0.15s"}} onClick={()=>setOpenGoalId(isOpen?null:g.id)}>
-              <div style={{width:10,height:10,borderRadius:3,background:gAchieved?"#4ADE80":gOverdue?"#EF4444":gUrgent?"#F97316":g.color||C.a,flexShrink:0,
-                boxShadow:gOverdue?"0 0 6px rgba(239,68,68,0.5)":gUrgent?"0 0 6px rgba(249,115,22,0.4)":"none",
-                animation:gOverdue?"burningGlow 2s ease-in-out infinite":gUrgent?"deferrableGlow 2s ease-in-out infinite":"none",
+        return <div key={g.id}
+          style={{borderBottom:isLast?"none":"1px solid "+C.bd+"66",background:isRowDragOver?C.a+"06":"transparent",transition:"background 0.15s"}}
+          onDragOver={e=>{e.preventDefault();setRowOver(g.id);}}
+          onDrop={()=>onRowDrop(g.id)}
+          onDragLeave={()=>setRowOver(null)}>
+
+          <div style={{display:"flex",minHeight:52,alignItems:"stretch"}}>
+            {/* Label — draggable for row reorder */}
+            <div
+              draggable
+              onDragStart={()=>setRowDrag(g.id)}
+              onDragEnd={()=>{setRowDrag(null);setRowOver(null);}}
+              style={{width:200,flexShrink:0,display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRight:"1px solid "+C.bd,cursor:"grab",background:isOpen?C.a+"06":"transparent",transition:"background 0.15s",userSelect:"none"}}
+              onClick={()=>setOpenGoalId(isOpen?null:g.id)}>
+              {/* Drag handle */}
+              <div style={{flexShrink:0,color:C.t2,opacity:0.3,fontSize:12,cursor:"grab"}}>⠿</div>
+              {/* Progress dot — color matches bar */}
+              <div style={{width:9,height:9,borderRadius:"50%",flexShrink:0,
+                background:gAchieved?"#16A34A":pct>=75?"#22C55E":pct>=50?"#F59E0B":pct>=25?"#F97316":"#EF4444",
+                boxShadow:gAchieved?"0 0 6px rgba(22,163,74,0.6)":"none",
+                transition:"background 0.4s",
               }}/>
               <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:13,fontWeight:600,color:gAchieved?"#15803D":gOverdue?"#EF4444":C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{g.name}</div>
-                {g.start_date&&g.end_date&&<div style={{fontSize:10,color:C.t2,marginTop:2}}>{g.start_date.substring(5)} — {g.end_date.substring(5)}</div>}
-                {gAchieved&&<div style={{fontSize:9,fontWeight:700,color:"#16A34A",marginTop:1}}>✓ Достигнута</div>}
-                {gOverdue&&!gAchieved&&<div style={{fontSize:9,fontWeight:800,color:"#EF4444",marginTop:1}}>🔥 ГОРИТ · {Math.abs(gDaysLeft!)} дн. назад</div>}
-                {gUrgent&&!gAchieved&&<div style={{fontSize:9,fontWeight:700,color:"#F97316",marginTop:1}}>⚡ {gDaysLeft} дн. осталось</div>}
+                <div style={{fontSize:12,fontWeight:600,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{g.name}</div>
+                {g.start_date&&g.end_date&&(
+                  <div style={{fontSize:10,color:C.t2,marginTop:1}}>{g.start_date.substring(5)} — {g.end_date.substring(5)}</div>
+                )}
+                {/* Progress bar mini */}
+                <div style={{height:2,borderRadius:2,background:C.bd,marginTop:4,overflow:"hidden"}}>
+                  <div style={{height:"100%",width:pct+"%",background:gAchieved?"#16A34A":pct>=50?"#F59E0B":"#EF4444",borderRadius:2,transition:"width 0.4s,background 0.4s"}}/>
+                </div>
               </div>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points={isOpen?"18 15 12 9 6 15":"6 9 12 15 18 9"}/></svg>
+              <span style={{fontSize:10,fontWeight:600,color:C.t2,flexShrink:0}}>{pct}%</span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points={isOpen?"18 15 12 9 6 15":"6 9 12 15 18 9"}/></svg>
             </div>
-            {/* Timeline area */}
-            <div style={{flex:1,position:"relative",background:idx%2===0?"transparent":"#FAFBFC88"}}>
-              {visibleMonths.map((_,i)=><div key={i} style={{position:"absolute",left:`${i*(100/period)}%`,top:0,bottom:0,width:1,background:C.bd,opacity:0.4}}/>)}
-              {todayCol>=0&&<div style={{position:"absolute",left:`${todayCol}%`,top:0,bottom:0,width:2,background:"#EF4444",zIndex:3,borderRadius:1}}/>}
-              {bar?<div style={{position:"absolute",top:"50%",transform:"translateY(-50%)",left:`${bar.left}%`,width:`${bar.width}%`,minWidth:6,height:32,background:barBg,borderRadius:8,display:"flex",alignItems:"center",padding:"0 10px",boxSizing:"border-box" as const,zIndex:2,boxShadow:barShadow,cursor:"pointer",overflow:"hidden",
-                animation:gOverdue&&!gAchieved?"burningGlow 2s ease-in-out infinite":"none",
-              }} onClick={()=>{setEditGoal({...g});setOpenGoalId(null);}}>
-                <span style={{fontSize:12,fontWeight:700,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",textShadow:"0 1px 3px rgba(0,0,0,0.35)"}}>{gAchieved?"🏆 ":gOverdue?"🔥 ":""}{g.name}</span>
-              </div>
-              :<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",paddingLeft:16}}>
-                <span style={{fontSize:11,color:C.t2,fontStyle:"italic"}}>Вне диапазона</span>
-              </div>}
+
+            {/* Timeline */}
+            <div style={{flex:1,position:"relative",background:idx%2===0?"transparent":C.bd+"18"}}
+              id={`ym-row-${g.id}`}>
+              {visibleMonths.map((_,i)=>(
+                <div key={i} style={{position:"absolute",left:`${i*(100/period)}%`,top:0,bottom:0,width:1,background:C.bd,opacity:0.35}}/>
+              ))}
+              {todayCol>=0&&<div style={{position:"absolute",left:`${todayCol}%`,top:0,bottom:0,width:2,background:"#EF4444",zIndex:3,borderRadius:1,opacity:0.7}}/>}
+
+              {bar
+                ?<div style={{
+                    position:"absolute",top:"50%",transform:"translateY(-50%)",
+                    left:`${bar.left}%`,width:`${bar.width}%`,
+                    minWidth:8,height:30,
+                    background:barBg,borderRadius:8,
+                    display:"flex",alignItems:"center",
+                    boxSizing:"border-box" as const,zIndex:2,
+                    boxShadow:barShadow,
+                    cursor:resizingId===g.id?"ew-resize":"pointer",
+                    overflow:"visible",
+                    transition:resizingId===g.id?"none":"box-shadow 0.3s",
+                  }}>
+                    {/* Left resize handle */}
+                    <div
+                      style={{position:"absolute",left:-4,top:0,bottom:0,width:10,cursor:"ew-resize",zIndex:10,display:"flex",alignItems:"center",justifyContent:"center"}}
+                      onMouseDown={e=>{
+                        e.stopPropagation();
+                        const row=document.getElementById(`ym-row-${g.id}`);
+                        if(!row)return;
+                        barResizeRef.current={id:g.id,side:"left",startX:e.clientX,origDate:g.start_date,containerW:row.clientWidth,containerLeft:row.getBoundingClientRect().left};
+                        setResizingId(g.id);
+                      }}>
+                      <div style={{width:3,height:16,background:"rgba(255,255,255,0.5)",borderRadius:2}}/>
+                    </div>
+
+                    {/* Bar label */}
+                    <div style={{flex:1,padding:"0 10px",overflow:"hidden"}}>
+                      <span style={{fontSize:11,fontWeight:700,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",textShadow:"0 1px 3px rgba(0,0,0,0.3)",display:"block"}}>
+                        {gAchieved?"🏆 ":""}{g.name}
+                      </span>
+                    </div>
+
+                    {/* Right resize handle */}
+                    <div
+                      style={{position:"absolute",right:-4,top:0,bottom:0,width:10,cursor:"ew-resize",zIndex:10,display:"flex",alignItems:"center",justifyContent:"center"}}
+                      onMouseDown={e=>{
+                        e.stopPropagation();
+                        const row=document.getElementById(`ym-row-${g.id}`);
+                        if(!row)return;
+                        barResizeRef.current={id:g.id,side:"right",startX:e.clientX,origDate:g.end_date,containerW:row.clientWidth,containerLeft:row.getBoundingClientRect().left};
+                        setResizingId(g.id);
+                      }}>
+                      <div style={{width:3,height:16,background:"rgba(255,255,255,0.5)",borderRadius:2}}/>
+                    </div>
+                  </div>
+                :<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",paddingLeft:12}}>
+                  <span style={{fontSize:10,color:C.t2,fontStyle:"italic",opacity:0.6}}>Вне диапазона</span>
+                </div>}
             </div>
           </div>
 
-          {isOpen&&<div style={{borderTop:"1px solid "+C.bd,padding:"14px 18px",background:gAchieved?"#F0FDF4":g.color+"05",display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:16}}>
+          {/* Expanded detail */}
+          {isOpen&&<div style={{borderTop:"1px solid "+C.bd,padding:"12px 16px",background:C.ib,display:"flex",justifyContent:"space-between",alignItems:"center",gap:16}}>
             <div style={{flex:1}}>
-              <div style={{fontSize:14,fontWeight:700,color:gAchieved?"#15803D":C.t1,marginBottom:g.description?5:0}}>{g.name}</div>
-              {g.description&&<div style={{fontSize:12,color:C.t2,lineHeight:1.5,marginBottom:6}}>{g.description}</div>}
-              <div style={{display:"flex",gap:16,fontSize:11,color:C.t2}}>
+              <div style={{fontSize:13,fontWeight:700,color:C.t1,marginBottom:4}}>{g.name}</div>
+              {g.description&&<div style={{fontSize:11,color:C.t2,marginBottom:6}}>{g.description}</div>}
+              <div style={{display:"flex",gap:12,fontSize:11,color:C.t2,flexWrap:"wrap"}}>
                 {g.start_date&&<span>Начало: <b style={{color:C.t1}}>{g.start_date}</b></span>}
-                {g.end_date&&<span>Конец: <b style={{color:C.t1}}>{g.end_date}</b></span>}
+                {g.end_date&&<span>Дедлайн: <b style={{color:C.t1}}>{g.end_date}</b></span>}
+                <span>Прогресс: <b style={{color:pct>=100?C.g:pct>=50?C.y:C.r}}>{pct}%</b></span>
               </div>
             </div>
             <div style={{display:"flex",gap:8,flexShrink:0}}>
-              <button onClick={()=>{setEditGoal({...g});setShowForm(false);setOpenGoalId(null);}} style={{padding:"6px 14px",fontSize:12,fontWeight:600,background:C.a+"14",color:C.a,border:"1px solid "+C.a+"33",borderRadius:8,cursor:"pointer"}}>Изменить</button>
-              <button onClick={()=>goals.remove(g.id)} style={{padding:"6px 12px",fontSize:12,background:C.r+"10",color:C.r,border:"1px solid "+C.r+"22",borderRadius:8,cursor:"pointer"}}>Удалить</button>
+              <button onClick={()=>{setEditGoal({...g});setOpenGoalId(null);setShowForm(false);}}
+                style={{padding:"6px 14px",fontSize:12,fontWeight:600,background:C.a+"14",color:C.a,border:"1px solid "+C.a+"33",borderRadius:8,cursor:"pointer"}}>Изменить</button>
+              <button onClick={()=>goals.remove(g.id)}
+                style={{padding:"6px 12px",fontSize:12,background:C.r+"10",color:C.r,border:"1px solid "+C.r+"22",borderRadius:8,cursor:"pointer"}}>Удалить</button>
             </div>
           </div>}
         </div>;
       })}
 
-      {/* Today footer label */}
+      {/* Today label */}
       {visibleGoals.length>0&&todayCol>=0&&<div style={{display:"flex",borderTop:"1px solid "+C.bd+"44"}}>
         <div style={{width:200,flexShrink:0}}/>
         <div style={{flex:1,position:"relative",height:18}}>
           <div style={{position:"absolute",left:`${todayCol}%`,transform:"translateX(-50%)",top:2,fontSize:9,fontWeight:700,color:"#EF4444",whiteSpace:"nowrap"}}>▲ Сегодня</div>
         </div>
       </div>}
-    </Card>
+    </div>
   </>;
 }
-
 /* ============ GOALS BLOCK ============ */
 // Priority system helpers
 const PRIORITIES={
@@ -2721,7 +2880,7 @@ function StrategyPage({userId}:{userId:string}){
     </div>
 
     {/* YEAR MAP */}
-    {stratTab==="yearmap"&&<YearMap userId={userId} goals={goals} goalUpdate={goals.update} goalAdd={goals.add}/>}
+    {stratTab==="yearmap"&&<YearMap userId={userId} goals={goals} goalUpdate={goals.update} goalAdd={goals.add} goalTasks={goalTasks}/>}
 
     {/* CALENDAR */}
     {stratTab==="calendar"&&<>
@@ -7463,29 +7622,32 @@ function BoardPage({userId}:{userId:string}){
     const file=e.target.files?.[0];
     if(!file)return;
     if(file.size>10*1024*1024){alert("Файл слишком большой (макс 10 МБ)");return;}
-    if(!["image/jpeg","image/png","image/gif","image/svg+xml","image/webp"].includes(file.type)){
-      alert("Неподдерживаемый формат. Используй JPG, PNG, GIF, SVG, WebP");return;
-    }
     try{
       const reader=new FileReader();
       reader.onload=ev=>{
         try{
           const url=ev.target?.result as string;
-          // Detect natural size to preserve aspect ratio
-          const img=new window.Image();
-          img.onload=()=>{
+          if(!url)return;
+          // Try to get natural dimensions, fall back to 300x240 if fails
+          const img=document.createElement("img");
+          const onLoaded=()=>{
             const natW=img.naturalWidth||400;
             const natH=img.naturalHeight||300;
-            // Fit into max 320px wide
             const maxW=320;
             const scale=natW>maxW?maxW/natW:1;
-            const w=Math.round(natW*scale);
-            const h=Math.round(natH*scale);
-            addItem({type:"image",imageUrl:url,imageW:natW,imageH:natH,w,h},imgClickPos.x,imgClickPos.y);
+            addItem({type:"image",imageUrl:url,imageW:natW,imageH:natH,w:Math.round(natW*scale),h:Math.round(natH*scale)},imgClickPos.x,imgClickPos.y);
           };
-          img.onerror=()=>alert("Не удалось загрузить изображение");
+          img.onload=onLoaded;
+          img.onerror=()=>{
+            // Still add image even if size detection fails
+            addItem({type:"image",imageUrl:url,w:300,h:240},imgClickPos.x,imgClickPos.y);
+          };
           img.src=url;
-        }catch(err){alert("Ошибка обработки изображения");}
+        }catch{
+          // Fallback: add without size detection
+          const url=ev.target?.result as string;
+          if(url)addItem({type:"image",imageUrl:url,w:300,h:240},imgClickPos.x,imgClickPos.y);
+        }
       };
       reader.onerror=()=>alert("Ошибка чтения файла");
       reader.readAsDataURL(file);
