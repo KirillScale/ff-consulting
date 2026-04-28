@@ -2610,13 +2610,13 @@ function StrategyPage({userId}:{userId:string}){
   const DAY_START=7;
   const DAY_HOURS=16;
 
-  // Drag state for calendar
-  const calDragRef=useRef<{id:string;startY:number;startMin:number;dur:number;dateStr:string}|null>(null);
-  const calResizeRef=useRef<{id:string;startY:number;origEndMin:number}|null>(null);
+  const calDragRef=useRef<{id:string;startY:number;startMin:number;dur:number;origDate:string;colW:number;gridLeft:number;gridTop:number}|null>(null);
+  const calResizeRef=useRef<{id:string;startY:number;origEndMin:number;startMin:number}|null>(null);
   const[calDragOver,setCalDragOver]=useState<{dateStr:string;min:number}|null>(null);
   const[inlineEdit,setInlineEdit]=useState<{id:string;text:string}|null>(null);
+  const[isDraggingCal,setIsDraggingCal]=useState(false);
+  const[isResizingCal,setIsResizingCal]=useState(false);
 
-  // Toggle task done — works for cal_tasks, kanban, and goalTasks
   const toggleCalDone=async(t:any)=>{
     const done=!(t.status==="done"||t.done);
     if(t.fromKanban){await kanban.update(t.id,{status:done?"done":"todo"});}
@@ -2624,82 +2624,109 @@ function StrategyPage({userId}:{userId:string}){
     else{await calTasks.update(t.id,{status:done?"done":"todo",done});}
   };
 
-  // Move task to new date+time (DnD drop)
   const moveCalTask=async(t:any,newDateStr:string,newStartMin:number)=>{
     const dur=timeToMin(t.end_time||"10:00")-timeToMin(t.start_time||"09:00");
-    const newStart=minToTime(newStartMin);
-    const newEnd=minToTime(newStartMin+Math.max(30,dur));
+    const newStart=minToTime(Math.max(DAY_START*60,Math.min((DAY_START+DAY_HOURS-1)*60,newStartMin)));
+    const newEnd=minToTime(Math.max(DAY_START*60+30,Math.min((DAY_START+DAY_HOURS)*60,newStartMin+Math.max(30,dur))));
     if(t.fromKanban){await kanban.update(t.id,{date:newDateStr,start_time:newStart,end_time:newEnd});}
     else if(t.fromGoal){await goalTasks.update(t.id,{date:newDateStr,start_time:newStart,end_time:newEnd});}
     else{await calTasks.update(t.id,{start_date:newDateStr,end_date:newDateStr,start_time:newStart,end_time:newEnd});}
   };
 
-  // Resize task end time
   const resizeCalTask=async(t:any,newEndMin:number)=>{
-    const newEnd=minToTime(Math.max(timeToMin(t.start_time||"09:00")+15,newEndMin));
+    const startMin=timeToMin(t.start_time||"09:00");
+    const clamped=Math.max(startMin+15,Math.min((DAY_START+DAY_HOURS)*60,newEndMin));
+    const newEnd=minToTime(Math.round(clamped/15)*15);
     if(t.fromKanban){await kanban.update(t.id,{end_time:newEnd});}
     else if(t.fromGoal){await goalTasks.update(t.id,{end_time:newEnd});}
     else{await calTasks.update(t.id,{end_time:newEnd});}
   };
 
-  // Week/Day time-grid view (Google Calendar style)
+  // Global mouse move/up for calendar interactions
+  useEffect(()=>{
+    const onMove=(e:MouseEvent)=>{
+      // ── DRAG ──
+      if(calDragRef.current){
+        const{startY,startMin,dur,origDate,colW,gridLeft,gridTop}=calDragRef.current;
+        const dy=e.clientY-gridTop-48; // 48=header
+        const rawMin=Math.round(((dy/SLOT_H)*60+DAY_START*60)/15)*15;
+        const newStartMin=Math.max(DAY_START*60,Math.min((DAY_START+DAY_HOURS-1)*60,rawMin-dur/2));
+
+        const dx=e.clientX-gridLeft-52; // 52=time gutter
+        const colIdx=Math.floor(dx/colW);
+        const days=calDragRef.current as any;
+        const dateStr=(days._days||[])[Math.max(0,Math.min((days._days||[]).length-1,colIdx))];
+
+        setCalDragOver({dateStr:dateStr||origDate,min:newStartMin});
+        setIsDraggingCal(true);
+
+        // Live preview: move the block DOM element
+        const el=document.getElementById(`cal-block-${calDragRef.current.id}`);
+        if(el){
+          el.style.top=((newStartMin-DAY_START*60)/60*SLOT_H)+"px";
+          el.style.opacity="0.5";
+        }
+      }
+      // ── RESIZE ──
+      if(calResizeRef.current){
+        const{id,startY,origEndMin,startMin}=calResizeRef.current;
+        const gridEl=document.getElementById("cal-timegrid");
+        if(!gridEl)return;
+        const rect=gridEl.getBoundingClientRect();
+        const dy=e.clientY-rect.top-48;
+        const rawMin=Math.round(((dy/SLOT_H)*60+DAY_START*60)/15)*15;
+        const newEndMin=Math.max(startMin+15,Math.min((DAY_START+DAY_HOURS)*60,rawMin));
+        calResizeRef.current.origEndMin=newEndMin;
+
+        // Live DOM preview
+        const el=document.getElementById(`cal-block-${id}`);
+        if(el){
+          const newH=Math.max(20,((newEndMin-startMin)/60*SLOT_H)-2);
+          el.style.height=newH+"px";
+          // Update time label inside
+          const label=el.querySelector(".cal-time-label") as HTMLElement;
+          if(label){
+            const t=allCalTasks.find((tt:any)=>tt.id===id);
+            if(t)label.textContent=`${t.start_time||"09:00"}–${minToTime(newEndMin)} · ${fmtDur(newEndMin-timeToMin(t.start_time||"09:00"))}`;
+          }
+        }
+        setIsResizingCal(true);
+      }
+    };
+
+    const onUp=async()=>{
+      // Finish drag
+      if(calDragRef.current&&calDragOver&&isDraggingCal){
+        const t=allCalTasks.find((tt:any)=>tt.id===calDragRef.current!.id);
+        if(t)await moveCalTask(t,calDragOver.dateStr,calDragOver.min);
+        // Reset el
+        const el=document.getElementById(`cal-block-${calDragRef.current.id}`);
+        if(el){el.style.opacity="1";}
+      }
+      calDragRef.current=null;setDragCalId(null);setCalDragOver(null);setIsDraggingCal(false);
+
+      // Finish resize
+      if(calResizeRef.current&&isResizingCal){
+        const t=allCalTasks.find((tt:any)=>tt.id===calResizeRef.current!.id);
+        if(t)await resizeCalTask(t,calResizeRef.current.origEndMin);
+      }
+      calResizeRef.current=null;setIsResizingCal(false);
+    };
+
+    window.addEventListener("mousemove",onMove);
+    window.addEventListener("mouseup",onUp);
+    return()=>{window.removeEventListener("mousemove",onMove);window.removeEventListener("mouseup",onUp);};
+  },[calDragOver,isDraggingCal,isResizingCal,allCalTasks]);
+
+  // Week/Day time-grid view
   const TimeGrid=({days:gridDays}:{days:string[]})=>{
     const tdStr=today();
     const nowMin=new Date().getHours()*60+new Date().getMinutes();
     const nowTop=((nowMin-DAY_START*60)/60)*SLOT_H;
     const gridRef2=useRef<HTMLDivElement>(null);
 
-    const getMinFromY=(y:number,rect:DOMRect)=>{
-      const relY=y-rect.top-48; // 48 = header height
-      const rawMin=Math.round((relY/SLOT_H)*60)+DAY_START*60;
-      return Math.max(DAY_START*60,Math.min((DAY_START+DAY_HOURS)*60-30,Math.round(rawMin/15)*15));
-    };
-
-    return<div className="yearmap-table" style={{display:"flex",background:C.w,borderRadius:16,border:"1px solid "+C.bd,overflow:"hidden"}}
-      onMouseMove={e=>{
-        const rect=(e.currentTarget as HTMLElement).getBoundingClientRect();
-        // Handle drag
-        if(calDragRef.current&&dragCalId){
-          const newMin=getMinFromY(e.clientY,rect)-calDragRef.current.dur/2;
-          // detect which column
-          const colW=(rect.width-52)/gridDays.length;
-          const colIdx=Math.floor((e.clientX-rect.left-52)/colW);
-          const dateStr=gridDays[Math.max(0,Math.min(gridDays.length-1,colIdx))];
-          setCalDragOver({dateStr,min:Math.max(DAY_START*60,newMin)});
-        }
-        // Handle resize
-        if(calResizeRef.current){
-          const rect2=gridRef2.current?.getBoundingClientRect()||rect;
-          const newEndMin=getMinFromY(e.clientY,rect2);
-          const t=allCalTasks.find((tt:any)=>tt.id===calResizeRef.current!.id);
-          if(t){
-            const snapped=Math.round(newEndMin/15)*15;
-            calResizeRef.current.origEndMin=snapped;
-            // Live preview via direct DOM (non-React for perf)
-            const el=document.getElementById(`cal-block-${t.id}`);
-            if(el){
-              const startMin=timeToMin(t.start_time||"09:00");
-              const newH=Math.max(20,((snapped-startMin)/60)*SLOT_H-2);
-              el.style.height=newH+"px";
-            }
-          }
-        }
-      }}
-      onMouseUp={async e=>{
-        // Finish drag drop
-        if(calDragRef.current&&calDragOver&&dragCalId){
-          const t=allCalTasks.find((tt:any)=>tt.id===dragCalId);
-          if(t)await moveCalTask(t,calDragOver.dateStr,calDragOver.min);
-          calDragRef.current=null;setDragCalId(null);setCalDragOver(null);
-        }
-        // Finish resize
-        if(calResizeRef.current){
-          const t=allCalTasks.find((tt:any)=>tt.id===calResizeRef.current!.id);
-          if(t)await resizeCalTask(t,calResizeRef.current.origEndMin);
-          calResizeRef.current=null;
-        }
-      }}
-      ref={gridRef2}>
+    return<div id="cal-timegrid" className="yearmap-table" ref={gridRef2}
+      style={{display:"flex",background:C.w,borderRadius:16,border:"1px solid "+C.bd,overflow:"hidden",userSelect:isDraggingCal||isResizingCal?"none":"auto",cursor:isResizingCal?"ns-resize":isDraggingCal?"grabbing":"default"}}>
 
       {/* Time gutter */}
       <div style={{width:52,flexShrink:0,borderRight:"1px solid "+C.bd,paddingTop:48}}>
@@ -2712,7 +2739,7 @@ function StrategyPage({userId}:{userId:string}){
 
       {/* Day columns */}
       <div style={{flex:1,display:"grid",gridTemplateColumns:`repeat(${gridDays.length},1fr)`}}>
-        {gridDays.map(dateStr=>{
+        {gridDays.map((dateStr,colIdx)=>{
           const isToday=dateStr===tdStr;
           const dt=new Date(dateStr+"T12:00:00");
           const dayTaskList=tasksForCalDay(dateStr);
@@ -2730,13 +2757,13 @@ function StrategyPage({userId}:{userId:string}){
             {/* Hour slots */}
             <div style={{position:"relative",height:DAY_HOURS*SLOT_H}}>
               {Array.from({length:DAY_HOURS},(_,i)=>(
-                <div key={i} onClick={()=>openCalNew(dateStr,i+DAY_START)}
+                <div key={i} onClick={()=>{if(!isDraggingCal&&!isResizingCal)openCalNew(dateStr,i+DAY_START);}}
                   style={{height:SLOT_H,borderBottom:"1px solid rgba(0,0,0,0.04)",cursor:"pointer",transition:"background 0.1s"}}
-                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(37,99,235,0.03)";}}
+                  onMouseEnter={e=>{if(!isDraggingCal&&!isResizingCal)(e.currentTarget as HTMLElement).style.background="rgba(37,99,235,0.03)";}}
                   onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}/>
               ))}
 
-              {/* DnD drop preview line */}
+              {/* DnD drop preview */}
               {isDragTarget&&calDragOver&&(
                 <div style={{position:"absolute",left:4,right:4,top:((calDragOver.min-DAY_START*60)/60)*SLOT_H,height:2,background:C.a,borderRadius:2,zIndex:20,pointerEvents:"none",boxShadow:`0 0 8px ${C.a}60`}}/>
               )}
@@ -2759,51 +2786,50 @@ function StrategyPage({userId}:{userId:string}){
                 const color=isDone?"#22C55E":(PRIORITY_COLORS[t.priority||"medium"]||C.a);
                 const dur=et-st;
                 const overlap=dayTaskList.filter((_:any,j:number)=>j<ti&&tasksOverlap(t,dayTaskList[j])).length;
-                const wPct=overlap?`calc(85% - ${overlap*8}px)`:"92%";
-                const lPct=overlap?`${overlap*8}px`:"2px";
+                const wPct=overlap?`calc(88% - ${overlap*10}px)`:"94%";
+                const lPct=overlap?`${overlap*10}px`:"2px";
                 const isEditingThis=inlineEdit?.id===t.id;
+                const canDrag=!isEditingThis;
 
                 return<div key={t.id} id={`cal-block-${t.id}`}
-                  draggable={!isEditingThis}
-                  onDragStart={e=>{
-                    e.stopPropagation();
-                    setDragCalId(t.id);
-                    const rect=(e.currentTarget.closest(".yearmap-table") as HTMLElement)?.getBoundingClientRect();
-                    if(rect)calDragRef.current={id:t.id,startY:e.clientY,startMin:st,dur,dateStr};
-                  }}
-                  onDragEnd={()=>{if(!calDragOver){setDragCalId(null);calDragRef.current=null;}}}
                   style={{
                     position:"absolute",top,left:lPct,width:wPct,height,
-                    background:isDone?"rgba(34,197,94,0.08)":`${color}18`,
-                    border:`1.5px solid ${color}44`,
+                    background:isDone?"rgba(34,197,94,0.09)":`${color}15`,
+                    border:`1.5px solid ${color}40`,
                     borderLeft:`3px solid ${color}`,
                     borderRadius:7,padding:"4px 6px 4px 8px",
-                    cursor:"grab",overflow:"hidden",
-                    zIndex:ti+1,
-                    opacity:dragCalId===t.id?0.35:1,
-                    transition:"opacity 0.15s,box-shadow 0.15s",
+                    cursor:canDrag?"grab":"default",
+                    overflow:"hidden",zIndex:ti+1,
+                    transition:"box-shadow 0.15s",
                     boxShadow:isDone?`0 0 8px rgba(34,197,94,0.15)`:"0 1px 4px rgba(0,0,0,0.08)",
-                    userSelect:"none",
+                  }}
+                  onMouseDown={e=>{
+                    if(e.target instanceof HTMLButtonElement)return;
+                    if(e.target instanceof HTMLInputElement)return;
+                    if((e.target as HTMLElement).classList.contains("resize-handle"))return;
+                    if(!canDrag)return;
+                    e.preventDefault();
+                    const gridRect=document.getElementById("cal-timegrid")?.getBoundingClientRect();
+                    if(!gridRect)return;
+                    const colW=(gridRect.width-52)/gridDays.length;
+                    // Store days array reference for column detection
+                    (calDragRef as any).current={
+                      id:t.id,startY:e.clientY,startMin:st,dur,origDate:dateStr,
+                      colW,gridLeft:gridRect.left,gridTop:gridRect.top,
+                      _days:gridDays,
+                    };
+                    setDragCalId(t.id);
                   }}
                   onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow=`0 2px 16px ${color}40`;(e.currentTarget as HTMLElement).style.zIndex="50";}}
                   onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow=isDone?"0 0 8px rgba(34,197,94,0.15)":"0 1px 4px rgba(0,0,0,0.08)";(e.currentTarget as HTMLElement).style.zIndex=String(ti+1);}}>
 
-                  {/* Top row: checkbox + title */}
+                  {/* Checkbox + title */}
                   <div style={{display:"flex",alignItems:"flex-start",gap:5,minWidth:0}}>
-                    {/* Checkbox */}
                     <button onClick={e=>{e.stopPropagation();toggleCalDone(t);}}
-                      style={{
-                        width:14,height:14,minWidth:14,borderRadius:4,
-                        border:`1.5px solid ${isDone?"#22C55E":color}`,
-                        background:isDone?"#22C55E":"transparent",
-                        cursor:"pointer",flexShrink:0,marginTop:1,
-                        display:"flex",alignItems:"center",justifyContent:"center",
-                        transition:"all 0.2s",boxShadow:isDone?"0 0 6px rgba(34,197,94,0.4)":"none",
-                      }}>
+                      style={{width:14,height:14,minWidth:14,borderRadius:4,border:`1.5px solid ${isDone?"#22C55E":color}`,background:isDone?"#22C55E":"transparent",cursor:"pointer",flexShrink:0,marginTop:1,display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s",boxShadow:isDone?"0 0 6px rgba(34,197,94,0.4)":"none"}}>
                       {isDone&&<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5"><polyline points="20 6 9 17 4 12"/></svg>}
                     </button>
 
-                    {/* Inline edit or display */}
                     {isEditingThis&&inlineEdit
                       ?<input autoFocus value={inlineEdit.text}
                           onChange={e=>setInlineEdit(p=>p?{...p,text:e.target.value}:p)}
@@ -2816,33 +2842,30 @@ function StrategyPage({userId}:{userId:string}){
                           }}
                           onKeyDown={e=>{if(e.key==="Enter"||e.key==="Escape")e.currentTarget.blur();e.stopPropagation();}}
                           onClick={e=>e.stopPropagation()}
-                          style={{flex:1,border:"none",background:"transparent",fontSize:11,fontWeight:700,color,outline:"none",fontFamily:"'Montserrat',sans-serif",minWidth:0,padding:0,textDecoration:isDone?"line-through":"none"}}/>
+                          style={{flex:1,border:"none",background:"transparent",fontSize:11,fontWeight:700,color,outline:"none",fontFamily:"'Montserrat',sans-serif",minWidth:0,padding:0}}/>
                       :<div style={{flex:1,fontSize:11,fontWeight:700,color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:isDone?"line-through":"none",lineHeight:1.3,cursor:"text"}}
                           onDoubleClick={e=>{e.stopPropagation();setInlineEdit({id:t.id,text:t.text||""});}}
-                          onClick={e=>{e.stopPropagation();if(!t.fromKanban&&!t.fromGoal)openCalEdit(t);}}>
+                          onClick={e=>{e.stopPropagation();if(!isDraggingCal&&!t.fromKanban&&!t.fromGoal)openCalEdit(t);}}>
                           {t.text}
                         </div>
                     }
                   </div>
 
                   {/* Time label */}
-                  {height>30&&<div style={{fontSize:9,color:`${color}bb`,marginTop:2,paddingLeft:19}}>{t.start_time||"09:00"}–{t.end_time||"10:00"}{dur>0?` · ${fmtDur(dur)}`:""}</div>}
-
-                  {/* Source badge */}
+                  {height>30&&<div className="cal-time-label" style={{fontSize:9,color:`${color}bb`,marginTop:2,paddingLeft:19}}>{t.start_time||"09:00"}–{t.end_time||"10:00"}{dur>0?` · ${fmtDur(dur)}`:""}</div>}
                   {height>44&&(t.fromKanban||t.fromGoal)&&<div style={{fontSize:9,color:`${color}88`,marginTop:1,paddingLeft:19}}>🔗 {t.fromGoal?"Цель":"Спринт"}</div>}
 
-                  {/* Resize handle — bottom edge */}
-                  {!t.fromKanban&&!t.fromGoal&&(
-                    <div
-                      onMouseDown={e=>{
-                        e.stopPropagation();e.preventDefault();
-                        calResizeRef.current={id:t.id,startY:e.clientY,origEndMin:et};
-                      }}
-                      style={{position:"absolute",bottom:0,left:0,right:0,height:8,cursor:"ns-resize",display:"flex",alignItems:"center",justifyContent:"center"}}
-                      onClick={e=>e.stopPropagation()}>
-                      <div style={{width:24,height:2,borderRadius:1,background:`${color}50`}}/>
-                    </div>
-                  )}
+                  {/* Resize handle */}
+                  <div className="resize-handle"
+                    onMouseDown={e=>{
+                      e.stopPropagation();e.preventDefault();
+                      calResizeRef.current={id:t.id,startY:e.clientY,origEndMin:et,startMin:st};
+                      setIsResizingCal(true);
+                    }}
+                    style={{position:"absolute",bottom:0,left:0,right:0,height:10,cursor:"ns-resize",display:"flex",alignItems:"center",justifyContent:"center",zIndex:10}}
+                    onClick={e=>e.stopPropagation()}>
+                    <div style={{width:28,height:3,borderRadius:99,background:`${color}50`}}/>
+                  </div>
                 </div>;
               })}
             </div>
@@ -2851,6 +2874,9 @@ function StrategyPage({userId}:{userId:string}){
       </div>
     </div>;
   };
+
+
+  // Week/Day time-grid view (Google Calendar style)
 
   // helper: do two timed tasks overlap?
   const tasksOverlap=(a:any,b:any)=>{
