@@ -2606,17 +2606,101 @@ function StrategyPage({userId}:{userId:string}){
   };
   const deleteCalTask=async()=>{if(calDeleteId){await calTasks.remove(calDeleteId);setCalDeleteId(null);}};
 
-  const SLOT_H=56; // px per hour
-  const DAY_START=7; // 7:00 start
-  const DAY_HOURS=16; // show 7:00–23:00
+  const SLOT_H=56;
+  const DAY_START=7;
+  const DAY_HOURS=16;
+
+  // Drag state for calendar
+  const calDragRef=useRef<{id:string;startY:number;startMin:number;dur:number;dateStr:string}|null>(null);
+  const calResizeRef=useRef<{id:string;startY:number;origEndMin:number}|null>(null);
+  const[calDragOver,setCalDragOver]=useState<{dateStr:string;min:number}|null>(null);
+  const[inlineEdit,setInlineEdit]=useState<{id:string;text:string}|null>(null);
+
+  // Toggle task done — works for cal_tasks, kanban, and goalTasks
+  const toggleCalDone=async(t:any)=>{
+    const done=!(t.status==="done"||t.done);
+    if(t.fromKanban){await kanban.update(t.id,{status:done?"done":"todo"});}
+    else if(t.fromGoal){await goalTasks.update(t.id,{status:done?"done":"todo",done});}
+    else{await calTasks.update(t.id,{status:done?"done":"todo",done});}
+  };
+
+  // Move task to new date+time (DnD drop)
+  const moveCalTask=async(t:any,newDateStr:string,newStartMin:number)=>{
+    const dur=timeToMin(t.end_time||"10:00")-timeToMin(t.start_time||"09:00");
+    const newStart=minToTime(newStartMin);
+    const newEnd=minToTime(newStartMin+Math.max(30,dur));
+    if(t.fromKanban){await kanban.update(t.id,{date:newDateStr,start_time:newStart,end_time:newEnd});}
+    else if(t.fromGoal){await goalTasks.update(t.id,{date:newDateStr,start_time:newStart,end_time:newEnd});}
+    else{await calTasks.update(t.id,{start_date:newDateStr,end_date:newDateStr,start_time:newStart,end_time:newEnd});}
+  };
+
+  // Resize task end time
+  const resizeCalTask=async(t:any,newEndMin:number)=>{
+    const newEnd=minToTime(Math.max(timeToMin(t.start_time||"09:00")+15,newEndMin));
+    if(t.fromKanban){await kanban.update(t.id,{end_time:newEnd});}
+    else if(t.fromGoal){await goalTasks.update(t.id,{end_time:newEnd});}
+    else{await calTasks.update(t.id,{end_time:newEnd});}
+  };
 
   // Week/Day time-grid view (Google Calendar style)
   const TimeGrid=({days:gridDays}:{days:string[]})=>{
     const tdStr=today();
     const nowMin=new Date().getHours()*60+new Date().getMinutes();
     const nowTop=((nowMin-DAY_START*60)/60)*SLOT_H;
+    const gridRef2=useRef<HTMLDivElement>(null);
 
-    return<div className="yearmap-table" style={{display:"flex",background:C.w,borderRadius:16,border:"1px solid "+C.bd,overflow:"hidden"}}>
+    const getMinFromY=(y:number,rect:DOMRect)=>{
+      const relY=y-rect.top-48; // 48 = header height
+      const rawMin=Math.round((relY/SLOT_H)*60)+DAY_START*60;
+      return Math.max(DAY_START*60,Math.min((DAY_START+DAY_HOURS)*60-30,Math.round(rawMin/15)*15));
+    };
+
+    return<div className="yearmap-table" style={{display:"flex",background:C.w,borderRadius:16,border:"1px solid "+C.bd,overflow:"hidden"}}
+      onMouseMove={e=>{
+        const rect=(e.currentTarget as HTMLElement).getBoundingClientRect();
+        // Handle drag
+        if(calDragRef.current&&dragCalId){
+          const newMin=getMinFromY(e.clientY,rect)-calDragRef.current.dur/2;
+          // detect which column
+          const colW=(rect.width-52)/gridDays.length;
+          const colIdx=Math.floor((e.clientX-rect.left-52)/colW);
+          const dateStr=gridDays[Math.max(0,Math.min(gridDays.length-1,colIdx))];
+          setCalDragOver({dateStr,min:Math.max(DAY_START*60,newMin)});
+        }
+        // Handle resize
+        if(calResizeRef.current){
+          const rect2=gridRef2.current?.getBoundingClientRect()||rect;
+          const newEndMin=getMinFromY(e.clientY,rect2);
+          const t=allCalTasks.find((tt:any)=>tt.id===calResizeRef.current!.id);
+          if(t){
+            const snapped=Math.round(newEndMin/15)*15;
+            calResizeRef.current.origEndMin=snapped;
+            // Live preview via direct DOM (non-React for perf)
+            const el=document.getElementById(`cal-block-${t.id}`);
+            if(el){
+              const startMin=timeToMin(t.start_time||"09:00");
+              const newH=Math.max(20,((snapped-startMin)/60)*SLOT_H-2);
+              el.style.height=newH+"px";
+            }
+          }
+        }
+      }}
+      onMouseUp={async e=>{
+        // Finish drag drop
+        if(calDragRef.current&&calDragOver&&dragCalId){
+          const t=allCalTasks.find((tt:any)=>tt.id===dragCalId);
+          if(t)await moveCalTask(t,calDragOver.dateStr,calDragOver.min);
+          calDragRef.current=null;setDragCalId(null);setCalDragOver(null);
+        }
+        // Finish resize
+        if(calResizeRef.current){
+          const t=allCalTasks.find((tt:any)=>tt.id===calResizeRef.current!.id);
+          if(t)await resizeCalTask(t,calResizeRef.current.origEndMin);
+          calResizeRef.current=null;
+        }
+      }}
+      ref={gridRef2}>
+
       {/* Time gutter */}
       <div style={{width:52,flexShrink:0,borderRight:"1px solid "+C.bd,paddingTop:48}}>
         {Array.from({length:DAY_HOURS},(_,i)=>i+DAY_START).map(h=>(
@@ -2632,8 +2716,9 @@ function StrategyPage({userId}:{userId:string}){
           const isToday=dateStr===tdStr;
           const dt=new Date(dateStr+"T12:00:00");
           const dayTaskList=tasksForCalDay(dateStr);
+          const isDragTarget=calDragOver?.dateStr===dateStr;
 
-          return<div key={dateStr} style={{borderRight:"1px solid "+C.bd,position:"relative"}}>
+          return<div key={dateStr} style={{borderRight:"1px solid "+C.bd,position:"relative",background:isDragTarget?"rgba(37,99,235,0.02)":"transparent"}}>
             {/* Day header */}
             <div style={{height:48,borderBottom:"1px solid "+C.bd,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",position:"sticky",top:0,zIndex:2,background:isToday?"rgba(37,99,235,0.05)":C.w}}>
               <span style={{fontSize:10,color:isToday?C.a:C.t2,fontWeight:600,textTransform:"uppercase"}}>{["Вс","Пн","Вт","Ср","Чт","Пт","Сб"][dt.getDay()]}</span>
@@ -2642,7 +2727,7 @@ function StrategyPage({userId}:{userId:string}){
               </div>
             </div>
 
-            {/* Hour slots — click to create */}
+            {/* Hour slots */}
             <div style={{position:"relative",height:DAY_HOURS*SLOT_H}}>
               {Array.from({length:DAY_HOURS},(_,i)=>(
                 <div key={i} onClick={()=>openCalNew(dateStr,i+DAY_START)}
@@ -2650,6 +2735,11 @@ function StrategyPage({userId}:{userId:string}){
                   onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(37,99,235,0.03)";}}
                   onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}/>
               ))}
+
+              {/* DnD drop preview line */}
+              {isDragTarget&&calDragOver&&(
+                <div style={{position:"absolute",left:4,right:4,top:((calDragOver.min-DAY_START*60)/60)*SLOT_H,height:2,background:C.a,borderRadius:2,zIndex:20,pointerEvents:"none",boxShadow:`0 0 8px ${C.a}60`}}/>
+              )}
 
               {/* Now line */}
               {isToday&&nowTop>0&&nowTop<DAY_HOURS*SLOT_H&&(
@@ -2664,34 +2754,95 @@ function StrategyPage({userId}:{userId:string}){
                 const st=timeToMin(t.start_time||"09:00");
                 const et=timeToMin(t.end_time||"10:00");
                 const top=Math.max(0,((st-DAY_START*60)/60)*SLOT_H);
-                const height=Math.max(20,((et-st)/60)*SLOT_H-2);
-                const color=PRIORITY_COLORS[t.priority||"medium"]||C.a;
-                const dur=timeDiff(t.start_time||"09:00",t.end_time||"10:00");
-                // offset overlapping tasks
+                const height=Math.max(24,((et-st)/60)*SLOT_H-2);
+                const isDone=t.status==="done"||t.done;
+                const color=isDone?"#22C55E":(PRIORITY_COLORS[t.priority||"medium"]||C.a);
+                const dur=et-st;
                 const overlap=dayTaskList.filter((_:any,j:number)=>j<ti&&tasksOverlap(t,dayTaskList[j])).length;
                 const wPct=overlap?`calc(85% - ${overlap*8}px)`:"92%";
                 const lPct=overlap?`${overlap*8}px`:"2px";
+                const isEditingThis=inlineEdit?.id===t.id;
 
-                return<div key={t.id}
-                  onClick={e=>{e.stopPropagation();if(!t.fromKanban&&!t.fromGoal)openCalEdit(t);}}
-                  draggable={!t.fromKanban&&!t.fromGoal}
-                  onDragStart={()=>setDragCalId(t.id)}
-                  onDragEnd={()=>setDragCalId(null)}
+                return<div key={t.id} id={`cal-block-${t.id}`}
+                  draggable={!isEditingThis}
+                  onDragStart={e=>{
+                    e.stopPropagation();
+                    setDragCalId(t.id);
+                    const rect=(e.currentTarget.closest(".yearmap-table") as HTMLElement)?.getBoundingClientRect();
+                    if(rect)calDragRef.current={id:t.id,startY:e.clientY,startMin:st,dur,dateStr};
+                  }}
+                  onDragEnd={()=>{if(!calDragOver){setDragCalId(null);calDragRef.current=null;}}}
                   style={{
                     position:"absolute",top,left:lPct,width:wPct,height,
-                    background:color+"22",border:`1.5px solid ${color}55`,borderLeft:`3px solid ${color}`,
-                    borderRadius:6,padding:"3px 6px",cursor:"pointer",overflow:"hidden",
+                    background:isDone?"rgba(34,197,94,0.08)":`${color}18`,
+                    border:`1.5px solid ${color}44`,
+                    borderLeft:`3px solid ${color}`,
+                    borderRadius:7,padding:"4px 6px 4px 8px",
+                    cursor:"grab",overflow:"hidden",
                     zIndex:ti+1,
-                    opacity:dragCalId===t.id?0.4:1,
-                    transition:"opacity 0.15s, box-shadow 0.15s",
-                    boxShadow:"0 1px 4px rgba(0,0,0,0.08)",
+                    opacity:dragCalId===t.id?0.35:1,
+                    transition:"opacity 0.15s,box-shadow 0.15s",
+                    boxShadow:isDone?`0 0 8px rgba(34,197,94,0.15)`:"0 1px 4px rgba(0,0,0,0.08)",
+                    userSelect:"none",
                   }}
-                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow=`0 2px 12px ${color}44`;(e.currentTarget as HTMLElement).style.zIndex="50";}}
-                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 1px 4px rgba(0,0,0,0.08)";(e.currentTarget as HTMLElement).style.zIndex=String(ti+1);}}>
-                  <div style={{fontSize:11,fontWeight:700,color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",lineHeight:1.2}}>{t.text}</div>
-                  {height>28&&<div style={{fontSize:10,color:color+"cc",marginTop:1}}>{t.start_time||"09:00"}–{t.end_time||"10:00"}{dur>0?` · ${fmtDur(dur)}`:""}</div>}
-                  {height>44&&t.description&&<div style={{fontSize:9,color:C.t2,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.description}</div>}
-                  {(t.fromKanban||t.fromGoal)&&<div style={{fontSize:9,color:color+"99",marginTop:1}}>🔗 {t.fromGoal?"Цель":"Спринт"}</div>}
+                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow=`0 2px 16px ${color}40`;(e.currentTarget as HTMLElement).style.zIndex="50";}}
+                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow=isDone?"0 0 8px rgba(34,197,94,0.15)":"0 1px 4px rgba(0,0,0,0.08)";(e.currentTarget as HTMLElement).style.zIndex=String(ti+1);}}>
+
+                  {/* Top row: checkbox + title */}
+                  <div style={{display:"flex",alignItems:"flex-start",gap:5,minWidth:0}}>
+                    {/* Checkbox */}
+                    <button onClick={e=>{e.stopPropagation();toggleCalDone(t);}}
+                      style={{
+                        width:14,height:14,minWidth:14,borderRadius:4,
+                        border:`1.5px solid ${isDone?"#22C55E":color}`,
+                        background:isDone?"#22C55E":"transparent",
+                        cursor:"pointer",flexShrink:0,marginTop:1,
+                        display:"flex",alignItems:"center",justifyContent:"center",
+                        transition:"all 0.2s",boxShadow:isDone?"0 0 6px rgba(34,197,94,0.4)":"none",
+                      }}>
+                      {isDone&&<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5"><polyline points="20 6 9 17 4 12"/></svg>}
+                    </button>
+
+                    {/* Inline edit or display */}
+                    {isEditingThis&&inlineEdit
+                      ?<input autoFocus value={inlineEdit.text}
+                          onChange={e=>setInlineEdit(p=>p?{...p,text:e.target.value}:p)}
+                          onBlur={async()=>{
+                            const txt=inlineEdit?.text||t.text;
+                            if(t.fromKanban)await kanban.update(t.id,{text:txt});
+                            else if(t.fromGoal)await goalTasks.update(t.id,{text:txt});
+                            else await calTasks.update(t.id,{text:txt});
+                            setInlineEdit(null);
+                          }}
+                          onKeyDown={e=>{if(e.key==="Enter"||e.key==="Escape")e.currentTarget.blur();e.stopPropagation();}}
+                          onClick={e=>e.stopPropagation()}
+                          style={{flex:1,border:"none",background:"transparent",fontSize:11,fontWeight:700,color,outline:"none",fontFamily:"'Montserrat',sans-serif",minWidth:0,padding:0,textDecoration:isDone?"line-through":"none"}}/>
+                      :<div style={{flex:1,fontSize:11,fontWeight:700,color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:isDone?"line-through":"none",lineHeight:1.3,cursor:"text"}}
+                          onDoubleClick={e=>{e.stopPropagation();setInlineEdit({id:t.id,text:t.text||""});}}
+                          onClick={e=>{e.stopPropagation();if(!t.fromKanban&&!t.fromGoal)openCalEdit(t);}}>
+                          {t.text}
+                        </div>
+                    }
+                  </div>
+
+                  {/* Time label */}
+                  {height>30&&<div style={{fontSize:9,color:`${color}bb`,marginTop:2,paddingLeft:19}}>{t.start_time||"09:00"}–{t.end_time||"10:00"}{dur>0?` · ${fmtDur(dur)}`:""}</div>}
+
+                  {/* Source badge */}
+                  {height>44&&(t.fromKanban||t.fromGoal)&&<div style={{fontSize:9,color:`${color}88`,marginTop:1,paddingLeft:19}}>🔗 {t.fromGoal?"Цель":"Спринт"}</div>}
+
+                  {/* Resize handle — bottom edge */}
+                  {!t.fromKanban&&!t.fromGoal&&(
+                    <div
+                      onMouseDown={e=>{
+                        e.stopPropagation();e.preventDefault();
+                        calResizeRef.current={id:t.id,startY:e.clientY,origEndMin:et};
+                      }}
+                      style={{position:"absolute",bottom:0,left:0,right:0,height:8,cursor:"ns-resize",display:"flex",alignItems:"center",justifyContent:"center"}}
+                      onClick={e=>e.stopPropagation()}>
+                      <div style={{width:24,height:2,borderRadius:1,background:`${color}50`}}/>
+                    </div>
+                  )}
                 </div>;
               })}
             </div>
