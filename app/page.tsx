@@ -2642,34 +2642,40 @@ function StrategyPage({userId}:{userId:string}){
     else{await calTasks.update(t.id,{end_time:newEnd});}
   };
 
-  // Global mouse move/up for calendar interactions
+  // Keep live refs to avoid stale closures
+  const allCalTasksRef=useRef(allCalTasks);
+  useEffect(()=>{allCalTasksRef.current=allCalTasks;},[allCalTasks]);
+  const calDragOverRef=useRef<{dateStr:string;min:number}|null>(null);
+
+  // Global mouse handlers — mounted once, use refs for all live data
   useEffect(()=>{
     const onMove=(e:MouseEvent)=>{
       // ── DRAG ──
       if(calDragRef.current){
-        const{startY,startMin,dur,origDate,colW,gridLeft,gridTop}=calDragRef.current;
-        const dy=e.clientY-gridTop-48; // 48=header
+        const{dur,origDate,colW,gridLeft,gridTop,_days}=calDragRef.current as any;
+        const dy=e.clientY-gridTop-48;
         const rawMin=Math.round(((dy/SLOT_H)*60+DAY_START*60)/15)*15;
-        const newStartMin=Math.max(DAY_START*60,Math.min((DAY_START+DAY_HOURS-1)*60,rawMin-dur/2));
+        const newStartMin=Math.max(DAY_START*60,Math.min((DAY_START+DAY_HOURS-1)*60,rawMin));
 
-        const dx=e.clientX-gridLeft-52; // 52=time gutter
-        const colIdx=Math.floor(dx/colW);
-        const days=calDragRef.current as any;
-        const dateStr=(days._days||[])[Math.max(0,Math.min((days._days||[]).length-1,colIdx))];
+        const dx=e.clientX-gridLeft-52;
+        const days=_days as string[];
+        const colIdx=Math.max(0,Math.min(days.length-1,Math.floor(dx/colW)));
+        const dateStr=days[colIdx]||origDate;
 
-        setCalDragOver({dateStr:dateStr||origDate,min:newStartMin});
+        calDragOverRef.current={dateStr,min:newStartMin};
+        setCalDragOver({dateStr,min:newStartMin});
         setIsDraggingCal(true);
 
-        // Live preview: move the block DOM element
+        // Live DOM move
         const el=document.getElementById(`cal-block-${calDragRef.current.id}`);
         if(el){
-          el.style.top=((newStartMin-DAY_START*60)/60*SLOT_H)+"px";
-          el.style.opacity="0.5";
+          el.style.top=Math.max(0,(newStartMin-DAY_START*60)/60*SLOT_H)+"px";
+          el.style.opacity="0.45";
         }
       }
       // ── RESIZE ──
       if(calResizeRef.current){
-        const{id,startY,origEndMin,startMin}=calResizeRef.current;
+        const{id,startMin}=calResizeRef.current;
         const gridEl=document.getElementById("cal-timegrid");
         if(!gridEl)return;
         const rect=gridEl.getBoundingClientRect();
@@ -2677,46 +2683,62 @@ function StrategyPage({userId}:{userId:string}){
         const rawMin=Math.round(((dy/SLOT_H)*60+DAY_START*60)/15)*15;
         const newEndMin=Math.max(startMin+15,Math.min((DAY_START+DAY_HOURS)*60,rawMin));
         calResizeRef.current.origEndMin=newEndMin;
+        setIsResizingCal(true);
 
-        // Live DOM preview
+        // Live DOM resize
         const el=document.getElementById(`cal-block-${id}`);
         if(el){
-          const newH=Math.max(20,((newEndMin-startMin)/60*SLOT_H)-2);
+          const newH=Math.max(20,(newEndMin-startMin)/60*SLOT_H-2);
           el.style.height=newH+"px";
-          // Update time label inside
           const label=el.querySelector(".cal-time-label") as HTMLElement;
           if(label){
-            const t=allCalTasks.find((tt:any)=>tt.id===id);
+            const t=allCalTasksRef.current.find((tt:any)=>tt.id===id);
             if(t)label.textContent=`${t.start_time||"09:00"}–${minToTime(newEndMin)} · ${fmtDur(newEndMin-timeToMin(t.start_time||"09:00"))}`;
           }
         }
-        setIsResizingCal(true);
       }
     };
 
-    const onUp=async()=>{
-      // Finish drag
-      if(calDragRef.current&&calDragOver&&isDraggingCal){
-        const t=allCalTasks.find((tt:any)=>tt.id===calDragRef.current!.id);
-        if(t)await moveCalTask(t,calDragOver.dateStr,calDragOver.min);
-        // Reset el
-        const el=document.getElementById(`cal-block-${calDragRef.current.id}`);
-        if(el){el.style.opacity="1";}
+    const onUp=async(e:MouseEvent)=>{
+      // ── Finish DRAG ──
+      if(calDragRef.current){
+        const id=calDragRef.current.id;
+        const drop=calDragOverRef.current;
+        const el=document.getElementById(`cal-block-${id}`);
+        if(el){el.style.opacity="1";el.style.top="";}
+        if(drop){
+          const t=allCalTasksRef.current.find((tt:any)=>tt.id===id);
+          if(t){
+            const dur=timeToMin(t.end_time||"10:00")-timeToMin(t.start_time||"09:00");
+            const newStart=minToTime(Math.max(DAY_START*60,drop.min));
+            const newEnd=minToTime(Math.max(DAY_START*60+30,drop.min+Math.max(30,dur)));
+            if(t.fromKanban)await kanban.update(id,{date:drop.dateStr,start_time:newStart,end_time:newEnd});
+            else if(t.fromGoal)await goalTasks.update(id,{date:drop.dateStr,start_time:newStart,end_time:newEnd});
+            else await calTasks.update(id,{start_date:drop.dateStr,end_date:drop.dateStr,start_time:newStart,end_time:newEnd});
+          }
+        }
+        calDragRef.current=null;
+        calDragOverRef.current=null;
+        setDragCalId(null);setCalDragOver(null);setIsDraggingCal(false);
       }
-      calDragRef.current=null;setDragCalId(null);setCalDragOver(null);setIsDraggingCal(false);
-
-      // Finish resize
-      if(calResizeRef.current&&isResizingCal){
-        const t=allCalTasks.find((tt:any)=>tt.id===calResizeRef.current!.id);
-        if(t)await resizeCalTask(t,calResizeRef.current.origEndMin);
+      // ── Finish RESIZE ──
+      if(calResizeRef.current){
+        const{id,origEndMin,startMin}=calResizeRef.current;
+        const t=allCalTasksRef.current.find((tt:any)=>tt.id===id);
+        if(t&&origEndMin>startMin){
+          const newEnd=minToTime(Math.round(origEndMin/15)*15);
+          if(t.fromKanban)await kanban.update(id,{end_time:newEnd});
+          else if(t.fromGoal)await goalTasks.update(id,{end_time:newEnd});
+          else await calTasks.update(id,{end_time:newEnd});
+        }
+        calResizeRef.current=null;setIsResizingCal(false);
       }
-      calResizeRef.current=null;setIsResizingCal(false);
     };
 
     window.addEventListener("mousemove",onMove);
     window.addEventListener("mouseup",onUp);
     return()=>{window.removeEventListener("mousemove",onMove);window.removeEventListener("mouseup",onUp);};
-  },[calDragOver,isDraggingCal,isResizingCal,allCalTasks]);
+  },[]); // mount once — all data via refs
 
   // Week/Day time-grid view
   const TimeGrid=({days:gridDays}:{days:string[]})=>{
