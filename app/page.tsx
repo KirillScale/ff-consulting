@@ -122,7 +122,18 @@ const getGreeting = () => {
 const I = ({path,size=20,color="currentColor",sw=1.5}:{path:string,size?:number,color?:string,sw?:number}) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round"><path d={path}/></svg>
 );
-const iS:React.CSSProperties = {width:"100%",padding:"11px 14px",border:"1px solid "+C.bd,borderRadius:10,fontSize:14,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box",fontFamily:"'Montserrat',sans-serif"};
+// Input style — динамический, всегда читает актуальные цвета из C
+// Вызывать как iS() — возвращает актуальные стили с учётом текущей темы
+const iS = ():React.CSSProperties => ({
+  width:"100%",padding:"11px 14px",
+  border:"1px solid "+C.bd,
+  borderRadius:10,fontSize:14,outline:"none",
+  background:C.ib,
+  color:C.t1,
+  boxSizing:"border-box" as const,
+  fontFamily:"'Montserrat',sans-serif",
+  transition:"border-color 0.15s",
+});
 const Logo = ({s=28}:{s?:number}) => <img src="/logo.png" width={s} height={s} style={{objectFit:"contain",display:"block",flexShrink:0}} alt="Vizzy"/>;
 const Brand = ({size="md"}:{size?:string}) => {
   const sz:any={sm:{f:12,sub:8,gap:1},md:{f:15,sub:9,gap:2},lg:{f:20,sub:11,gap:3}};
@@ -188,18 +199,6 @@ const useColStyle=(isOver?:boolean):React.CSSProperties=>{
   };
 };
 
-// Input style hook
-const useIS=():React.CSSProperties=>{
-  const{dark}=useTheme();
-  return{
-    width:"100%",padding:"11px 14px",
-    border:`1px solid ${dark?"rgba(255,255,255,0.08)":C.bd}`,
-    borderRadius:10,fontSize:14,outline:"none",
-    background:dark?"#141927":C.ib,
-    color:C.t1,boxSizing:"border-box",
-    fontFamily:"'Montserrat',sans-serif",
-  };
-};
 
 /* ============ SUPABASE DATA HOOK ============ */
 function useTable(table:string, userId:string|null) {
@@ -259,8 +258,8 @@ function Auth({ onLogin }: { onLogin: (u: any) => void }) {
         </div>
         <div style={{fontSize:16,fontWeight:600,textAlign:"center",marginBottom:24,color:C.t1}}>Вход в платформу</div>
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
-          <input placeholder="Email" type="email" value={email} onChange={e=>setEmail(e.target.value)} style={iS}/>
-          <input placeholder="Пароль" type="password" value={pw} onChange={e=>setPw(e.target.value)} style={iS} onKeyDown={e=>e.key==="Enter"&&login()}/>
+          <input placeholder="Email" type="email" value={email} onChange={e=>setEmail(e.target.value)} style={iS()}/>
+          <input placeholder="Пароль" type="password" value={pw} onChange={e=>setPw(e.target.value)} style={iS()} onKeyDown={e=>e.key==="Enter"&&login()}/>
           {err&&<div style={{background:"#FEF2F2",color:C.r,padding:"10px 14px",borderRadius:10,fontSize:13,fontWeight:500}}>{err}</div>}
           <Btn onClick={login} style={{width:"100%",padding:"14px 0",fontSize:15,marginTop:8,opacity:loading?0.6:1}}>
             {loading?"Вход...":"Войти"}
@@ -1277,7 +1276,7 @@ function TaskModal({task,taskType,userId,onClose}:{task:any,taskType:"kanban"|"g
           {taskComments.map((c:any)=><div key={c.id} style={{background:C.bg,borderRadius:12,padding:"12px 14px"}}>
             {editId===c.id
               ? <div style={{display:"flex",gap:8,flexDirection:"column"}}>
-                  <textarea value={editText} onChange={e=>setEditText(e.target.value)} rows={2} style={{...iS,resize:"none",fontSize:13}}/>
+                  <textarea value={editText} onChange={e=>setEditText(e.target.value)} rows={2} style={{...iS(),resize:"none",fontSize:13}}/>
                   <div style={{display:"flex",gap:6}}>
                     <button onClick={()=>saveEdit(c.id)} style={{padding:"6px 14px",background:C.a,color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer"}}>Сохранить</button>
                     <button onClick={()=>setEditId(null)} style={{padding:"6px 12px",background:"transparent",border:"1px solid "+C.bd,borderRadius:8,fontSize:12,cursor:"pointer"}}>Отмена</button>
@@ -1300,7 +1299,7 @@ function TaskModal({task,taskType,userId,onClose}:{task:any,taskType:"kanban"|"g
 
       {/* Input */}
       <div style={{padding:"16px 24px",borderTop:"1px solid "+C.bd}}>
-        <textarea value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&(e.metaKey||e.ctrlKey))send();}} placeholder="Напиши комментарий... (Cmd+Enter для отправки)" rows={3} style={{...iS,resize:"none",fontSize:13,marginBottom:10}}/>
+        <textarea value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&(e.metaKey||e.ctrlKey))send();}} placeholder="Напиши комментарий... (Cmd+Enter для отправки)" rows={3} style={{...iS(),resize:"none",fontSize:13,marginBottom:10}}/>
         <button onClick={send} disabled={!text.trim()} style={{width:"100%",padding:"10px",background:C.a,color:"#fff",border:"none",borderRadius:10,fontSize:14,fontWeight:600,cursor:text.trim()?"pointer":"not-allowed",opacity:text.trim()?1:0.5}}>Отправить</button>
       </div>
     </div>
@@ -1500,11 +1499,11 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
       <div style={{fontSize:14,fontWeight:700,marginBottom:14,color:C.t1}}>{editGoal?"Изменить цель":"Новая цель"}</div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:12}}>
         <div style={{gridColumn:"span 3"}}><label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4}}>Название</label>
-          <input value={editGoal?editGoal.name:gf.name} onChange={e=>editGoal?setEditGoal({...editGoal,name:e.target.value}):sGf({...gf,name:e.target.value})} style={{...iS,fontSize:13}}/></div>
+          <input value={editGoal?editGoal.name:gf.name} onChange={e=>editGoal?setEditGoal({...editGoal,name:e.target.value}):sGf({...gf,name:e.target.value})} style={{...iS(),fontSize:13}}/></div>
         <div><label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4}}>Начало</label>
-          <input type="date" value={editGoal?editGoal.start_date:gf.start_date} onChange={e=>editGoal?setEditGoal({...editGoal,start_date:e.target.value}):sGf({...gf,start_date:e.target.value})} style={{...iS,fontSize:13}}/></div>
+          <input type="date" value={editGoal?editGoal.start_date:gf.start_date} onChange={e=>editGoal?setEditGoal({...editGoal,start_date:e.target.value}):sGf({...gf,start_date:e.target.value})} style={{...iS(),fontSize:13}}/></div>
         <div><label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4}}>Конец (дедлайн)</label>
-          <input type="date" value={editGoal?editGoal.end_date:gf.end_date} onChange={e=>editGoal?setEditGoal({...editGoal,end_date:e.target.value}):sGf({...gf,end_date:e.target.value})} style={{...iS,fontSize:13}}/></div>
+          <input type="date" value={editGoal?editGoal.end_date:gf.end_date} onChange={e=>editGoal?setEditGoal({...editGoal,end_date:e.target.value}):sGf({...gf,end_date:e.target.value})} style={{...iS(),fontSize:13}}/></div>
         <div><label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4}}>Цвет</label>
           <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
             {COLORS.map(c=><button key={c} onClick={()=>editGoal?setEditGoal({...editGoal,color:c}):sGf({...gf,color:c})} style={{width:22,height:22,borderRadius:6,background:c,border:(editGoal?editGoal.color:gf.color)===c?"3px solid "+C.t1:"3px solid transparent",cursor:"pointer"}}/>)}
@@ -1744,23 +1743,23 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
     return<div style={{padding:"12px 14px",borderRadius:10,background:"#EFF6FF",border:"2px solid "+C.a,marginBottom:6}}>
       <input autoFocus value={txt} onChange={e=>setTxt(e.target.value)}
         onKeyDown={e=>{if(e.key==="Enter")save();if(e.key==="Escape")onClose();}}
-        style={{...iS,padding:"7px 10px",fontSize:13,marginBottom:8,fontWeight:500}}/>
+        style={{...iS(),padding:"7px 10px",fontSize:13,marginBottom:8,fontWeight:500}}/>
       <div style={{display:"flex",gap:6,marginBottom:8}}>
         <div style={{display:"flex",flexDirection:"column",gap:2,flex:"0 0 75px"}}>
           <label style={{fontSize:10,color:C.t2,fontWeight:600}}>Минуты</label>
           <input type="number" value={mins} onChange={e=>setMins(+e.target.value)} min={30} max={480} step={5}
-            style={{...iS,padding:"6px 8px",fontSize:12}}/>
+            style={{...iS(),padding:"6px 8px",fontSize:12}}/>
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:2,flex:1}}>
           <label style={{fontSize:10,color:C.t2,fontWeight:600}}>Тип</label>
-          <select value={type} onChange={e=>setType(e.target.value)} style={{...iS,padding:"6px 8px",fontSize:12}}>
+          <select value={type} onChange={e=>setType(e.target.value)} style={{...iS(),padding:"6px 8px",fontSize:12}}>
             {TYPES.map((t:any)=><option key={t.id} value={t.id}>{t.label}</option>)}
           </select>
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:2,flex:"0 0 130px"}}>
           <label style={{fontSize:10,color:C.t2,fontWeight:600}}>Дата</label>
           <input type="date" value={date} onChange={e=>setDate(e.target.value)}
-            style={{...iS,padding:"6px 8px",fontSize:12}}/>
+            style={{...iS(),padding:"6px 8px",fontSize:12}}/>
         </div>
       </div>
       <div style={{display:"flex",gap:6}}>
@@ -1791,13 +1790,13 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
     return<div style={{marginTop:8,padding:12,background:C.w,borderRadius:10,border:"1px solid "+C.bd}}>
       <input autoFocus placeholder="Название задачи" value={localText} onChange={e=>setLocalText(e.target.value)}
         onKeyDown={e=>{if(e.key==="Enter")addLocal();if(e.key==="Escape")setShowGTF(null);}}
-        style={{...iS,padding:"8px 10px",fontSize:12,marginBottom:8}}/>
+        style={{...iS(),padding:"8px 10px",fontSize:12,marginBottom:8}}/>
       <div style={{display:"flex",gap:6,marginBottom:6}}>
-        <input type="number" value={localMins} onChange={e=>setLocalMins(+e.target.value)} min={30} max={480} step={5} style={{...iS,width:75,padding:"6px 8px",fontSize:12}}/>
-        <select value={localType} onChange={e=>setLocalType(e.target.value)} style={{...iS,flex:1,padding:"6px 8px",fontSize:12}}>
+        <input type="number" value={localMins} onChange={e=>setLocalMins(+e.target.value)} min={30} max={480} step={5} style={{...iS(),width:75,padding:"6px 8px",fontSize:12}}/>
+        <select value={localType} onChange={e=>setLocalType(e.target.value)} style={{...iS(),flex:1,padding:"6px 8px",fontSize:12}}>
           {TYPES.map((t:any)=><option key={t.id} value={t.id}>{t.label}</option>)}
         </select>
-        <input type="date" value={localDate} onChange={e=>setLocalDate(e.target.value)} style={{...iS,width:130,padding:"6px 8px",fontSize:12}}/>
+        <input type="date" value={localDate} onChange={e=>setLocalDate(e.target.value)} style={{...iS(),width:130,padding:"6px 8px",fontSize:12}}/>
       </div>
       {localErr&&<div style={{fontSize:11,color:C.r,marginBottom:6}}>{localErr}</div>}
       <div style={{display:"flex",gap:6}}>
@@ -1965,11 +1964,11 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
 
       {isEditing&&<div style={{padding:"16px 18px",background:C.w,borderBottom:"1px solid "+C.bd}}>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:10}}>
-          <div style={{gridColumn:"span 3"}}><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4,fontWeight:600}}>Название</label><input value={editGoalData.name||""} onChange={e=>setEditGoalData({...editGoalData,name:e.target.value})} style={iS}/></div>
-          <div><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4,fontWeight:600}}>Начало</label><input type="date" value={editGoalData.start_date||""} onChange={e=>setEditGoalData({...editGoalData,start_date:e.target.value})} style={iS}/></div>
-          <div><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4,fontWeight:600}}>Конец</label><input type="date" value={editGoalData.end_date||""} onChange={e=>setEditGoalData({...editGoalData,end_date:e.target.value})} style={iS}/></div>
+          <div style={{gridColumn:"span 3"}}><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4,fontWeight:600}}>Название</label><input value={editGoalData.name||""} onChange={e=>setEditGoalData({...editGoalData,name:e.target.value})} style={iS()}/></div>
+          <div><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4,fontWeight:600}}>Начало</label><input type="date" value={editGoalData.start_date||""} onChange={e=>setEditGoalData({...editGoalData,start_date:e.target.value})} style={iS()}/></div>
+          <div><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4,fontWeight:600}}>Конец</label><input type="date" value={editGoalData.end_date||""} onChange={e=>setEditGoalData({...editGoalData,end_date:e.target.value})} style={iS()}/></div>
           <div><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4,fontWeight:600}}>Цвет</label><div style={{display:"flex",gap:4,marginTop:2}}>{COLORS.map((c:string)=><button key={c} onClick={()=>setEditGoalData({...editGoalData,color:c})} style={{width:22,height:22,borderRadius:6,background:c,border:(editGoalData.color||C.a)===c?"3px solid #111":"3px solid transparent",cursor:"pointer"}}/>)}</div></div>
-          <div style={{gridColumn:"span 3"}}><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4,fontWeight:600}}>Описание</label><textarea value={editGoalData.description||""} onChange={e=>setEditGoalData({...editGoalData,description:e.target.value})} rows={2} style={{...iS,resize:"none"}}/></div>
+          <div style={{gridColumn:"span 3"}}><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4,fontWeight:600}}>Описание</label><textarea value={editGoalData.description||""} onChange={e=>setEditGoalData({...editGoalData,description:e.target.value})} rows={2} style={{...iS(),resize:"none"}}/></div>
         </div>
         <div style={{display:"flex",gap:8}}><Btn onClick={saveGoalEdit}>Сохранить</Btn><Btn primary={false} onClick={()=>setEditGoalId(null)}>Отмена</Btn></div>
       </div>}
@@ -2199,11 +2198,11 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
     {/* New goal form */}
     {showNewGoal&&<div style={{padding:"20px 24px",borderBottom:"1px solid "+C.bd,background:"#FAFBFD"}}>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:12}}>
-        <div style={{gridColumn:"span 3"}}><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>Название *</label><input value={newGoal.name} onChange={e=>sNewGoal({...newGoal,name:e.target.value})} style={iS} placeholder="Запустить воронку..."/></div>
-        <div><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>Начало</label><input type="date" value={newGoal.start_date} onChange={e=>sNewGoal({...newGoal,start_date:e.target.value})} style={iS}/></div>
-        <div><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>Дедлайн</label><input type="date" value={newGoal.end_date} onChange={e=>sNewGoal({...newGoal,end_date:e.target.value})} style={iS}/></div>
+        <div style={{gridColumn:"span 3"}}><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>Название *</label><input value={newGoal.name} onChange={e=>sNewGoal({...newGoal,name:e.target.value})} style={iS()} placeholder="Запустить воронку..."/></div>
+        <div><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>Начало</label><input type="date" value={newGoal.start_date} onChange={e=>sNewGoal({...newGoal,start_date:e.target.value})} style={iS()}/></div>
+        <div><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>Дедлайн</label><input type="date" value={newGoal.end_date} onChange={e=>sNewGoal({...newGoal,end_date:e.target.value})} style={iS()}/></div>
         <div><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>Цвет</label><div style={{display:"flex",gap:5,marginTop:2}}>{COLORS.map((c:string)=><button key={c} onClick={()=>sNewGoal({...newGoal,color:c})} style={{width:26,height:26,borderRadius:7,background:c,border:newGoal.color===c?"3px solid #111":"3px solid transparent",cursor:"pointer"}}/>)}</div></div>
-        <div style={{gridColumn:"span 3"}}><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>Описание</label><textarea value={newGoal.description} onChange={e=>sNewGoal({...newGoal,description:e.target.value})} rows={2} style={{...iS,resize:"none"}}/></div>
+        <div style={{gridColumn:"span 3"}}><label style={{fontSize:11,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>Описание</label><textarea value={newGoal.description} onChange={e=>sNewGoal({...newGoal,description:e.target.value})} rows={2} style={{...iS(),resize:"none"}}/></div>
       </div>
       <div style={{display:"flex",gap:8}}><Btn onClick={addChildGoal}>Создать</Btn><Btn primary={false} onClick={()=>setShowNewGoal(false)}>Отмена</Btn></div>
     </div>}
@@ -2256,7 +2255,7 @@ function StrategyPage({userId}:{userId:string}){
   const goals = useTable("goals", userId);
   const goalTasks = useTable("goal_tasks", userId);
   const isMobile=useIsMobile();
-  const[stratTab,setStratTab]=useState<"sprint"|"yearmap"|"calendar">("sprint");
+  const[stratTab,setStratTab]=useState<"sprint"|"yearmap">("sprint");
   const[showTF,setShowTF]=useState<string|null>(null);
   const[tf,sTf]=useState({text:"",mins:30,type:"biz"});
   const[tfErr,setTfErr]=useState("");
@@ -2431,7 +2430,7 @@ function StrategyPage({userId}:{userId:string}){
     const canDrag=!t.fromGoal&&dayStr;
     if(editingTask===t.id){
       return <div style={{display:"flex",alignItems:"center",gap:6,padding:"8px 10px",borderRadius:8,background:C.bg,borderLeft:"3px solid "+typeColor(t.type)}}>
-        <input autoFocus value={editText} onChange={e=>setEditText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")saveEdit(t);if(e.key==="Escape")setEditingTask(null);}} style={{...iS,padding:"4px 8px",fontSize:12,flex:1}}/>
+        <input autoFocus value={editText} onChange={e=>setEditText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")saveEdit(t);if(e.key==="Escape")setEditingTask(null);}} style={{...iS(),padding:"4px 8px",fontSize:12,flex:1}}/>
         <button onClick={()=>saveEdit(t)} style={{padding:"4px 8px",background:C.a,color:"#fff",border:"none",borderRadius:6,fontSize:11,cursor:"pointer"}}>✓</button>
         <button onClick={()=>setEditingTask(null)} style={{padding:"4px 8px",background:C.bg,border:"1px solid "+C.bd,borderRadius:6,fontSize:11,cursor:"pointer"}}>✕</button>
       </div>;
@@ -2510,10 +2509,6 @@ function StrategyPage({userId}:{userId:string}){
       }).join("\n");
       return`[Контекст: Карта года]\n${goalList||"Целей нет"}`;
     }
-    if(stratTab==="calendar"){
-      const calTaskList=[...calTasks.data].map((t:any)=>`- ${t.text} (${t.start_date} ${t.start_time||""}–${t.end_time||""}, приоритет: ${t.priority||"medium"})`).join("\n");
-      return`[Контекст: Календарь задач]\n${calTaskList||"Задач нет"}`;
-    }
     return"";
   };
 
@@ -2545,442 +2540,6 @@ function StrategyPage({userId}:{userId:string}){
     if(vizzyBottomRef.current)vizzyBottomRef.current.scrollIntoView({behavior:"smooth"});
   },[vizzyMessages]);
 
-  // ── Calendar state ──
-  const[calMode,setCalMode]=useState<"month"|"week"|"day">("week");
-  const[calDate,setCalDate]=useState(()=>new Date());
-  const[calModal,setCalModal]=useState<any>(null);
-  const[calForm,setCalForm]=useState({text:"",description:"",start_date:"",end_date:"",start_time:"09:00",end_time:"10:00",priority:"medium",assignee:"",auto_placed:false});
-  const[calDeleteId,setCalDeleteId]=useState<string|null>(null);
-
-  const calTasks=useTable("cal_tasks",userId);
-
-  const allCalTasks=useMemo(()=>[
-    ...calTasks.data,
-    ...kanban.data.filter((t:any)=>t.date).map((t:any)=>({
-      ...t,start_date:t.date,end_date:t.date,
-      start_time:"09:00",end_time:`${String(9+Math.ceil((t.mins||60)/60)).padStart(2,"0")}:00`,
-      fromKanban:true,priority:"medium"
-    })),
-    ...goalTasks.data.filter((t:any)=>t.date).map((t:any)=>({
-      ...t,start_date:t.date,end_date:t.date,
-      start_time:"10:00",end_time:`${String(10+Math.ceil((t.mins||60)/60)).padStart(2,"0")}:00`,
-      fromGoal:true,priority:"medium"
-    })),
-  ],[calTasks.data,kanban.data,goalTasks.data]);
-
-  const tasksForCalDay=(dateStr:string)=>allCalTasks.filter((t:any)=>t.start_date<=dateStr&&(t.end_date||t.start_date)>=dateStr);
-
-  const navCal=(dir:1|-1)=>{
-    const d=new Date(calDate);
-    if(calMode==="month"){d.setMonth(d.getMonth()+dir);}
-    else if(calMode==="week"){d.setDate(d.getDate()+dir*7);}
-    else{d.setDate(d.getDate()+dir);}
-    setCalDate(d);
-  };
-
-  const PRIORITY_COLORS:Record<string,string>={low:"#10B981",medium:"#2563EB",high:"#EF4444"};
-  const PRIORITY_LABELS:Record<string,string>={low:"Низкий",medium:"Средний",high:"Высокий"};
-  const HOURS=Array.from({length:24},(_,i)=>i); // 0..23
-
-  const timeToMin=(t:string)=>{const[h,m]=(t||"00:00").split(":").map(Number);return h*60+(m||0);};
-  const minToTime=(m:number)=>`${String(Math.floor(m/60)%24).padStart(2,"0")}:${String(m%60).padStart(2,"0")}`;
-  const timeDiff=(s:string,e:string)=>{const d=timeToMin(e)-timeToMin(s);return d>0?d:0;};
-  const fmtDur=(mins:number)=>mins>=60?`${Math.floor(mins/60)}ч${mins%60?` ${mins%60}м`:""}`:` ${mins}м`;
-
-  // Find first free slot in working hours for a given date
-  const findFreeSlot=(dateStr:string,durMin=60):{start:string;end:string;auto:boolean}=>{
-    const WORK_START=10*60; // 10:00
-    const WORK_END=19*60;   // 19:00
-    const dayTasks=allCalTasks.filter((t:any)=>(t.start_date||"")<=dateStr&&(t.end_date||t.start_date||"")>=dateStr);
-    const busy=dayTasks.map((t:any)=>({s:timeToMin(t.start_time||"09:00"),e:timeToMin(t.end_time||"10:00")}))
-      .sort((a:any,b:any)=>a.s-b.s);
-    // Try every 15-min slot
-    for(let s=WORK_START;s+durMin<=WORK_END;s+=15){
-      const e=s+durMin;
-      const overlap=busy.some((b:any)=>s<b.e&&e>b.s);
-      if(!overlap)return{start:minToTime(s),end:minToTime(e),auto:true};
-    }
-    // All busy — fallback to 10:00 with overlap
-    return{start:"10:00",end:minToTime(WORK_START+durMin),auto:true};
-  };
-
-  const openCalNew=(dateStr?:string,hour?:number)=>{
-    const d=dateStr||today();
-    if(hour!=null){
-      // Clicked a specific hour slot — use exact time
-      setCalForm({text:"",description:"",start_date:d,end_date:d,start_time:`${String(hour).padStart(2,"0")}:00`,end_time:`${String(hour+1).padStart(2,"0")}:00`,priority:"medium",assignee:"",auto_placed:false});
-    } else {
-      // Smart placement
-      const slot=findFreeSlot(d);
-      setCalForm({text:"",description:"",start_date:d,end_date:d,start_time:slot.start,end_time:slot.end,priority:"medium",assignee:"",auto_placed:true});
-    }
-    setCalModal("new");
-  };
-  const openCalEdit=(t:any)=>{
-    setCalForm({text:t.text||"",description:t.description||"",start_date:t.start_date||"",end_date:t.end_date||t.start_date||"",start_time:t.start_time||"09:00",end_time:t.end_time||"10:00",priority:t.priority||"medium",assignee:t.assignee||"",auto_placed:t.auto_placed||false});
-    setCalModal(t);
-  };
-  const saveCalTask=async()=>{
-    if(!calForm.text.trim())return;
-    const isEdit=calModal&&calModal!=="new";
-    const payload={
-      text:calForm.text,description:calForm.description,
-      start_date:calForm.start_date,end_date:calForm.end_date||calForm.start_date,
-      start_time:calForm.start_time,end_time:calForm.end_time,
-      priority:calForm.priority,assignee:calForm.assignee,
-      auto_placed:false, // once saved from modal = intentionally placed
-      manually_placed:true,
-    };
-    if(calModal==="new"){await calTasks.add(payload);}
-    else if(isEdit&&!calModal.fromKanban&&!calModal.fromGoal){await calTasks.update(calModal.id,payload);}
-    setCalModal(null);
-  };
-  const deleteCalTask=async()=>{if(calDeleteId){await calTasks.remove(calDeleteId);setCalDeleteId(null);}};
-
-  const SLOT_H=56;
-  const DAY_START=7;
-  const DAY_HOURS=16;
-
-  const calDragRef   = useRef<any>(null);
-  const calResizeRef = useRef<any>(null);
-  const calDragOverR = useRef<{dateStr:string;min:number}|null>(null);
-  const allCalRef    = useRef<any[]>([]);
-  const[isDraggingCal,setIsDraggingCal]=useState(false);
-  const[isResizingCal,setIsResizingCal]=useState(false);
-  const[calDragOverState,setCalDragOverState]=useState<{dateStr:string;min:number}|null>(null);
-  const[dragCalId,setDragCalId]=useState<string|null>(null);
-  const[inlineEdit,setInlineEdit]=useState<{id:string;text:string}|null>(null);
-
-  useEffect(()=>{ allCalRef.current=allCalTasks; },[allCalTasks]);
-
-  const saveMove=useCallback(async(id:string,dateStr:string,startMin:number,dur:number)=>{
-    const t=allCalRef.current.find((x:any)=>x.id===id);
-    if(!t)return;
-    const s=minToTime(Math.max(DAY_START*60,startMin));
-    const e=minToTime(Math.min((DAY_START+DAY_HOURS)*60,startMin+Math.max(30,dur)));
-    if(t.fromKanban)    await kanban.update(id,{date:dateStr,start_time:s,end_time:e});
-    else if(t.fromGoal) await goalTasks.update(id,{date:dateStr,start_time:s,end_time:e});
-    else                await calTasks.update(id,{start_date:dateStr,end_date:dateStr,start_time:s,end_time:e,auto_placed:false,manually_placed:true});
-  },[kanban,goalTasks,calTasks]);
-
-  const saveResize=useCallback(async(id:string,startMin:number,endMin:number)=>{
-    const t=allCalRef.current.find((x:any)=>x.id===id);
-    if(!t)return;
-    const e=minToTime(Math.max(startMin+15,Math.min((DAY_START+DAY_HOURS)*60,Math.round(endMin/15)*15)));
-    if(t.fromKanban)    await kanban.update(id,{end_time:e});
-    else if(t.fromGoal) await goalTasks.update(id,{end_time:e});
-    else                await calTasks.update(id,{end_time:e,manually_placed:true});
-  },[kanban,goalTasks,calTasks]);
-
-  useEffect(()=>{
-    const move=(e:MouseEvent)=>{
-      if(calDragRef.current){
-        const{dur,origDate,colW,gridLeft,gridTop,days}=calDragRef.current;
-        const relY=e.clientY-gridTop-48;
-        const rawMin=Math.round(((relY/SLOT_H)*60+DAY_START*60)/15)*15;
-        const startMin=Math.max(DAY_START*60,Math.min((DAY_START+DAY_HOURS-1)*60,rawMin));
-        const relX=e.clientX-gridLeft-52;
-        const colIdx=Math.max(0,Math.min(days.length-1,Math.floor(relX/colW)));
-        const dateStr=days[colIdx]||origDate;
-        calDragOverR.current={dateStr,min:startMin};
-        setCalDragOverState({dateStr,min:startMin});
-        setIsDraggingCal(true);
-        const el=document.getElementById(`cb-${calDragRef.current.id}`);
-        if(el){el.style.top=Math.max(0,(startMin-DAY_START*60)/60*SLOT_H)+"px";el.style.opacity="0.4";el.style.pointerEvents="none";}
-      }
-      if(calResizeRef.current){
-        const{id,startMin}=calResizeRef.current;
-        const grid=document.getElementById("cal-grid");
-        if(!grid)return;
-        const rect=grid.getBoundingClientRect();
-        const relY=e.clientY-rect.top-48;
-        const rawMin=Math.round(((relY/SLOT_H)*60+DAY_START*60)/15)*15;
-        const endMin=Math.max(startMin+15,Math.min((DAY_START+DAY_HOURS)*60,rawMin));
-        calResizeRef.current.origEndMin=endMin;
-        setIsResizingCal(true);
-        const el=document.getElementById(`cb-${id}`);
-        if(el){
-          el.style.height=Math.max(20,(endMin-startMin)/60*SLOT_H-2)+"px";
-          const lbl=el.querySelector(".cbt") as HTMLElement;
-          if(lbl)lbl.textContent=`${minToTime(startMin)}–${minToTime(endMin)} · ${fmtDur(endMin-startMin)}`;
-        }
-      }
-    };
-    const up=async()=>{
-      if(calDragRef.current){
-        const{id,dur}=calDragRef.current;
-        const drop=calDragOverR.current;
-        const el=document.getElementById(`cb-${id}`);
-        if(el){el.style.opacity="1";el.style.pointerEvents="";el.style.top="";}
-        if(drop)await saveMove(id,drop.dateStr,drop.min,dur);
-        calDragRef.current=null;calDragOverR.current=null;
-        setDragCalId(null);setCalDragOverState(null);setIsDraggingCal(false);
-      }
-      if(calResizeRef.current){
-        const{id,startMin,origEndMin}=calResizeRef.current;
-        await saveResize(id,startMin,origEndMin);
-        calResizeRef.current=null;setIsResizingCal(false);
-      }
-    };
-    window.addEventListener("mousemove",move,{passive:true});
-    window.addEventListener("mouseup",up);
-    return()=>{window.removeEventListener("mousemove",move);window.removeEventListener("mouseup",up);};
-  },[saveMove,saveResize]);
-
-
-  // Week/Day time-grid view
-  const TimeGrid=({days:gridDays}:{days:string[]})=>{
-    const tdStr=today();
-    const nowMin=new Date().getHours()*60+new Date().getMinutes();
-    const nowTop=((nowMin-DAY_START*60)/60)*SLOT_H;
-    const gridRef2=useRef<HTMLDivElement>(null);
-
-    return<div id="cal-grid" className="yearmap-table" ref={gridRef2}
-      style={{display:"flex",background:C.w,borderRadius:16,border:"1px solid "+C.bd,overflow:"hidden",userSelect:isDraggingCal||isResizingCal?"none":"auto",cursor:isResizingCal?"ns-resize":isDraggingCal?"grabbing":"default"}}>
-
-      {/* Time gutter */}
-      <div style={{width:52,flexShrink:0,borderRight:"1px solid "+C.bd,paddingTop:48}}>
-        {Array.from({length:DAY_HOURS},(_,i)=>i+DAY_START).map(h=>(
-          <div key={h} style={{height:SLOT_H,display:"flex",alignItems:"flex-start",justifyContent:"flex-end",paddingRight:8,paddingTop:2}}>
-            <span style={{fontSize:10,color:C.t2,fontWeight:500}}>{String(h).padStart(2,"0")}:00</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Day columns */}
-      <div style={{flex:1,display:"grid",gridTemplateColumns:`repeat(${gridDays.length},1fr)`}}>
-        {gridDays.map((dateStr,colIdx)=>{
-          const isToday=dateStr===tdStr;
-          const dt=new Date(dateStr+"T12:00:00");
-          const dayTaskList=tasksForCalDay(dateStr);
-          const isDragTarget=calDragOverState?.dateStr===dateStr;
-
-          return<div key={dateStr} style={{borderRight:"1px solid "+C.bd,position:"relative",background:isDragTarget?"rgba(37,99,235,0.02)":"transparent"}}>
-            {/* Day header */}
-            <div style={{height:48,borderBottom:"1px solid "+C.bd,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",position:"sticky",top:0,zIndex:2,background:isToday?"rgba(37,99,235,0.05)":C.w}}>
-              <span style={{fontSize:10,color:isToday?C.a:C.t2,fontWeight:600,textTransform:"uppercase"}}>{["Вс","Пн","Вт","Ср","Чт","Пт","Сб"][dt.getDay()]}</span>
-              <div style={{width:28,height:28,borderRadius:"50%",background:isToday?C.a:"transparent",display:"flex",alignItems:"center",justifyContent:"center",marginTop:1}}>
-                <span style={{fontSize:14,fontWeight:700,color:isToday?"#fff":C.t1}}>{dt.getDate()}</span>
-              </div>
-            </div>
-
-            {/* Hour slots */}
-            <div style={{position:"relative",height:DAY_HOURS*SLOT_H}}>
-              {Array.from({length:DAY_HOURS},(_,i)=>(
-                <div key={i} onClick={()=>{if(!isDraggingCal&&!isResizingCal)openCalNew(dateStr,i+DAY_START);}}
-                  style={{height:SLOT_H,borderBottom:"1px solid rgba(0,0,0,0.04)",cursor:"pointer",transition:"background 0.1s"}}
-                  onMouseEnter={e=>{if(!isDraggingCal&&!isResizingCal)(e.currentTarget as HTMLElement).style.background="rgba(37,99,235,0.03)";}}
-                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}/>
-              ))}
-
-              {/* DnD drop preview */}
-              {isDragTarget&&calDragOverState&&(
-                <div style={{position:"absolute",left:4,right:4,top:((calDragOverState!.min-DAY_START*60)/60)*SLOT_H,height:2,background:C.a,borderRadius:2,zIndex:20,pointerEvents:"none",boxShadow:`0 0 8px ${C.a}60`}}/>
-              )}
-
-              {/* Now line */}
-              {isToday&&nowTop>0&&nowTop<DAY_HOURS*SLOT_H&&(
-                <div style={{position:"absolute",left:0,right:0,top:nowTop,zIndex:3,display:"flex",alignItems:"center",pointerEvents:"none"}}>
-                  <div style={{width:8,height:8,borderRadius:"50%",background:C.r,flexShrink:0,marginLeft:-4}}/>
-                  <div style={{flex:1,height:2,background:C.r}}/>
-                </div>
-              )}
-
-              {/* Task blocks */}
-              {dayTaskList.map((t:any,ti:number)=>{
-                const st=timeToMin(t.start_time||"09:00");
-                const et=timeToMin(t.end_time||"10:00");
-                const top=Math.max(0,((st-DAY_START*60)/60)*SLOT_H);
-                const height=Math.max(24,((et-st)/60)*SLOT_H-2);
-                const isDone=t.status==="done"||t.done;
-                const isAuto=t.auto_placed&&!t.fromKanban&&!t.fromGoal;
-                const color=isDone?"#22C55E":(PRIORITY_COLORS[t.priority||"medium"]||C.a);
-                const dur=et-st;
-                const overlap=dayTaskList.filter((_:any,j:number)=>j<ti&&tasksOverlap(t,dayTaskList[j])).length;
-                const wPct=overlap?`calc(88% - ${overlap*10}px)`:"94%";
-                const lPct=overlap?`${overlap*10}px`:"2px";
-                const isEditingThis=inlineEdit?.id===t.id;
-                const canDrag=!isEditingThis;
-
-                return<div key={t.id} id={`cb-${t.id}`}
-                  style={{
-                    position:"absolute",top,left:lPct,width:wPct,height,
-                    background:isDone?"rgba(34,197,94,0.09)":isAuto?`${color}0A`:`${color}14`,
-                    border:isAuto?`1.5px dashed ${color}55`:`1.5px solid ${color}40`,
-                    borderLeft:`3px solid ${color}`,
-                    borderRadius:7,padding:"4px 6px 4px 8px",
-                    cursor:canDrag?"grab":"default",
-                    overflow:"hidden",zIndex:ti+1,
-                    opacity:isAuto?0.85:1,
-                    transition:"box-shadow 0.15s,opacity 0.2s",
-                    boxShadow:isDone?`0 0 8px rgba(34,197,94,0.15)`:"0 1px 4px rgba(0,0,0,0.08)",
-                  }}
-                  onMouseDown={e=>{
-                    if(e.target instanceof HTMLButtonElement)return;
-                    if(e.target instanceof HTMLInputElement)return;
-                    if((e.target as HTMLElement).classList.contains("resize-handle"))return;
-                    if(!canDrag)return;
-                    e.preventDefault();
-                    const gridRect=document.getElementById("cal-grid")?.getBoundingClientRect();
-                    if(!gridRect)return;
-                    const colW=(gridRect.width-52)/gridDays.length;
-                    // Store days array reference for column detection
-                    calDragRef.current={
-                      id:t.id,startY:e.clientY,startMin:st,dur,origDate:dateStr,
-                      colW,gridLeft:gridRect.left,gridTop:gridRect.top,
-                      days:gridDays,
-                    };
-                    setDragCalId(t.id);
-                  }}
-                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow=`0 2px 16px ${color}40`;(e.currentTarget as HTMLElement).style.zIndex="50";}}
-                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow=isDone?"0 0 8px rgba(34,197,94,0.15)":"0 1px 4px rgba(0,0,0,0.08)";(e.currentTarget as HTMLElement).style.zIndex=String(ti+1);}}>
-
-                  {/* Checkbox + title */}
-                  <div style={{display:"flex",alignItems:"flex-start",gap:5,minWidth:0}}>
-                    <button onClick={e=>{e.stopPropagation();const done=!(t.status==="done"||t.done);if(t.fromKanban)kanban.update(t.id,{status:done?"done":"todo"});else if(t.fromGoal)goalTasks.update(t.id,{status:done?"done":"todo",done});else calTasks.update(t.id,{status:done?"done":"todo",done});}}
-                      style={{width:14,height:14,minWidth:14,borderRadius:4,border:`1.5px solid ${isDone?"#22C55E":color}`,background:isDone?"#22C55E":"transparent",cursor:"pointer",flexShrink:0,marginTop:1,display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s",boxShadow:isDone?"0 0 6px rgba(34,197,94,0.4)":"none"}}>
-                      {isDone&&<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5"><polyline points="20 6 9 17 4 12"/></svg>}
-                    </button>
-
-                    {isEditingThis&&inlineEdit
-                      ?<input autoFocus value={inlineEdit.text}
-                          onChange={e=>setInlineEdit(p=>p?{...p,text:e.target.value}:p)}
-                          onBlur={async()=>{
-                            const txt=inlineEdit?.text||t.text;
-                            if(t.fromKanban)await kanban.update(t.id,{text:txt});
-                            else if(t.fromGoal)await goalTasks.update(t.id,{text:txt});
-                            else await calTasks.update(t.id,{text:txt});
-                            setInlineEdit(null);
-                          }}
-                          onKeyDown={e=>{if(e.key==="Enter"||e.key==="Escape")e.currentTarget.blur();e.stopPropagation();}}
-                          onClick={e=>e.stopPropagation()}
-                          style={{flex:1,border:"none",background:"transparent",fontSize:11,fontWeight:700,color,outline:"none",fontFamily:"'Montserrat',sans-serif",minWidth:0,padding:0}}/>
-                      :<div style={{flex:1,fontSize:11,fontWeight:700,color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:isDone?"line-through":"none",lineHeight:1.3,cursor:"text"}}
-                          onDoubleClick={e=>{e.stopPropagation();setInlineEdit({id:t.id,text:t.text||""});}}
-                          onClick={e=>{e.stopPropagation();if(!isDraggingCal&&!t.fromKanban&&!t.fromGoal)openCalEdit(t);}}>
-                          {t.text}
-                        </div>
-                    }
-                  </div>
-
-                  {/* Time label */}
-                  {height>30&&<div className="cbt" style={{fontSize:9,color:`${color}bb`,marginTop:2,paddingLeft:19}}>{t.start_time||"09:00"}–{t.end_time||"10:00"}{dur>0?` · ${fmtDur(dur)}`:""}</div>}
-                  {height>44&&(t.fromKanban||t.fromGoal)&&<div style={{fontSize:9,color:`${color}88`,marginTop:1,paddingLeft:19}}>🔗 {t.fromGoal?"Цель":"Спринт"}</div>}
-
-                  {/* Resize handle */}
-                  <div className="resize-handle"
-                    onMouseDown={e=>{
-                      e.stopPropagation();e.preventDefault();
-                      calResizeRef.current={id:t.id,startY:e.clientY,origEndMin:et,startMin:st};
-                      setIsResizingCal(true);
-                    }}
-                    style={{position:"absolute",bottom:0,left:0,right:0,height:10,cursor:"ns-resize",display:"flex",alignItems:"center",justifyContent:"center",zIndex:10}}
-                    onClick={e=>e.stopPropagation()}>
-                    <div style={{width:28,height:3,borderRadius:99,background:`${color}50`}}/>
-                  </div>
-                </div>;
-              })}
-            </div>
-          </div>;
-        })}
-      </div>
-    </div>;
-  };
-
-
-  // Week/Day time-grid view (Google Calendar style)
-
-  // helper: do two timed tasks overlap?
-  const tasksOverlap=(a:any,b:any)=>{
-    const as=timeToMin(a.start_time||"09:00"),ae=timeToMin(a.end_time||"10:00");
-    const bs=timeToMin(b.start_time||"09:00"),be=timeToMin(b.end_time||"10:00");
-    return as<be&&ae>bs;
-  };
-
-  const CalendarView=()=>{
-    const tdStr=today();
-
-    if(calMode==="month"){
-      const y=calDate.getFullYear(),m=calDate.getMonth();
-      const firstDay=new Date(y,m,1).getDay();
-      const daysInMonth=new Date(y,m+1,0).getDate();
-      const startOffset=firstDay===0?6:firstDay-1; // Mon-first
-      const cells:Array<{date:string|null}>=[];
-      for(let i=0;i<startOffset;i++)cells.push({date:null});
-      for(let d=1;d<=daysInMonth;d++){
-        const ds2=`${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-        cells.push({date:ds2});
-      }
-      while(cells.length%7!==0)cells.push({date:null});
-
-      return<div className="yearmap-table" style={{background:C.w,borderRadius:16,border:"1px solid "+C.bd,overflow:"hidden"}}>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",borderBottom:"1px solid "+C.bd,background:C.ib}}>
-          {["Пн","Вт","Ср","Чт","Пт","Сб","Вс"].map(wd=>(
-            <div key={wd} style={{textAlign:"center",fontSize:11,fontWeight:700,color:C.t2,padding:"10px 0",letterSpacing:0.5}}>{wd}</div>
-          ))}
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)"}}>
-          {cells.map((cell,i)=>{
-            if(!cell.date)return<div key={i} style={{minHeight:110,borderRight:"1px solid "+C.bd+"66",borderBottom:"1px solid "+C.bd+"66",background:C.ib,opacity:0.5}}/>;
-            const dayTasks=tasksForCalDay(cell.date);
-            const isToday=cell.date===tdStr;
-            const isPast=cell.date<tdStr;
-            return<div key={cell.date}
-              onClick={()=>openCalNew(cell.date||undefined)}
-              style={{minHeight:110,borderRight:"1px solid "+C.bd+"66",borderBottom:"1px solid "+C.bd+"66",padding:"6px 4px",cursor:"pointer",
-                background:isToday?"rgba(37,99,235,0.03)":"transparent",transition:"background 0.1s"}}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=isToday?"rgba(37,99,235,0.06)":C.ib;}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=isToday?"rgba(37,99,235,0.03)":"transparent";}}>
-              <div style={{display:"flex",justifyContent:"center",marginBottom:4}}>
-                <div style={{width:24,height:24,borderRadius:"50%",background:isToday?C.a:"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                  <span style={{fontSize:12,fontWeight:isToday?700:400,color:isToday?"#fff":isPast?C.t2:C.t1}}>{parseInt(cell.date.split("-")[2])}</span>
-                </div>
-              </div>
-              {dayTasks.slice(0,3).map((t:any)=>{
-                const color=t.status==="done"||t.done?"#22C55E":(PRIORITY_COLORS[t.priority||"medium"]||C.a);
-                const isAuto=t.auto_placed&&!t.manually_placed;
-                const isDone=t.status==="done"||t.done;
-                return<div key={t.id}
-                  onClick={e=>{e.stopPropagation();openCalEdit(t);}}
-                  style={{
-                    fontSize:10,fontWeight:500,padding:"2px 5px",borderRadius:4,marginBottom:2,
-                    overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
-                    background:isDone?"rgba(34,197,94,0.08)":isAuto?color+"10":color+"16",
-                    color:isDone?"#22C55E":color,
-                    borderLeft:`2px solid ${isDone?"#22C55E":color}`,
-                    border:isAuto?`1px dashed ${color}50`:undefined,
-                    textDecoration:isDone?"line-through":"none",
-                    opacity:isDone?0.7:1,
-                  }}>
-                  {isDone&&"✓ "}{t.start_time&&<span style={{opacity:0.6}}>{t.start_time} </span>}{t.text}
-                </div>;
-              })}
-              {dayTasks.length>3&&<div style={{fontSize:9,color:C.t2,paddingLeft:4,cursor:"pointer"}} onClick={e=>{e.stopPropagation();setCalMode("day");setCalDate(new Date(cell.date!));}}
-                >+{dayTasks.length-3} ещё</div>}
-            </div>;
-          })}
-        </div>
-      </div>;
-    }
-
-    if(calMode==="week"){
-      const startOfWeek=new Date(calDate);
-      const dow=startOfWeek.getDay()===0?6:startOfWeek.getDay()-1; // Mon-based
-      startOfWeek.setDate(calDate.getDate()-dow);
-      const weekDays=Array.from({length:7},(_,i)=>{const d=new Date(startOfWeek);d.setDate(startOfWeek.getDate()+i);return ds(d);});
-      return<div style={{overflowX:"auto"}}><div style={{minWidth:640}}><TimeGrid days={weekDays}/></div></div>;
-    }
-
-    // Day view
-    return<TimeGrid days={[ds(calDate)]}/>;
-  };
-
-  const calTitle=()=>{
-    if(calMode==="month")return`${MR[calDate.getMonth()].charAt(0).toUpperCase()+MR[calDate.getMonth()].slice(1)} ${calDate.getFullYear()}`;
-    if(calMode==="week"){const s=new Date(calDate);s.setDate(calDate.getDate()-calDate.getDay());const e=new Date(s);e.setDate(s.getDate()+6);return`${s.getDate()} ${MR[s.getMonth()].substring(0,3)} — ${e.getDate()} ${MR[e.getMonth()].substring(0,3)} ${e.getFullYear()}`;}
-    return`${calDate.getDate()} ${MR[calDate.getMonth()]} ${calDate.getFullYear()}`;
-  };
-
   return <>
     {/* Vizzy AI toggle tab */}
     <div onClick={()=>setVizzyOpen(!vizzyOpen)} style={{position:"fixed",right:vizzyOpen?376:0,top:"40%",transform:"translateY(-50%)",background:`linear-gradient(135deg,${VIZZY_ACCENT},#7C3AED)`,width:32,height:120,borderRadius:"12px 0 0 12px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,boxShadow:"-4px 0 20px rgba(167,139,250,0.35)",zIndex:110,transition:"right 0.3s ease"}}>
@@ -3001,7 +2560,7 @@ function StrategyPage({userId}:{userId:string}){
             <div style={{fontSize:14,fontWeight:700,color:"#fff",lineHeight:1.2}}>Vizzy AI</div>
             <div style={{fontSize:10,color:"rgba(167,139,250,0.7)",display:"flex",alignItems:"center",gap:4}}>
               <div style={{width:6,height:6,borderRadius:"50%",background:"#10B981"}}/>
-              Executive Assistant · {stratTab==="sprint"?"Спринт":stratTab==="yearmap"?"Карта года":"Календарь"}
+              Executive Assistant · {stratTab==="sprint"?"Спринт":"Карта года"}
             </div>
           </div>
         </div>
@@ -3086,76 +2645,8 @@ function StrategyPage({userId}:{userId:string}){
     <div style={{display:"inline-flex",background:C.bg,borderRadius:12,padding:3,gap:2,marginBottom:24,border:"1px solid "+C.bd}}>
       <button style={tabStyle(stratTab==="sprint")} onClick={()=>setStratTab("sprint")}>Текущий спринт</button>
       <button style={tabStyle(stratTab==="yearmap")} onClick={()=>setStratTab("yearmap")}>Карта года</button>
-      <button style={tabStyle(stratTab==="calendar")} onClick={()=>setStratTab("calendar")}>Календарь задач</button>
     </div>
-
-    {/* YEAR MAP */}
     {stratTab==="yearmap"&&<YearMap userId={userId} goals={goals} goalUpdate={goals.update} goalAdd={goals.add} goalTasks={goalTasks}/>}
-
-    {/* CALENDAR */}
-    {stratTab==="calendar"&&<>
-      {/* Controls row */}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,flexWrap:"wrap",gap:10}}>
-        {/* Left: nav */}
-        <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <button onClick={()=>navCal(-1)} style={{width:34,height:34,borderRadius:9,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-          <button onClick={()=>navCal(1)} style={{width:34,height:34,borderRadius:9,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
-          <span style={{fontSize:16,fontWeight:700,color:C.t1,minWidth:200}}>{calTitle()}</span>
-          <button onClick={()=>setCalDate(new Date())}
-            style={{padding:"6px 14px",background:C.a+"14",color:C.a,border:"1px solid "+C.a+"30",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer"}}>Сегодня</button>
-        </div>
-
-        {/* Right: view switcher + add */}
-        <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          <div style={{display:"flex",background:C.ib,borderRadius:9,padding:3,border:"1px solid "+C.bd,gap:2}}>
-            {(["month","week","day"] as const).map(m=>(
-              <button key={m} onClick={()=>setCalMode(m)}
-                style={{padding:"6px 14px",borderRadius:7,border:"none",
-                  background:calMode===m?C.w:"transparent",
-                  color:calMode===m?C.t1:C.t2,
-                  fontSize:12,fontWeight:calMode===m?600:400,cursor:"pointer",
-                  boxShadow:calMode===m?"0 1px 4px rgba(0,0,0,0.08)":"none",transition:"all 0.15s"}}>
-                {m==="month"?"Месяц":m==="week"?"Неделя":"День"}
-              </button>
-            ))}
-          </div>
-          <button onClick={()=>openCalNew()}
-            style={{padding:"8px 18px",background:C.a,color:"#fff",border:"none",borderRadius:9,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,boxShadow:`0 0 16px ${C.a}30`,transition:"all 0.2s"}}
-            onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(-1px)";(e.currentTarget as HTMLElement).style.boxShadow=`0 0 24px ${C.a}50`;}}
-            onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform="none";(e.currentTarget as HTMLElement).style.boxShadow=`0 0 16px ${C.a}30`;}}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            + Задача
-          </button>
-        </div>
-      </div>
-
-      {/* Unscheduled tasks bar — tasks without time */}
-      {(()=>{
-        const unscheduled=allCalTasks.filter((t:any)=>t.auto_placed&&!t.manually_placed);
-        if(!unscheduled.length)return null;
-        return <div style={{background:C.y+"10",border:"1px solid "+C.y+"30",borderRadius:12,padding:"10px 14px",marginBottom:14,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-          <span style={{fontSize:12,fontWeight:600,color:C.y}}>⚡ {unscheduled.length} незапланированных задач</span>
-          <span style={{fontSize:11,color:C.t2}}>Перетащи их на нужное время в календаре</span>
-          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginLeft:"auto"}}>
-            {unscheduled.slice(0,4).map((t:any)=>(
-              <div key={t.id} style={{fontSize:11,padding:"3px 10px",borderRadius:20,background:C.y+"18",color:C.y,border:"1px dashed "+C.y+"50",fontWeight:500,cursor:"pointer"}}
-                onClick={()=>openCalEdit(t)}>
-                {t.text}
-              </div>
-            ))}
-          </div>
-        </div>;
-      })()}
-
-      {/* Calendar grid */}
-      <CalendarView/>
-    </>}
-
-    {/* SPRINT */}
     {stratTab==="sprint"&&<>
       {kanbanErrToast&&<div style={{position:"fixed",bottom:isMobile?72:24,left:"50%",transform:"translateX(-50%)",background:C.r,color:"#fff",padding:"12px 20px",borderRadius:12,fontSize:13,fontWeight:500,zIndex:1000,boxShadow:"0 8px 24px rgba(0,0,0,0.2)"}}>Не удалось сохранить порядок. Попробуйте ещё раз</div>}
       {/* Kanban */}
@@ -3193,10 +2684,10 @@ function StrategyPage({userId}:{userId:string}){
                 {st.tasks.length===0&&<div style={{textAlign:"center",color:C.t2,fontSize:12,padding:"20px 0"}}>Нет задач</div>}
                 {st.tasks.map((t:any)=><TaskItem key={t.id} t={t} dayStr={d}/>)}
                 {showTF===d?<div style={{marginTop:6}}>
-                  <input placeholder="Задача" value={tf.text} onChange={e=>sTf({...tf,text:e.target.value})} style={{...iS,padding:"8px 10px",fontSize:12,marginBottom:6}}/>
+                  <input placeholder="Задача" value={tf.text} onChange={e=>sTf({...tf,text:e.target.value})} style={{...iS(),padding:"8px 10px",fontSize:12,marginBottom:6}}/>
                   <div style={{display:"flex",gap:6,marginBottom:6}}>
-                    <input type="number" value={tf.mins} onChange={e=>sTf({...tf,mins:+e.target.value})} min={30} max={480} step={5} style={{...iS,width:70,padding:"6px 8px",fontSize:12}}/>
-                    <select value={tf.type} onChange={e=>sTf({...tf,type:e.target.value})} style={{...iS,flex:1,padding:"6px 8px",fontSize:12}}>{TYPES.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}</select>
+                    <input type="number" value={tf.mins} onChange={e=>sTf({...tf,mins:+e.target.value})} min={30} max={480} step={5} style={{...iS(),width:70,padding:"6px 8px",fontSize:12}}/>
+                    <select value={tf.type} onChange={e=>sTf({...tf,type:e.target.value})} style={{...iS(),flex:1,padding:"6px 8px",fontSize:12}}>{TYPES.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}</select>
                   </div>
                   {tfErr&&<div style={{fontSize:11,color:C.r,marginBottom:4}}>{tfErr}</div>}
                   <div style={{display:"flex",gap:6}}><button onClick={()=>addTask(d)} style={{flex:1,padding:"6px",background:C.a,color:"#fff",border:"none",borderRadius:6,fontSize:12,cursor:"pointer"}}>+</button><button onClick={()=>setShowTF(null)} style={{padding:"6px 10px",background:C.bg,border:"1px solid "+C.bd,borderRadius:6,fontSize:12,cursor:"pointer"}}>×</button></div>
@@ -3221,118 +2712,7 @@ function StrategyPage({userId}:{userId:string}){
 
     {/* Task modal */}
     {activeModal&&<TaskModal task={activeModal.task} taskType={activeModal.type} userId={userId} onClose={()=>setActiveModal(null)}/>}
-
-    {/* Calendar task modal */}
-    {calModal&&(
-      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setCalModal(null)}>
-        <div data-modal="" style={{background:C.w,borderRadius:20,padding:28,width:"100%",maxWidth:500,boxShadow:"0 24px 60px rgba(0,0,0,0.25)",border:"1px solid "+C.bd}} onClick={e=>e.stopPropagation()}>
-          {/* Header */}
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
-            <div style={{fontSize:17,fontWeight:700,color:C.t1}}>{calModal==="new"?"✨ Новая задача":"✏️ Редактировать задачу"}</div>
-            {calForm.auto_placed&&calModal==="new"&&(
-              <div style={{fontSize:10,fontWeight:600,background:C.y+"15",color:C.y,border:`1px dashed ${C.y}60`,borderRadius:8,padding:"3px 10px",display:"flex",alignItems:"center",gap:5}}>
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
-                Авто-размещение
-              </div>
-            )}
-          </div>
-
-          <div style={{display:"flex",flexDirection:"column",gap:14}}>
-            {/* Title */}
-            <div>
-              <label style={{fontSize:11,fontWeight:600,color:C.t2,display:"block",marginBottom:5,letterSpacing:0.3}}>Название *</label>
-              <input autoFocus value={calForm.text} onChange={e=>setCalForm({...calForm,text:e.target.value})}
-                onKeyDown={e=>{if(e.key==="Enter")saveCalTask();}}
-                placeholder="Что нужно сделать?" style={{...iS,fontSize:14,fontWeight:500}}/>
-            </div>
-
-            {/* Description */}
-            <div>
-              <label style={{fontSize:11,fontWeight:600,color:C.t2,display:"block",marginBottom:5,letterSpacing:0.3}}>Описание <span style={{fontWeight:400,opacity:0.6}}>(необязательно)</span></label>
-              <textarea value={calForm.description} onChange={e=>setCalForm({...calForm,description:e.target.value})} rows={2}
-                placeholder="Дополнительные детали..." style={{...iS,resize:"vertical"}}/>
-            </div>
-
-            {/* Dates */}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-              <div>
-                <label style={{fontSize:11,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>📅 Дата начала</label>
-                <input type="date" value={calForm.start_date} onChange={e=>setCalForm({...calForm,start_date:e.target.value,end_date:calForm.end_date||e.target.value})} style={iS}/>
-              </div>
-              <div>
-                <label style={{fontSize:11,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>📅 Дата окончания</label>
-                <input type="date" value={calForm.end_date} onChange={e=>setCalForm({...calForm,end_date:e.target.value})} style={iS}/>
-              </div>
-            </div>
-
-            {/* Time */}
-            <div>
-              <label style={{fontSize:11,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>⏰ Время <span style={{fontWeight:400,opacity:0.6}}>(необязательно — автоматически найдём свободный слот)</span></label>
-              <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:8,alignItems:"center"}}>
-                <input type="time" value={calForm.start_time} onChange={e=>{setCalForm({...calForm,start_time:e.target.value,auto_placed:false});}} style={iS}/>
-                <span style={{fontSize:12,color:C.t2,textAlign:"center"}}>→</span>
-                <input type="time" value={calForm.end_time} onChange={e=>{setCalForm({...calForm,end_time:e.target.value,auto_placed:false});}} style={iS}/>
-              </div>
-              {calForm.start_time&&calForm.end_time&&timeDiff(calForm.start_time,calForm.end_time)>0&&(
-                <div style={{fontSize:11,color:C.a,fontWeight:600,marginTop:6,display:"flex",alignItems:"center",gap:5}}>
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  {fmtDur(timeDiff(calForm.start_time,calForm.end_time))}
-                </div>
-              )}
-            </div>
-
-            {/* Priority */}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-              <div>
-                <label style={{fontSize:11,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Приоритет</label>
-                <div style={{display:"flex",gap:6}}>
-                  {[{v:"low",l:"Низкий",c:"#10B981"},{v:"medium",l:"Средний",c:"#2563EB"},{v:"high",l:"Высокий",c:"#EF4444"}].map(p=>(
-                    <button key={p.v} onClick={()=>setCalForm({...calForm,priority:p.v})}
-                      style={{flex:1,padding:"7px 4px",border:`1px solid ${calForm.priority===p.v?p.c:C.bd}`,borderRadius:9,background:calForm.priority===p.v?p.c+"14":"transparent",color:calForm.priority===p.v?p.c:C.t2,fontSize:10,fontWeight:600,cursor:"pointer",transition:"all 0.15s"}}>
-                      {p.l}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label style={{fontSize:11,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Ответственный</label>
-                <input value={calForm.assignee} onChange={e=>setCalForm({...calForm,assignee:e.target.value})} placeholder="Имя..." style={iS}/>
-              </div>
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div style={{display:"flex",gap:10,marginTop:22,justifyContent:"space-between",alignItems:"center"}}>
-            <div>
-              {calModal!=="new"&&!calModal?.fromKanban&&!calModal?.fromGoal&&(
-                <button onClick={()=>{setCalDeleteId(calModal.id);setCalModal(null);}}
-                  style={{padding:"8px 14px",background:C.r+"10",color:C.r,border:"1px solid "+C.r+"30",borderRadius:9,fontSize:12,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
-                  Удалить
-                </button>
-              )}
-            </div>
-            <div style={{display:"flex",gap:8}}>
-              <Btn onClick={()=>setCalModal(null)} primary={false}>Отмена</Btn>
-              <Btn onClick={saveCalTask} disabled={!calForm.text.trim()}>Сохранить</Btn>
-            </div>
-          </div>
-        </div>
-      </div>
-    )}
-    {calDeleteId&&(
-      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setCalDeleteId(null)}>
-        <div style={{background:C.w,borderRadius:16,padding:28,maxWidth:340,width:"100%",textAlign:"center"}} onClick={e=>e.stopPropagation()}>
-          <div style={{fontSize:32,marginBottom:12}}>🗑️</div>
-          <div style={{fontSize:16,fontWeight:700,marginBottom:8}}>Удалить задачу?</div>
-          <div style={{display:"flex",gap:10,justifyContent:"center",marginTop:20}}>
-            <Btn onClick={()=>setCalDeleteId(null)} primary={false}>Отмена</Btn>
-            <Btn onClick={deleteCalTask} style={{background:C.r}}>Удалить</Btn>
-          </div>
-        </div>
-      </div>
-    )}
-    </div>{/* end marginRight wrapper */}
+    </div>
   </>;
 }
 
@@ -3770,11 +3150,11 @@ function CrmPage({userId}:{userId:string}){
                 <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Название *</label>
                 <input autoFocus value={newFunnelName} onChange={e=>setNewFunnelName(e.target.value)}
                   onKeyDown={e=>{if(e.key==="Enter")createFunnel();}}
-                  placeholder="Например: Основная воронка, Instagram, B2B..." style={iS}/>
+                  placeholder="Например: Основная воронка, Instagram, B2B..." style={iS()}/>
               </div>
               <div>
                 <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Описание (необязательно)</label>
-                <input value={newFunnelDesc} onChange={e=>setNewFunnelDesc(e.target.value)} placeholder="Краткое описание..." style={iS}/>
+                <input value={newFunnelDesc} onChange={e=>setNewFunnelDesc(e.target.value)} placeholder="Краткое описание..." style={iS()}/>
               </div>
               <div>
                 <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:8}}>Цвет воронки</label>
@@ -3801,7 +3181,7 @@ function CrmPage({userId}:{userId:string}){
             <div style={{fontSize:16,fontWeight:700,marginBottom:16}}>Переименовать воронку</div>
             <input autoFocus value={editFunnelName} onChange={e=>setEditFunnelName(e.target.value)}
               onKeyDown={e=>{if(e.key==="Enter"){funnels.update(editFunnelId,{name:editFunnelName});setEditFunnelId(null);}}}
-              style={iS}/>
+              style={iS()}/>
             <div style={{display:"flex",gap:8,marginTop:16,justifyContent:"flex-end"}}>
               <button onClick={()=>setEditFunnelId(null)} style={{padding:"9px 16px",background:"#F2F2F7",color:"#8E8E93",border:"none",borderRadius:10,fontSize:13,cursor:"pointer"}}>Отмена</button>
               <button onClick={()=>{funnels.update(editFunnelId,{name:editFunnelName});setEditFunnelId(null);}} style={{padding:"9px 18px",background:"#007AFF",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:700,cursor:"pointer"}}>Сохранить</button>
@@ -3960,7 +3340,7 @@ function CrmPage({userId}:{userId:string}){
     {tab==="list"&&<>
       <div style={{display:"flex",justifyContent:"space-between",marginBottom:14,gap:12}}>
         <input placeholder="Поиск по имени, телефону, email..." value={search} onChange={e=>setSearch(e.target.value)}
-          style={{...iS,maxWidth:300,borderRadius:9,fontSize:12,padding:"8px 12px",background:C.ib,border:"1px solid "+C.bd}}/>
+          style={{...iS(),maxWidth:300,borderRadius:9,fontSize:12,padding:"8px 12px",background:C.ib,border:"1px solid "+C.bd}}/>
         <button onClick={()=>setShow(!show)} style={{padding:"8px 16px",background:C.a,color:"#fff",border:"none",borderRadius:9,fontSize:12,fontWeight:600,cursor:"pointer",boxShadow:`0 0 16px ${C.a}30`,transition:"all 0.2s"}}
           onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(-1px)";(e.currentTarget as HTMLElement).style.boxShadow=`0 0 24px ${C.a}50`;}}
           onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform="none";(e.currentTarget as HTMLElement).style.boxShadow=`0 0 16px ${C.a}30`;}}>
@@ -4027,11 +3407,11 @@ function CrmPage({userId}:{userId:string}){
             <div>
               <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Название *</label>
               <input autoFocus value={newFunnelName} onChange={e=>setNewFunnelName(e.target.value)}
-                onKeyDown={e=>{if(e.key==="Enter")createFunnel();}} placeholder="Например: Instagram, B2B, Партнёры..." style={iS}/>
+                onKeyDown={e=>{if(e.key==="Enter")createFunnel();}} placeholder="Например: Instagram, B2B, Партнёры..." style={iS()}/>
             </div>
             <div>
               <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Описание</label>
-              <input value={newFunnelDesc} onChange={e=>setNewFunnelDesc(e.target.value)} placeholder="Краткое описание..." style={iS}/>
+              <input value={newFunnelDesc} onChange={e=>setNewFunnelDesc(e.target.value)} placeholder="Краткое описание..." style={iS()}/>
             </div>
             <div>
               <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:8}}>Цвет</label>
@@ -4193,7 +3573,7 @@ function ContentPage({userId}:{userId:string}){
             </label>
           </div>
 
-          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Тема *</label><input value={f.topic} onChange={e=>sF({...f,topic:e.target.value})} style={iS}/></div>
+          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Тема *</label><input value={f.topic} onChange={e=>sF({...f,topic:e.target.value})} style={iS()}/></div>
 
           {/* Platform with icon */}
           <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Платформа</label>
@@ -4205,17 +3585,17 @@ function ContentPage({userId}:{userId:string}){
             </div>
           </div>
 
-          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Тип</label><select value={f.type} onChange={e=>sF({...f,type:e.target.value})} style={iS}>{CTYPES.map(t=><option key={t}>{t}</option>)}</select></div>
-          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Статус</label><select value={f.status} onChange={e=>sF({...f,status:e.target.value})} style={iS}>{CSTATS.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
-          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Ссылка на контент</label><input value={f.content_url} onChange={e=>sF({...f,content_url:e.target.value})} placeholder="https://..." style={iS}/></div>
+          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Тип</label><select value={f.type} onChange={e=>sF({...f,type:e.target.value})} style={iS()}>{CTYPES.map(t=><option key={t}>{t}</option>)}</select></div>
+          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Статус</label><select value={f.status} onChange={e=>sF({...f,status:e.target.value})} style={iS()}>{CSTATS.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
+          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Ссылка на контент</label><input value={f.content_url} onChange={e=>sF({...f,content_url:e.target.value})} placeholder="https://..." style={iS()}/></div>
 
           {/* Deadlines */}
           {DEADLINES.map(d=><div key={d.key}>
             <label style={{fontSize:12,display:"block",marginBottom:6,fontWeight:600,color:d.color}}>{d.label}</label>
-            <input type="datetime-local" value={f[d.key]} onChange={e=>sF({...f,[d.key]:e.target.value})} style={{...iS,borderColor:f[d.key]?d.color:C.bd}}/>
+            <input type="datetime-local" value={f[d.key]} onChange={e=>sF({...f,[d.key]:e.target.value})} style={{...iS(),borderColor:f[d.key]?d.color:C.bd}}/>
           </div>)}
 
-          <div style={{gridColumn:"span 3"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Текст контента</label><textarea value={f.scenario} onChange={e=>sF({...f,scenario:e.target.value})} rows={3} style={{...iS,resize:"vertical"}}/></div>
+          <div style={{gridColumn:"span 3"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Текст контента</label><textarea value={f.scenario} onChange={e=>sF({...f,scenario:e.target.value})} rows={3} style={{...iS(),resize:"vertical"}}/></div>
         </div>
         <div style={{display:"flex",gap:10,marginTop:16}}><Btn onClick={sub}>{editId?"Сохранить":"Добавить"}</Btn><Btn primary={false} onClick={()=>{setShow(false);setEditId(null);}}>Отмена</Btn></div>
       </Card>}
@@ -4486,7 +3866,7 @@ function StoriesCarouselTab({userId}:{userId:string}){
               {editTitleId===car.id
                 ? <input autoFocus value={editTitleVal} onChange={e=>setEditTitleVal(e.target.value)}
                     onBlur={()=>saveTitle(car.id)} onKeyDown={e=>{if(e.key==="Enter")saveTitle(car.id);if(e.key==="Escape")setEditTitleId(null);}}
-                    style={{...iS,padding:"6px 10px",fontSize:15,fontWeight:700,width:240}}/>
+                    style={{...iS(),padding:"6px 10px",fontSize:15,fontWeight:700,width:240}}/>
                 : <span style={{fontSize:15,fontWeight:700,color:C.t1,cursor:"pointer"}} onDoubleClick={()=>{setEditTitleId(car.id);setEditTitleVal(car.title);}}>{car.title}</span>
               }
               <span style={{fontSize:11,color:C.t2,background:C.bd,borderRadius:20,padding:"2px 8px"}}>{slots.length}/15 сторис</span>
@@ -4652,11 +4032,11 @@ function PnlPage({userId}:{userId:string}){
     </div>
     <div style={{display:"flex",justifyContent:"space-between",marginBottom:20}}><div style={{fontSize:18,fontWeight:600}}>Транзакции</div><Btn onClick={()=>setShow(!show)}>+ Транзакция</Btn></div>
     {show&&<Card style={{marginBottom:20}}><div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:14}}>
-      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Тип</label><select value={f.type} onChange={e=>sF({...f,type:e.target.value})} style={iS}><option value="income">Доход</option><option value="expense">Расход</option></select></div>
-      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Сумма</label><input type="number" value={f.amount} onChange={e=>sF({...f,amount:e.target.value})} style={iS}/></div>
-      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Категория</label><select value={f.category} onChange={e=>sF({...f,category:e.target.value})} style={iS}>{cats.map(c=><option key={c}>{c}</option>)}</select></div>
-      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Дата</label><input type="date" value={f.date} onChange={e=>sF({...f,date:e.target.value})} style={iS}/></div>
-      <div style={{gridColumn:"span 2"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Комментарий</label><input value={f.comment} onChange={e=>sF({...f,comment:e.target.value})} style={iS}/></div>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Тип</label><select value={f.type} onChange={e=>sF({...f,type:e.target.value})} style={iS()}><option value="income">Доход</option><option value="expense">Расход</option></select></div>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Сумма</label><input type="number" value={f.amount} onChange={e=>sF({...f,amount:e.target.value})} style={iS()}/></div>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Категория</label><select value={f.category} onChange={e=>sF({...f,category:e.target.value})} style={iS()}>{cats.map(c=><option key={c}>{c}</option>)}</select></div>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Дата</label><input type="date" value={f.date} onChange={e=>sF({...f,date:e.target.value})} style={iS()}/></div>
+      <div style={{gridColumn:"span 2"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Комментарий</label><input value={f.comment} onChange={e=>sF({...f,comment:e.target.value})} style={iS()}/></div>
     </div><div style={{display:"flex",gap:10,marginTop:16}}><Btn onClick={sub}>Добавить</Btn><Btn primary={false} onClick={()=>setShow(false)}>Отмена</Btn></div></Card>}
     <Card style={{padding:0,overflow:"hidden"}}>{tx.length===0?<div style={{padding:"48px",textAlign:"center",color:C.t2}}>Нет транзакций</div>:<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:14}}><thead><tr style={{borderBottom:"2px solid "+C.bd}}>{["Дата","Тип","Сумма","Категория","Комментарий",""].map((h,i)=><th key={i} style={{padding:"14px 16px",textAlign:"left",fontSize:12,fontWeight:600,color:C.t2,textTransform:"uppercase"}}>{h}</th>)}</tr></thead><tbody>{tx.map((t:any)=><tr key={t.id} style={{borderBottom:"1px solid "+C.bd}}><td style={{padding:"14px 16px",fontSize:13}}>{t.date}</td><td style={{padding:"14px 16px"}}><Tag label={t.type==="income"?"Доход":"Расход"} color={t.type==="income"?C.g:C.r}/></td><td style={{padding:"14px 16px",fontWeight:600,color:t.type==="income"?C.g:C.r}}>{(t.type==="income"?"+":"-")+fmt$(t.amount)} ₽</td><td style={{padding:"14px 16px"}}>{t.category}</td><td style={{padding:"14px 16px",color:C.t2}}>{t.comment||"-"}</td><td style={{padding:"14px 8px"}}><button onClick={()=>remove(t.id)} style={{width:28,height:28,borderRadius:6,border:"none",background:C.bg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><I path="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" size={12} color={C.r} sw={2}/></button></td></tr>)}</tbody></table></div>}</Card>
   </>;
@@ -4786,9 +4166,9 @@ function MediaPage({userId}:{userId:string}){
     {show&&<Card style={{marginBottom:20}}>
       <div style={{fontSize:14,fontWeight:600,marginBottom:14}}>Добавить данные</div>
       <div style={{display:"grid",gridTemplateColumns:isMobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:14}}>
-        <div style={{gridColumn:"1/-1"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Дата</label><input type="date" value={f.date} onChange={e=>sF({...f,date:e.target.value})} style={iS}/></div>
-        {([["ig","Instagram (подписчики)"],["yt","YouTube (подписчики)"],["tg","Telegram (подписчики)"],["oth","Другие"]] as const).map(([k,l])=><div key={k}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>{l}</label><input type="number" value={(f as any)[k]} onChange={e=>sF({...f,[k]:+e.target.value})} style={iS}/></div>)}
-        {([["ig_story","Охват Stories IG"],["tg_story","Охват Telegram"]] as const).map(([k,l])=><div key={k} style={{gridColumn:"span 2"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>{l}</label><input type="number" value={(f as any)[k]} onChange={e=>sF({...f,[k]:+e.target.value})} style={iS}/></div>)}
+        <div style={{gridColumn:"1/-1"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Дата</label><input type="date" value={f.date} onChange={e=>sF({...f,date:e.target.value})} style={iS()}/></div>
+        {([["ig","Instagram (подписчики)"],["yt","YouTube (подписчики)"],["tg","Telegram (подписчики)"],["oth","Другие"]] as const).map(([k,l])=><div key={k}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>{l}</label><input type="number" value={(f as any)[k]} onChange={e=>sF({...f,[k]:+e.target.value})} style={iS()}/></div>)}
+        {([["ig_story","Охват Stories IG"],["tg_story","Охват Telegram"]] as const).map(([k,l])=><div key={k} style={{gridColumn:"span 2"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>{l}</label><input type="number" value={(f as any)[k]} onChange={e=>sF({...f,[k]:+e.target.value})} style={iS()}/></div>)}
       </div>
       <div style={{display:"flex",gap:10,marginTop:16}}><Btn onClick={sub}>Сохранить</Btn><Btn primary={false} onClick={()=>setShow(false)}>Отмена</Btn></div>
     </Card>}
@@ -4875,11 +4255,11 @@ function AdsPage({userId}:{userId:string}){
 
     <div style={{display:"flex",justifyContent:"space-between",marginBottom:20}}><div style={{fontSize:18,fontWeight:600}}>Рекламные кампании</div><Btn onClick={()=>setShow(!show)}>+ Кампания</Btn></div>
     {show&&<Card style={{marginBottom:20}}><div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:14}}>
-      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Название</label><input value={f.name} onChange={e=>sF({...f,name:e.target.value})} style={iS}/></div>
-      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Платформа</label><select value={f.platform} onChange={e=>sF({...f,platform:e.target.value})} style={iS}>{SRCS.map(s=><option key={s}>{s}</option>)}</select></div>
-      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Статус</label><select value={f.status} onChange={e=>sF({...f,status:e.target.value})} style={iS}><option value="active">Активна</option><option value="paused">Пауза</option><option value="done">Завершена</option></select></div>
-      {([["budget","Бюджет"],["spent","Потрачено"],["leads","Лиды"],["revenue","Выручка"],["reach","Охват"],["impressions","Показы"],["clicks","Клики"],["period","Период"]] as const).map(([k,l])=><div key={k}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>{l}</label><input type={k==="period"?"text":"number"} value={(f as any)[k]} onChange={e=>sF({...f,[k]:e.target.value})} style={iS}/></div>)}
-      <div style={{gridColumn:"span 3"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Описание</label><input value={f.description} onChange={e=>sF({...f,description:e.target.value})} style={iS}/></div>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Название</label><input value={f.name} onChange={e=>sF({...f,name:e.target.value})} style={iS()}/></div>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Платформа</label><select value={f.platform} onChange={e=>sF({...f,platform:e.target.value})} style={iS()}>{SRCS.map(s=><option key={s}>{s}</option>)}</select></div>
+      <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Статус</label><select value={f.status} onChange={e=>sF({...f,status:e.target.value})} style={iS()}><option value="active">Активна</option><option value="paused">Пауза</option><option value="done">Завершена</option></select></div>
+      {([["budget","Бюджет"],["spent","Потрачено"],["leads","Лиды"],["revenue","Выручка"],["reach","Охват"],["impressions","Показы"],["clicks","Клики"],["period","Период"]] as const).map(([k,l])=><div key={k}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>{l}</label><input type={k==="period"?"text":"number"} value={(f as any)[k]} onChange={e=>sF({...f,[k]:e.target.value})} style={iS()}/></div>)}
+      <div style={{gridColumn:"span 3"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Описание</label><input value={f.description} onChange={e=>sF({...f,description:e.target.value})} style={iS()}/></div>
     </div><div style={{display:"flex",gap:10,marginTop:16}}><Btn onClick={sub}>Добавить</Btn><Btn primary={false} onClick={()=>setShow(false)}>Отмена</Btn></div></Card>}
 
     <Card style={{padding:0,overflow:"hidden"}}>{camps.length===0?<div style={{padding:"48px",textAlign:"center",color:C.t2}}>Нет кампаний</div>:<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:14}}><thead><tr style={{borderBottom:"2px solid "+C.bd}}>{["Название","Платформа","Бюджет","Потрачено","Показы","Клики","CTR","Лиды","CPL","Статус",""].map((h,i)=><th key={i} style={{padding:"12px 14px",textAlign:"left",fontSize:11,fontWeight:600,color:C.t2,textTransform:"uppercase"}}>{h}</th>)}</tr></thead><tbody>{camps.map((c:any)=>{
@@ -5168,24 +4548,24 @@ function CallsPage({userId}:{userId:string}){
           {editCall&&<button onClick={()=>{if(confirm("Удалить созвон?"))remove(editCall.id).then(()=>setModal(false));}} style={{fontSize:12,color:C.r,background:C.r+"10",border:"none",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontWeight:600}}>Удалить</button>}
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
-          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Название созвона</label><input value={f.title} onChange={e=>sF({...f,title:e.target.value})} placeholder="Разбор воронки с Игнатом..." style={iS}/></div>
-          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Дата</label><input type="date" value={f.date} onChange={e=>sF({...f,date:e.target.value})} style={iS}/></div>
+          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Название созвона</label><input value={f.title} onChange={e=>sF({...f,title:e.target.value})} placeholder="Разбор воронки с Игнатом..." style={iS()}/></div>
+          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Дата</label><input type="date" value={f.date} onChange={e=>sF({...f,date:e.target.value})} style={iS()}/></div>
           <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12}}>
-            <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Начало</label><input type="time" value={f.time_start} onChange={e=>sF({...f,time_start:e.target.value})} style={iS}/></div>
-            <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Конец</label><input type="time" value={f.time_end} onChange={e=>sF({...f,time_end:e.target.value})} style={iS}/></div>
+            <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Начало</label><input type="time" value={f.time_start} onChange={e=>sF({...f,time_start:e.target.value})} style={iS()}/></div>
+            <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Конец</label><input type="time" value={f.time_end} onChange={e=>sF({...f,time_end:e.target.value})} style={iS()}/></div>
           </div>
           <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12}}>
-            <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Сеттер</label><input value={f.setter_name} onChange={e=>sF({...f,setter_name:e.target.value})} placeholder="Кто назначил..." style={iS}/></div>
-            <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Ответственный</label><input value={f.responsible_name} onChange={e=>sF({...f,responsible_name:e.target.value})} placeholder="Кто проводит..." style={iS}/></div>
+            <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Сеттер</label><input value={f.setter_name} onChange={e=>sF({...f,setter_name:e.target.value})} placeholder="Кто назначил..." style={iS()}/></div>
+            <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Ответственный</label><input value={f.responsible_name} onChange={e=>sF({...f,responsible_name:e.target.value})} placeholder="Кто проводит..." style={iS()}/></div>
           </div>
           <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Тип созвона</label>
-            <select value={f.goal} onChange={e=>sF({...f,goal:e.target.value})} style={iS}>
+            <select value={f.goal} onChange={e=>sF({...f,goal:e.target.value})} style={iS()}>
               {CALL_GOALS.map(g=><option key={g}>{g}</option>)}
             </select>
           </div>
-          {f.goal==="Своя цель"&&<div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Название</label><input value={f.custom_goal} onChange={e=>sF({...f,custom_goal:e.target.value})} placeholder="Введи название..." style={iS}/></div>}
-          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Ссылка на встречу</label><input value={f.link} onChange={e=>sF({...f,link:e.target.value})} placeholder="zoom.us/j/..." style={iS}/></div>
-          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Комментарий</label><textarea value={f.description} onChange={e=>sF({...f,description:e.target.value})} rows={2} style={{...iS,resize:"none"}}/></div>
+          {f.goal==="Своя цель"&&<div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Название</label><input value={f.custom_goal} onChange={e=>sF({...f,custom_goal:e.target.value})} placeholder="Введи название..." style={iS()}/></div>}
+          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Ссылка на встречу</label><input value={f.link} onChange={e=>sF({...f,link:e.target.value})} placeholder="zoom.us/j/..." style={iS()}/></div>
+          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Комментарий</label><textarea value={f.description} onChange={e=>sF({...f,description:e.target.value})} rows={2} style={{...iS(),resize:"none"}}/></div>
           {editCall&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:C.bg,borderRadius:10}}>
             <button onClick={()=>{update(editCall.id,{completed:!editCall.completed});setEditCall({...editCall,completed:!editCall.completed});}} style={{width:22,height:22,borderRadius:6,border:`2px solid ${editCall.completed?C.g:C.bd}`,background:editCall.completed?C.g:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
               {editCall.completed&&<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
@@ -5222,14 +4602,14 @@ function CalcPage(){
     <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:"28px 36px",marginBottom:24,color:"#fff"}}><div style={{fontSize:20,fontWeight:700}}>Калькулятор конверсий</div><div style={{fontSize:14,opacity:0.7,marginTop:4}}>Введи цель - платформа посчитает</div></div>
     <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:isMobile?12:20,marginBottom:isMobile?16:24}}>
       <Card><div style={{fontSize:16,fontWeight:600,marginBottom:16}}>Цель</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Сумма</label><input type="number" value={goal.amount} onChange={e=>sGoal({...goal,amount:+e.target.value})} style={iS}/></div>
-        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Период</label><select value={goal.period} onChange={e=>sGoal({...goal,period:e.target.value})} style={iS}><option value="month">Месяц</option><option value="quarter">Квартал</option></select></div>
+        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Сумма</label><input type="number" value={goal.amount} onChange={e=>sGoal({...goal,amount:+e.target.value})} style={iS()}/></div>
+        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Период</label><select value={goal.period} onChange={e=>sGoal({...goal,period:e.target.value})} style={iS()}><option value="month">Месяц</option><option value="quarter">Квартал</option></select></div>
       </div></Card>
       <Card><div style={{fontSize:16,fontWeight:600,marginBottom:16}}>Воронка</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Чек</label><input type="number" value={p.check} onChange={e=>sP({...p,check:+e.target.value||1})} style={iS}/></div>
-        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Звонок→продажа %</label><input type="number" value={p.convCall} onChange={e=>sP({...p,convCall:+e.target.value||1})} style={iS}/></div>
-        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Лид→звонок %</label><input type="number" value={p.convLead} onChange={e=>sP({...p,convLead:+e.target.value||1})} style={iS}/></div>
-        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Трафик→лид %</label><input type="number" value={p.convTraffic} onChange={e=>sP({...p,convTraffic:+e.target.value||1})} style={iS}/></div>
+        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Чек</label><input type="number" value={p.check} onChange={e=>sP({...p,check:+e.target.value||1})} style={iS()}/></div>
+        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Звонок→продажа %</label><input type="number" value={p.convCall} onChange={e=>sP({...p,convCall:+e.target.value||1})} style={iS()}/></div>
+        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Лид→звонок %</label><input type="number" value={p.convLead} onChange={e=>sP({...p,convLead:+e.target.value||1})} style={iS()}/></div>
+        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Трафик→лид %</label><input type="number" value={p.convTraffic} onChange={e=>sP({...p,convTraffic:+e.target.value||1})} style={iS()}/></div>
       </div></Card>
     </div>
     <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(3,1fr)",gap:16}}>
@@ -5318,11 +4698,11 @@ function LinksPage({userId}:{userId:string}){
     {showForm&&<div style={{background:C.w,borderRadius:16,padding:"22px 24px",marginBottom:24,boxShadow:"0 4px 24px rgba(0,0,0,0.08)",border:"1px solid "+C.bd}}>
       <div style={{fontSize:15,fontWeight:700,marginBottom:18,color:C.t1}}>{editId?"Редактировать ссылку":"Новая ссылка"}</div>
       <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:14,marginBottom:14}}>
-        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Название *</label><input value={f.title} onChange={e=>sF({...f,title:e.target.value})} placeholder="Google Analytics" style={iS}/></div>
-        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>URL *</label><input value={f.url} onChange={e=>sF({...f,url:e.target.value})} placeholder="analytics.google.com" style={iS}/></div>
-        <div style={{gridColumn:"span 2"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Описание</label><input value={f.description} onChange={e=>sF({...f,description:e.target.value})} placeholder="Краткое описание что это и зачем..." style={iS}/></div>
+        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Название *</label><input value={f.title} onChange={e=>sF({...f,title:e.target.value})} placeholder="Google Analytics" style={iS()}/></div>
+        <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>URL *</label><input value={f.url} onChange={e=>sF({...f,url:e.target.value})} placeholder="analytics.google.com" style={iS()}/></div>
+        <div style={{gridColumn:"span 2"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Описание</label><input value={f.description} onChange={e=>sF({...f,description:e.target.value})} placeholder="Краткое описание что это и зачем..." style={iS()}/></div>
         <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Категория</label>
-          <input value={f.category} onChange={e=>sF({...f,category:e.target.value})} list="cats" style={iS} placeholder="Общее"/>
+          <input value={f.category} onChange={e=>sF({...f,category:e.target.value})} list="cats" style={iS()} placeholder="Общее"/>
           <datalist id="cats">{DEFAULT_CATS.map(c=><option key={c} value={c}/>)}</datalist>
         </div>
         <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Цвет карточки</label>
@@ -5342,7 +4722,7 @@ function LinksPage({userId}:{userId:string}){
     <div style={{display:"flex",gap:12,marginBottom:20,alignItems:"center",flexWrap:"wrap"}}>
       <div style={{position:"relative",flex:"0 0 260px"}}>
         <svg style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Поиск по ссылкам..." style={{...iS,paddingLeft:34}}/>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Поиск по ссылкам..." style={{...iS(),paddingLeft:34}}/>
       </div>
       <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
         {allCategories.map(cat=><button key={cat} onClick={()=>setActiveCategory(cat)} style={{padding:"7px 14px",borderRadius:20,border:"1px solid "+(activeCategory===cat?C.a:C.bd),background:activeCategory===cat?C.a:"transparent",color:activeCategory===cat?"#fff":C.t2,fontSize:12,fontWeight:activeCategory===cat?600:400,cursor:"pointer",whiteSpace:"nowrap"}}>{cat}</button>)}
@@ -5475,7 +4855,7 @@ function FilesPage({userId}:{userId:string}){
       <div style={{fontSize:15,fontWeight:700,marginBottom:14}}>Загрузить файл</div>
       <div style={{marginBottom:12}}>
         <label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Название (необязательно)</label>
-        <input value={fName} onChange={e=>setFName(e.target.value)} placeholder="Мой файл..." style={iS}/>
+        <input value={fName} onChange={e=>setFName(e.target.value)} placeholder="Мой файл..." style={iS()}/>
       </div>
       <div
         onDragOver={e=>{e.preventDefault();setDragging(true);}}
@@ -5504,7 +4884,7 @@ function FilesPage({userId}:{userId:string}){
     {/* Search */}
     <div style={{position:"relative",marginBottom:16,maxWidth:320}}>
       <svg style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Поиск файлов..." style={{...iS,paddingLeft:34}}/>
+      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Поиск файлов..." style={{...iS(),paddingLeft:34}}/>
     </div>
 
     {/* Table */}
@@ -6529,31 +5909,31 @@ function MailingsPage({userId}:{userId:string}){
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
               <div>
                 <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Кому (получатель) *</label>
-                <input autoFocus placeholder="Иван Петров / Сегмент: Новые лиды" value={form.recipient} onChange={e=>setForm({...form,recipient:e.target.value})} style={iS}/>
+                <input autoFocus placeholder="Иван Петров / Сегмент: Новые лиды" value={form.recipient} onChange={e=>setForm({...form,recipient:e.target.value})} style={iS()}/>
               </div>
               <div>
                 <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Цель рассылки *</label>
-                <input placeholder="Прогрев, Продажа курса, Реактивация..." value={form.goal} onChange={e=>setForm({...form,goal:e.target.value})} style={iS}/>
+                <input placeholder="Прогрев, Продажа курса, Реактивация..." value={form.goal} onChange={e=>setForm({...form,goal:e.target.value})} style={iS()}/>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
                 <div>
                   <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Дата и время</label>
-                  <input type="datetime-local" value={form.scheduled_at} onChange={e=>setForm({...form,scheduled_at:e.target.value})} style={iS}/>
+                  <input type="datetime-local" value={form.scheduled_at} onChange={e=>setForm({...form,scheduled_at:e.target.value})} style={iS()}/>
                 </div>
                 <div>
                   <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Статус</label>
-                  <select value={form.status} onChange={e=>setForm({...form,status:e.target.value})} style={iS}>
+                  <select value={form.status} onChange={e=>setForm({...form,status:e.target.value})} style={iS()}>
                     {MAILING_STATUSES.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}
                   </select>
                 </div>
               </div>
               <div>
                 <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Ссылка на чат (Instagram, Telegram...)</label>
-                <input placeholder="https://t.me/username" value={form.chat_url} onChange={e=>setForm({...form,chat_url:e.target.value})} style={iS}/>
+                <input placeholder="https://t.me/username" value={form.chat_url} onChange={e=>setForm({...form,chat_url:e.target.value})} style={iS()}/>
               </div>
               <div>
                 <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Текст / Контент рассылки</label>
-                <textarea rows={4} placeholder="Текст сообщения..." value={form.content} onChange={e=>setForm({...form,content:e.target.value})} style={{...iS,resize:"vertical"}}/>
+                <textarea rows={4} placeholder="Текст сообщения..." value={form.content} onChange={e=>setForm({...form,content:e.target.value})} style={{...iS(),resize:"vertical"}}/>
               </div>
             </div>
             <div style={{display:"flex",gap:10,marginTop:24,justifyContent:"flex-end"}}>
@@ -7515,7 +6895,7 @@ function ToolsPage(){
         {PRESETS.map(m=><button key={m} onClick={()=>{if(!running){setSelectedPreset(m);setUseCustom(false);}}} disabled={running} style={{padding:"8px 16px",borderRadius:10,border:"2px solid "+((!useCustom&&selectedPreset===m)?C.a:C.bd),background:(!useCustom&&selectedPreset===m)?C.a+"12":"transparent",color:(!useCustom&&selectedPreset===m)?C.a:C.t1,fontWeight:600,fontSize:14,cursor:running?"not-allowed":"pointer",opacity:running?0.5:1}}>{m} мин</button>)}
       </div>
       <div style={{display:"flex",gap:8,alignItems:"center"}}>
-        <input type="number" placeholder="Свои минуты..." value={customMins} onChange={e=>{if(!running){setCustomMins(e.target.value);setUseCustom(true);}}} disabled={running} min={1} max={180} style={{...iS,width:160,padding:"8px 12px",fontSize:14}}/>
+        <input type="number" placeholder="Свои минуты..." value={customMins} onChange={e=>{if(!running){setCustomMins(e.target.value);setUseCustom(true);}}} disabled={running} min={1} max={180} style={{...iS(),width:160,padding:"8px 12px",fontSize:14}}/>
         {useCustom&&+customMins>0&&<span style={{fontSize:13,color:C.a,fontWeight:600}}>{customMins} мин выбрано</span>}
       </div>
     </Card>
@@ -8084,7 +7464,7 @@ function BoardPage({userId}:{userId:string}){
                       ?<input autoFocus value={renameVal} onChange={e=>setRenameVal(e.target.value)}
                           onKeyDown={e=>{if(e.key==="Enter")renameBoard();if(e.key==="Escape")setRenamingId(null);}}
                           onBlur={renameBoard}
-                          style={{...iS,fontSize:14,fontWeight:700,padding:"4px 8px"}} onClick={e=>e.stopPropagation()}/>
+                          style={{...iS(),fontSize:14,fontWeight:700,padding:"4px 8px"}} onClick={e=>e.stopPropagation()}/>
                       :<div style={{fontSize:15,fontWeight:700,color:C.t1,marginBottom:4}}>{b.name}</div>
                     }
                     <div style={{fontSize:11,color:C.t2,marginBottom:12}}>{new Date(b.created_at).toLocaleDateString("ru-RU")}</div>
@@ -8115,7 +7495,7 @@ function BoardPage({userId}:{userId:string}){
               <div style={{fontSize:18,fontWeight:700,marginBottom:16}}>Новая доска</div>
               <input autoFocus value={newBoardName} onChange={e=>setNewBoardName(e.target.value)}
                 onKeyDown={e=>{if(e.key==="Enter")createBoard();}}
-                placeholder="Название доски..." style={iS}/>
+                placeholder="Название доски..." style={iS()}/>
               <div style={{display:"flex",gap:10,marginTop:20,justifyContent:"flex-end"}}>
                 <Btn onClick={()=>setNewBoardModal(false)} primary={false}>Отмена</Btn>
                 <Btn onClick={createBoard}>Создать</Btn>
@@ -8509,7 +7889,7 @@ function BoardPage({userId}:{userId:string}){
             <div style={{fontSize:16,fontWeight:700,marginBottom:14}}>🔗 Добавить ссылку</div>
             <input autoFocus value={linkUrl} onChange={e=>setLinkUrl(e.target.value)} placeholder="https://example.com"
               onKeyDown={e=>{if(e.key==="Enter")fetchLink();if(e.key==="Escape")setLinkModal(false);}}
-              style={iS}/>
+              style={iS()}/>
             <div style={{display:"flex",gap:10,marginTop:16,justifyContent:"flex-end"}}>
               <Btn onClick={()=>setLinkModal(false)} primary={false}>Отмена</Btn>
               <Btn onClick={fetchLink} disabled={!linkUrl.trim()||linkLoading}>{linkLoading?"Загрузка...":"Добавить"}</Btn>
