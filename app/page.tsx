@@ -4045,6 +4045,23 @@ function ContentPage({userId}:{userId:string}){
     setEditId(item.id);setShow(true);
   };
 
+  const[calDragId,setCalDragId]=useState<string|null>(null);
+  const[calDragOver,setCalDragOver]=useState<string|null>(null); // dateStr
+
+  const onCalDragStart=(id:string,e:React.DragEvent)=>{
+    setCalDragId(id);
+    e.dataTransfer.effectAllowed="move";
+  };
+  const onCalDragEnd=()=>{setCalDragId(null);setCalDragOver(null);};
+  const onCalDayDragOver=(dateStr:string,e:React.DragEvent)=>{e.preventDefault();e.dataTransfer.dropEffect="move";setCalDragOver(dateStr);};
+  const onCalDayDrop=async(dateStr:string,e:React.DragEvent)=>{
+    e.preventDefault();
+    if(calDragId&&calDragId!==dateStr){
+      await update(calDragId,{date:dateStr,publish_date:dateStr});
+    }
+    setCalDragId(null);setCalDragOver(null);
+  };
+
   const CONTENT_STAGES=[
     {id:"idea",label:"💡 Идея",color:"#8B5CF6",hint:"Концепции и темы ждут своей очереди"},
     {id:"progress",label:"🎬 Разработка",color:"#F59E0B",hint:"Съёмка, написание текста, сбор материала"},
@@ -4345,29 +4362,60 @@ function ContentPage({userId}:{userId:string}){
           <button onClick={()=>setCalMonth(m=>m.m===11?{y:m.y+1,m:0}:{y:m.y,m:m.m+1})} style={{width:34,height:34,border:"1px solid "+C.bd,borderRadius:9,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
           <button onClick={()=>setCalMonth({y:new Date().getFullYear(),m:new Date().getMonth()})} style={{padding:"6px 12px",background:C.a+"14",color:C.a,border:"1px solid "+C.a+"30",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer"}}>Сегодня</button>
         </div>
-        {/* Stage legend */}
-        <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+        <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
+          <span style={{fontSize:11,color:C.t2,opacity:0.6}}>Перетащи карточку на нужный день</span>
           {CONTENT_STAGES.map(s=>(
             <div key={s.id} style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:C.t2}}>
               <div style={{width:8,height:8,borderRadius:"50%",background:s.color}}/>
-              {s.label.replace(/[💡🎬✂️🚀] /,"")}
+              {s.label.replace(/[^\s]+\s/,"")}
             </div>
           ))}
         </div>
       </div>
+
       <Card style={{padding:0,overflow:"hidden"}}>
         <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",borderBottom:"2px solid "+C.bd,background:C.ib}}>
-          {["Пн","Вт","Ср","Чт","Пт","Сб","Вс"].map(d=><div key={d} style={{padding:"10px",textAlign:"center",fontSize:11,fontWeight:700,color:C.t2,letterSpacing:0.5}}>{d}</div>)}
+          {["Пн","Вт","Ср","Чт","Пт","Сб","Вс"].map(d=>(
+            <div key={d} style={{padding:"10px",textAlign:"center",fontSize:11,fontWeight:700,color:C.t2,letterSpacing:0.5}}>{d}</div>
+          ))}
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)"}}>
           {calDays.map((d,i)=>{
+            const dateStr=d?ds(d):"";
             const dayItems=d?itemsForDay(d):[];
-            const isT=d&&ds(d)===today();
-            return <div key={i}
-              onClick={()=>{if(d){sF({...emptyF(),publish_date:ds(d),date:ds(d)});setShow(true);setTab("list");}}}
-              style={{minHeight:110,padding:"6px",borderRight:i%7!==6?"1px solid "+C.bd+"66":"none",borderBottom:"1px solid "+C.bd+"66",background:isT?"rgba(37,99,235,0.03)":"transparent",cursor:d?"pointer":"default",transition:"background 0.1s"}}
-              onMouseEnter={e=>{if(d)(e.currentTarget as HTMLElement).style.background=isT?"rgba(37,99,235,0.06)":C.ib;}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=isT?"rgba(37,99,235,0.03)":"transparent";}}>
+            const isT=d&&dateStr===today();
+            const isDragOver=calDragOver===dateStr&&!!dateStr;
+            const isDraggingDay=calDragId&&dayItems.some((x:any)=>x.id===calDragId);
+
+            return<div key={i}
+              onDragOver={e=>{if(d)onCalDayDragOver(dateStr,e);}}
+              onDrop={e=>{if(d)onCalDayDrop(dateStr,e);}}
+              onDragLeave={e=>{
+                // Only clear if leaving the cell entirely
+                if(!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)){
+                  setCalDragOver(null);
+                }
+              }}
+              onClick={()=>{if(d&&!calDragId){sF({...emptyF(),publish_date:dateStr,date:dateStr});setShow(true);setTab("list");}}}
+              style={{
+                minHeight:110,padding:"6px",
+                borderRight:i%7!==6?"1px solid "+C.bd+"66":"none",
+                borderBottom:"1px solid "+C.bd+"66",
+                background:isDragOver?"rgba(37,99,235,0.08)":(isT?"rgba(37,99,235,0.03)":"transparent"),
+                cursor:d?"pointer":"default",
+                transition:"background 0.15s",
+                outline:isDragOver?"2px dashed "+C.a:"none",
+                outlineOffset:-2,
+                position:"relative",
+              }}
+              onMouseEnter={e=>{if(d&&!calDragId)(e.currentTarget as HTMLElement).style.background=isT?"rgba(37,99,235,0.06)":C.ib;}}
+              onMouseLeave={e=>{if(!isDragOver)(e.currentTarget as HTMLElement).style.background=isT?"rgba(37,99,235,0.03)":"transparent";}}>
+
+              {/* Drop indicator */}
+              {isDragOver&&<div style={{position:"absolute",inset:2,borderRadius:6,border:"2px dashed "+C.a,background:C.a+"06",pointerEvents:"none",zIndex:10,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <span style={{fontSize:10,color:C.a,fontWeight:600}}>📅 Перенести сюда</span>
+              </div>}
+
               {d&&<>
                 <div style={{display:"flex",justifyContent:"center",marginBottom:4}}>
                   <div style={{width:22,height:22,borderRadius:"50%",background:isT?C.a:"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -4377,17 +4425,38 @@ function ContentPage({userId}:{userId:string}){
                 {dayItems.slice(0,3).map((x:any)=>{
                   const stage=CONTENT_STAGES.find(s=>s.id===x.status);
                   const col=stage?.color||C.a;
+                  const isDragging=calDragId===x.id;
                   return<div key={x.id}
-                    onClick={e=>{e.stopPropagation();startEdit(x);setTab("list");}}
-                    style={{marginBottom:3,borderRadius:5,overflow:"hidden",border:"1px solid "+col+"30",background:col+"10",borderLeft:"2px solid "+col,cursor:"pointer",padding:"2px 5px"}}>
-                    {x.cover_url&&<img src={x.cover_url} style={{width:"100%",height:28,objectFit:"cover",display:"block",borderRadius:"2px 2px 0 0",marginBottom:2}} alt=""/>}
+                    draggable
+                    onDragStart={e=>{e.stopPropagation();onCalDragStart(x.id,e);}}
+                    onDragEnd={e=>{e.stopPropagation();onCalDragEnd();}}
+                    onClick={e=>{e.stopPropagation();if(!calDragId)startEdit(x);}}
+                    style={{
+                      marginBottom:3,borderRadius:5,overflow:"hidden",
+                      border:"1px solid "+col+"30",
+                      background:isDragging?"rgba(0,0,0,0.05)":col+"10",
+                      borderLeft:"2px solid "+col,
+                      cursor:"grab",padding:"2px 5px",
+                      opacity:isDragging?0.35:1,
+                      transform:isDragging?"scale(0.97)":"none",
+                      transition:"opacity 0.15s,transform 0.15s",
+                      userSelect:"none",
+                    }}>
+                    {x.cover_url&&!isDragging&&(
+                      <img src={x.cover_url} style={{width:"100%",height:28,objectFit:"cover",display:"block",borderRadius:"2px 2px 0 0",marginBottom:2}} alt=""/>
+                    )}
                     <div style={{display:"flex",alignItems:"center",gap:3}}>
                       <PlatformIcon pid={x.platform} size={9}/>
                       <span style={{fontSize:9,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1,color:C.t1,fontWeight:500}}>{x.topic}</span>
                     </div>
                   </div>;
                 })}
-                {dayItems.length>3&&<div style={{fontSize:9,color:C.t2,textAlign:"center",cursor:"pointer"}} onClick={e=>{e.stopPropagation();setCalMonth({y:d.getFullYear(),m:d.getMonth()});}}> +{dayItems.length-3} ещё</div>}
+                {dayItems.length>3&&(
+                  <div style={{fontSize:9,color:C.t2,textAlign:"center",cursor:"pointer",padding:"2px 0"}}
+                    onClick={e=>e.stopPropagation()}>
+                    +{dayItems.length-3} ещё
+                  </div>
+                )}
               </>}
             </div>;
           })}
