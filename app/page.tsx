@@ -329,7 +329,7 @@ function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onL
             el.style.transform="translateX(2px)";
           }
           const c=accent||"#4F8EF7";
-          el.style.boxShadow=`0 0 16px ${c}18`;
+          el.style.boxShadow="0 0 16px "+c+"18";
         }}
         onMouseLeave={e=>{
           const el=e.currentTarget as HTMLElement;
@@ -343,7 +343,7 @@ function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onL
           position:"absolute",left:0,top:"18%",bottom:"18%",width:3,
           borderRadius:"0 3px 3px 0",
           background:accent||"#4F8EF7",
-          boxShadow:`0 0 10px ${accent||"#4F8EF7"},0 0 20px ${accent||"#4F8EF7"}66`,
+          boxShadow:"0 0 10px "+(accent||"#4F8EF7")+",0 0 20px "+(accent||"#4F8EF7")+"66",
         }}/>}
 
         {/* Shimmer overlay on active */}
@@ -364,8 +364,8 @@ function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onL
             :isActive
               ?(isGrad?"linear-gradient(135deg,#86EFAC,#A78BFA)":accent?accent+"30":"rgba(79,142,247,0.25)")
               :"rgba(255,255,255,0.04)",
-          border:isActive?`1px solid ${accent||"#4F8EF7"}33`:"1px solid rgba(255,255,255,0.04)",
-          boxShadow:isActive&&accent?`0 0 12px ${accent}40,inset 0 1px 0 rgba(255,255,255,0.1)`
+          border:isActive?"1px solid "+(accent||"#4F8EF7")+"33":"1px solid rgba(255,255,255,0.04)",
+          boxShadow:isActive&&accent?"0 0 12px "+accent+"40,inset 0 1px 0 rgba(255,255,255,0.1)"
             :isActive?"0 0 12px rgba(79,142,247,0.4),inset 0 1px 0 rgba(255,255,255,0.1)":"none",
           transition:"all 0.2s",
         }}>
@@ -386,7 +386,7 @@ function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onL
         {!collapsed&&isActive&&<div style={{
           width:5,height:5,borderRadius:"50%",
           background:accent||"#4F8EF7",flexShrink:0,
-          boxShadow:`0 0 6px ${accent||"#4F8EF7"},0 0 12px ${accent||"#4F8EF7"}88`,
+          boxShadow:"0 0 6px "+(accent||"#4F8EF7")+",0 0 12px "+(accent||"#4F8EF7")+"88",
         }}/>}
       </button>
     );
@@ -1478,7 +1478,7 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
         {PERIODS.map(([p,l])=><button key={p} onClick={()=>{setPeriod(p as any);if(p===12)setStartMonth(0);else setStartMonth(Math.max(0,now.getMonth()-1));}} style={{padding:"5px 12px",border:"none",borderRadius:7,background:period===p?C.a:"transparent",color:period===p?"#fff":C.t2,fontSize:12,fontWeight:700,cursor:"pointer"}}>{l}</button>)}
       </div>
       <button onClick={()=>{setShowForm(!showForm);setEditGoal(null);}}
-        style={{padding:"8px 18px",background:C.a,color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer",boxShadow:`0 0 16px ${C.a}30`}}>
+        style={{padding:"8px 18px",background:C.a,color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer",boxShadow:"0 0 16px "+C.a+"30"}}>
         + Цель
       </button>
     </div>
@@ -2000,7 +2000,7 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
                 width:p+"%",borderRadius:99,
                 background:prgGradient(p),
                 transition:"width 0.6s cubic-bezier(0.34,1.56,0.64,1)",
-                boxShadow:`0 0 8px 1px ${prgColor(p)}66`,
+                boxShadow:"0 0 8px 1px "+prgColor(p)+"66",
               }}>
                 {/* Shine */}
                 <div style={{position:"absolute",top:1,left:4,right:8,height:3,borderRadius:99,background:"rgba(255,255,255,0.45)"}}/>
@@ -2011,7 +2011,7 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
                   width:p>=m?8:5,height:p>=m?8:5,borderRadius:"50%",
                   background:p>=m?prgColor(p):"rgba(0,0,0,0.15)",
                   border:p>=m?`2px solid white`:"none",
-                  boxShadow:p>=m?`0 0 6px ${prgColor(m)}88`:"none",
+                  boxShadow:p>=m?"0 0 6px "+prgColor(m)+"88":"none",
                   transition:"all 0.4s",zIndex:2,
                 }}/>
               ))}
@@ -2022,7 +2022,7 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
               flexShrink:0,minWidth:52,textAlign:"center",
               padding:"3px 10px",borderRadius:20,
               background:isAchieved?"linear-gradient(135deg,#4ADE80,#16A34A)":prgGradient(p),
-              boxShadow:`0 2px 8px ${prgColor(p)}44`,
+              boxShadow:"0 2px 8px "+prgColor(p)+"44",
               transition:"all 0.4s",
             }}>
               <span style={{fontSize:12,fontWeight:800,color:"#fff",textShadow:"0 1px 3px rgba(0,0,0,0.25)"}}>{p}%</span>
@@ -2035,7 +2035,7 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
         <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}} onClick={e=>e.stopPropagation()}>
           {!isAchieved&&<div style={{position:"relative"}}>
             <button onClick={()=>setPriorityMenu(isPriorityMenuOpen?null:g.id)}
-              style={{display:"flex",alignItems:"center",gap:4,padding:"5px 10px",borderRadius:20,border:`1px solid ${pr.color}33`,background:pr.color+"10",cursor:"pointer",fontSize:11,fontWeight:600,color:pr.color}}>
+              style={{display:"flex",alignItems:"center",gap:4,padding:"5px 10px",borderRadius:20,border:"1px solid "+pr.color+"33",background:pr.color+"10",cursor:"pointer",fontSize:11,fontWeight:600,color:pr.color}}>
               <span style={{animation:isUrgent?"pulse 1.5s ease-in-out infinite":"none"}}>{pr.icon}</span>
               <span>{pr.label}</span>
             </button>
@@ -2263,12 +2263,25 @@ function StrategyPage({userId}:{userId:string}){
   const[calModal,setCalModal]=useState<any>(null); // null | "new" | task object
   const[calForm,setCalForm]=useState({text:"",description:"",date:"",start_time:"",end_time:""});
 
-  // Merged tasks for calendar: kanban + goalTasks + calTasks
-  const allCalTasks=useMemo(()=>[
-    ...calTasks.data,
-    ...kanban.data.filter((t:any)=>t.date&&t.start_time).map((t:any)=>({...t,_src:"kanban"})),
-    ...goalTasks.data.filter((t:any)=>t.date&&t.start_time).map((t:any)=>({...t,_src:"goal"})),
-  ],[calTasks.data,kanban.data,goalTasks.data]);
+  // Merged tasks for calendar: calTasks + kanban (with date) + goalTasks (with date)
+  const allCalTasks=useMemo(()=>{
+    const cal=calTasks.data;
+    // Kanban tasks with date → show in calendar (auto-place time if missing)
+    const kb=kanban.data.filter((t:any)=>t.date).map((t:any)=>({
+      ...t,_src:"kanban",
+      start_time:t.start_time||"10:00",
+      end_time:t.end_time||(t.start_time?`${String(parseInt(t.start_time)+1).padStart(2,"0")}:00`:"11:00"),
+      auto_placed:!t.start_time,
+    }));
+    // Goal tasks with date
+    const gt=goalTasks.data.filter((t:any)=>t.date).map((t:any)=>({
+      ...t,_src:"goal",
+      start_time:t.start_time||"10:00",
+      end_time:t.end_time||(t.start_time?`${String(parseInt(t.start_time)+1).padStart(2,"0")}:00`:"11:00"),
+      auto_placed:!t.start_time,
+    }));
+    return[...cal,...kb,...gt];
+  },[calTasks.data,kanban.data,goalTasks.data]);
 
   // Smart free-slot finder: finds first free 1h slot 10:00–18:00
   const findFreeSlot=(dateStr:string)=>{
@@ -2297,18 +2310,28 @@ function StrategyPage({userId}:{userId:string}){
 
   const saveCalTask=async()=>{
     if(!calForm.text.trim())return;
-    const isAuto=!calForm.start_time;
-    const slot=isAuto?findFreeSlot(calForm.date||today()):{start:calForm.start_time,end:calForm.end_time};
+    const dateStr=calForm.date||today();
+    const hasTime=!!(calForm.start_time&&calForm.end_time);
+    const slot=hasTime?{start:calForm.start_time,end:calForm.end_time}:findFreeSlot(dateStr);
     const payload={
-      text:calForm.text,description:calForm.description,
-      date:calForm.date||today(),
-      start_time:slot.start,end_time:slot.end,
-      auto_placed:isAuto,manually_placed:!isAuto,
-      status:"todo",done:false,
+      text:calForm.text.trim(),
+      description:calForm.description||"",
+      date:dateStr,
+      start_time:slot.start,
+      end_time:slot.end,
+      auto_placed:!hasTime,
+      manually_placed:hasTime,
+      status:"todo",
+      done:false,
     };
-    if(calModal==="new")await calTasks.add(payload);
-    else await calTasks.update(calModal.id,{...payload,auto_placed:false,manually_placed:true});
+    if(calModal==="new"){
+      await calTasks.add(payload);
+    } else if(calModal&&typeof calModal==="object"&&!calModal._src){
+      // Only edit native cal_tasks, not kanban/goal
+      await calTasks.update(calModal.id,{...payload,auto_placed:false,manually_placed:true});
+    }
     setCalModal(null);
+    setCalForm({text:"",description:"",date:"",start_time:"",end_time:""});
   };
 
   const navCal=(dir:number)=>{
@@ -2524,7 +2547,7 @@ function StrategyPage({userId}:{userId:string}){
     const tdStr=today();
     const nowMin=new Date().getHours()*60+new Date().getMinutes();
     const nowTop=((nowMin-CAL_START*60)/60)*SLOT_H;
-    const tasksOnDay=(d:string)=>allCalTasks.filter((t:any)=>(t.date||t.start_date)===d&&t.start_time);
+    const tasksOnDay=(d:string)=>allCalTasks.filter((t:any)=>(t.date||t.start_date)===d);
 
     return<div id="cal-grid-inner" style={{display:"flex",background:C.w,borderRadius:16,border:"1px solid "+C.bd,overflow:"hidden",userSelect:"none"}}>
       {/* Time gutter */}
@@ -2561,7 +2584,7 @@ function StrategyPage({userId}:{userId:string}){
                   onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}/>
               ))}
               {/* Drop preview line */}
-              {isDrop&&dropPreview&&<div style={{position:"absolute",left:4,right:4,top:(dropPreview.min-CAL_START*60)/60*SLOT_H,height:2,background:C.a,borderRadius:2,zIndex:20,pointerEvents:"none",boxShadow:`0 0 8px ${C.a}60`}}/>}
+              {isDrop&&dropPreview&&<div style={{position:"absolute",left:4,right:4,top:(dropPreview.min-CAL_START*60)/60*SLOT_H,height:2,background:C.a,borderRadius:2,zIndex:20,pointerEvents:"none",boxShadow:"0 0 8px "+C.a+"60"}}/>}
               {/* Now line */}
               {isToday&&nowTop>0&&nowTop<CAL_HOURS*SLOT_H&&(
                 <div style={{position:"absolute",left:0,right:0,top:nowTop,zIndex:4,display:"flex",alignItems:"center",pointerEvents:"none"}}>
@@ -2586,11 +2609,11 @@ function StrategyPage({userId}:{userId:string}){
                 return<div key={t.id} id={`ct-${t.id}`}
                   style={{
                     position:"absolute",
-                    top:topPx,left:off?`${off*10}px`:"2px",
-                    width:off?`calc(90% - ${off*10}px)`:"94%",
+                    top:topPx,left:off?(off*10)+"px":"2px",
+                    width:off?"calc(90% - "+(off*10)+"px)":"94%",
                     height:heightPx,
-                    background:isDone?"rgba(34,197,94,0.08)":`${color}14`,
-                    border:isAuto?`1.5px dashed ${color}55`:`1.5px solid ${color}40`,
+                    background:isDone?"rgba(34,197,94,0.08)":color+"14",
+                    border:isAuto?"1.5px dashed "+color+"55":"1.5px solid "+color+"40",
                     borderLeft:`3px solid ${color}`,
                     borderRadius:7,padding:"4px 6px 4px 8px",
                     cursor:"grab",overflow:"hidden",zIndex:ti+2,
@@ -2610,7 +2633,7 @@ function StrategyPage({userId}:{userId:string}){
                     setDragTaskId(t.id);
                   }}
                   onClick={e=>{if(!dragTaskId&&Math.abs(e.movementX)<3)setCalModal(t);}}
-                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow=`0 2px 14px ${color}40`;(e.currentTarget as HTMLElement).style.zIndex="50";}}
+                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 2px 14px "+color+"40";(e.currentTarget as HTMLElement).style.zIndex="50";}}
                   onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow=isDone?"0 0 8px rgba(34,197,94,0.12)":"0 1px 3px rgba(0,0,0,0.07)";(e.currentTarget as HTMLElement).style.zIndex=String(ti+2);}}>
                   {/* Checkbox */}
                   <div style={{display:"flex",alignItems:"flex-start",gap:5}}>
@@ -2619,18 +2642,18 @@ function StrategyPage({userId}:{userId:string}){
                       if(t._src==="kanban")kanban.update(t.id,{status:done?"done":"todo",done});
                       else if(t._src==="goal")goalTasks.update(t.id,{status:done?"done":"todo",done});
                       else calTasks.update(t.id,{status:done?"done":"todo",done});}}
-                      style={{width:13,height:13,minWidth:13,borderRadius:3,border:`1.5px solid ${isDone?"#22C55E":color}`,background:isDone?"#22C55E":"transparent",cursor:"pointer",marginTop:1,display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s"}}>
+                      style={{width:13,height:13,minWidth:13,borderRadius:3,border:"1.5px solid "+(isDone?"#22C55E":color),background:isDone?"#22C55E":"transparent",cursor:"pointer",marginTop:1,display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s"}}>
                       {isDone&&<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5"><polyline points="20 6 9 17 4 12"/></svg>}
                     </button>
                     <div style={{flex:1,fontSize:11,fontWeight:700,color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:isDone?"line-through":"none",lineHeight:1.3}}>{t.text}</div>
                   </div>
-                  {heightPx>32&&<div className="ct-lbl" style={{fontSize:9,color:`${color}bb`,paddingLeft:18,marginTop:2}}>{t.start_time}–{t.end_time} · {fmtDur(dur)}</div>}
+                  {heightPx>32&&<div className="ct-lbl" style={{fontSize:9,color:color+"bb",paddingLeft:18,marginTop:2}}>{t.start_time}–{t.end_time} · {fmtDur(dur)}</div>}
                   {isAuto&&heightPx>44&&<div style={{fontSize:9,color:C.y,paddingLeft:18,fontStyle:"italic"}}>⚡ незапланировано</div>}
                   {/* Resize handle */}
                   <div className="cal-resize"
                     onMouseDown={e=>{e.stopPropagation();e.preventDefault();calResizeRef.current={id:t.id,startMin:st,endMin:et};setResizing(true);}}
                     style={{position:"absolute",bottom:0,left:0,right:0,height:10,cursor:"ns-resize",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                    <div style={{width:24,height:3,borderRadius:99,background:`${color}50`}}/>
+                    <div style={{width:24,height:3,borderRadius:99,background:color+"50"}}/>
                   </div>
                 </div>;
               })}
@@ -2677,8 +2700,8 @@ function StrategyPage({userId}:{userId:string}){
                 const color=isDone?"#22C55E":(t._src==="goal"?(goals.data.find((g:any)=>g.id===t.goal_id)?.color||C.a):typeColor(t.type||"biz"));
                 return<div key={t.id} onClick={e=>{e.stopPropagation();setCalModal(t);}}
                   style={{fontSize:10,padding:"2px 5px",borderRadius:4,marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
-                    background:isDone?"rgba(34,197,94,0.08)":`${color}14`,color,
-                    border:isAuto?`1px dashed ${color}40`:`1px solid ${color}25`,
+                    background:isDone?"rgba(34,197,94,0.08)":color+"14",color,
+                    border:isAuto?"1px dashed "+color+"40":"1px solid "+color+"25",
                     borderLeft:`2px solid ${color}`,textDecoration:isDone?"line-through":"none"}}>
                   {t.start_time&&<span style={{opacity:0.6,fontSize:9}}>{t.start_time} </span>}{t.text}
                 </div>;
@@ -2712,7 +2735,6 @@ function StrategyPage({userId}:{userId:string}){
     const t=isView?calModal:null;
     const isDone=t&&(t.status==="done"||t.done);
 
-    // View mode
     if(isView&&t){
       const color=isDone?"#22C55E":(t._src==="goal"?(goals.data.find((g:any)=>g.id===t.goal_id)?.color||C.a):typeColor(t.type||"biz"));
       return<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setCalModal(null)}>
@@ -2724,63 +2746,72 @@ function StrategyPage({userId}:{userId:string}){
           </div>
           {t.description&&<div style={{fontSize:13,color:C.t2,marginBottom:12,lineHeight:1.6}}>{t.description}</div>}
           <div style={{display:"flex",gap:12,fontSize:12,color:C.t2,marginBottom:20,flexWrap:"wrap"}}>
-            {(t.date||t.start_date)&&<span>📅 {t.date||t.start_date}</span>}
-            {t.start_time&&<span>🕐 {t.start_time}–{t.end_time}</span>}
+            {(t.date||t.start_date)&&<span>{"📅 "+(t.date||t.start_date)}</span>}
+            {t.start_time&&<span>{"🕐 "+t.start_time+"–"+t.end_time}</span>}
             {t._src==="kanban"&&<span>📋 Спринт</span>}
             {t._src==="goal"&&<span>🎯 Цель</span>}
           </div>
           <div style={{display:"flex",gap:10}}>
             <button onClick={()=>setCalModal({...t,_editing:true})}
-              style={{flex:1,padding:"9px",background:C.a+"14",color:C.a,border:"1px solid "+C.a+"30",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer"}}>✏️ Редактировать</button>
+              style={{flex:1,padding:"9px",background:C.a+"14",color:C.a,border:"1px solid "+C.a+"30",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer"}}>
+              {"✏️ Редактировать"}
+            </button>
             {!t._src&&<button onClick={()=>{calTasks.remove(t.id);setCalModal(null);}}
-              style={{padding:"9px 16px",background:C.r+"10",color:C.r,border:"1px solid "+C.r+"25",borderRadius:10,fontSize:13,cursor:"pointer"}}>🗑</button>}
+              style={{padding:"9px 16px",background:C.r+"10",color:C.r,border:"1px solid "+C.r+"25",borderRadius:10,fontSize:13,cursor:"pointer"}}>
+              {"🗑"}
+            </button>}
           </div>
         </div>
       </div>;
     }
 
-    // Edit/New mode
-    const task=isNew?null:calModal;
     return<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setCalModal(null)}>
       <div style={{background:C.w,borderRadius:18,padding:28,width:"100%",maxWidth:460,border:"1px solid "+C.bd,boxShadow:"0 24px 60px rgba(0,0,0,0.35)"}} onClick={e=>e.stopPropagation()}>
         <div style={{fontSize:17,fontWeight:700,color:C.t1,marginBottom:20}}>{isNew?"Новая задача":"Редактировать"}</div>
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
           <div>
-            <label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4}}>Название *</label>
-            <input autoFocus value={calForm.text} onChange={e=>setCalForm(f=>({...f,text:e.target.value}))}
-              placeholder="Название задачи" style={{...iS(),fontSize:13}}
-              defaultValue={task?.text||""}/>
+            <label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4}}>{"Название *"}</label>
+            <input autoFocus value={calForm.text}
+              onChange={e=>setCalForm(f=>({...f,text:e.target.value}))}
+              onKeyDown={e=>{if(e.key==="Enter")saveCalTask();}}
+              placeholder="Название задачи" style={{...iS(),fontSize:13}}/>
           </div>
           <div>
             <label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4}}>Описание</label>
-            <textarea value={calForm.description} onChange={e=>setCalForm(f=>({...f,description:e.target.value}))}
+            <textarea value={calForm.description}
+              onChange={e=>setCalForm(f=>({...f,description:e.target.value}))}
               rows={2} placeholder="Опционально"
               style={{...iS(),fontSize:13,resize:"vertical" as const}}/>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
-            <div style={{gridColumn:"span 3"}}>
-              <label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4}}>Дата</label>
-              <input type="date" value={calForm.date} onChange={e=>setCalForm(f=>({...f,date:e.target.value}))} style={{...iS(),fontSize:13}}/>
-            </div>
+          <div>
+            <label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4}}>Дата</label>
+            <input type="date" value={calForm.date}
+              onChange={e=>setCalForm(f=>({...f,date:e.target.value}))}
+              style={{...iS(),fontSize:13}}/>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
             <div>
               <label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4}}>Начало</label>
-              <input type="time" value={calForm.start_time} onChange={e=>setCalForm(f=>({...f,start_time:e.target.value}))} style={{...iS(),fontSize:13}}/>
+              <input type="time" value={calForm.start_time}
+                onChange={e=>setCalForm(f=>({...f,start_time:e.target.value}))}
+                style={{...iS(),fontSize:13}}/>
             </div>
             <div>
               <label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4}}>Конец</label>
-              <input type="time" value={calForm.end_time} onChange={e=>setCalForm(f=>({...f,end_time:e.target.value}))} style={{...iS(),fontSize:13}}/>
-            </div>
-            <div style={{display:"flex",alignItems:"flex-end"}}>
-              <span style={{fontSize:10,color:C.t2}}>Пусто = авто 📅</span>
+              <input type="time" value={calForm.end_time}
+                onChange={e=>setCalForm(f=>({...f,end_time:e.target.value}))}
+                style={{...iS(),fontSize:13}}/>
             </div>
           </div>
+          <div style={{fontSize:10,color:C.t2}}>Пусто = автоматическое размещение 10:00–18:00</div>
         </div>
         <div style={{display:"flex",gap:10,marginTop:20,justifyContent:"flex-end"}}>
-          <button onClick={()=>setCalModal(null)} style={{padding:"9px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:10,fontSize:13,cursor:"pointer"}}>Отмена</button>
-          <button onClick={()=>{
-            if(!calForm.text.trim())return;
-            saveCalTask();
-          }} style={{padding:"9px 22px",background:C.a,color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer",boxShadow:`0 0 16px ${C.a}40`}}>
+          <button onClick={()=>setCalModal(null)}
+            style={{padding:"9px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:10,fontSize:13,cursor:"pointer"}}>
+            Отмена
+          </button>
+          <button onClick={saveCalTask}
+            style={{padding:"9px 22px",background:C.a,color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer",boxShadow:"0 0 16px "+C.a+"40"}}>
             {isNew?"Создать":"Сохранить"}
           </button>
         </div>
@@ -2788,10 +2819,18 @@ function StrategyPage({userId}:{userId:string}){
     </div>;
   };
 
-  // init calForm when modal opens
+
+  // init calForm when modal opens for edit
   useEffect(()=>{
-    if(calModal&&calModal!=="new"&&typeof calModal==="object"){
-      setCalForm({text:calModal.text||"",description:calModal.description||"",date:calModal.date||calModal.start_date||"",start_time:calModal.start_time||"",end_time:calModal.end_time||""});
+    if(!calModal||calModal==="new")return;
+    if(typeof calModal==="object"){
+      setCalForm({
+        text:calModal.text||"",
+        description:calModal.description||"",
+        date:calModal.date||calModal.start_date||today(),
+        start_time:calModal.start_time||"",
+        end_time:calModal.end_time||"",
+      });
     }
   },[calModal]);
 
@@ -3116,7 +3155,7 @@ function StrategyPage({userId}:{userId:string}){
             ))}
           </div>
           <button onClick={()=>openCalNew()}
-            style={{padding:"8px 18px",background:C.a,color:"#fff",border:"none",borderRadius:9,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,boxShadow:`0 0 16px ${C.a}30`}}>
+            style={{padding:"8px 18px",background:C.a,color:"#fff",border:"none",borderRadius:9,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,boxShadow:"0 0 16px "+C.a+"30"}}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             + Задача
           </button>
@@ -3374,7 +3413,7 @@ function CrmPage({userId}:{userId:string}){
             </div>
             <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
               <button onClick={()=>setEditLeadId(null)} style={{padding:"9px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:10,fontSize:13,cursor:"pointer"}}>Отмена</button>
-              <button onClick={saveEditLead} style={{padding:"9px 20px",background:C.a,color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer",boxShadow:`0 0 16px ${C.a}40`}}>Сохранить</button>
+              <button onClick={saveEditLead} style={{padding:"9px 20px",background:C.a,color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer",boxShadow:"0 0 16px "+C.a+"40"}}>Сохранить</button>
             </div>
           </div>
         </div>
@@ -3413,7 +3452,7 @@ function CrmPage({userId}:{userId:string}){
         onMouseEnter={e=>{
           const el=e.currentTarget as HTMLElement;
           el.style.borderColor=stageColor+"60";
-          el.style.boxShadow=`0 0 16px ${stageColor}18`;
+          el.style.boxShadow="0 0 16px "+stageColor+"18";
           el.style.animationPlayState="paused";
         }}
         onMouseLeave={e=>{
@@ -3425,7 +3464,7 @@ function CrmPage({userId}:{userId:string}){
         }}>
 
         {/* Subtle shimmer bg */}
-        <div style={{position:"absolute",inset:0,background:`linear-gradient(135deg,${stageColor}04,transparent)`,pointerEvents:"none",borderRadius:11}}/>
+        <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg,"+stageColor+"04,transparent)",pointerEvents:"none",borderRadius:11}}/>
 
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,minWidth:0,position:"relative"}}>
           <div style={{fontWeight:600,fontSize:13,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1,minWidth:0}}>{l.name}</div>
@@ -3454,7 +3493,7 @@ function CrmPage({userId}:{userId:string}){
             {/* Edit button */}
             <button onClick={e=>{e.stopPropagation();openEditLead(l);}}
               style={{flex:1,padding:"7px 12px",background:C.a+"12",color:C.a,border:"1px solid "+C.a+"30",borderRadius:9,fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,transition:"all 0.15s"}}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.a+"20";(e.currentTarget as HTMLElement).style.boxShadow=`0 0 12px ${C.a}20`;}}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.a+"20";(e.currentTarget as HTMLElement).style.boxShadow="0 0 12px "+C.a+"20";}}
               onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=C.a+"12";(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
               ✏️ Редактировать
             </button>
@@ -3516,7 +3555,7 @@ function CrmPage({userId}:{userId:string}){
                 onMouseEnter={e=>{
                   const el=e.currentTarget as HTMLElement;
                   el.style.transform="translateY(-3px)";
-                  el.style.boxShadow=`0 8px 32px rgba(0,0,0,0.12), 0 0 0 1px ${accentColor}30, 0 0 20px ${accentColor}15`;
+                  el.style.boxShadow="0 8px 32px rgba(0,0,0,0.12), 0 0 0 1px "+accentColor+"30, 0 0 20px "+accentColor+"15";
                   el.style.borderColor=accentColor+"40";
                 }}
                 onMouseLeave={e=>{
@@ -3527,7 +3566,7 @@ function CrmPage({userId}:{userId:string}){
                 }}>
 
                 {/* Top accent line */}
-                <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${accentColor},${accentColor}88,transparent)`,borderRadius:"18px 18px 0 0"}}/>
+                <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:"linear-gradient(90deg,"+accentColor+","+accentColor+"88,transparent)",borderRadius:"18px 18px 0 0"}}/>
 
                 {/* Top right actions */}
                 <div style={{position:"absolute",top:12,right:12,display:"flex",gap:4}} onClick={e=>e.stopPropagation()}>
@@ -3547,10 +3586,10 @@ function CrmPage({userId}:{userId:string}){
                 <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16,paddingRight:64}}>
                   <div style={{
                     width:36,height:36,borderRadius:10,flexShrink:0,
-                    background:`linear-gradient(135deg,${accentColor}20,${accentColor}08)`,
-                    border:`1px solid ${accentColor}30`,
+                    background:"linear-gradient(135deg,"+accentColor+"20,"+accentColor+"08)",
+                    border:"1px solid "+accentColor+"30",
                     display:"flex",alignItems:"center",justifyContent:"center",
-                    boxShadow:`0 0 12px ${accentColor}20`,
+                    boxShadow:"0 0 12px "+accentColor+"20",
                   }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={accentColor} strokeWidth="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
                   </div>
@@ -3610,7 +3649,7 @@ function CrmPage({userId}:{userId:string}){
                 const el=e.currentTarget as HTMLElement;
                 el.style.borderColor=C.a;
                 el.style.background=C.a+"06";
-                el.style.boxShadow=`0 0 20px ${C.a}10`;
+                el.style.boxShadow="0 0 20px "+C.a+"10";
               }}
               onMouseLeave={e=>{
                 const el=e.currentTarget as HTMLElement;
@@ -3710,7 +3749,7 @@ function CrmPage({userId}:{userId:string}){
           const cnt=allLeads.data.filter((l:any)=>l.funnel_id===fu.id).length;
           const ac=fu.color||C.a;
           return <button key={fu.id} onClick={()=>openFunnel(fu.id)}
-            style={{padding:"6px 14px",borderRadius:9,border:"1px solid "+(isAct?ac+"50":C.bd),whiteSpace:"nowrap",fontSize:12,fontWeight:isAct?700:400,cursor:"pointer",flexShrink:0,background:isAct?ac+"12":"transparent",color:isAct?ac:C.t2,boxShadow:isAct?`0 0 12px ${ac}20`:"none",transition:"all 0.15s"}}>
+            style={{padding:"6px 14px",borderRadius:9,border:"1px solid "+(isAct?ac+"50":C.bd),whiteSpace:"nowrap",fontSize:12,fontWeight:isAct?700:400,cursor:"pointer",flexShrink:0,background:isAct?ac+"12":"transparent",color:isAct?ac:C.t2,boxShadow:isAct?"0 0 12px "+ac+"20":"none",transition:"all 0.15s"}}>
             {fu.name}
             <span style={{marginLeft:5,fontSize:10,opacity:0.7,background:isAct?ac+"25":C.bd,borderRadius:10,padding:"1px 6px"}}>{cnt}</span>
           </button>;
@@ -3733,7 +3772,7 @@ function CrmPage({userId}:{userId:string}){
         {l:"Сделки",v:fmt$(totalD)+" ₽"},
       ].map((s,i)=>(
         <div key={i} style={{background:C.w,borderRadius:14,padding:"14px 16px",border:"1px solid "+C.bd,transition:"all 0.2s"}}
-          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.a+"30";(e.currentTarget as HTMLElement).style.boxShadow=`0 0 16px ${C.a}10`;}}
+          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.a+"30";(e.currentTarget as HTMLElement).style.boxShadow="0 0 16px "+C.a+"10";}}
           onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
           <div style={{fontSize:20,fontWeight:700,color:C.t1,marginBottom:2,lineHeight:1.2}}>{s.v}</div>
           <div style={{fontSize:11,color:C.t2}}>{s.l}</div>
@@ -3751,9 +3790,9 @@ function CrmPage({userId}:{userId:string}){
     {tab==="kanban"&&<>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
         <div style={{fontSize:11,color:C.t2}}>Перетаскивай карточки между этапами. Нажми ✎ чтобы переименовать.</div>
-        <button onClick={()=>setShow(!show)} style={{padding:"8px 16px",background:C.a,color:"#fff",border:"none",borderRadius:9,fontSize:12,fontWeight:600,cursor:"pointer",boxShadow:`0 0 16px ${C.a}30`,transition:"all 0.2s"}}
-          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow=`0 0 24px ${C.a}50`;(e.currentTarget as HTMLElement).style.transform="translateY(-1px)";}}
-          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow=`0 0 16px ${C.a}30`;(e.currentTarget as HTMLElement).style.transform="none";}}>
+        <button onClick={()=>setShow(!show)} style={{padding:"8px 16px",background:C.a,color:"#fff",border:"none",borderRadius:9,fontSize:12,fontWeight:600,cursor:"pointer",boxShadow:"0 0 16px "+C.a+"30",transition:"all 0.2s"}}
+          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 0 24px "+C.a+"50";(e.currentTarget as HTMLElement).style.transform="translateY(-1px)";}}
+          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 0 16px "+C.a+"30";(e.currentTarget as HTMLElement).style.transform="none";}}>
           + Лид
         </button>
       </div>
@@ -3792,7 +3831,7 @@ function CrmPage({userId}:{userId:string}){
           const stageLeads=leads.filter((l:any)=>l.status===stage.id);
           const isOver=dragOver===stage.id;
           return <div key={stage.id} onDragOver={e=>onDragOver(stage.id,e)} onDrop={()=>onDrop(stage.id)} onDragLeave={()=>setDragOver(null)}
-            style={{minWidth:228,width:228,flexShrink:0,background:isOver?C.a+"06":C.ib,borderRadius:14,padding:"0 0 10px",border:"1px solid "+(isOver?C.a+"40":C.bd),boxShadow:isOver?`0 0 20px ${C.a}15`:"none",transition:"all 0.2s"}}>
+            style={{minWidth:228,width:228,flexShrink:0,background:isOver?C.a+"06":C.ib,borderRadius:14,padding:"0 0 10px",border:"1px solid "+(isOver?C.a+"40":C.bd),boxShadow:isOver?"0 0 20px "+C.a+"15":"none",transition:"all 0.2s"}}>
             <div style={{padding:"11px 11px 8px",borderBottom:"1px solid "+C.bd}}>
               {editStageId===stage.id
                 ?<input autoFocus defaultValue={stage.label}
@@ -3801,7 +3840,7 @@ function CrmPage({userId}:{userId:string}){
                     style={{width:"100%",fontSize:12,fontWeight:600,padding:"3px 7px",border:"1px solid "+stage.color,borderRadius:7,outline:"none",background:C.ib,color:C.t1}}/>
                 :<div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                     <div style={{display:"flex",alignItems:"center",gap:6}}>
-                      <div style={{width:7,height:7,borderRadius:"50%",background:stage.color,boxShadow:`0 0 6px ${stage.color}80`,flexShrink:0}}/>
+                      <div style={{width:7,height:7,borderRadius:"50%",background:stage.color,boxShadow:"0 0 6px "+stage.color+"80",flexShrink:0}}/>
                       <span style={{fontSize:12,fontWeight:600,color:C.t1}}>{stage.label}</span>
                     </div>
                     <div style={{display:"flex",alignItems:"center",gap:4}}>
@@ -3827,9 +3866,9 @@ function CrmPage({userId}:{userId:string}){
       <div style={{display:"flex",justifyContent:"space-between",marginBottom:14,gap:12}}>
         <input placeholder="Поиск по имени, телефону, email..." value={search} onChange={e=>setSearch(e.target.value)}
           style={{...iS(),maxWidth:300,borderRadius:9,fontSize:12,padding:"8px 12px",background:C.ib,border:"1px solid "+C.bd}}/>
-        <button onClick={()=>setShow(!show)} style={{padding:"8px 16px",background:C.a,color:"#fff",border:"none",borderRadius:9,fontSize:12,fontWeight:600,cursor:"pointer",boxShadow:`0 0 16px ${C.a}30`,transition:"all 0.2s"}}
-          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(-1px)";(e.currentTarget as HTMLElement).style.boxShadow=`0 0 24px ${C.a}50`;}}
-          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform="none";(e.currentTarget as HTMLElement).style.boxShadow=`0 0 16px ${C.a}30`;}}>
+        <button onClick={()=>setShow(!show)} style={{padding:"8px 16px",background:C.a,color:"#fff",border:"none",borderRadius:9,fontSize:12,fontWeight:600,cursor:"pointer",boxShadow:"0 0 16px "+C.a+"30",transition:"all 0.2s"}}
+          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(-1px)";(e.currentTarget as HTMLElement).style.boxShadow="0 0 24px "+C.a+"50";}}
+          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform="none";(e.currentTarget as HTMLElement).style.boxShadow="0 0 16px "+C.a+"30";}}>
           + Лид
         </button>
       </div>
@@ -3862,7 +3901,7 @@ function CrmPage({userId}:{userId:string}){
             <div key={l.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderBottom:i<found.length-1?"1px solid "+C.bd:"none",transition:"background 0.1s"}}
               onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.ib;}}
               onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}>
-              <div style={{width:32,height:32,borderRadius:"50%",background:stCol(l.status)+"18",border:`1px solid ${stCol(l.status)}25`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <div style={{width:32,height:32,borderRadius:"50%",background:stCol(l.status)+"18",border:"1px solid "+stCol(l.status)+"25",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                 <span style={{fontSize:13,fontWeight:700,color:stCol(l.status)}}>{l.name[0]?.toUpperCase()}</span>
               </div>
               <div style={{flex:1,minWidth:0}}>
@@ -3871,7 +3910,7 @@ function CrmPage({userId}:{userId:string}){
               </div>
               <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
                 {l.deal&&<span style={{fontSize:11,fontWeight:600,color:C.g}}>{fmt$(l.deal)}₽</span>}
-                <span style={{fontSize:10,fontWeight:600,padding:"2px 9px",borderRadius:20,background:stCol(l.status)+"14",color:stCol(l.status),border:`1px solid ${stCol(l.status)}25`}}>{stLbl(l.status)}</span>
+                <span style={{fontSize:10,fontWeight:600,padding:"2px 9px",borderRadius:20,background:stCol(l.status)+"14",color:stCol(l.status),border:"1px solid "+stCol(l.status)+"25"}}>{stLbl(l.status)}</span>
                 <button onClick={()=>allLeads.remove(l.id)} style={{width:24,height:24,borderRadius:7,border:"1px solid "+C.bd,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.15s"}}
                   onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.r+"50";(e.currentTarget as HTMLElement).style.background=C.r+"10";}}
                   onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.background="transparent";}}>
@@ -4306,7 +4345,7 @@ function StoriesCarouselTab({userId}:{userId:string}){
                 <div style={{fontSize:11,fontWeight:700,color:C.r,marginTop:1}}>-{an.lost.toLocaleString("ru")} зрителей</div>
               </div>
             </div>
-            {an.maxDrop>0&&<div style={{background:color+"0A",borderRadius:8,padding:"7px 10px",border:`1px solid ${color}22`}}>
+            {an.maxDrop>0&&<div style={{background:color+"0A",borderRadius:8,padding:"7px 10px",border:"1px solid "+color+"22"}}>
               <div style={{fontSize:10,fontWeight:600,color,marginBottom:2}}>Главный отвал</div>
               <div style={{fontSize:11,color:C.t1}}>Сторис #{an.maxDropIdx} → #{an.maxDropIdx+1}</div>
               <div style={{fontSize:11,fontWeight:700,color:C.r}}>-{an.maxDrop.toLocaleString("ru")} просмотров</div>
@@ -4402,7 +4441,7 @@ function StoriesCarouselTab({userId}:{userId:string}){
                     {/* Story card */}
                     <div style={{width:140,borderRadius:16,overflow:"hidden",
                       border:`2px solid ${borderColor}`,
-                      boxShadow:(anyMax||anyAfter)?`0 0 0 3px ${borderColor}22`:C.sh,
+                      boxShadow:(anyMax||anyAfter)?"0 0 0 3px "+borderColor+"22":C.sh,
                       transition:"border 0.2s",background:C.w}}>
 
                       {/* Image area */}
@@ -4445,13 +4484,13 @@ function StoriesCarouselTab({userId}:{userId:string}){
                             <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={C.r} strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
                           </button>
                         </div>
-                        <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:5,background:IG_COLOR+"12",borderRadius:8,padding:"5px 7px",border:`1px solid ${IG_COLOR}25`}}>
+                        <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:5,background:IG_COLOR+"12",borderRadius:8,padding:"5px 7px",border:"1px solid "+IG_COLOR+"25"}}>
                           <IgIcon/>
                           <input type="number" value={slot.ig_view_count||""} onChange={e=>items.update(slot.id,{ig_view_count:+e.target.value||0})}
                             placeholder="IG"
                             style={{flex:1,border:"none",background:"transparent",fontSize:11,outline:"none",fontFamily:"'Montserrat',sans-serif",color:C.t1,minWidth:0,textAlign:"center"}}/>
                         </div>
-                        <div style={{display:"flex",alignItems:"center",gap:4,background:TG_COLOR+"12",borderRadius:8,padding:"5px 7px",border:`1px solid ${TG_COLOR}25`}}>
+                        <div style={{display:"flex",alignItems:"center",gap:4,background:TG_COLOR+"12",borderRadius:8,padding:"5px 7px",border:"1px solid "+TG_COLOR+"25"}}>
                           <TgIcon/>
                           <input type="number" value={slot.tg_view_count||""} onChange={e=>items.update(slot.id,{tg_view_count:+e.target.value||0})}
                             placeholder="TG"
@@ -4911,7 +4950,7 @@ function CallsPage({userId}:{userId:string}){
                     borderRadius:8,padding:"4px 8px",boxSizing:"border-box",
                     overflow:"hidden",cursor:"pointer",zIndex:10,
                     opacity:isDone?0.6:1,
-                    boxShadow:isDone?"none":`0 2px 8px ${cc}28`,
+                    boxShadow:isDone?"none":"0 2px 8px "+cc+"28",
                   }}>
                   <div style={{display:"flex",alignItems:"flex-start",gap:4}}>
                     <div style={{flex:1,minWidth:0}}>
@@ -5572,7 +5611,7 @@ function AIChatBase({pageId,system}:{pageId:string,system?:string}){
     setChats(prev=>prev.map(c=>c.id===chatId?{...c,msgs:newMsgs,title:c.title==="Новый чат"?(q.slice(0,35)||c.title):c.title}:c));
     setInput("");setErr("");setFileData(null);setLoading(true);
     try{
-      const apiMsgs=newMsgs.map(m=>({role:m.role,content:m.file&&m.file.type==="text"?m.content+"\n\nФайл \""+m.file.name+"\":\n"+m.file.data:m.content}));
+      const apiMsgs=newMsgs.map(m=>({role:m.role,content:m.file&&m.file.type==="text"?m.content+"\n\nФайл "+m.file.name+":\n"+m.file.data:m.content}));
       const res=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:apiMsgs,...(system?{system}:{})})});
       if(!res.ok)throw new Error("API error "+res.status);
       const data=await res.json();
@@ -5583,7 +5622,7 @@ function AIChatBase({pageId,system}:{pageId:string,system?:string}){
   };
 
   const formatMsg=(text:string)=>text.split("\n").map((line,i,arr)=>{
-    const parts=line.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).map((part,j)=>{
+    const parts=line.split(/(\*\*[^*]+\*\*|\u0060[^\u0060]+\u0060)/g).map((part,j)=>{
       if(part.startsWith("**")&&part.endsWith("**"))return <strong key={j}>{part.slice(2,-2)}</strong>;
       if(part.startsWith("`")&&part.endsWith("`"))return <code key={j} style={{background:"rgba(255,255,255,0.15)",borderRadius:4,padding:"1px 5px",fontSize:"0.9em",fontFamily:"monospace"}}>{part.slice(1,-1)}</code>;
       return part;
@@ -7897,10 +7936,10 @@ function BoardPage({userId}:{userId:string}){
   const renderShapeFill=(it:BItem)=>{
     const c=it.color||"#3B82F6";
     switch(it.shapeKind){
-      case"circle":return<div style={{width:"100%",height:"100%",background:c,borderRadius:"50%",boxShadow:`0 4px 20px ${c}55`}}/>;
-      case"diamond":return<div style={{width:"100%",height:"100%",background:c,clipPath:"polygon(50% 0%,100% 50%,50% 100%,0% 50%)",boxShadow:`0 4px 20px ${c}55`}}/>;
+      case"circle":return<div style={{width:"100%",height:"100%",background:c,borderRadius:"50%",boxShadow:"0 4px 20px "+c+"55"}}/>;
+      case"diamond":return<div style={{width:"100%",height:"100%",background:c,clipPath:"polygon(50% 0%,100% 50%,50% 100%,0% 50%)",boxShadow:"0 4px 20px "+c+"55"}}/>;
       case"triangle":return<div style={{width:"100%",height:"100%",background:c,clipPath:"polygon(50% 0%,100% 100%,0% 100%)"}} />;
-      default:return<div style={{width:"100%",height:"100%",background:c,borderRadius:10,boxShadow:`0 4px 20px ${c}55`}}/>;
+      default:return<div style={{width:"100%",height:"100%",background:c,borderRadius:10,boxShadow:"0 4px 20px "+c+"55"}}/>;
     }
   };
 
