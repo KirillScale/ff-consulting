@@ -3285,8 +3285,42 @@ function CrmPage({userId}:{userId:string}){
   const[editFunnelName,setEditFunnelName]=useState("");
 
   // Lead form
-  const emptyLead={name:"",contact:"",phone:"",email:"",source:"Instagram",status:"new",note:"",deal:""};
+  const emptyLead={name:"",contact:"",phone:"",email:"",source:"Instagram",status:"new",note:"",deal:"",avatar_url:""};
   const[f,sF]=useState<any>(emptyLead);
+  const[avatarUpl,setAvatarUpl]=useState<string|null>(null); // uploading lead id or "new"
+
+  const uploadLeadAvatar=async(file:File,leadId:string|"new")=>{
+    setAvatarUpl(leadId);
+    try{
+      const img=document.createElement("img");
+      const obj=URL.createObjectURL(file);
+      await new Promise<void>(res=>{img.onload=()=>res();img.src=obj;});
+      const SIZE=200;
+      const scale=Math.min(1,SIZE/Math.min(img.naturalWidth,img.naturalHeight));
+      const w=Math.round(img.naturalWidth*scale);
+      const h=Math.round(img.naturalHeight*scale);
+      const canvas=document.createElement("canvas");
+      // Crop to square from center
+      const side=Math.min(w,h);
+      canvas.width=side; canvas.height=side;
+      const ctx=canvas.getContext("2d")!;
+      ctx.drawImage(img,(w-side)/2*-1,(h-side)/2*-1,w,h);
+      URL.revokeObjectURL(obj);
+      const blob=await new Promise<Blob>((res,rej)=>canvas.toBlob(b=>b?res(b):rej(),"image/jpeg",0.88));
+      const path=userId+"/lead_avatar_"+Date.now()+".jpg";
+      const{error}=await supabase.storage.from("files").upload(path,blob,{upsert:true,contentType:"image/jpeg"});
+      if(error)throw error;
+      const{data}=supabase.storage.from("files").getPublicUrl(path);
+      const url=data.publicUrl;
+      if(leadId==="new"){
+        sF((p:any)=>({...p,avatar_url:url}));
+      } else {
+        await allLeads.update(leadId,{avatar_url:url});
+        setEditLeadData((p:any)=>({...p,avatar_url:url}));
+      }
+    }catch(e){console.error("avatar upload",e);}
+    finally{setAvatarUpl(null);}
+  };
 
   // Stage labels per funnel (in-memory; could be persisted)
   const[stageLabels,setStageLabels]=useState<Record<string,Record<string,string>>>({});
@@ -3378,7 +3412,7 @@ function CrmPage({userId}:{userId:string}){
 
   const openEditLead=(l:any)=>{
     setEditLeadId(l.id);
-    setEditLeadData({name:l.name||"",contact:l.contact||"",phone:l.phone||"",email:l.email||"",note:l.note||"",deal:l.deal||"",source:l.source||"Instagram"});
+    setEditLeadData({name:l.name||"",contact:l.contact||"",phone:l.phone||"",email:l.email||"",note:l.note||"",deal:l.deal||"",source:l.source||"Instagram",avatar_url:l.avatar_url||""});
   };
 
   const saveEditLead=async()=>{
@@ -3397,6 +3431,37 @@ function CrmPage({userId}:{userId:string}){
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setEditLeadId(null)}>
           <div style={{background:C.w,borderRadius:18,padding:28,width:"100%",maxWidth:480,border:"1px solid "+C.bd,boxShadow:"0 24px 60px rgba(0,0,0,0.4)"}} onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:16,fontWeight:700,color:C.t1,marginBottom:20}}>✏️ Редактировать лида</div>
+
+            {/* Avatar upload in modal */}
+            <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:20}}>
+              <label style={{cursor:"pointer",flexShrink:0}}>
+                <div style={{width:72,height:72,borderRadius:"50%",background:C.ib,border:"2px dashed "+C.bd,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",position:"relative",transition:"border-color 0.15s"}}
+                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.a;}}
+                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;}}>
+                  {avatarUpl===editLeadId
+                    ?<div style={{width:22,height:22,border:"2px solid "+C.bd,borderTopColor:C.a,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+                    :editLeadData.avatar_url
+                    ?<img src={editLeadData.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>
+                    :<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  }
+                  <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",display:"flex",alignItems:"center",justifyContent:"center",transition:"background 0.2s"}}
+                    onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(0,0,0,0.35)";}}
+                    onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="rgba(0,0,0,0)";}}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" style={{opacity:0}}
+                      onMouseEnter={e=>{(e.currentTarget as SVGElement).style.opacity="1";}}
+                      onMouseLeave={e=>{(e.currentTarget as SVGElement).style.opacity="0";}}><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                  </div>
+                </div>
+                <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0]&&editLeadId)uploadLeadAvatar(e.target.files[0],editLeadId);}}/>
+              </label>
+              <div>
+                <div style={{fontSize:13,fontWeight:600,color:C.t1}}>{editLeadData.name||"Лид"}</div>
+                <div style={{fontSize:11,color:C.t2,marginTop:2}}>Нажми на фото чтобы изменить</div>
+                {editLeadData.avatar_url&&<button onClick={()=>setEditLeadData({...editLeadData,avatar_url:""})}
+                  style={{fontSize:10,color:C.r,background:"transparent",border:"none",cursor:"pointer",padding:0,marginTop:4}}>✕ Удалить фото</button>}
+              </div>
+            </div>
+
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
               {([["name","Имя *"],["contact","Контакт"],["phone","Телефон"],["email","Email"],["deal","Сделка, ₽"],["source","Источник"]] as const).map(([k,label])=>(
                 <div key={k}>
@@ -3467,10 +3532,19 @@ function CrmPage({userId}:{userId:string}){
         <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg,"+stageColor+"04,transparent)",pointerEvents:"none",borderRadius:11}}/>
 
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,minWidth:0,position:"relative"}}>
-          <div style={{fontWeight:600,fontSize:13,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1,minWidth:0}}>{l.name}</div>
+          {/* Avatar */}
+          <div style={{width:32,height:32,borderRadius:"50%",flexShrink:0,overflow:"hidden",background:stageColor+"20",border:"2px solid "+stageColor+"30",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            {l.avatar_url
+              ?<img src={l.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt={l.name}/>
+              :<span style={{fontSize:12,fontWeight:700,color:stageColor}}>{(l.name||"?")[0].toUpperCase()}</span>
+            }
+          </div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontWeight:600,fontSize:13,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.name}</div>
+            {(l.phone||l.email||l.contact)&&<div style={{fontSize:11,color:C.t2,marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.phone||l.email||l.contact}</div>}
+          </div>
           {l.deal&&<div style={{fontSize:11,fontWeight:600,color:C.g,flexShrink:0,whiteSpace:"nowrap"}}>{fmt$(l.deal)}₽</div>}
         </div>
-        {(l.phone||l.email||l.contact)&&<div style={{fontSize:11,color:C.t2,marginTop:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",position:"relative"}}>{l.phone||l.email||l.contact}</div>}
 
         {isOpen&&<div style={{marginTop:10,paddingTop:10,borderTop:"1px solid "+C.bd,position:"relative"}}>
           {l.source&&<div style={{fontSize:10,color:C.t2,marginBottom:5}}>Источник: {l.source}</div>}
@@ -3799,6 +3873,23 @@ function CrmPage({userId}:{userId:string}){
 
       {show&&<div style={{background:C.w,borderRadius:14,padding:18,marginBottom:18,border:"1px solid "+C.bd}} className="form-panel">
         <div style={{fontSize:14,fontWeight:600,marginBottom:14,color:C.t1}}>Новый лид</div>
+        <div style={{display:"flex",gap:14,marginBottom:14,alignItems:"flex-start"}}>
+          {/* Avatar upload */}
+          <label style={{cursor:"pointer",flexShrink:0}}>
+            <div style={{width:64,height:64,borderRadius:"50%",background:C.ib,border:"2px dashed "+C.bd,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",position:"relative",transition:"border-color 0.15s"}}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.a;}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;}}>
+              {avatarUpl==="new"
+                ?<div style={{width:20,height:20,border:"2px solid "+C.bd,borderTopColor:C.a,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+                :f.avatar_url
+                ?<img src={f.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>
+                :<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              }
+            </div>
+            <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0])uploadLeadAvatar(e.target.files[0],"new");}}/>
+          </label>
+          <div style={{fontSize:10,color:C.t2,paddingTop:20,lineHeight:1.5}}>Аватар лида<br/><span style={{opacity:0.6}}>Нажми чтобы загрузить</span></div>
+        </div>
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:10}}>
           {([["name","Имя *"],["contact","Контакт"],["phone","Телефон"],["email","Email"],["note","Заметка"],["deal","Сделка, ₽"]] as const).map(([k,l])=>(
             <div key={k}>
