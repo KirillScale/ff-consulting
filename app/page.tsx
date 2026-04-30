@@ -2255,7 +2255,171 @@ function StrategyPage({userId}:{userId:string}){
   const goals = useTable("goals", userId);
   const goalTasks = useTable("goal_tasks", userId);
   const isMobile=useIsMobile();
-  const[stratTab,setStratTab]=useState<"sprint"|"yearmap">("sprint");
+  const[stratTab,setStratTab]=useState<"sprint"|"yearmap"|"calendar">("sprint");
+  // ── Calendar state ──────────────────────────────────────────
+  const calTasks=useTable("cal_tasks",userId);
+  const[calMode,setCalMode]=useState<"month"|"week"|"day">("week");
+  const[calDate,setCalDate]=useState(()=>new Date());
+  const[calModal,setCalModal]=useState<any>(null); // null | "new" | task object
+  const[calForm,setCalForm]=useState({text:"",description:"",date:"",start_time:"",end_time:""});
+
+  // Merged tasks for calendar: kanban + goalTasks + calTasks
+  const allCalTasks=useMemo(()=>[
+    ...calTasks.data,
+    ...kanban.data.filter((t:any)=>t.date&&t.start_time).map((t:any)=>({...t,_src:"kanban"})),
+    ...goalTasks.data.filter((t:any)=>t.date&&t.start_time).map((t:any)=>({...t,_src:"goal"})),
+  ],[calTasks.data,kanban.data,goalTasks.data]);
+
+  // Smart free-slot finder: finds first free 1h slot 10:00–18:00
+  const findFreeSlot=(dateStr:string)=>{
+    const busy=allCalTasks.filter((t:any)=>t.date===dateStr||t.start_date===dateStr);
+    for(let h=10;h<18;h++){
+      const slotStart=h*60,slotEnd=slotStart+60;
+      const conflict=busy.some((t:any)=>{
+        const ts=timeToMin(t.start_time||"10:00"),te=timeToMin(t.end_time||"11:00");
+        return ts<slotEnd&&te>slotStart;
+      });
+      if(!conflict)return{start:`${String(h).padStart(2,"0")}:00`,end:`${String(h+1).padStart(2,"0")}:00`};
+    }
+    return{start:"10:00",end:"11:00"}; // fallback overlap
+  };
+
+  const openCalNew=(dateStr?:string,hour?:number)=>{
+    const d=dateStr||today();
+    if(hour!==undefined){
+      setCalForm({text:"",description:"",date:d,start_time:`${String(hour).padStart(2,"0")}:00`,end_time:`${String(hour+1).padStart(2,"0")}:00`});
+    } else {
+      const slot=findFreeSlot(d);
+      setCalForm({text:"",description:"",date:d,start_time:slot.start,end_time:slot.end});
+    }
+    setCalModal("new");
+  };
+
+  const saveCalTask=async()=>{
+    if(!calForm.text.trim())return;
+    const isAuto=!calForm.start_time;
+    const slot=isAuto?findFreeSlot(calForm.date||today()):{start:calForm.start_time,end:calForm.end_time};
+    const payload={
+      text:calForm.text,description:calForm.description,
+      date:calForm.date||today(),
+      start_time:slot.start,end_time:slot.end,
+      auto_placed:isAuto,manually_placed:!isAuto,
+      status:"todo",done:false,
+    };
+    if(calModal==="new")await calTasks.add(payload);
+    else await calTasks.update(calModal.id,{...payload,auto_placed:false,manually_placed:true});
+    setCalModal(null);
+  };
+
+  const navCal=(dir:number)=>{
+    setCalDate(d=>{
+      const nd=new Date(d);
+      if(calMode==="day")nd.setDate(nd.getDate()+dir);
+      else if(calMode==="week")nd.setDate(nd.getDate()+dir*7);
+      else nd.setMonth(nd.getMonth()+dir);
+      return nd;
+    });
+  };
+
+  const calTitle=()=>{
+    const MN=["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+    if(calMode==="month")return`${MN[calDate.getMonth()]} ${calDate.getFullYear()}`;
+    if(calMode==="day"){const d=calDate;return`${d.getDate()} ${MN[d.getMonth()].slice(0,3)} ${d.getFullYear()}`;}
+    const sow=new Date(calDate);const dow=sow.getDay()===0?6:sow.getDay()-1;sow.setDate(sow.getDate()-dow);
+    const eow=new Date(sow);eow.setDate(sow.getDate()+6);
+    return`${sow.getDate()} ${MN[sow.getMonth()].slice(0,3)} — ${eow.getDate()} ${MN[eow.getMonth()].slice(0,3)} ${eow.getFullYear()}`;
+  };
+
+  // Calendar helpers
+  const SLOT_H=56; // px per hour
+  const CAL_START=7; // 07:00
+  const CAL_HOURS=16; // 07:00–23:00
+  const timeToMin=(t:string)=>{const[h,m]=(t||"00:00").split(":").map(Number);return h*60+m;};
+  const minToTime=(m:number)=>`${String(Math.floor(m/60)).padStart(2,"0")}:${String(m%60).padStart(2,"0")}`;
+  const fmtDur=(mins:number)=>mins>=60?`${Math.floor(mins/60)}ч${mins%60?` ${mins%60}м`:""}`:` ${mins}м`;
+
+  // Drag/resize refs — mounted once, no stale closure
+  const calDragRef=useRef<any>(null);
+  const calResizeRef=useRef<any>(null);
+  const calDropRef=useRef<{dateStr:string;min:number}|null>(null);
+  const allCalRef=useRef<any[]>([]);
+  const[dragTaskId,setDragTaskId]=useState<string|null>(null);
+  const[dropPreview,setDropPreview]=useState<{dateStr:string;min:number}|null>(null);
+  const[resizing,setResizing]=useState(false);
+
+  useEffect(()=>{allCalRef.current=allCalTasks;},[allCalTasks]);
+
+  const doMoveTask=useCallback(async(id:string,dateStr:string,startMin:number,dur:number)=>{
+    const t=allCalRef.current.find((x:any)=>x.id===id);
+    if(!t)return;
+    const s=minToTime(Math.max(CAL_START*60,startMin));
+    const e=minToTime(Math.min((CAL_START+CAL_HOURS)*60,startMin+Math.max(30,dur)));
+    if(t._src==="kanban")await kanban.update(id,{date:dateStr,start_time:s,end_time:e});
+    else if(t._src==="goal")await goalTasks.update(id,{date:dateStr,start_time:s,end_time:e});
+    else await calTasks.update(id,{date:dateStr,start_time:s,end_time:e,manually_placed:true,auto_placed:false});
+  },[kanban,goalTasks,calTasks]);
+
+  const doResizeTask=useCallback(async(id:string,startMin:number,endMin:number)=>{
+    const t=allCalRef.current.find((x:any)=>x.id===id);
+    if(!t)return;
+    const e=minToTime(Math.max(startMin+15,Math.min((CAL_START+CAL_HOURS)*60,Math.round(endMin/15)*15)));
+    if(t._src==="kanban")await kanban.update(id,{end_time:e});
+    else if(t._src==="goal")await goalTasks.update(id,{end_time:e});
+    else await calTasks.update(id,{end_time:e,manually_placed:true});
+  },[kanban,goalTasks,calTasks]);
+
+  useEffect(()=>{
+    const onMove=(e:MouseEvent)=>{
+      if(calDragRef.current){
+        const{dur,origDate,colW,gridLeft,gridTop,days}=calDragRef.current;
+        const relY=e.clientY-gridTop-48;
+        const rawMin=Math.round(((relY/SLOT_H)*60+CAL_START*60)/15)*15;
+        const startMin=Math.max(CAL_START*60,Math.min((CAL_START+CAL_HOURS-1)*60,rawMin));
+        const relX=e.clientX-gridLeft-52;
+        const colIdx=Math.max(0,Math.min(days.length-1,Math.floor(relX/colW)));
+        const dateStr=days[colIdx]||origDate;
+        calDropRef.current={dateStr,min:startMin};
+        setDropPreview({dateStr,min:startMin});
+        const el=document.getElementById(`ct-${calDragRef.current.id}`);
+        if(el){el.style.top=Math.max(0,(startMin-CAL_START*60)/60*SLOT_H)+"px";el.style.opacity="0.4";el.style.pointerEvents="none";}
+      }
+      if(calResizeRef.current){
+        const{id,startMin}=calResizeRef.current;
+        const grid=document.getElementById("cal-grid-inner");
+        if(!grid)return;
+        const rect=grid.getBoundingClientRect();
+        const relY=e.clientY-rect.top-48;
+        const rawMin=Math.round(((relY/SLOT_H)*60+CAL_START*60)/15)*15;
+        const endMin=Math.max(startMin+15,Math.min((CAL_START+CAL_HOURS)*60,rawMin));
+        calResizeRef.current.endMin=endMin;
+        setResizing(true);
+        const el=document.getElementById(`ct-${id}`);
+        if(el){
+          el.style.height=Math.max(20,(endMin-startMin)/60*SLOT_H-2)+"px";
+          const lbl=el.querySelector(".ct-lbl") as HTMLElement;
+          if(lbl)lbl.textContent=`${minToTime(startMin)}–${minToTime(endMin)} · ${fmtDur(endMin-startMin)}`;
+        }
+      }
+    };
+    const onUp=async()=>{
+      if(calDragRef.current){
+        const{id,dur}=calDragRef.current;
+        const el=document.getElementById(`ct-${id}`);
+        if(el){el.style.opacity="1";el.style.pointerEvents="";el.style.top="";}
+        if(calDropRef.current)await doMoveTask(id,calDropRef.current.dateStr,calDropRef.current.min,dur);
+        calDragRef.current=null;calDropRef.current=null;
+        setDragTaskId(null);setDropPreview(null);
+      }
+      if(calResizeRef.current){
+        const{id,startMin,endMin}=calResizeRef.current;
+        if(endMin)await doResizeTask(id,startMin,endMin);
+        calResizeRef.current=null;setResizing(false);
+      }
+    };
+    window.addEventListener("mousemove",onMove,{passive:true});
+    window.addEventListener("mouseup",onUp);
+    return()=>{window.removeEventListener("mousemove",onMove);window.removeEventListener("mouseup",onUp);};
+  },[doMoveTask,doResizeTask]);
   const[showTF,setShowTF]=useState<string|null>(null);
   const[tf,sTf]=useState({text:"",mins:30,type:"biz"});
   const[tfErr,setTfErr]=useState("");
@@ -2354,6 +2518,282 @@ function StrategyPage({userId}:{userId:string}){
     else{await kanban.remove(t.id);}
     setDeleteConfirm(null);
   };
+
+  // ── TimeGrid (Week/Day view) ────────────────────────────────
+  const TimeGrid=({days}:{days:string[]})=>{
+    const tdStr=today();
+    const nowMin=new Date().getHours()*60+new Date().getMinutes();
+    const nowTop=((nowMin-CAL_START*60)/60)*SLOT_H;
+    const tasksOnDay=(d:string)=>allCalTasks.filter((t:any)=>(t.date||t.start_date)===d&&t.start_time);
+
+    return<div id="cal-grid-inner" style={{display:"flex",background:C.w,borderRadius:16,border:"1px solid "+C.bd,overflow:"hidden",userSelect:"none"}}>
+      {/* Time gutter */}
+      <div style={{width:52,flexShrink:0,borderRight:"1px solid "+C.bd,paddingTop:48}}>
+        {Array.from({length:CAL_HOURS},(_,i)=>i+CAL_START).map(h=>(
+          <div key={h} style={{height:SLOT_H,display:"flex",alignItems:"flex-start",justifyContent:"flex-end",paddingRight:8,paddingTop:2}}>
+            <span style={{fontSize:10,color:C.t2}}>{String(h).padStart(2,"0")}:00</span>
+          </div>
+        ))}
+      </div>
+      {/* Columns */}
+      <div style={{flex:1,display:"grid",gridTemplateColumns:`repeat(${days.length},1fr)`}}>
+        {days.map((dateStr,colIdx)=>{
+          const isToday=dateStr===tdStr;
+          const dt=new Date(dateStr+"T12:00:00");
+          const dayTasks=tasksOnDay(dateStr);
+          const isDrop=dropPreview?.dateStr===dateStr;
+          return<div key={dateStr} style={{borderRight:"1px solid "+C.bd,position:"relative",background:isDrop?"rgba(37,99,235,0.02)":"transparent"}}>
+            {/* Header */}
+            <div style={{height:48,borderBottom:"1px solid "+C.bd,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",position:"sticky",top:0,zIndex:5,background:isToday?"rgba(37,99,235,0.04)":C.w}}>
+              <span style={{fontSize:10,color:isToday?C.a:C.t2,fontWeight:600,textTransform:"uppercase"}}>
+                {["Вс","Пн","Вт","Ср","Чт","Пт","Сб"][dt.getDay()]}
+              </span>
+              <div style={{width:28,height:28,borderRadius:"50%",background:isToday?C.a:"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <span style={{fontSize:14,fontWeight:700,color:isToday?"#fff":C.t1}}>{dt.getDate()}</span>
+              </div>
+            </div>
+            {/* Hour slots */}
+            <div style={{position:"relative",height:CAL_HOURS*SLOT_H}}>
+              {Array.from({length:CAL_HOURS},(_,i)=>(
+                <div key={i} onClick={()=>!dragTaskId&&!resizing&&openCalNew(dateStr,i+CAL_START)}
+                  style={{height:SLOT_H,borderBottom:"1px solid rgba(0,0,0,0.04)",cursor:"pointer"}}
+                  onMouseEnter={e=>{if(!dragTaskId&&!resizing)(e.currentTarget as HTMLElement).style.background="rgba(37,99,235,0.03)";}}
+                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}/>
+              ))}
+              {/* Drop preview line */}
+              {isDrop&&dropPreview&&<div style={{position:"absolute",left:4,right:4,top:(dropPreview.min-CAL_START*60)/60*SLOT_H,height:2,background:C.a,borderRadius:2,zIndex:20,pointerEvents:"none",boxShadow:`0 0 8px ${C.a}60`}}/>}
+              {/* Now line */}
+              {isToday&&nowTop>0&&nowTop<CAL_HOURS*SLOT_H&&(
+                <div style={{position:"absolute",left:0,right:0,top:nowTop,zIndex:4,display:"flex",alignItems:"center",pointerEvents:"none"}}>
+                  <div style={{width:8,height:8,borderRadius:"50%",background:C.r,marginLeft:-4,flexShrink:0}}/>
+                  <div style={{flex:1,height:2,background:C.r}}/>
+                </div>
+              )}
+              {/* Task blocks */}
+              {dayTasks.map((t:any,ti:number)=>{
+                const st=timeToMin(t.start_time||"09:00");
+                const et=timeToMin(t.end_time||"10:00");
+                const topPx=Math.max(0,(st-CAL_START*60)/60*SLOT_H);
+                const heightPx=Math.max(24,(et-st)/60*SLOT_H-2);
+                const isDone=t.status==="done"||t.done;
+                const isAuto=t.auto_placed&&!t.manually_placed;
+                const color=isDone?"#22C55E":(t._src==="goal"?(goals.data.find((g:any)=>g.id===t.goal_id)?.color||C.a):typeColor(t.type||"biz"));
+                const dur=et-st;
+                // Overlap offset
+                const prev=dayTasks.filter((_:any,j:number)=>j<ti&&timeToMin(dayTasks[j].start_time||"09:00")<et&&timeToMin(dayTasks[j].end_time||"10:00")>st);
+                const off=prev.length;
+
+                return<div key={t.id} id={`ct-${t.id}`}
+                  style={{
+                    position:"absolute",
+                    top:topPx,left:off?`${off*10}px`:"2px",
+                    width:off?`calc(90% - ${off*10}px)`:"94%",
+                    height:heightPx,
+                    background:isDone?"rgba(34,197,94,0.08)":`${color}14`,
+                    border:isAuto?`1.5px dashed ${color}55`:`1.5px solid ${color}40`,
+                    borderLeft:`3px solid ${color}`,
+                    borderRadius:7,padding:"4px 6px 4px 8px",
+                    cursor:"grab",overflow:"hidden",zIndex:ti+2,
+                    opacity:dragTaskId===t.id?0.4:1,
+                    transition:"box-shadow 0.15s",
+                    boxShadow:isDone?"0 0 8px rgba(34,197,94,0.12)":"0 1px 3px rgba(0,0,0,0.07)",
+                  }}
+                  onMouseDown={e=>{
+                    if((e.target as HTMLElement).classList.contains("cal-resize"))return;
+                    if(e.button!==0)return;
+                    e.preventDefault();
+                    const grid=document.getElementById("cal-grid-inner");
+                    if(!grid)return;
+                    const rect=grid.getBoundingClientRect();
+                    const colW=(rect.width-52)/days.length;
+                    calDragRef.current={id:t.id,dur,origDate:dateStr,colW,gridLeft:rect.left,gridTop:rect.top,days};
+                    setDragTaskId(t.id);
+                  }}
+                  onClick={e=>{if(!dragTaskId&&Math.abs(e.movementX)<3)setCalModal(t);}}
+                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow=`0 2px 14px ${color}40`;(e.currentTarget as HTMLElement).style.zIndex="50";}}
+                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow=isDone?"0 0 8px rgba(34,197,94,0.12)":"0 1px 3px rgba(0,0,0,0.07)";(e.currentTarget as HTMLElement).style.zIndex=String(ti+2);}}>
+                  {/* Checkbox */}
+                  <div style={{display:"flex",alignItems:"flex-start",gap:5}}>
+                    <button onMouseDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();
+                      const done=!(t.status==="done"||t.done);
+                      if(t._src==="kanban")kanban.update(t.id,{status:done?"done":"todo",done});
+                      else if(t._src==="goal")goalTasks.update(t.id,{status:done?"done":"todo",done});
+                      else calTasks.update(t.id,{status:done?"done":"todo",done});}}
+                      style={{width:13,height:13,minWidth:13,borderRadius:3,border:`1.5px solid ${isDone?"#22C55E":color}`,background:isDone?"#22C55E":"transparent",cursor:"pointer",marginTop:1,display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s"}}>
+                      {isDone&&<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5"><polyline points="20 6 9 17 4 12"/></svg>}
+                    </button>
+                    <div style={{flex:1,fontSize:11,fontWeight:700,color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:isDone?"line-through":"none",lineHeight:1.3}}>{t.text}</div>
+                  </div>
+                  {heightPx>32&&<div className="ct-lbl" style={{fontSize:9,color:`${color}bb`,paddingLeft:18,marginTop:2}}>{t.start_time}–{t.end_time} · {fmtDur(dur)}</div>}
+                  {isAuto&&heightPx>44&&<div style={{fontSize:9,color:C.y,paddingLeft:18,fontStyle:"italic"}}>⚡ незапланировано</div>}
+                  {/* Resize handle */}
+                  <div className="cal-resize"
+                    onMouseDown={e=>{e.stopPropagation();e.preventDefault();calResizeRef.current={id:t.id,startMin:st,endMin:et};setResizing(true);}}
+                    style={{position:"absolute",bottom:0,left:0,right:0,height:10,cursor:"ns-resize",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    <div style={{width:24,height:3,borderRadius:99,background:`${color}50`}}/>
+                  </div>
+                </div>;
+              })}
+            </div>
+          </div>;
+        })}
+      </div>
+    </div>;
+  };
+
+  // ── CalendarView ──────────────────────────────────────────
+  const CalendarView=()=>{
+    const tdStr=today();
+    if(calMode==="month"){
+      const y=calDate.getFullYear(),m=calDate.getMonth();
+      const firstDow=new Date(y,m,1).getDay();
+      const offset=firstDow===0?6:firstDow-1;
+      const daysInMonth=new Date(y,m+1,0).getDate();
+      const cells:string[]=[];
+      for(let i=0;i<offset;i++)cells.push("");
+      for(let d=1;d<=daysInMonth;d++)cells.push(`${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`);
+      while(cells.length%7)cells.push("");
+      return<div style={{background:C.w,borderRadius:16,border:"1px solid "+C.bd,overflow:"hidden"}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",background:C.ib,borderBottom:"1px solid "+C.bd}}>
+          {["Пн","Вт","Ср","Чт","Пт","Сб","Вс"].map(d=><div key={d} style={{textAlign:"center",padding:"10px 0",fontSize:11,fontWeight:700,color:C.t2}}>{d}</div>)}
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)"}}>
+          {cells.map((d,i)=>{
+            if(!d)return<div key={i} style={{minHeight:90,borderRight:"1px solid "+C.bd+"44",borderBottom:"1px solid "+C.bd+"44",background:C.ib,opacity:0.4}}/>;
+            const dayT=allCalTasks.filter((t:any)=>(t.date||t.start_date)===d);
+            const isToday=d===tdStr;
+            return<div key={d} onClick={()=>openCalNew(d)}
+              style={{minHeight:90,borderRight:"1px solid "+C.bd+"44",borderBottom:"1px solid "+C.bd+"44",padding:"6px 4px",cursor:"pointer",background:isToday?"rgba(37,99,235,0.03)":"transparent",transition:"background 0.1s"}}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=isToday?"rgba(37,99,235,0.06)":C.ib;}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=isToday?"rgba(37,99,235,0.03)":"transparent";}}>
+              <div style={{display:"flex",justifyContent:"center",marginBottom:3}}>
+                <div style={{width:24,height:24,borderRadius:"50%",background:isToday?C.a:"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <span style={{fontSize:12,fontWeight:isToday?700:400,color:isToday?"#fff":C.t1}}>{parseInt(d.split("-")[2])}</span>
+                </div>
+              </div>
+              {dayT.slice(0,3).map((t:any)=>{
+                const isDone=t.status==="done"||t.done;
+                const isAuto=t.auto_placed&&!t.manually_placed;
+                const color=isDone?"#22C55E":(t._src==="goal"?(goals.data.find((g:any)=>g.id===t.goal_id)?.color||C.a):typeColor(t.type||"biz"));
+                return<div key={t.id} onClick={e=>{e.stopPropagation();setCalModal(t);}}
+                  style={{fontSize:10,padding:"2px 5px",borderRadius:4,marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+                    background:isDone?"rgba(34,197,94,0.08)":`${color}14`,color,
+                    border:isAuto?`1px dashed ${color}40`:`1px solid ${color}25`,
+                    borderLeft:`2px solid ${color}`,textDecoration:isDone?"line-through":"none"}}>
+                  {t.start_time&&<span style={{opacity:0.6,fontSize:9}}>{t.start_time} </span>}{t.text}
+                </div>;
+              })}
+              {dayT.length>3&&<div style={{fontSize:9,color:C.t2,paddingLeft:4,cursor:"pointer"}}
+                onClick={e=>{e.stopPropagation();setCalMode("day");setCalDate(new Date(d+"T12:00:00"));}}>
+                +{dayT.length-3} ещё
+              </div>}
+            </div>;
+          })}
+        </div>
+      </div>;
+    }
+    if(calMode==="week"){
+      const sow=new Date(calDate);
+      const dow=sow.getDay()===0?6:sow.getDay()-1;
+      sow.setDate(sow.getDate()-dow);
+      const days=Array.from({length:7},(_,i)=>{const d=new Date(sow);d.setDate(sow.getDate()+i);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;});
+      return<div style={{overflowX:"auto"}}><div style={{minWidth:560}}><TimeGrid days={days}/></div></div>;
+    }
+    const d=calDate;
+    const dStr=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    return<TimeGrid days={[dStr]}/>;
+  };
+
+  // ── Calendar modal ─────────────────────────────────────────
+  const CalModal=()=>{
+    if(!calModal)return null;
+    const isNew=calModal==="new";
+    const isView=!isNew&&typeof calModal==="object"&&!calModal._editing;
+    const t=isView?calModal:null;
+    const isDone=t&&(t.status==="done"||t.done);
+
+    // View mode
+    if(isView&&t){
+      const color=isDone?"#22C55E":(t._src==="goal"?(goals.data.find((g:any)=>g.id===t.goal_id)?.color||C.a):typeColor(t.type||"biz"));
+      return<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setCalModal(null)}>
+        <div style={{background:C.w,borderRadius:18,padding:28,width:"100%",maxWidth:420,border:"1px solid "+C.bd,boxShadow:"0 24px 60px rgba(0,0,0,0.35)"}} onClick={e=>e.stopPropagation()}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+            <div style={{width:12,height:12,borderRadius:3,background:color,flexShrink:0}}/>
+            <div style={{fontSize:17,fontWeight:700,color:C.t1,flex:1}}>{t.text}</div>
+            <button onClick={()=>setCalModal(null)} style={{width:28,height:28,border:"1px solid "+C.bd,borderRadius:8,background:C.ib,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.t2}}>✕</button>
+          </div>
+          {t.description&&<div style={{fontSize:13,color:C.t2,marginBottom:12,lineHeight:1.6}}>{t.description}</div>}
+          <div style={{display:"flex",gap:12,fontSize:12,color:C.t2,marginBottom:20,flexWrap:"wrap"}}>
+            {(t.date||t.start_date)&&<span>📅 {t.date||t.start_date}</span>}
+            {t.start_time&&<span>🕐 {t.start_time}–{t.end_time}</span>}
+            {t._src==="kanban"&&<span>📋 Спринт</span>}
+            {t._src==="goal"&&<span>🎯 Цель</span>}
+          </div>
+          <div style={{display:"flex",gap:10}}>
+            <button onClick={()=>setCalModal({...t,_editing:true})}
+              style={{flex:1,padding:"9px",background:C.a+"14",color:C.a,border:"1px solid "+C.a+"30",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer"}}>✏️ Редактировать</button>
+            {!t._src&&<button onClick={()=>{calTasks.remove(t.id);setCalModal(null);}}
+              style={{padding:"9px 16px",background:C.r+"10",color:C.r,border:"1px solid "+C.r+"25",borderRadius:10,fontSize:13,cursor:"pointer"}}>🗑</button>}
+          </div>
+        </div>
+      </div>;
+    }
+
+    // Edit/New mode
+    const task=isNew?null:calModal;
+    return<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setCalModal(null)}>
+      <div style={{background:C.w,borderRadius:18,padding:28,width:"100%",maxWidth:460,border:"1px solid "+C.bd,boxShadow:"0 24px 60px rgba(0,0,0,0.35)"}} onClick={e=>e.stopPropagation()}>
+        <div style={{fontSize:17,fontWeight:700,color:C.t1,marginBottom:20}}>{isNew?"Новая задача":"Редактировать"}</div>
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          <div>
+            <label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4}}>Название *</label>
+            <input autoFocus value={calForm.text} onChange={e=>setCalForm(f=>({...f,text:e.target.value}))}
+              placeholder="Название задачи" style={{...iS(),fontSize:13}}
+              defaultValue={task?.text||""}/>
+          </div>
+          <div>
+            <label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4}}>Описание</label>
+            <textarea value={calForm.description} onChange={e=>setCalForm(f=>({...f,description:e.target.value}))}
+              rows={2} placeholder="Опционально"
+              style={{...iS(),fontSize:13,resize:"vertical" as const}}/>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
+            <div style={{gridColumn:"span 3"}}>
+              <label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4}}>Дата</label>
+              <input type="date" value={calForm.date} onChange={e=>setCalForm(f=>({...f,date:e.target.value}))} style={{...iS(),fontSize:13}}/>
+            </div>
+            <div>
+              <label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4}}>Начало</label>
+              <input type="time" value={calForm.start_time} onChange={e=>setCalForm(f=>({...f,start_time:e.target.value}))} style={{...iS(),fontSize:13}}/>
+            </div>
+            <div>
+              <label style={{fontSize:11,color:C.t2,display:"block",marginBottom:4}}>Конец</label>
+              <input type="time" value={calForm.end_time} onChange={e=>setCalForm(f=>({...f,end_time:e.target.value}))} style={{...iS(),fontSize:13}}/>
+            </div>
+            <div style={{display:"flex",alignItems:"flex-end"}}>
+              <span style={{fontSize:10,color:C.t2}}>Пусто = авто 📅</span>
+            </div>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:10,marginTop:20,justifyContent:"flex-end"}}>
+          <button onClick={()=>setCalModal(null)} style={{padding:"9px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:10,fontSize:13,cursor:"pointer"}}>Отмена</button>
+          <button onClick={()=>{
+            if(!calForm.text.trim())return;
+            saveCalTask();
+          }} style={{padding:"9px 22px",background:C.a,color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer",boxShadow:`0 0 16px ${C.a}40`}}>
+            {isNew?"Создать":"Сохранить"}
+          </button>
+        </div>
+      </div>
+    </div>;
+  };
+
+  // init calForm when modal opens
+  useEffect(()=>{
+    if(calModal&&calModal!=="new"&&typeof calModal==="object"){
+      setCalForm({text:calModal.text||"",description:calModal.description||"",date:calModal.date||calModal.start_date||"",start_time:calModal.start_time||"",end_time:calModal.end_time||""});
+    }
+  },[calModal]);
 
   const advice=useMemo(()=>{
     const tasks=tasksForDay(td);
@@ -2645,8 +3085,54 @@ function StrategyPage({userId}:{userId:string}){
     <div style={{display:"inline-flex",background:C.bg,borderRadius:12,padding:3,gap:2,marginBottom:24,border:"1px solid "+C.bd}}>
       <button style={tabStyle(stratTab==="sprint")} onClick={()=>setStratTab("sprint")}>Текущий спринт</button>
       <button style={tabStyle(stratTab==="yearmap")} onClick={()=>setStratTab("yearmap")}>Карта года</button>
+      <button style={tabStyle(stratTab==="calendar")} onClick={()=>setStratTab("calendar")}>Календарь задач</button>
     </div>
     {stratTab==="yearmap"&&<YearMap userId={userId} goals={goals} goalUpdate={goals.update} goalAdd={goals.add} goalTasks={goalTasks}/>}
+
+    {/* CALENDAR */}
+    {stratTab==="calendar"&&<>
+      {/* Toolbar */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,flexWrap:"wrap",gap:10}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <button onClick={()=>navCal(-1)} style={{width:34,height:34,borderRadius:9,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <button onClick={()=>navCal(1)} style={{width:34,height:34,borderRadius:9,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+          <span style={{fontSize:16,fontWeight:700,color:C.t1,minWidth:220}}>{calTitle()}</span>
+          <button onClick={()=>setCalDate(new Date())}
+            style={{padding:"6px 14px",background:C.a+"14",color:C.a,border:"1px solid "+C.a+"30",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer"}}>
+            Сегодня
+          </button>
+        </div>
+        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          <div style={{display:"flex",background:C.ib,borderRadius:9,padding:3,border:"1px solid "+C.bd,gap:2}}>
+            {(["month","week","day"] as const).map(m=>(
+              <button key={m} onClick={()=>setCalMode(m)}
+                style={{padding:"6px 14px",borderRadius:7,border:"none",background:calMode===m?C.w:"transparent",color:calMode===m?C.t1:C.t2,fontSize:12,fontWeight:calMode===m?600:400,cursor:"pointer",boxShadow:calMode===m?"0 1px 4px rgba(0,0,0,0.08)":"none",transition:"all 0.15s"}}>
+                {m==="month"?"Месяц":m==="week"?"Неделя":"День"}
+              </button>
+            ))}
+          </div>
+          <button onClick={()=>openCalNew()}
+            style={{padding:"8px 18px",background:C.a,color:"#fff",border:"none",borderRadius:9,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,boxShadow:`0 0 16px ${C.a}30`}}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            + Задача
+          </button>
+        </div>
+      </div>
+      {/* Auto-placed banner */}
+      {(()=>{const u=allCalTasks.filter((t:any)=>t.auto_placed&&!t.manually_placed);if(!u.length)return null;
+        return<div style={{background:C.y+"10",border:"1px solid "+C.y+"30",borderRadius:12,padding:"10px 14px",marginBottom:14,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+          <span style={{fontSize:12,fontWeight:600,color:C.y}}>⚡ {u.length} незапланированных задач</span>
+          <span style={{fontSize:11,color:C.t2}}>Перетащи их на удобное время</span>
+        </div>;})()}
+      <div style={{overflowY:"auto",maxHeight:"calc(100vh - 280px)"}}>
+        <CalendarView/>
+      </div>
+      <CalModal/>
+    </>}
     {stratTab==="sprint"&&<>
       {kanbanErrToast&&<div style={{position:"fixed",bottom:isMobile?72:24,left:"50%",transform:"translateX(-50%)",background:C.r,color:"#fff",padding:"12px 20px",borderRadius:12,fontSize:13,fontWeight:500,zIndex:1000,boxShadow:"0 8px 24px rgba(0,0,0,0.2)"}}>Не удалось сохранить порядок. Попробуйте ещё раз</div>}
       {/* Kanban */}
