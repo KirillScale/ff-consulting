@@ -4021,6 +4021,25 @@ function ContentPage({userId}:{userId:string}){
     setEditId(item.id);setShow(true);
   };
 
+  const CONTENT_STAGES=[
+    {id:"idea",label:"💡 Идея",color:"#8B5CF6",hint:"Концепции и темы ждут своей очереди"},
+    {id:"progress",label:"🎬 Разработка",color:"#F59E0B",hint:"Съёмка, написание текста, сбор материала"},
+    {id:"ready",label:"✂️ Реализация",color:"#3B82F6",hint:"Монтаж, дизайн, финальная правка"},
+    {id:"published",label:"🚀 Опубликовано",color:"#10B981",hint:"Вышло в свет — собирает реакции"},
+  ];
+  const[kanbanDrag,setKanbanDrag]=useState<string|null>(null);
+  const[kanbanOver,setKanbanOver]=useState<string|null>(null);
+
+  const onKanbanDragStart=(id:string)=>setKanbanDrag(id);
+  const onKanbanDragEnd=()=>{setKanbanDrag(null);setKanbanOver(null);};
+  const onKanbanDragOver=(stageId:string,e:React.DragEvent)=>{e.preventDefault();setKanbanOver(stageId);};
+  const onKanbanDrop=async(stageId:string)=>{
+    if(kanbanDrag&&kanbanDrag!==stageId){
+      await update(kanbanDrag,{status:stageId});
+    }
+    setKanbanDrag(null);setKanbanOver(null);
+  };
+
   const calDays=useMemo(()=>{
     const first=new Date(calMonth.y,calMonth.m,1);
     const last=new Date(calMonth.y,calMonth.m+1,0);
@@ -4059,20 +4078,44 @@ function ContentPage({userId}:{userId:string}){
   ];
 
   return <>
-    <div style={{display:"grid",gridTemplateColumns:isMobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:isMobile?10:16,marginBottom:isMobile?16:24}}>
-      {[{l:"Всего",v:items.length,c:C.a},{l:"В работе",v:items.filter((x:any)=>x.status==="progress").length,c:C.y},{l:"Готово",v:items.filter((x:any)=>x.status==="ready").length,c:C.a},{l:"Опубликовано",v:items.filter((x:any)=>x.status==="published").length,c:C.g}].map((s,i)=><Card key={i} style={{padding:"20px 24px"}}><div style={{fontSize:26,fontWeight:700,color:s.c}}>{s.v}</div><div style={{fontSize:13,color:C.t2,marginTop:4}}>{s.l}</div></Card>)}
+    {/* ── Dashboard stats ── */}
+    <div style={{display:"grid",gridTemplateColumns:isMobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:12,marginBottom:24}}>
+      {CONTENT_STAGES.map(stage=>{
+        const cnt=items.filter((x:any)=>x.status===stage.id).length;
+        const pct=items.length?Math.round(cnt/items.length*100):0;
+        const isMax=cnt===Math.max(...CONTENT_STAGES.map(s=>items.filter((x:any)=>x.status===s.id).length));
+        return<div key={stage.id} style={{background:C.w,borderRadius:14,padding:"16px 18px",border:"1px solid "+(isMax?stage.color+"40":C.bd),boxShadow:isMax?"0 0 20px "+stage.color+"15":"none",transition:"all 0.2s"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+            <span style={{fontSize:13,color:C.t2,fontWeight:500}}>{stage.label}</span>
+            {isMax&&cnt>0&&<span style={{fontSize:10,background:stage.color+"18",color:stage.color,borderRadius:20,padding:"2px 7px",fontWeight:600}}>больше всего</span>}
+          </div>
+          <div style={{fontSize:26,fontWeight:800,color:stage.color,marginBottom:6}}>{cnt}</div>
+          <div style={{height:4,borderRadius:4,background:C.bd,overflow:"hidden"}}>
+            <div style={{height:"100%",width:pct+"%",background:"linear-gradient(90deg,"+stage.color+","+stage.color+"bb)",borderRadius:4,transition:"width 0.4s"}}/>
+          </div>
+          <div style={{fontSize:10,color:C.t2,marginTop:4}}>{pct}% от всех</div>
+        </div>;
+      })}
     </div>
 
-    {/* Tabs */}
+    {/* ── Tabs ── */}
     <div style={{display:"flex",gap:4,marginBottom:20,borderBottom:"2px solid "+C.bd}}>
-      {[{id:"list",label:"Контент-план"},{id:"calendar",label:"Календарь"},{id:"stories",label:"📊 Карусели историй"}].map(t=><button key={t.id} onClick={()=>setTab(t.id as any)} style={{padding:"10px 20px",background:"none",border:"none",borderBottom:tab===t.id?"3px solid "+C.a:"3px solid transparent",color:tab===t.id?C.a:C.t2,fontSize:14,fontWeight:tab===t.id?600:400,cursor:"pointer",marginBottom:-2}}>{t.label}</button>)}
+      {[{id:"list",label:"📋 Канбан"},{id:"calendar",label:"Календарь"},{id:"stories",label:"📊 Карусели историй"}].map(t=><button key={t.id} onClick={()=>setTab(t.id as any)} style={{padding:"10px 20px",background:"none",border:"none",borderBottom:tab===t.id?"3px solid "+C.a:"3px solid transparent",color:tab===t.id?C.a:C.t2,fontSize:14,fontWeight:tab===t.id?600:400,cursor:"pointer",marginBottom:-2}}>{t.label}</button>)}
     </div>
 
-    {/* LIST TAB */}
+    {/* ── KANBAN TAB ── */}
     {tab==="list"&&<>
-      <div style={{display:"flex",justifyContent:"space-between",marginBottom:20}}>
-        <div style={{fontSize:18,fontWeight:600}}>Контент-план</div>
-        <Btn onClick={()=>{setShow(!show);setEditId(null);sF(emptyF());}}>+ Контент</Btn>
+      {/* Header */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+        <div>
+          <div style={{fontSize:18,fontWeight:700,color:C.t1}}>Контент-план</div>
+          <div style={{fontSize:12,color:C.t2,marginTop:2}}>Перетаскивай карточки между этапами</div>
+        </div>
+        <button onClick={()=>{setShow(!show);setEditId(null);sF(emptyF());}}
+          style={{padding:"9px 18px",background:C.a,color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,boxShadow:"0 0 16px "+C.a+"30"}}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          + Контент
+        </button>
       </div>
 
       {/* Form */}
@@ -4125,51 +4168,120 @@ function ContentPage({userId}:{userId:string}){
         <div style={{display:"flex",gap:10,marginTop:16}}><Btn onClick={sub}>{editId?"Сохранить":"Добавить"}</Btn><Btn primary={false} onClick={()=>{setShow(false);setEditId(null);}}>Отмена</Btn></div>
       </Card>}
 
-      {/* Grouped list */}
-      {items.length===0
-        ? <Card style={{padding:"48px",textAlign:"center"}}><span style={{color:C.t2}}>Нет публикаций</span></Card>
-        : Object.entries(groupedByMonth).map(([key,group])=><div key={key} style={{marginBottom:24}}>
-            <div style={{fontSize:13,fontWeight:700,color:C.t2,letterSpacing:0.5,textTransform:"uppercase",marginBottom:10,display:"flex",alignItems:"center",gap:8}}>
-              {monthLabel(key)}
-              <span style={{fontSize:11,fontWeight:500,background:C.bd,borderRadius:20,padding:"1px 8px",textTransform:"none"}}>{(group as any[]).length}</span>
+      {/* KANBAN BOARD */}
+      <div style={{display:"flex",gap:14,overflowX:"auto",alignItems:"flex-start",paddingBottom:16,scrollbarWidth:"none"}}>
+        {CONTENT_STAGES.map(stage=>{
+          const stageItems=items.filter((x:any)=>x.status===stage.id);
+          const isOver=kanbanOver===stage.id;
+          return<div key={stage.id}
+            onDragOver={e=>onKanbanDragOver(stage.id,e)}
+            onDrop={()=>onKanbanDrop(stage.id)}
+            onDragLeave={()=>setKanbanOver(null)}
+            style={{
+              minWidth:260,width:260,flexShrink:0,
+              background:isOver?C.a+"06":C.ib,
+              borderRadius:14,
+              border:"1px solid "+(isOver?stage.color+"50":C.bd),
+              boxShadow:isOver?"0 0 20px "+stage.color+"15":"none",
+              transition:"all 0.2s",
+              overflow:"hidden",
+            }}>
+            {/* Column header */}
+            <div style={{padding:"14px 14px 10px",borderBottom:"1px solid "+C.bd}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
+                <div style={{display:"flex",alignItems:"center",gap:7}}>
+                  <div style={{width:8,height:8,borderRadius:"50%",background:stage.color,boxShadow:"0 0 6px "+stage.color+"80"}}/>
+                  <span style={{fontSize:13,fontWeight:700,color:C.t1}}>{stage.label}</span>
+                </div>
+                <span style={{fontSize:11,fontWeight:700,color:stage.color,background:stage.color+"15",borderRadius:20,padding:"2px 8px"}}>{stageItems.length}</span>
+              </div>
+              <div style={{fontSize:10,color:C.t2,lineHeight:1.4}}>{stage.hint}</div>
             </div>
-            <Card style={{padding:0,overflow:"hidden"}}>
-              <div style={{overflowX:"auto"}}>
-              <table style={{width:"100%",borderCollapse:"collapse",fontSize:14,minWidth:isMobile?480:0}}>
-                <tbody>{(group as any[]).map((x:any,i:number)=><tr key={x.id} style={{borderBottom:i<(group as any[]).length-1?"1px solid "+C.bd:"none"}}
-                  onMouseEnter={e=>(e.currentTarget.style.background=C.bg)} onMouseLeave={e=>(e.currentTarget.style.background="transparent")}>
-                  {/* Cover thumbnail */}
-                  <td style={{padding:"10px 12px",width:52}}>
-                    <div style={{width:44,height:44,borderRadius:8,overflow:"hidden",background:C.bg,border:"1px solid "+C.bd,flexShrink:0,position:"relative"}}>
-                      {x.cover_url?<img src={x.cover_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center"}}><PlatformIcon pid={x.platform} size={16}/></div>}
+
+            {/* Cards */}
+            <div style={{padding:"10px 10px",display:"flex",flexDirection:"column",gap:8,minHeight:80}}>
+              {stageItems.length===0&&!isOver&&(
+                <div style={{padding:"20px 0",textAlign:"center",color:C.t2,fontSize:11,opacity:0.4}}>Пусто</div>
+              )}
+              {stageItems.map((x:any)=>(
+                <div key={x.id}
+                  draggable
+                  onDragStart={()=>onKanbanDragStart(x.id)}
+                  onDragEnd={onKanbanDragEnd}
+                  style={{
+                    background:C.w,borderRadius:10,padding:"12px 12px",
+                    border:"1px solid "+C.bd,
+                    borderLeft:"3px solid "+stage.color,
+                    cursor:"grab",
+                    opacity:kanbanDrag===x.id?0.4:1,
+                    transition:"all 0.15s",
+                    boxShadow:"0 1px 4px rgba(0,0,0,0.06)",
+                    animation:"leadPulse 5s ease-in-out infinite",
+                  }}
+                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 4px 16px "+stage.color+"20";(e.currentTarget as HTMLElement).style.borderColor=stage.color+"60";(e.currentTarget as HTMLElement).style.animationPlayState="paused";}}
+                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 1px 4px rgba(0,0,0,0.06)";(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.borderLeftColor=stage.color;(e.currentTarget as HTMLElement).style.animationPlayState="running";}}>
+
+                  {/* Card top: platform + type */}
+                  <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:7}}>
+                    {x.cover_url
+                      ?<img src={x.cover_url} style={{width:28,height:28,borderRadius:6,objectFit:"cover",flexShrink:0}} alt=""/>
+                      :<div style={{width:28,height:28,borderRadius:6,background:C.ib,border:"1px solid "+C.bd,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><PlatformIcon pid={x.platform} size={14}/></div>
+                    }
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:12,fontWeight:700,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{x.topic}</div>
+                      <div style={{fontSize:10,color:C.t2,marginTop:1}}>{x.type} · <span style={{color:pCol(x.platform)}}>{pLbl(x.platform)}</span></div>
                     </div>
-                  </td>
-                  {/* Platform icon */}
-                  <td style={{padding:"10px 8px",width:28}}><PlatformIcon pid={x.platform} size={20}/></td>
-                  <td style={{padding:"10px 8px",minWidth:80}}><Tag label={pLbl(x.platform)} color={pCol(x.platform)}/></td>
-                  <td style={{padding:"10px 8px",width:80,fontSize:12,color:C.t2}}>{x.type}</td>
-                  <td style={{padding:"10px 12px",fontWeight:500}}>
-                    {x.topic}
-                    {x.scenario&&<div style={{fontSize:11,color:C.t2,marginTop:1,maxWidth:300,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{x.scenario}</div>}
-                  </td>
-                  <td style={{padding:"10px 8px"}}><Tag label={csLbl(x.status)} color={csCol(x.status)}/></td>
-                  <td style={{padding:"10px 8px",fontSize:11,color:C.t2,whiteSpace:"nowrap"}}>{x.date||""}</td>
-                  <td style={{padding:"10px 10px"}}>
-                    <div style={{display:"flex",gap:5,alignItems:"center"}}>
-                      {/* View link button */}
-                      {x.content_url
-                        ? <a href={x.content_url} target="_blank" rel="noreferrer" style={{padding:"5px 10px",background:C.a+"12",color:C.a,borderRadius:7,fontSize:11,fontWeight:600,textDecoration:"none",whiteSpace:"nowrap",border:"1px solid "+C.a+"22"}}>Посмотреть</a>
-                        : <span style={{padding:"5px 10px",background:C.bg,color:C.t2,borderRadius:7,fontSize:11,border:"1px solid "+C.bd,whiteSpace:"nowrap",opacity:0.5}}>Посмотреть</span>
-                      }
-                      <button onClick={()=>startEdit(x)} style={{width:28,height:28,borderRadius:6,border:"none",background:C.bg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><I path="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" size={12} color={C.a} sw={2}/></button>
-                      <button onClick={()=>remove(x.id)} style={{width:28,height:28,borderRadius:6,border:"none",background:C.bg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><I path="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" size={12} color={C.r} sw={2}/></button>
+                  </div>
+
+                  {/* Scenario preview */}
+                  {x.scenario&&<div style={{fontSize:11,color:C.t2,lineHeight:1.4,marginBottom:8,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical" as any}}>{x.scenario}</div>}
+
+                  {/* Date + actions */}
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:6}}>
+                    {x.date?<span style={{fontSize:10,color:C.t2}}>📅 {x.date}</span>:<span/>}
+                    <div style={{display:"flex",gap:4}}>
+                      {x.content_url&&<a href={x.content_url} target="_blank" rel="noreferrer"
+                        style={{width:24,height:24,borderRadius:6,background:C.a+"12",display:"flex",alignItems:"center",justifyContent:"center",textDecoration:"none"}}
+                        onClick={e=>e.stopPropagation()}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={C.a} strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                      </a>}
+                      <button onClick={e=>{e.stopPropagation();startEdit(x);}}
+                        style={{width:24,height:24,borderRadius:6,border:"none",background:C.ib,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={C.a} strokeWidth="2"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                      </button>
+                      <button onClick={e=>{e.stopPropagation();remove(x.id);}}
+                        style={{width:24,height:24,borderRadius:6,border:"none",background:C.ib,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={C.r} strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+                      </button>
                     </div>
-                  </td>
-                </tr>)}</tbody>
-              </table></div>
-            </Card>
-          </div>)
-      }
+                  </div>
+
+                  {/* Move to next stage quick button */}
+                  {stage.id!=="published"&&(()=>{
+                    const nextIdx=CONTENT_STAGES.findIndex(s=>s.id===stage.id)+1;
+                    const next=CONTENT_STAGES[nextIdx];
+                    return next?<button
+                      onMouseDown={e=>e.stopPropagation()}
+                      onClick={e=>{e.stopPropagation();update(x.id,{status:next.id});}}
+                      style={{marginTop:8,width:"100%",padding:"5px 0",background:next.color+"10",border:"1px solid "+next.color+"25",borderRadius:7,fontSize:10,color:next.color,fontWeight:600,cursor:"pointer",transition:"all 0.15s"}}
+                      onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=next.color+"20";}}
+                      onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=next.color+"10";}}>
+                      → {next.label}
+                    </button>:null;
+                  })()}
+                </div>
+              ))}
+
+              {/* Drop zone indicator */}
+              {isOver&&kanbanDrag&&(
+                <div style={{height:60,borderRadius:10,border:"1px dashed "+stage.color,background:stage.color+"06",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <span style={{fontSize:11,color:stage.color}}>Перетащи сюда</span>
+                </div>
+              )}
+            </div>
+          </div>;
+        })}
+      </div>
     </>}
 
     {/* CALENDAR TAB */}
