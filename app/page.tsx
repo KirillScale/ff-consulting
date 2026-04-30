@@ -3986,27 +3986,51 @@ function ContentPage({userId}:{userId:string}){
     setCoverUploading(true);
     try{
       const compressed=await new Promise<Blob>((resolve,reject)=>{
-        const img=new Image();
+        const img=document.createElement("img");
         const obj=URL.createObjectURL(file);
         img.onload=()=>{
-          const MAX=900;
-          const scale=Math.min(1,MAX/Math.max(img.width,img.height));
+          // Preserve ORIGINAL proportions — no forced 1:1 crop
+          const MAX=1200;
+          const scale=Math.min(1,MAX/Math.max(img.naturalWidth,img.naturalHeight));
+          const w=Math.round(img.naturalWidth*scale);
+          const h=Math.round(img.naturalHeight*scale);
           const canvas=document.createElement("canvas");
-          canvas.width=Math.round(img.width*scale);
-          canvas.height=Math.round(img.height*scale);
-          canvas.getContext("2d")!.drawImage(img,0,0,canvas.width,canvas.height);
+          canvas.width=w; canvas.height=h;
+          canvas.getContext("2d")!.drawImage(img,0,0,w,h);
           URL.revokeObjectURL(obj);
-          canvas.toBlob(b=>b?resolve(b):reject(),"image/jpeg",0.82);
+          canvas.toBlob(b=>b?resolve(b):reject(),"image/jpeg",0.88);
         };
-        img.onerror=reject;img.src=obj;
+        img.onerror=reject; img.src=obj;
       });
-      const path=`${userId}/content_${Date.now()}.jpg`;
+      const path=userId+"/content_"+Date.now()+".jpg";
       const{error}=await supabase.storage.from("files").upload(path,compressed,{upsert:true,contentType:"image/jpeg"});
       if(error)throw error;
       const{data}=supabase.storage.from("files").getPublicUrl(path);
       sF((prev:any)=>({...prev,cover_url:data.publicUrl}));
     }catch(e){console.error(e);}
     finally{setCoverUploading(false);}
+  };
+
+  const downloadPDF=(item:any)=>{
+    const win=window.open("","_blank");
+    if(!win)return;
+    const escapedScenario=(item.scenario||"").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    win.document.write("<!DOCTYPE html><html><head><meta charset='utf-8'><title>"+item.topic+"</title>"
+      +"<style>body{font-family:Arial,sans-serif;max-width:800px;margin:40px auto;padding:0 24px;color:#1a1a2e;line-height:1.6;}"
+      +"h1{font-size:26px;font-weight:800;margin-bottom:8px;}"
+      +".meta{font-size:13px;color:#666;margin-bottom:24px;}"
+      +".badge{background:#f0f4ff;color:#2563eb;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:600;margin-right:8px;}"
+      +".content{background:#f8f9fa;border-radius:8px;padding:16px;font-size:14px;white-space:pre-wrap;line-height:1.8;}"
+      +"img{max-width:100%;border-radius:8px;margin-bottom:16px;max-height:360px;object-fit:cover;width:100%;}"
+      +"</style></head><body>"
+      +(item.cover_url?"<img src='"+item.cover_url+"'/>":"")
+      +"<h1>"+item.topic+"</h1>"
+      +"<div class='meta'><span class='badge'>"+item.platform+"</span><span class='badge'>"+item.type+"</span>"+(item.date?" &nbsp;📅 "+item.date:"")+"</div>"
+      +(item.scenario?"<div style='font-size:11px;font-weight:700;color:#888;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px'>ТЕКСТ / СЦЕНАРИЙ</div><div class='content'>"+escapedScenario+"</div>":"")
+      +(item.content_url?"<p style='margin-top:16px'><a href='"+item.content_url+"'>"+item.content_url+"</a></p>":"")
+      +"<script>window.onload=function(){window.print();}<\/script>"
+      +"</body></html>");
+    win.document.close();
   };
 
   const sub=async()=>{
@@ -4122,32 +4146,33 @@ function ContentPage({userId}:{userId:string}){
       {show&&<Card style={{marginBottom:20}}>
         <div style={{fontSize:15,fontWeight:700,marginBottom:18}}>{editId?"Редактировать":"Добавить контент"}</div>
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:14}}>
-          {/* Cover upload */}
+          {/* Cover upload — preserves aspect ratio */}
           <div style={{gridRow:"span 2",display:"flex",flexDirection:"column",gap:8}}>
             <label style={{fontSize:12,color:C.t2,fontWeight:600}}>Обложка</label>
             <label style={{cursor:"pointer",flex:1}}>
-              <div style={{width:"100%",aspectRatio:"1",background:C.bg,borderRadius:12,border:"2px dashed "+C.bd,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
+              <div style={{width:"100%",minHeight:120,background:C.ib,borderRadius:12,border:"2px dashed "+C.bd,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
                 {coverUploading
                   ? <div style={{width:24,height:24,border:"3px solid "+C.bd,borderTopColor:C.a,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
                   : f.cover_url
-                  ? <img src={f.cover_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="cover"/>
-                  : <div style={{textAlign:"center",padding:8}}>
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.5" style={{marginBottom:4}}><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  ? <img src={f.cover_url} style={{width:"100%",height:"100%",objectFit:"contain",display:"block"}} alt="cover"/>
+                  : <div style={{textAlign:"center",padding:16}}>
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.5" style={{marginBottom:6}}><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                       <div style={{fontSize:11,color:C.t2}}>Загрузить фото</div>
+                      <div style={{fontSize:10,color:C.t2,opacity:0.6,marginTop:2}}>Сохраняется в оригинальных пропорциях</div>
                     </div>
                 }
               </div>
               <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0])uploadCover(e.target.files[0]);}}/>
             </label>
+            {f.cover_url&&<button onClick={()=>sF({...f,cover_url:""})} style={{fontSize:11,color:C.r,background:"transparent",border:"none",cursor:"pointer",textAlign:"left",padding:0}}>✕ Удалить обложку</button>}
           </div>
 
           <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Тема *</label><input value={f.topic} onChange={e=>sF({...f,topic:e.target.value})} style={iS()}/></div>
 
-          {/* Platform with icon */}
           <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Платформа</label>
             <div style={{display:"flex",alignItems:"center",gap:8,padding:"0 10px",border:"1px solid "+C.bd,borderRadius:8,background:C.ib,height:38}}>
               <PlatformIcon pid={f.platform} size={18}/>
-              <select value={f.platform} onChange={e=>sF({...f,platform:e.target.value})} style={{flex:1,border:"none",background:"transparent",fontSize:13,outline:"none",fontFamily:"'Montserrat',sans-serif",cursor:"pointer"}}>
+              <select value={f.platform} onChange={e=>sF({...f,platform:e.target.value})} style={{flex:1,border:"none",background:"transparent",fontSize:13,outline:"none",fontFamily:"'Montserrat',sans-serif",cursor:"pointer",color:C.t1}}>
                 {PLATS.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}
               </select>
             </div>
@@ -4155,17 +4180,39 @@ function ContentPage({userId}:{userId:string}){
 
           <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Тип</label><select value={f.type} onChange={e=>sF({...f,type:e.target.value})} style={iS()}>{CTYPES.map(t=><option key={t}>{t}</option>)}</select></div>
           <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Статус</label><select value={f.status} onChange={e=>sF({...f,status:e.target.value})} style={iS()}>{CSTATS.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
+          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Дата публикации</label><input type="date" value={f.publish_date||""} onChange={e=>sF({...f,publish_date:e.target.value,date:e.target.value})} style={iS()}/></div>
           <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Ссылка на контент</label><input value={f.content_url} onChange={e=>sF({...f,content_url:e.target.value})} placeholder="https://..." style={iS()}/></div>
 
-          {/* Deadlines */}
-          {DEADLINES.map(d=><div key={d.key}>
-            <label style={{fontSize:12,display:"block",marginBottom:6,fontWeight:600,color:d.color}}>{d.label}</label>
-            <input type="datetime-local" value={f[d.key]} onChange={e=>sF({...f,[d.key]:e.target.value})} style={{...iS(),borderColor:f[d.key]?d.color:C.bd}}/>
-          </div>)}
+          {/* Deadlines — optional */}
+          <div style={{gridColumn:"span 3"}}>
+            <label style={{fontSize:12,color:C.t2,display:"block",marginBottom:8,fontWeight:600}}>Дедлайны <span style={{fontWeight:400,opacity:0.6}}>(необязательно)</span></label>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
+              {DEADLINES.filter(d=>d.key!=="publish_date").map(d=><div key={d.key}>
+                <label style={{fontSize:11,display:"block",marginBottom:4,color:d.color}}>{d.label}</label>
+                <input type="date" value={f[d.key]||""} onChange={e=>sF({...f,[d.key]:e.target.value})} style={{...iS(),fontSize:12,borderColor:f[d.key]?d.color:C.bd}}/>
+              </div>)}
+            </div>
+          </div>
 
-          <div style={{gridColumn:"span 3"}}><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Текст контента</label><textarea value={f.scenario} onChange={e=>sF({...f,scenario:e.target.value})} rows={3} style={{...iS(),resize:"vertical"}}/></div>
+          {/* Scenario / content text — full width, large */}
+          <div style={{gridColumn:"span 3"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+              <label style={{fontSize:12,color:C.t2,fontWeight:600}}>Сценарий / Текст контента</label>
+              <span style={{fontSize:10,color:C.t2,opacity:0.6}}>{f.scenario?.length||0} символов</span>
+            </div>
+            <textarea value={f.scenario} onChange={e=>sF({...f,scenario:e.target.value})}
+              rows={8} placeholder={"Напиши сценарий, текст поста, хэштеги, описание видео...\n\nМожно структурировать:\n• Крючок: ...\n• Основная мысль: ...\n• Призыв к действию: ..."}
+              style={{...iS(),resize:"vertical",lineHeight:"1.6",fontFamily:"'Montserrat',sans-serif"}}/>
+          </div>
         </div>
-        <div style={{display:"flex",gap:10,marginTop:16}}><Btn onClick={sub}>{editId?"Сохранить":"Добавить"}</Btn><Btn primary={false} onClick={()=>{setShow(false);setEditId(null);}}>Отмена</Btn></div>
+        <div style={{display:"flex",gap:10,marginTop:16,flexWrap:"wrap"}}>
+          <Btn onClick={sub}>{editId?"Сохранить":"Добавить"}</Btn>
+          {editId&&f.scenario&&<button onClick={()=>downloadPDF({...f,id:editId})}
+            style={{padding:"9px 16px",background:"linear-gradient(135deg,#16A34A,#15803D)",color:"#fff",border:"none",borderRadius:9,fontSize:12,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,boxShadow:"0 0 12px rgba(22,163,74,0.3)"}}>
+            📄 Скачать PDF
+          </button>}
+          <Btn primary={false} onClick={()=>{setShow(false);setEditId(null);}}>Отмена</Btn>
+        </div>
       </Card>}
 
       {/* KANBAN BOARD */}
@@ -4245,6 +4292,11 @@ function ContentPage({userId}:{userId:string}){
                         onClick={e=>e.stopPropagation()}>
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={C.a} strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                       </a>}
+                      {x.scenario&&<button onClick={e=>{e.stopPropagation();downloadPDF(x);}}
+                        title="Скачать PDF"
+                        style={{width:24,height:24,borderRadius:6,border:"none",background:"#16A34A12",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                      </button>}
                       <button onClick={e=>{e.stopPropagation();startEdit(x);}}
                         style={{width:24,height:24,borderRadius:6,border:"none",background:C.ib,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={C.a} strokeWidth="2"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
@@ -4286,30 +4338,56 @@ function ContentPage({userId}:{userId:string}){
 
     {/* CALENDAR TAB */}
     {tab==="calendar"&&<>
-      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
-        <button onClick={()=>setCalMonth(m=>m.m===0?{y:m.y-1,m:11}:{y:m.y,m:m.m-1})} style={{width:36,height:36,border:"1px solid "+C.bd,borderRadius:10,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg></button>
-        <span style={{fontSize:16,fontWeight:600,minWidth:140,textAlign:"center"}}>{MS[calMonth.m]} {calMonth.y}</span>
-        <button onClick={()=>setCalMonth(m=>m.m===11?{y:m.y+1,m:0}:{y:m.y,m:m.m+1})} style={{width:36,height:36,border:"1px solid "+C.bd,borderRadius:10,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg></button>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20,flexWrap:"wrap",gap:10}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <button onClick={()=>setCalMonth(m=>m.m===0?{y:m.y-1,m:11}:{y:m.y,m:m.m-1})} style={{width:34,height:34,border:"1px solid "+C.bd,borderRadius:9,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+          <span style={{fontSize:16,fontWeight:700,color:C.t1,minWidth:160,textAlign:"center"}}>{MS[calMonth.m]} {calMonth.y}</span>
+          <button onClick={()=>setCalMonth(m=>m.m===11?{y:m.y+1,m:0}:{y:m.y,m:m.m+1})} style={{width:34,height:34,border:"1px solid "+C.bd,borderRadius:9,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
+          <button onClick={()=>setCalMonth({y:new Date().getFullYear(),m:new Date().getMonth()})} style={{padding:"6px 12px",background:C.a+"14",color:C.a,border:"1px solid "+C.a+"30",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer"}}>Сегодня</button>
+        </div>
+        {/* Stage legend */}
+        <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+          {CONTENT_STAGES.map(s=>(
+            <div key={s.id} style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:C.t2}}>
+              <div style={{width:8,height:8,borderRadius:"50%",background:s.color}}/>
+              {s.label.replace(/[💡🎬✂️🚀] /,"")}
+            </div>
+          ))}
+        </div>
       </div>
       <Card style={{padding:0,overflow:"hidden"}}>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",borderBottom:"2px solid "+C.bd}}>
-          {["Пн","Вт","Ср","Чт","Пт","Сб","Вс"].map(d=><div key={d} style={{padding:"10px",textAlign:"center",fontSize:12,fontWeight:600,color:C.t2}}>{d}</div>)}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",borderBottom:"2px solid "+C.bd,background:C.ib}}>
+          {["Пн","Вт","Ср","Чт","Пт","Сб","Вс"].map(d=><div key={d} style={{padding:"10px",textAlign:"center",fontSize:11,fontWeight:700,color:C.t2,letterSpacing:0.5}}>{d}</div>)}
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)"}}>
           {calDays.map((d,i)=>{
             const dayItems=d?itemsForDay(d):[];
             const isT=d&&ds(d)===today();
-            return <div key={i} style={{minHeight:110,padding:"6px",borderRight:i%7!==6?"1px solid "+C.bd:"none",borderBottom:"1px solid "+C.bd,background:isT?"rgba(37,99,235,0.03)":"transparent"}}>
+            return <div key={i}
+              onClick={()=>{if(d){sF({...emptyF(),publish_date:ds(d),date:ds(d)});setShow(true);setTab("list");}}}
+              style={{minHeight:110,padding:"6px",borderRight:i%7!==6?"1px solid "+C.bd+"66":"none",borderBottom:"1px solid "+C.bd+"66",background:isT?"rgba(37,99,235,0.03)":"transparent",cursor:d?"pointer":"default",transition:"background 0.1s"}}
+              onMouseEnter={e=>{if(d)(e.currentTarget as HTMLElement).style.background=isT?"rgba(37,99,235,0.06)":C.ib;}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=isT?"rgba(37,99,235,0.03)":"transparent";}}>
               {d&&<>
-                <div style={{fontSize:13,fontWeight:isT?700:400,color:isT?C.a:C.t1,marginBottom:5}}>{d.getDate()}</div>
-                {dayItems.slice(0,3).map((x:any)=><div key={x.id} style={{marginBottom:4,borderRadius:6,overflow:"hidden",border:"1px solid "+C.bd,background:C.w}}>
-                  {x.cover_url&&<img src={x.cover_url} style={{width:"100%",height:36,objectFit:"cover",display:"block"}} alt=""/>}
-                  <div style={{padding:"3px 5px",display:"flex",alignItems:"center",gap:4}}>
-                    <PlatformIcon pid={x.platform} size={10}/>
-                    <span style={{fontSize:9,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1,color:C.t1}}>{x.topic}</span>
+                <div style={{display:"flex",justifyContent:"center",marginBottom:4}}>
+                  <div style={{width:22,height:22,borderRadius:"50%",background:isT?C.a:"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    <span style={{fontSize:12,fontWeight:isT?700:400,color:isT?"#fff":C.t1}}>{d.getDate()}</span>
                   </div>
-                </div>)}
-                {dayItems.length>3&&<div style={{fontSize:9,color:C.t2,textAlign:"center"}}>+{dayItems.length-3}</div>}
+                </div>
+                {dayItems.slice(0,3).map((x:any)=>{
+                  const stage=CONTENT_STAGES.find(s=>s.id===x.status);
+                  const col=stage?.color||C.a;
+                  return<div key={x.id}
+                    onClick={e=>{e.stopPropagation();startEdit(x);setTab("list");}}
+                    style={{marginBottom:3,borderRadius:5,overflow:"hidden",border:"1px solid "+col+"30",background:col+"10",borderLeft:"2px solid "+col,cursor:"pointer",padding:"2px 5px"}}>
+                    {x.cover_url&&<img src={x.cover_url} style={{width:"100%",height:28,objectFit:"cover",display:"block",borderRadius:"2px 2px 0 0",marginBottom:2}} alt=""/>}
+                    <div style={{display:"flex",alignItems:"center",gap:3}}>
+                      <PlatformIcon pid={x.platform} size={9}/>
+                      <span style={{fontSize:9,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1,color:C.t1,fontWeight:500}}>{x.topic}</span>
+                    </div>
+                  </div>;
+                })}
+                {dayItems.length>3&&<div style={{fontSize:9,color:C.t2,textAlign:"center",cursor:"pointer"}} onClick={e=>{e.stopPropagation();setCalMonth({y:d.getFullYear(),m:d.getMonth()});}}> +{dayItems.length-3} ещё</div>}
               </>}
             </div>;
           })}
