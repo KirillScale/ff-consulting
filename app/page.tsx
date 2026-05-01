@@ -7839,9 +7839,15 @@ function BoardPage({userId}:{userId:string}){
   const[shapeKind,setShapeKind]=useState<"rect"|"circle"|"diamond"|"triangle">("rect");
   const[drawColor,setDrawColor]=useState("#2563EB");
   const[drawThickness,setDrawThickness]=useState(3);
-  const drawingRef=useRef<{path:string;startX:number;startY:number}|null>(null);
+  const drawingRef=useRef<{path:string;startX:number;startY:number;pointCount:number}|null>(null);
   const[isDrawing,setIsDrawing]=useState(false);
   const[drawPreview,setDrawPreview]=useState("");
+
+  // Live refs — always up to date, no stale closures in handlers
+  const itemsRef=useRef<BItem[]>([]);
+  const linesRef=useRef<BLine[]>([]);
+  const selRef=useRef<Set<string>>(new Set());
+  const selLineRef=useRef<string|null>(null);
 
   // Anchor hover for smart connectors
   const[hoverAnchor,setHoverAnchor]=useState<{id:string;side:"top"|"bottom"|"left"|"right"}|null>(null);
@@ -7885,6 +7891,12 @@ function BoardPage({userId}:{userId:string}){
   const imgInputRef=useRef<HTMLInputElement>(null);
   const[imgClickPos,setImgClickPos]=useState({x:200,y:200});
 
+  // Sync live refs on every state change
+  useEffect(()=>{itemsRef.current=items;},[items]);
+  useEffect(()=>{linesRef.current=lines;},[lines]);
+  useEffect(()=>{selRef.current=selectedIds;},[selectedIds]);
+  useEffect(()=>{selLineRef.current=selectedLineId;},[selectedLineId]);
+
   // ── Load boards ──
   useEffect(()=>{
     (async()=>{
@@ -7917,22 +7929,21 @@ function BoardPage({userId}:{userId:string}){
         color:d.color||"#64748B",thickness:d.thickness||2,
         style:d.style||"solid",arrow:d.arrow||"arrow",
       })));
+      // Sync refs
+      itemsRef.current=(its||[]).map((d:any):BItem=>({id:d.id,type:d.type,x:d.x,y:d.y,w:d.w,h:d.h,text:d.text||"",color:d.color||"",fontSize:d.font_size||14,fontBold:d.font_bold||false,fontItalic:d.font_italic||false,shapeKind:d.shape_kind||"rect",imageUrl:d.image_url||"",linkUrl:d.link_url||"",linkTitle:d.link_title||"",linkFavicon:d.link_favicon||"",zIndex:d.z_index||0,drawPath:d.draw_path||undefined,drawColor:d.draw_color||undefined,drawThickness:d.draw_thickness||undefined}));
+      linesRef.current=(lns||[]).map((d:any):BLine=>({id:d.id,fromId:d.from_id,toId:d.to_id,color:d.color||"#64748B",thickness:d.thickness||2,style:d.style||"solid",arrow:d.arrow||"arrow"}));
       setLoadingCanvas(false);
     })();
   },[activeBoardId]);
 
-  // ── Auto-save ──
+  // ── Auto-save (upsert-based — no full delete on every save) ──
   const triggerSave=(newItems:BItem[],newLines:BLine[])=>{
     setSaved(false);
     clearTimeout(saveTimer.current);
     saveTimer.current=setTimeout(async()=>{
       if(!activeBoardId)return;
       try{
-        await Promise.all([
-          supabase.from("board_items").delete().eq("board_id",activeBoardId),
-          supabase.from("board_lines").delete().eq("board_id",activeBoardId),
-        ]);
-        if(newItems.length>0)await supabase.from("board_items").insert(newItems.map((it,i)=>({
+        const itemRows=newItems.map((it,i)=>({
           id:it.id,board_id:activeBoardId,user_id:userId,type:it.type,
           x:Math.round(it.x),y:Math.round(it.y),w:Math.round(it.w),h:Math.round(it.h),
           text:it.text||"",color:it.color||"",font_size:it.fontSize||14,
@@ -7940,20 +7951,35 @@ function BoardPage({userId}:{userId:string}){
           shape_kind:it.shapeKind||null,image_url:it.imageUrl||"",
           link_url:it.linkUrl||"",link_title:it.linkTitle||"",link_favicon:it.linkFavicon||"",
           z_index:i,draw_path:it.drawPath||null,draw_color:it.drawColor||null,draw_thickness:it.drawThickness||null,
-        })));
-        if(newLines.length>0)await supabase.from("board_lines").insert(newLines.map(ln=>({
+        }));
+        const lineRows=newLines.map(ln=>({
           id:ln.id,board_id:activeBoardId,user_id:userId,
           from_id:ln.fromId,to_id:ln.toId,
           color:ln.color||"#64748B",thickness:ln.thickness||2,style:ln.style||"solid",arrow:ln.arrow||"arrow",
-        })));
+        }));
+        // Fetch current IDs to find deleted ones
+        const[{data:dbIt},{data:dbLn}]=await Promise.all([
+          supabase.from("board_items").select("id").eq("board_id",activeBoardId),
+          supabase.from("board_lines").select("id").eq("board_id",activeBoardId),
+        ]);
+        const curItemIds=new Set(newItems.map(i=>i.id));
+        const curLineIds=new Set(newLines.map(l=>l.id));
+        const delIt=(dbIt||[]).filter((r:any)=>!curItemIds.has(r.id)).map((r:any)=>r.id);
+        const delLn=(dbLn||[]).filter((r:any)=>!curLineIds.has(r.id)).map((r:any)=>r.id);
+        await Promise.all([
+          delIt.length?supabase.from("board_items").delete().in("id",delIt):null,
+          delLn.length?supabase.from("board_lines").delete().in("id",delLn):null,
+          itemRows.length?supabase.from("board_items").upsert(itemRows,{onConflict:"id"}):null,
+          lineRows.length?supabase.from("board_lines").upsert(lineRows,{onConflict:"id"}):null,
+        ].filter(Boolean));
         setSaved(true);
       }catch{setSaved(false);}
     },1500);
   };
 
-  const updItems=(next:BItem[])=>{setItems(next);triggerSave(next,lines);};
-  const updLines=(next:BLine[])=>{setLines(next);triggerSave(items,next);};
-  const updBoth=(ni:BItem[],nl:BLine[])=>{setItems(ni);setLines(nl);triggerSave(ni,nl);};
+  const updItems=(next:BItem[])=>{itemsRef.current=next;setItems(next);triggerSave(next,linesRef.current);};
+  const updLines=(next:BLine[])=>{linesRef.current=next;setLines(next);triggerSave(itemsRef.current,next);};
+  const updBoth=(ni:BItem[],nl:BLine[])=>{itemsRef.current=ni;linesRef.current=nl;setItems(ni);setLines(nl);triggerSave(ni,nl);};
 
   // ── Board management ──
   const createBoard=async()=>{
@@ -8053,7 +8079,7 @@ function BoardPage({userId}:{userId:string}){
     const onBg=tgt===canvasRef.current||tgt.classList.contains("board-bg-dot");
     if(tool==="draw"&&onBg){
       const{x,y}=toCanvas(e.clientX,e.clientY);
-      drawingRef.current={path:`M0,0`,startX:x,startY:y};
+      drawingRef.current={path:`M0,0`,startX:x,startY:y,pointCount:0};
       setIsDrawing(true);setDrawPreview("M0,0");
       return;
     }
@@ -8085,9 +8111,16 @@ function BoardPage({userId}:{userId:string}){
       const{x,y}=toCanvas(e.clientX,e.clientY);
       const dx=x-drawingRef.current.startX;
       const dy=y-drawingRef.current.startY;
-      const newPath=drawingRef.current.path+` L${dx.toFixed(1)},${dy.toFixed(1)}`;
-      drawingRef.current.path=newPath;
-      setDrawPreview(newPath);
+      drawingRef.current.pointCount=(drawingRef.current.pointCount||0)+1;
+      // Only add point every 3 moves (throttle) and limit total points to 800
+      if(drawingRef.current.pointCount%3===0&&drawingRef.current.path.length<12000){
+        const newPath=drawingRef.current.path+` L${dx.toFixed(1)},${dy.toFixed(1)}`;
+        drawingRef.current.path=newPath;
+        // Only update React state every 6 moves for perf
+        if(drawingRef.current.pointCount%6===0){
+          setDrawPreview(newPath);
+        }
+      }
     } else if(connectorDrag){
       // Update live connector preview via state
       const{x,y}=toCanvas(e.clientX,e.clientY);
@@ -8139,25 +8172,25 @@ function BoardPage({userId}:{userId:string}){
 
   // ── Delete selected ──
   const deleteSelected=()=>{
-    if(selectedLineId){updLines(lines.filter(l=>l.id!==selectedLineId));setSelectedLineId(null);return;}
-    if(selectedIds.size===0)return;
-    const ni=items.filter(i=>!selectedIds.has(i.id));
-    const nl=lines.filter(l=>!selectedIds.has(l.fromId)&&!selectedIds.has(l.toId));
-    updBoth(ni,nl);setSelectedIds(new Set());
+    if(selLineRef.current){updLines(linesRef.current.filter(l=>l.id!==selLineRef.current));setSelectedLineId(null);selLineRef.current=null;return;}
+    if(selRef.current.size===0)return;
+    const ni=itemsRef.current.filter(i=>!selRef.current.has(i.id));
+    const nl=linesRef.current.filter(l=>!selRef.current.has(l.fromId)&&!selRef.current.has(l.toId));
+    updBoth(ni,nl);setSelectedIds(new Set());selRef.current=new Set();
   };
 
   // ── Z order ──
-  const bringForward=(id:string)=>updItems(items.map((it,i)=>it.id===id?{...it,zIndex:(items.length+1)}:it));
-  const sendBackward=(id:string)=>updItems(items.map(it=>it.id===id?{...it,zIndex:-1}:it));
+  const bringForward=(id:string)=>updItems(itemsRef.current.map((it,i)=>it.id===id?{...it,zIndex:(itemsRef.current.length+1)}:it));
+  const sendBackward=(id:string)=>updItems(itemsRef.current.map(it=>it.id===id?{...it,zIndex:-1}:it));
 
   // ── Duplicate ──
   const duplicateSelected=()=>{
     const clones:BItem[]=[];
-    selectedIds.forEach(id=>{
-      const it=items.find(i=>i.id===id);
+    selRef.current.forEach(id=>{
+      const it=itemsRef.current.find(i=>i.id===id);
       if(it)clones.push({...it,id:bid(),x:it.x+20,y:it.y+20});
     });
-    if(clones.length){const next=[...items,...clones];updItems(next);setSelectedIds(new Set(clones.map(c=>c.id)));}
+    if(clones.length){const next=[...itemsRef.current,...clones];updItems(next);setSelectedIds(new Set(clones.map(c=>c.id)));selRef.current=new Set(clones.map(c=>c.id));}
   };
 
   // ── Image upload ──
@@ -8238,7 +8271,7 @@ function BoardPage({userId}:{userId:string}){
       if((e.ctrlKey||e.metaKey)&&k==="0"){setZoom(1);setPan({x:0,y:0});}
     };
     window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h);
-  },[editingId,selectedIds,selectedLineId,items,lines]);
+  },[editingId]);
 
   // Get anchor point position on item
   const anchorPos=(it:BItem,side:"top"|"bottom"|"left"|"right")=>{
