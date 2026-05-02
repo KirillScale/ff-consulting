@@ -728,7 +728,14 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 /* ============ MAIN APP ============ */
 export default function App() {
   const [user, setUser] = useState<any>(null);
-  const [page, setPage] = useState("dashboard");
+  const [page, setPage] = useState(()=>{
+    try{return localStorage.getItem("ff_page")||"dashboard";}catch{return "dashboard";}
+  });
+
+  // Save page to localStorage on every change
+  useEffect(()=>{
+    try{localStorage.setItem("ff_page",page);}catch{}
+  },[page]);
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState("");
   const [userAvatar, setUserAvatar] = useState("");
