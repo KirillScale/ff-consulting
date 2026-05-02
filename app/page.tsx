@@ -4250,13 +4250,64 @@ function ContentPage({userId}:{userId:string}){
     {key:"publish_date",label:"Дата публикации",color:C.g},
   ];
 
+  const[platformFilter,setPlatformFilter]=useState<string>("all");
+
+  const PLATFORM_FILTERS=[
+    {id:"all",label:"Все",icon:"🌐"},
+    {id:"youtube",label:"YouTube",icon:"▶️"},
+    {id:"instagram",label:"Instagram",icon:"📸"},
+    {id:"telegram",label:"Telegram",icon:"✈️"},
+    {id:"tiktok",label:"TikTok",icon:"🎵"},
+    {id:"other",label:"Другое",icon:"📦"},
+  ];
+
+  const filteredItems=useMemo(()=>{
+    if(platformFilter==="all")return items;
+    if(platformFilter==="other"){
+      const known=["youtube","instagram","telegram","tiktok"];
+      return items.filter((x:any)=>!known.includes((x.platform||"").toLowerCase()));
+    }
+    return items.filter((x:any)=>(x.platform||"").toLowerCase()===platformFilter);
+  },[items,platformFilter]);
+
   return <>
+    {/* ── Platform filter bar ── */}
+    <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
+      {PLATFORM_FILTERS.map(pf=>{
+        const cnt=pf.id==="all"?items.length
+          :pf.id==="other"?items.filter((x:any)=>!["youtube","instagram","telegram","tiktok"].includes((x.platform||"").toLowerCase())).length
+          :items.filter((x:any)=>(x.platform||"").toLowerCase()===pf.id).length;
+        const isActive=platformFilter===pf.id;
+        return<button key={pf.id} onClick={()=>setPlatformFilter(pf.id)}
+          style={{
+            display:"flex",alignItems:"center",gap:6,
+            padding:"6px 14px",borderRadius:20,border:"none",cursor:"pointer",
+            fontSize:12,fontWeight:isActive?700:400,
+            background:isActive?C.a:C.ib,
+            color:isActive?"#fff":C.t2,
+            boxShadow:isActive?"0 0 14px "+C.a+"40":"none",
+            transition:"all 0.18s",
+          }}
+          onMouseEnter={e=>{if(!isActive)(e.currentTarget as HTMLElement).style.background=C.bd;}}
+          onMouseLeave={e=>{if(!isActive)(e.currentTarget as HTMLElement).style.background=C.ib;}}>
+          <span>{pf.icon}</span>
+          {pf.label}
+          {cnt>0&&<span style={{
+            background:isActive?"rgba(255,255,255,0.25)":C.a+"20",
+            color:isActive?"#fff":C.a,
+            borderRadius:20,padding:"0 7px",fontSize:11,fontWeight:700,
+          }}>{cnt}</span>}
+        </button>;
+      })}
+    </div>
+
     {/* ── Dashboard stats ── */}
     <div style={{display:"grid",gridTemplateColumns:isMobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:12,marginBottom:24}}>
       {CONTENT_STAGES.map(stage=>{
-        const cnt=items.filter((x:any)=>x.status===stage.id).length;
-        const pct=items.length?Math.round(cnt/items.length*100):0;
-        const isMax=cnt===Math.max(...CONTENT_STAGES.map(s=>items.filter((x:any)=>x.status===s.id).length));
+        const cnt=filteredItems.filter((x:any)=>x.status===stage.id).length;
+        const total=filteredItems.length;
+        const pct=total?Math.round(cnt/total*100):0;
+        const isMax=cnt>0&&cnt===Math.max(...CONTENT_STAGES.map(s=>filteredItems.filter((x:any)=>x.status===s.id).length));
         return<div key={stage.id} style={{background:C.w,borderRadius:14,padding:"16px 18px",border:"1px solid "+(isMax?stage.color+"40":C.bd),boxShadow:isMax?"0 0 20px "+stage.color+"15":"none",transition:"all 0.2s"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
             <span style={{fontSize:13,color:C.t2,fontWeight:500}}>{stage.label}</span>
@@ -4367,7 +4418,7 @@ function ContentPage({userId}:{userId:string}){
       {/* KANBAN BOARD */}
       <div style={{display:"flex",gap:14,overflowX:"auto",alignItems:"flex-start",paddingBottom:16,scrollbarWidth:"none"}}>
         {CONTENT_STAGES.map(stage=>{
-          const stageItems=items.filter((x:any)=>x.status===stage.id);
+          const stageItems=filteredItems.filter((x:any)=>x.status===stage.id);
           const isOver=kanbanOver===stage.id;
           return<div key={stage.id}
             onDragOver={e=>onKanbanDragOver(stage.id,e)}
@@ -7833,7 +7884,8 @@ interface BItem{
   x:number; y:number; w:number; h:number;
   text?:string; color?:string;
   fontSize?:number; fontBold?:boolean; fontItalic?:boolean;
-  shapeKind?:"rect"|"circle"|"diamond"|"triangle";
+  shapeKind?:"rect"|"circle"|"diamond"|"triangle"|"parallelogram"|"square";
+  shapeText?:string; // text inside shape
   imageUrl?:string; imageW?:number; imageH?:number;
   linkUrl?:string; linkTitle?:string; linkFavicon?:string;
   zIndex?:number;
@@ -7877,7 +7929,7 @@ function BoardPage({userId}:{userId:string}){
 
   // Tool state
   const[tool,setTool]=useState<"select"|"pan"|"sticky"|"text"|"image"|"link"|"shape"|"line"|"draw">("select");
-  const[shapeKind,setShapeKind]=useState<"rect"|"circle"|"diamond"|"triangle">("rect");
+  const[shapeKind,setShapeKind]=useState<"rect"|"circle"|"diamond"|"triangle"|"parallelogram"|"square">("rect");
   const[drawColor,setDrawColor]=useState("#2563EB");
   const[drawThickness,setDrawThickness]=useState(3);
   const drawingRef=useRef<{path:string;startX:number;startY:number;pointCount:number}|null>(null);
@@ -8234,16 +8286,14 @@ function BoardPage({userId}:{userId:string}){
     if(clones.length){const next=[...itemsRef.current,...clones];updItems(next);setSelectedIds(new Set(clones.map(c=>c.id)));selRef.current=new Set(clones.map(c=>c.id));}
   };
 
-  // ── Image upload — Supabase Storage (no base64 in memory) ──
   const[imgUploading,setImgUploading]=useState(false);
-  const onImageFile=async(e:React.ChangeEvent<HTMLInputElement>)=>{
-    const file=e.target.files?.[0];
-    if(!file)return;
+
+  // ── Upload image from file (shared by drag-drop, paste, file picker) ──
+  const uploadImageFile=async(file:File,cx:number,cy:number)=>{
+    if(!file.type.startsWith("image/"))return;
     if(file.size>20*1024*1024){alert("Файл слишком большой (макс 20 МБ)");return;}
-    e.target.value="";
     setImgUploading(true);
     try{
-      // Compress + resize to max 1400px to prevent memory explosion
       const compressed=await new Promise<Blob>((res,rej)=>{
         const img=document.createElement("img");
         const obj=URL.createObjectURL(file);
@@ -8256,11 +8306,6 @@ function BoardPage({userId}:{userId:string}){
           canvas.width=w;canvas.height=h;
           canvas.getContext("2d")!.drawImage(img,0,0,w,h);
           URL.revokeObjectURL(obj);
-          // Store original dims for aspect ratio
-          (canvas as any)._natW=img.naturalWidth;
-          (canvas as any)._natH=img.naturalHeight;
-          (canvas as any)._w=w;
-          (canvas as any)._h=h;
           canvas.toBlob(b=>{
             if(b){(b as any)._w=w;(b as any)._h=h;res(b);}else rej();
           },"image/jpeg",0.88);
@@ -8273,20 +8318,58 @@ function BoardPage({userId}:{userId:string}){
       const{error}=await supabase.storage.from("files").upload(path,compressed,{contentType:"image/jpeg",upsert:false});
       if(error)throw error;
       const{data}=supabase.storage.from("files").getPublicUrl(path);
-      const maxW=320;
-      const scale=w>maxW?maxW/w:1;
-      addItem({
-        type:"image",imageUrl:data.publicUrl,
-        imageW:w,imageH:h,
-        w:Math.round(w*scale),h:Math.round(h*scale),
-      },imgClickPos.x,imgClickPos.y);
-    }catch(err){
-      console.error("Image upload failed:",err);
-      alert("Ошибка загрузки. Попробуй ещё раз.");
-    }finally{
-      setImgUploading(false);
+      const maxW=320;const scale2=w>maxW?maxW/w:1;
+      addItem({type:"image",imageUrl:data.publicUrl,imageW:w,imageH:h,w:Math.round(w*scale2),h:Math.round(h*scale2)},cx,cy);
+    }catch(err){console.error(err);alert("Ошибка загрузки");}
+    finally{setImgUploading(false);}
+  };
+
+  // ── External drag-drop onto canvas ──
+  const onCanvasDragOver=(e:React.DragEvent)=>{
+    if(e.dataTransfer.types.includes("Files")){e.preventDefault();e.dataTransfer.dropEffect="copy";}
+  };
+  const onCanvasDrop=async(e:React.DragEvent)=>{
+    e.preventDefault();
+    const files=Array.from(e.dataTransfer.files).filter(f=>f.type.startsWith("image/"));
+    if(!files.length)return;
+    const rect=canvasRef.current!.getBoundingClientRect();
+    const cx=(e.clientX-rect.left-pan.x)/zoom;
+    const cy=(e.clientY-rect.top-pan.y)/zoom;
+    for(let i=0;i<files.length;i++){
+      await uploadImageFile(files[i],cx+i*20,cy+i*20);
     }
   };
+
+  // ── File input handler ──
+  const onImageFile=async(e:React.ChangeEvent<HTMLInputElement>)=>{
+    const file=e.target.files?.[0];if(!file)return;
+    e.target.value="";
+    await uploadImageFile(file,imgClickPos.x,imgClickPos.y);
+  };
+
+  // ── Clipboard paste (Ctrl+V) ──
+  useEffect(()=>{
+    const onPaste=async(e:ClipboardEvent)=>{
+      const tag=(e.target as HTMLElement).tagName;
+      if(tag==="INPUT"||tag==="TEXTAREA")return;
+      if(!activeBoardId)return;
+      const items2=Array.from(e.clipboardData?.items||[]);
+      const imgItem=items2.find(i=>i.type.startsWith("image/"));
+      if(imgItem){
+        e.preventDefault();
+        const file=imgItem.getAsFile();
+        if(file){
+          // Place in center of current view
+          const rect=canvasRef.current?.getBoundingClientRect();
+          const cx=rect?(rect.width/2-pan.x)/zoom:400;
+          const cy=rect?(rect.height/2-pan.y)/zoom:300;
+          await uploadImageFile(file,cx,cy);
+        }
+      }
+    };
+    window.addEventListener("paste",onPaste);
+    return()=>window.removeEventListener("paste",onPaste);
+  },[activeBoardId,pan,zoom]);
 
   // ── Link fetch ──
   const fetchLink=async()=>{
@@ -8375,11 +8458,32 @@ function BoardPage({userId}:{userId:string}){
   // ── Render shape ──
   const renderShapeFill=(it:BItem)=>{
     const c=it.color||"#3B82F6";
+    const textStyle:React.CSSProperties={
+      position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",
+      fontSize:it.fontSize||13,fontWeight:600,color:"#fff",
+      textAlign:"center",padding:"4px 8px",wordBreak:"break-word",
+      textShadow:"0 1px 3px rgba(0,0,0,0.4)",pointerEvents:"none",lineHeight:1.3,
+    };
+    const txt=it.shapeText||it.text||"";
     switch(it.shapeKind){
-      case"circle":return<div style={{width:"100%",height:"100%",background:c,borderRadius:"50%",boxShadow:"0 4px 20px "+c+"55"}}/>;
-      case"diamond":return<div style={{width:"100%",height:"100%",background:c,clipPath:"polygon(50% 0%,100% 50%,50% 100%,0% 50%)",boxShadow:"0 4px 20px "+c+"55"}}/>;
-      case"triangle":return<div style={{width:"100%",height:"100%",background:c,clipPath:"polygon(50% 0%,100% 100%,0% 100%)"}} />;
-      default:return<div style={{width:"100%",height:"100%",background:c,borderRadius:10,boxShadow:"0 4px 20px "+c+"55"}}/>;
+      case"square":return<div style={{width:"100%",height:"100%",background:c,borderRadius:8,boxShadow:"0 4px 20px "+c+"55",position:"relative"}}>
+        {txt&&<div style={textStyle}>{txt}</div>}
+      </div>;
+      case"circle":return<div style={{width:"100%",height:"100%",background:c,borderRadius:"50%",boxShadow:"0 4px 20px "+c+"55",position:"relative"}}>
+        {txt&&<div style={{...textStyle,borderRadius:"50%"}}>{txt}</div>}
+      </div>;
+      case"diamond":return<div style={{width:"100%",height:"100%",background:c,clipPath:"polygon(50% 0%,100% 50%,50% 100%,0% 50%)",boxShadow:"0 4px 20px "+c+"55",position:"relative"}}>
+        {txt&&<div style={textStyle}>{txt}</div>}
+      </div>;
+      case"triangle":return<div style={{width:"100%",height:"100%",background:c,clipPath:"polygon(50% 0%,100% 100%,0% 100%)",position:"relative"}}>
+        {txt&&<div style={{...textStyle,paddingTop:"40%"}}>{txt}</div>}
+      </div>;
+      case"parallelogram":return<div style={{width:"100%",height:"100%",background:c,clipPath:"polygon(15% 0%,100% 0%,85% 100%,0% 100%)",boxShadow:"0 4px 20px "+c+"55",position:"relative"}}>
+        {txt&&<div style={textStyle}>{txt}</div>}
+      </div>;
+      default:return<div style={{width:"100%",height:"100%",background:c,borderRadius:10,boxShadow:"0 4px 20px "+c+"55",position:"relative"}}>
+        {txt&&<div style={textStyle}>{txt}</div>}
+      </div>;
     }
   };
 
@@ -8552,10 +8656,10 @@ function BoardPage({userId}:{userId:string}){
         {/* Shape kind picker */}
         {tool==="shape"&&(
           <div style={{display:"flex",gap:3,background:"#F1F5F9",borderRadius:9,padding:"3px"}}>
-            {(["rect","circle","diamond","triangle"] as const).map(sk=>(
+            {(["rect","square","circle","diamond","triangle","parallelogram"] as const).map(sk=>(
               <button key={sk} onClick={()=>setShapeKind(sk)}
-                style={{width:30,height:30,borderRadius:7,border:"none",fontSize:15,background:shapeKind===sk?"#fff":"transparent",cursor:"pointer",boxShadow:shapeKind===sk?"0 1px 4px rgba(0,0,0,0.08)":"none"}}>
-                {sk==="rect"?"▬":sk==="circle"?"●":sk==="diamond"?"◆":"▲"}
+                style={{width:30,height:30,borderRadius:7,border:"none",fontSize:15,background:shapeKind===sk?"#fff":"transparent",cursor:"pointer",boxShadow:shapeKind===sk?"0 1px 4px rgba(0,0,0,0.08)":"none",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                {sk==="rect"?"▬":sk==="square"?"■":sk==="circle"?"●":sk==="diamond"?"◆":sk==="triangle"?"▲":"▱"}
               </button>
             ))}
           </div>
@@ -8682,7 +8786,9 @@ function BoardPage({userId}:{userId:string}){
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
         onMouseLeave={onMouseUp}
-        onWheel={onWheel}>
+        onWheel={onWheel}
+        onDragOver={onCanvasDragOver}
+        onDrop={onCanvasDrop}>
 
         {/* Dot grid */}
         <svg className="board-bg-dot" style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none"}} xmlns="http://www.w3.org/2000/svg">
@@ -8731,7 +8837,7 @@ function BoardPage({userId}:{userId:string}){
             return(
               <div key={it.id}
                 onMouseDown={e=>onItemDown(e,it.id)}
-                onDoubleClick={e=>{e.stopPropagation();if(it.type!=="shape"&&it.type!=="image"){setEditingId(it.id);setEditText(it.text||"");setSelectedIds(new Set([it.id]));}}}
+                onDoubleClick={e=>{e.stopPropagation();if(it.type!=="image"){setEditingId(it.id);setEditText(it.type==="shape"?(it.shapeText||it.text||""):(it.text||""));setSelectedIds(new Set([it.id]));}}}
                 style={{
                   position:"absolute",left:it.x,top:it.y,width:it.w,height:it.h,
                   cursor:tool==="line"?"crosshair":dragState.current?.ids.includes(it.id)?"grabbing":"grab",
@@ -8797,7 +8903,16 @@ function BoardPage({userId}:{userId:string}){
                 )}
 
                 {/* ── SHAPE ── */}
-                {it.type==="shape"&&renderShapeFill(it)}
+                {it.type==="shape"&&!isEdit&&renderShapeFill(it)}
+                {it.type==="shape"&&isEdit&&(
+                  <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",zIndex:10}}>
+                    <textarea autoFocus value={editText} onChange={e=>setEditText(e.target.value)}
+                      onBlur={()=>{const next=items.map(i=>i.id===it.id?{...i,text:editText,shapeText:editText}:i);updItems(next);setEditingId(null);}}
+                      onKeyDown={e=>{if(e.key==="Escape"){const next=items.map(i=>i.id===it.id?{...i,text:editText,shapeText:editText}:i);updItems(next);setEditingId(null);}e.stopPropagation();}}
+                      placeholder="Текст..."
+                      style={{width:"80%",maxHeight:"70%",border:"none",background:"rgba(0,0,0,0.5)",backdropFilter:"blur(4px)",borderRadius:8,resize:"none",outline:"none",fontFamily:"'Montserrat',sans-serif",fontSize:it.fontSize||13,fontWeight:600,color:"#fff",textAlign:"center",padding:"8px",lineHeight:1.4}}/>
+                  </div>
+                )}
 
                 {/* Resize handle */}
                 {isSel&&!isEdit&&it.type!=="draw"&&(
