@@ -48,25 +48,32 @@ const CALL_GOALS=["Созвон с командой","Созвон с лидом
 // NAV grouped structure
 const NAV_GROUPS=[
   {
+    // Pinned — no label
     items:[
-      {id:"dashboard",label:"Dashboard",ic:"M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"},
-      {id:"strategy",label:"Стратегия роста",ic:"M5 3l3.057 7.134L2 16h5.5L12 21l4.5-5H22l-6.057-5.866L19 3l-7 4-7-4z"},
-    ]
-  },
-  {
-    label:"Работа с лидами",
-    items:[
-      {id:"crm",label:"CRM",ic:"M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"},
-      {id:"calls",label:"Созвоны",ic:"M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"},
-      {id:"mailings",label:"Рассылки",ic:"M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"},
+      {id:"dashboard",label:"Dashboard",accent:"#4F8EF7",ic:"M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"},
+      {id:"strategy",label:"War Room",accent:"#4F8EF7",ic:"M13 10V3L4 14h7v7l9-11h-7z"},
+      {id:"pnl",label:"P&L",accent:"#4F8EF7",ic:"M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"},
     ]
   },
   {
     label:"Привлечение",
     items:[
-      {id:"content",label:"Контент",ic:"M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"},
-      {id:"media",label:"Медийность",ic:"M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"},
-      {id:"ads",label:"Реклама",ic:"M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"},
+      {id:"content",label:"Контент",accent:"#A855F7",ic:"M7 4v16M17 4v16M3 8h4m10 0h4M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"},
+      {id:"ads",label:"Реклама",accent:"#6EE7B7",ic:"M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"},
+    ]
+  },
+  {
+    label:"Работа с лидами",
+    items:[
+      {id:"crm",label:"CRM",accent:"#38BDF8",ic:"M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"},
+      {id:"calls",label:"Созвоны",accent:"#38BDF8",ic:"M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"},
+    ]
+  },
+  {
+    label:"Программы",
+    items:[
+      {id:"board",label:"Vizzy Map",accent:"#FBBF24",ic:"M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"},
+      {id:"sheets",label:"Vizzy Tables",accent:"#4ADE80",ic:"M3 10h18M3 6h18M3 14h18M3 18h18M10 3v18M6 3v18"},
     ]
   },
   {
@@ -79,13 +86,9 @@ const NAV_GROUPS=[
     ]
   },
   {
-    label:"Остальное",
+    label:"Прочее",
     items:[
-      {id:"pnl",label:"P&L",ic:"M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"},
-      {id:"sheets",label:"Таблицы",ic:"M3 10h18M3 6h18M3 14h18M3 18h18M10 3v18M6 3v18"},
-      {id:"tools",label:"Инструменты",ic:"M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"},
-      {id:"links",label:"База ссылок",ic:"M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"},
-      {id:"board",label:"Доска",ic:"M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"},
+      {id:"links",label:"База ссылок",accent:"#94A3B8",ic:"M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"},
     ]
   },
 ];
@@ -301,108 +304,137 @@ function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onL
 
   const renderItem=(n:any)=>{
     const isActive=active===n.id;
-    const accent=getAccent(n);
+    const accent=getAccent(n)||"#4F8EF7";
     const isGrad=n.accent==="gradient";
     const customIcon=AI_ICONS[n.id];
-    const iconColor=isActive?"#fff":accent||"rgba(255,255,255,0.45)";
+    // Parse accent to rgb for backgrounds
+    const r=parseInt(accent.slice(1,3),16)||79;
+    const g2=parseInt(accent.slice(3,5),16)||142;
+    const b=parseInt(accent.slice(5,7),16)||247;
 
     return(
       <button key={n.id} onClick={()=>onNav(n.id)} title={collapsed?n.label:undefined}
         style={{
           display:"flex",alignItems:"center",gap:10,
-          padding:collapsed?"10px 0":"8px 10px",
+          padding:collapsed?"9px 0":"7px 10px 7px 10px",
           justifyContent:collapsed?"center":"flex-start",
-          border:"none",
-          borderRadius:12,
+          borderRadius:11,
           cursor:"pointer",width:"100%",
-          background:isActive
-            ? `rgba(${accent?hexToRgb(accent):"79,142,247"},0.12)`
-            : "transparent",
           position:"relative",overflow:"hidden",
-          transition:"all 0.2s ease",
+          transition:"all 0.25s cubic-bezier(0.4,0,0.2,1)",
           outline:"none",
+          marginBottom:1,
+          background:isActive
+            ?("rgba("+r+","+g2+","+b+",0.13)")
+            :"rgba(255,255,255,0.0)",
+          backdropFilter:isActive?"blur(12px) saturate(1.6)":"none",
+          WebkitBackdropFilter:isActive?"blur(12px) saturate(1.6)":"none",
+          boxShadow:isActive
+            ?("0 0 20px rgba("+r+","+g2+","+b+",0.2), inset 0 1px 0 rgba(255,255,255,0.08)")
+            :"none",
+          border:isActive
+            ?("1px solid rgba("+r+","+g2+","+b+",0.25)")
+            :"1px solid transparent",
         }}
         onMouseEnter={e=>{
           const el=e.currentTarget as HTMLElement;
           if(!isActive){
-            el.style.background="rgba(255,255,255,0.04)";
+            el.style.background="rgba("+r+","+g2+","+b+",0.07)";
+            el.style.backdropFilter="blur(8px)";
+            (el.style as any).WebkitBackdropFilter="blur(8px)";
+            el.style.border="1px solid rgba("+r+","+g2+","+b+",0.12)";
             el.style.transform="translateX(2px)";
           }
-          const c=accent||"#4F8EF7";
-          el.style.boxShadow="0 0 16px "+c+"18";
         }}
         onMouseLeave={e=>{
           const el=e.currentTarget as HTMLElement;
-          el.style.background=isActive?`rgba(79,142,247,0.12)`:"transparent";
-          el.style.transform="translateX(0)";
-          el.style.boxShadow=isActive?`0 0 20px rgba(79,142,247,0.15)`:"none";
+          if(!isActive){
+            el.style.background="rgba(255,255,255,0)";
+            el.style.backdropFilter="none";
+            (el.style as any).WebkitBackdropFilter="none";
+            el.style.border="1px solid transparent";
+            el.style.transform="translateX(0)";
+          }
         }}>
 
-        {/* Active left glow bar */}
+        {/* Active left glow bar — gradient */}
         {isActive&&<div style={{
-          position:"absolute",left:0,top:"18%",bottom:"18%",width:3,
+          position:"absolute",left:0,top:"16%",bottom:"16%",width:3,
           borderRadius:"0 3px 3px 0",
-          background:accent||"#4F8EF7",
-          boxShadow:"0 0 10px "+(accent||"#4F8EF7")+",0 0 20px "+(accent||"#4F8EF7")+"66",
+          background:isGrad
+            ?"linear-gradient(180deg,#86EFAC,#A78BFA)"
+            :"linear-gradient(180deg,rgba("+r+","+g2+","+b+",1),rgba("+r+","+g2+","+b+",0.4))",
+          boxShadow:"0 0 12px rgba("+r+","+g2+","+b+",0.8), 0 0 24px rgba("+r+","+g2+","+b+",0.4)",
         }}/>}
 
-        {/* Shimmer overlay on active */}
+        {/* Shimmer overlay */}
         {isActive&&<div style={{
-          position:"absolute",inset:0,borderRadius:12,
-          background:"linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.03) 50%,transparent 100%)",
+          position:"absolute",inset:0,borderRadius:11,
+          background:"linear-gradient(105deg,transparent 30%,rgba(255,255,255,0.04) 50%,transparent 70%)",
           backgroundSize:"200% 100%",
-          animation:"shimmer 3s ease-in-out infinite",
+          animation:"shimmer 4s ease-in-out infinite",
           pointerEvents:"none",
         }}/>}
 
-        {/* Icon wrapper */}
+        {/* Ambient glow blob on active */}
+        {isActive&&<div style={{
+          position:"absolute",right:-10,top:"50%",transform:"translateY(-50%)",
+          width:50,height:50,borderRadius:"50%",
+          background:"radial-gradient(circle,rgba("+r+","+g2+","+b+",0.15) 0%,transparent 70%)",
+          pointerEvents:"none",
+          filter:"blur(8px)",
+        }}/>}
+
+        {/* Icon wrapper — glass pill */}
         <div style={{
           width:26,height:26,borderRadius:8,flexShrink:0,
           display:"flex",alignItems:"center",justifyContent:"center",
           overflow:"hidden",
           background:customIcon?"transparent"
             :isActive
-              ?(isGrad?"linear-gradient(135deg,#86EFAC,#A78BFA)":accent?accent+"30":"rgba(79,142,247,0.25)")
-              :"rgba(255,255,255,0.04)",
-          border:isActive?"1px solid "+(accent||"#4F8EF7")+"33":"1px solid rgba(255,255,255,0.04)",
-          boxShadow:isActive&&accent?"0 0 12px "+accent+"40,inset 0 1px 0 rgba(255,255,255,0.1)"
-            :isActive?"0 0 12px rgba(79,142,247,0.4),inset 0 1px 0 rgba(255,255,255,0.1)":"none",
-          transition:"all 0.2s",
+              ?isGrad
+                ?"linear-gradient(135deg,rgba(134,239,172,0.3),rgba(167,139,250,0.3))"
+                :"rgba("+r+","+g2+","+b+",0.2)"
+              :`rgba(255,255,255,0.04)`,
+          border:isActive
+            ?"1px solid rgba("+r+","+g2+","+b+",0.35)"
+            :"1px solid rgba(255,255,255,0.05)",
+          boxShadow:isActive
+            ?"0 0 10px rgba("+r+","+g2+","+b+",0.3), inset 0 1px 0 rgba(255,255,255,0.12)"
+            :"none",
+          transition:"all 0.25s",
         }}>
           {customIcon
-            ?<img src={customIcon} width={26} height={26} style={{borderRadius:8,objectFit:"cover",opacity:isActive?1:0.55}} alt={n.label}/>
-            :<I path={n.ic} size={13} color={isGrad&&isActive?"#fff":iconColor} sw={isActive?2:1.5}/>
+            ?<img src={customIcon} width={26} height={26} style={{borderRadius:8,objectFit:"cover",opacity:isActive?1:0.5}} alt={n.label}/>
+            :<I path={n.ic} size={13}
+                color={isActive?(isGrad?"#c4f5d4":accent):"rgba(255,255,255,0.4)"}
+                sw={isActive?2:1.5}/>
           }
         </div>
 
         {!collapsed&&<span style={{
           fontSize:12.5,fontWeight:isActive?600:400,flex:1,textAlign:"left",
-          color:isActive?(isGrad?"#86EFAC":accent||"#E0EAFF"):"rgba(255,255,255,0.6)",
+          color:isActive
+            ?(isGrad?"#c4f5d4":accent==="gradient"?"#86EFAC":accent)
+            :"rgba(255,255,255,0.5)",
           overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+          transition:"color 0.2s",
           letterSpacing:isActive?0.1:0,
         }}>{n.label}</span>}
 
         {/* Active dot */}
         {!collapsed&&isActive&&<div style={{
-          width:5,height:5,borderRadius:"50%",
-          background:accent||"#4F8EF7",flexShrink:0,
-          boxShadow:"0 0 6px "+(accent||"#4F8EF7")+",0 0 12px "+(accent||"#4F8EF7")+"88",
+          width:5,height:5,borderRadius:"50%",flexShrink:0,
+          background:isGrad
+            ?"linear-gradient(135deg,#86EFAC,#A78BFA)"
+            :accent,
+          boxShadow:"0 0 6px rgba("+r+","+g2+","+b+",0.8), 0 0 12px rgba("+r+","+g2+","+b+",0.5)",
         }}/>}
       </button>
     );
   };
 
-  // helper: hex color → "r,g,b"
-  function hexToRgb(hex:string){
-    const r=parseInt(hex.slice(1,3),16);
-    const g=parseInt(hex.slice(3,5),16);
-    const b=parseInt(hex.slice(5,7),16);
-    return`${r},${g},${b}`;
-  }
-
-  const SB_BG=dark
-    ?"linear-gradient(180deg,#06080F 0%,#080B14 50%,#060810 100%)"
-    :"linear-gradient(180deg,#111420 0%,#12141A 100%)";
+  const SB_BG="linear-gradient(180deg,#06080F 0%,#080B14 50%,#060810 100%)";
 
   return(
     <div style={{
@@ -472,7 +504,7 @@ function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onL
                   style={{
                     width:"100%",display:"flex",alignItems:"center",
                     justifyContent:"space-between",
-                    padding:"7px 10px 4px",border:"none",
+                    padding:"8px 10px 4px",border:"none",
                     background:"transparent",cursor:"pointer",borderRadius:8,
                     transition:"background 0.15s",
                   }}
@@ -480,11 +512,13 @@ function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onL
                   onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}>
                   <span style={{
                     fontSize:9,fontWeight:700,
-                    color:hasActiveItem?"rgba(79,142,247,0.7)":"rgba(255,255,255,0.22)",
-                    letterSpacing:1.5,textTransform:"uppercase",
+                    color:hasActiveItem
+                      ?(group.items.find(i=>i.id===active)?.accent||"rgba(79,142,247,0.7)")+"bb"
+                      :"rgba(255,255,255,0.18)",
+                    letterSpacing:1.8,textTransform:"uppercase",
                   }}>{group.label}</span>
                   <svg width="9" height="9" viewBox="0 0 24 24" fill="none"
-                    stroke={hasActiveItem?"rgba(79,142,247,0.5)":"rgba(255,255,255,0.2)"}
+                    stroke={hasActiveItem?"rgba(255,255,255,0.25)":"rgba(255,255,255,0.15)"}
                     strokeWidth="2.5"
                     style={{transform:isOpen?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.25s ease"}}>
                     <polyline points="6 9 12 15 18 9"/>
