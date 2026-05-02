@@ -8234,42 +8234,58 @@ function BoardPage({userId}:{userId:string}){
     if(clones.length){const next=[...itemsRef.current,...clones];updItems(next);setSelectedIds(new Set(clones.map(c=>c.id)));selRef.current=new Set(clones.map(c=>c.id));}
   };
 
-  // ── Image upload ──
+  // ── Image upload — Supabase Storage (no base64 in memory) ──
+  const[imgUploading,setImgUploading]=useState(false);
   const onImageFile=async(e:React.ChangeEvent<HTMLInputElement>)=>{
     const file=e.target.files?.[0];
     if(!file)return;
-    if(file.size>10*1024*1024){alert("Файл слишком большой (макс 10 МБ)");return;}
-    try{
-      const reader=new FileReader();
-      reader.onload=ev=>{
-        try{
-          const url=ev.target?.result as string;
-          if(!url)return;
-          // Try to get natural dimensions, fall back to 300x240 if fails
-          const img=document.createElement("img");
-          const onLoaded=()=>{
-            const natW=img.naturalWidth||400;
-            const natH=img.naturalHeight||300;
-            const maxW=320;
-            const scale=natW>maxW?maxW/natW:1;
-            addItem({type:"image",imageUrl:url,imageW:natW,imageH:natH,w:Math.round(natW*scale),h:Math.round(natH*scale)},imgClickPos.x,imgClickPos.y);
-          };
-          img.onload=onLoaded;
-          img.onerror=()=>{
-            // Still add image even if size detection fails
-            addItem({type:"image",imageUrl:url,w:300,h:240},imgClickPos.x,imgClickPos.y);
-          };
-          img.src=url;
-        }catch{
-          // Fallback: add without size detection
-          const url=ev.target?.result as string;
-          if(url)addItem({type:"image",imageUrl:url,w:300,h:240},imgClickPos.x,imgClickPos.y);
-        }
-      };
-      reader.onerror=()=>alert("Ошибка чтения файла");
-      reader.readAsDataURL(file);
-    }catch(err){alert("Ошибка загрузки изображения");}
+    if(file.size>20*1024*1024){alert("Файл слишком большой (макс 20 МБ)");return;}
     e.target.value="";
+    setImgUploading(true);
+    try{
+      // Compress + resize to max 1400px to prevent memory explosion
+      const compressed=await new Promise<Blob>((res,rej)=>{
+        const img=document.createElement("img");
+        const obj=URL.createObjectURL(file);
+        img.onload=()=>{
+          const MAX=1400;
+          const scale=Math.min(1,MAX/Math.max(img.naturalWidth,img.naturalHeight));
+          const w=Math.round(img.naturalWidth*scale);
+          const h=Math.round(img.naturalHeight*scale);
+          const canvas=document.createElement("canvas");
+          canvas.width=w;canvas.height=h;
+          canvas.getContext("2d")!.drawImage(img,0,0,w,h);
+          URL.revokeObjectURL(obj);
+          // Store original dims for aspect ratio
+          (canvas as any)._natW=img.naturalWidth;
+          (canvas as any)._natH=img.naturalHeight;
+          (canvas as any)._w=w;
+          (canvas as any)._h=h;
+          canvas.toBlob(b=>{
+            if(b){(b as any)._w=w;(b as any)._h=h;res(b);}else rej();
+          },"image/jpeg",0.88);
+        };
+        img.onerror=rej;img.src=obj;
+      });
+      const w=(compressed as any)._w||400;
+      const h=(compressed as any)._h||300;
+      const path=userId+"/board_"+bid()+"_"+Date.now()+".jpg";
+      const{error}=await supabase.storage.from("files").upload(path,compressed,{contentType:"image/jpeg",upsert:false});
+      if(error)throw error;
+      const{data}=supabase.storage.from("files").getPublicUrl(path);
+      const maxW=320;
+      const scale=w>maxW?maxW/w:1;
+      addItem({
+        type:"image",imageUrl:data.publicUrl,
+        imageW:w,imageH:h,
+        w:Math.round(w*scale),h:Math.round(h*scale),
+      },imgClickPos.x,imgClickPos.y);
+    }catch(err){
+      console.error("Image upload failed:",err);
+      alert("Ошибка загрузки. Попробуй ещё раз.");
+    }finally{
+      setImgUploading(false);
+    }
   };
 
   // ── Link fetch ──
@@ -8557,9 +8573,15 @@ function BoardPage({userId}:{userId:string}){
         </div>
 
         {/* Save indicator */}
-        <div style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:C.t2}}>
-          <div style={{width:6,height:6,borderRadius:"50%",background:saved?"#10B981":"#F59E0B",transition:"background 0.3s"}}/>
-          {saved?"Сохранено":"Сохранение..."}
+        <div style={{display:"flex",alignItems:"center",gap:8,fontSize:11,color:C.t2}}>
+          {imgUploading&&<div style={{display:"flex",alignItems:"center",gap:5,color:"#F59E0B"}}>
+            <div style={{width:12,height:12,border:"2px solid #F59E0B",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/>
+            Загрузка фото...
+          </div>}
+          {!imgUploading&&<>
+            <div style={{width:6,height:6,borderRadius:"50%",background:saved?"#10B981":"#F59E0B",transition:"background 0.3s"}}/>
+            {saved?"Сохранено":"Сохранение..."}
+          </>}
         </div>
       </div>
 
