@@ -728,9 +728,25 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 /* ============ MAIN APP ============ */
 export default function App() {
   const [user, setUser] = useState<any>(null);
+  const APP_VERSION="v2.1"; // bump this to force-clear stale localStorage
   const VALID_PAGES=["dashboard","strategy","crm","calls","content","pnl","sheets","media","ads","links","board","files","ai","script","product","stories","calc","tools","mailings"];
+
+  // Clear stale localStorage on version change
+  useEffect(()=>{
+    try{
+      const storedVersion=localStorage.getItem("ff_version");
+      if(storedVersion!==APP_VERSION){
+        localStorage.removeItem("ff_page");
+        localStorage.setItem("ff_version",APP_VERSION);
+      }
+    }catch{}
+  },[]);
+
   const [page, setPage] = useState(()=>{
     try{
+      // Check version first
+      const storedVersion=localStorage.getItem("ff_version");
+      if(storedVersion!==APP_VERSION)return "dashboard";
       const saved=localStorage.getItem("ff_page")||"dashboard";
       if(!VALID_PAGES.includes(saved)){
         localStorage.removeItem("ff_page");
@@ -739,13 +755,6 @@ export default function App() {
       return saved;
     }catch{return "dashboard";}
   });
-
-  // Сбрасываем на dashboard если нет контента (на случай битого state)
-  useEffect(()=>{
-    if(!VALID_PAGES.includes(page)){
-      setPage("dashboard");
-    }
-  },[page]);
 
   useEffect(()=>{
     try{localStorage.setItem("ff_page",page);}catch{}
@@ -1144,16 +1153,14 @@ function DashPage({userId,name,avatar,onNav,onAvatarChange}:{userId:string,name:
 
   const upcomingCalls = useMemo(()=>{
     return calls.data
-      .filter((c:any)=>c.date>=td&&c.time_start)
-      .sort((a:any,b:any)=>a.date===b.date?(a.time_start||"").localeCompare(b.time_start||""):a.date.localeCompare(b.date))
+      .filter((c:any)=>c.date >= td)
+      .sort((a:any,b:any)=>a.date===b.date?a.time_start.localeCompare(b.time_start):a.date.localeCompare(b.date))
       .slice(0,5);
   },[calls.data, td]);
 
   const minsUntilCall = (c:any) => {
-    if(!c.time_start)return 999;
     const now = new Date();
-    const parts = (c.time_start||"00:00").split(":");
-    const h=parseInt(parts[0]||"0"), m=parseInt(parts[1]||"0");
+    const [h,m] = c.time_start.split(":").map(Number);
     const callTime = new Date(c.date);
     callTime.setHours(h, m, 0, 0);
     return Math.round((callTime.getTime() - now.getTime()) / 60000);
@@ -1163,7 +1170,7 @@ function DashPage({userId,name,avatar,onNav,onAvatarChange}:{userId:string,name:
 
   return <>
     {/* Hero greeting with avatar */}
-    <div style={{background:"linear-gradient(135deg,"+(C.dk||"#080B12")+","+(C.da||"#101828")+")",borderRadius:16,padding:isMobile?"18px 20px":"28px 36px",marginBottom:isMobile?16:24,color:"#fff",display:"flex",alignItems:"center",gap:16}}>
+    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:isMobile?"18px 20px":"28px 36px",marginBottom:isMobile?16:24,color:"#fff",display:"flex",alignItems:"center",gap:16}}>
       <label style={{cursor:"pointer",flexShrink:0}}>
         <div style={{width:isMobile?52:64,height:isMobile?52:64,borderRadius:"50%",border:"3px solid rgba(255,255,255,0.3)",overflow:"hidden",background:"rgba(255,255,255,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
           {avatarUploading
@@ -2260,7 +2267,7 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
     {toast&&<div style={{position:"fixed",bottom:isMobile?72:24,left:"50%",transform:"translateX(-50%)",background:C.dk,color:"#fff",padding:"12px 20px",borderRadius:12,fontSize:13,fontWeight:500,zIndex:1000,boxShadow:"0 8px 24px rgba(0,0,0,0.2)",maxWidth:360,textAlign:"center"}}>{toast}</div>}
 
     {/* Header */}
-    <div style={{padding:"18px 24px",background:"linear-gradient(135deg,"+(C.dk||"#080B12")+","+(C.da||"#101828")+")",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+    <div style={{padding:"18px 24px",background:`linear-gradient(135deg,${C.dk},${C.da})`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
         <div style={{width:32,height:32,borderRadius:10,background:"rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center"}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
@@ -3499,6 +3506,22 @@ function CrmPage({userId}:{userId:string}){
     setEditLeadId(null);
   };
 
+  // Build "write" URL from contact field
+  const getWriteUrl=(l:any):string|null=>{
+    const c=(l.contact||l.phone||l.email||"").trim();
+    if(!c)return null;
+    if(c.includes("t.me/")||c.includes("telegram"))return c.startsWith("http")?c:"https://"+c;
+    if(c.includes("instagram.com")||c.includes("instagram"))return c.startsWith("http")?c:"https://"+c;
+    if(c.includes("wa.me")||c.includes("whatsapp"))return c.startsWith("http")?c:"https://"+c;
+    if(c.match(/^\+?[\d\s\-()]{7,}$/)){
+      const digits=c.replace(/\D/g,"");
+      return"https://wa.me/"+digits;
+    }
+    if(c.includes("@")&&!c.includes("/"))return"mailto:"+c;
+    if(c.startsWith("http"))return c;
+    return"https://"+c;
+  };
+
   const leadCard=(l:any,stageColor:string)=>{
     const isOpen=openLead===l.id;
     const isEditing=editLeadId===l.id;
@@ -3641,21 +3664,27 @@ function CrmPage({userId}:{userId:string}){
           </div>
 
           {/* Action row */}
-          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+            {/* Написать button */}
+            {getWriteUrl(l)&&<a href={getWriteUrl(l)!} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}
+              style={{flex:1,padding:"7px 10px",background:"linear-gradient(135deg,#22C55E14,#16A34A10)",color:"#16A34A",border:"1px solid #22C55E30",borderRadius:9,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,textDecoration:"none",transition:"all 0.15s"}}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#22C55E,#16A34A)";(e.currentTarget as HTMLElement).style.color="#fff";(e.currentTarget as HTMLElement).style.boxShadow="0 0 12px #22C55E40";}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#22C55E14,#16A34A10)";(e.currentTarget as HTMLElement).style.color="#16A34A";(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
+              ✉️ Написать
+            </a>}
             {/* Edit button */}
             <button onClick={e=>{e.stopPropagation();openEditLead(l);}}
-              style={{flex:1,padding:"7px 12px",background:C.a+"12",color:C.a,border:"1px solid "+C.a+"30",borderRadius:9,fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,transition:"all 0.15s"}}
+              style={{flex:1,padding:"7px 10px",background:C.a+"12",color:C.a,border:"1px solid "+C.a+"30",borderRadius:9,fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,transition:"all 0.15s"}}
               onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.a+"20";(e.currentTarget as HTMLElement).style.boxShadow="0 0 12px "+C.a+"20";}}
               onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=C.a+"12";(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
-              ✏️ Редактировать
+              ✏️ Изменить
             </button>
-
-            {/* Delete button — pink gradient */}
+            {/* Delete button */}
             <button onClick={e=>{e.stopPropagation();setDeleteConfirmId(l.id);}}
-              style={{flex:1,padding:"7px 12px",background:"linear-gradient(135deg,#FF6B9D22,#E91E8C14)",color:"#E91E8C",border:"1px solid #E91E8C30",borderRadius:9,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,transition:"all 0.15s"}}
+              style={{padding:"7px 10px",background:"#E91E8C10",color:"#E91E8C",border:"1px solid #E91E8C30",borderRadius:9,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.15s"}}
               onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#FF6B9D,#E91E8C)";(e.currentTarget as HTMLElement).style.color="#fff";(e.currentTarget as HTMLElement).style.boxShadow="0 0 16px rgba(233,30,140,0.4)";}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#FF6B9D22,#E91E8C14)";(e.currentTarget as HTMLElement).style.color="#E91E8C";(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
-              🗑 Удалить
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="#E91E8C10";(e.currentTarget as HTMLElement).style.color="#E91E8C";(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
+              🗑
             </button>
           </div>
         </div>}
@@ -4070,17 +4099,35 @@ function CrmPage({userId}:{userId:string}){
             <div key={l.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderBottom:i<found.length-1?"1px solid "+C.bd:"none",transition:"background 0.1s"}}
               onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.ib;}}
               onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}>
-              <div style={{width:32,height:32,borderRadius:"50%",background:stCol(l.status)+"18",border:"1px solid "+stCol(l.status)+"25",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                <span style={{fontSize:13,fontWeight:700,color:stCol(l.status)}}>{l.name[0]?.toUpperCase()}</span>
+              {/* Avatar — same as kanban */}
+              <div style={{width:36,height:36,borderRadius:"50%",flexShrink:0,overflow:"hidden",background:stCol(l.status)+"18",border:"2px solid "+stCol(l.status)+"30",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                {l.avatar_url
+                  ?<img src={l.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt={l.name}/>
+                  :<span style={{fontSize:13,fontWeight:700,color:stCol(l.status)}}>{(l.name||"?")[0]?.toUpperCase()}</span>
+                }
               </div>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontSize:13,fontWeight:600,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.name}</div>
                 <div style={{fontSize:11,color:C.t2,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.phone||l.email||l.contact||l.source}</div>
               </div>
-              <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+              <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
                 {l.deal&&<span style={{fontSize:11,fontWeight:600,color:C.g}}>{fmt$(l.deal)}₽</span>}
                 <span style={{fontSize:10,fontWeight:600,padding:"2px 9px",borderRadius:20,background:stCol(l.status)+"14",color:stCol(l.status),border:"1px solid "+stCol(l.status)+"25"}}>{stLbl(l.status)}</span>
-                <button onClick={()=>allLeads.remove(l.id)} style={{width:24,height:24,borderRadius:7,border:"1px solid "+C.bd,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.15s"}}
+                {/* Написать */}
+                {getWriteUrl(l)&&<a href={getWriteUrl(l)!} target="_blank" rel="noreferrer"
+                  style={{padding:"5px 12px",background:"linear-gradient(135deg,#22C55E14,#16A34A10)",color:"#16A34A",border:"1px solid #22C55E30",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",textDecoration:"none",transition:"all 0.15s",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:4}}
+                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#22C55E,#16A34A)";(e.currentTarget as HTMLElement).style.color="#fff";}}
+                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#22C55E14,#16A34A10)";(e.currentTarget as HTMLElement).style.color="#16A34A";}}>
+                  ✉️ Написать
+                </a>}
+                {/* Edit */}
+                <button onClick={()=>openEditLead(l)} style={{width:28,height:28,borderRadius:7,border:"1px solid "+C.bd,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.15s"}}
+                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.a+"10";(e.currentTarget as HTMLElement).style.borderColor=C.a+"40";}}
+                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";(e.currentTarget as HTMLElement).style.borderColor=C.bd;}}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={C.a} strokeWidth="2"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                </button>
+                {/* Delete */}
+                <button onClick={()=>allLeads.remove(l.id)} style={{width:28,height:28,borderRadius:7,border:"1px solid "+C.bd,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.15s"}}
                   onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.r+"50";(e.currentTarget as HTMLElement).style.background=C.r+"10";}}
                   onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.background="transparent";}}>
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={C.r} strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
@@ -5145,7 +5192,7 @@ function MediaPage({userId}:{userId:string}){
   const chartW=260;
 
   return <>
-    <div style={{background:"linear-gradient(135deg,"+(C.dk||"#080B12")+","+(C.da||"#101828")+")",borderRadius:16,padding:"24px 32px",marginBottom:24,color:"#fff",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:"24px 32px",marginBottom:24,color:"#fff",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <div><div style={{fontSize:20,fontWeight:700}}>Медийность</div><div style={{fontSize:13,opacity:0.6,marginTop:4}}>Динамика аудитории и охватов</div></div>
       <Btn onClick={()=>setShow(!show)} style={{background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.25)"}}>+ Данные</Btn>
     </div>
@@ -5343,7 +5390,7 @@ function CallsPage({userId}:{userId:string}){
     return days;
   },[calDate,calView]);
 
-  const callsForDay=(d:Date)=>calls.filter((c:any)=>c.date===ds(d)).sort((a:any,b:any)=>(a.time_start||"").localeCompare(b.time_start||""));
+  const callsForDay=(d:Date)=>calls.filter((c:any)=>c.date===ds(d)).sort((a:any,b:any)=>a.time_start.localeCompare(b.time_start));
 
   const changeDay=(delta:number)=>{
     const d=new Date(calDate);
@@ -5362,7 +5409,7 @@ function CallsPage({userId}:{userId:string}){
     const nowStr=today()+"T"+new Date().toTimeString().substring(0,5);
     return calls
       .filter((c:any)=>!c.completed&&(c.date>td||(c.date===td&&(c.time_start||"00:00")>=new Date().toTimeString().substring(0,5))))
-      .sort((a:any,b:any)=>a.date===b.date?(a.time_start||"").localeCompare(b.time_start||""):a.date.localeCompare(b.date))
+      .sort((a:any,b:any)=>a.date===b.date?a.time_start.localeCompare(b.time_start):a.date.localeCompare(b.date))
       .slice(0,5);
   },[calls,td]);
 
@@ -5504,7 +5551,7 @@ function CallsPage({userId}:{userId:string}){
       {/* Sidebar */}
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
         {/* Add button */}
-        <button onClick={()=>openCreate(td)} style={{width:"100%",padding:"12px",background:"linear-gradient(135deg,"+(C.dk||"#080B12")+","+(C.da||"#101828")+")",color:"#fff",border:"none",borderRadius:14,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+        <button onClick={()=>openCreate(td)} style={{width:"100%",padding:"12px",background:`linear-gradient(135deg,${C.dk},${C.da})`,color:"#fff",border:"none",borderRadius:14,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Новый созвон
         </button>
@@ -5603,7 +5650,7 @@ function CalcPage(){
     {label:"Оптимист",pr:{...p,convCall:Math.min(p.convCall*1.4,100),convLead:Math.min(p.convLead*1.4,100),convTraffic:Math.min(p.convTraffic*1.4,100)}},
   ];
   return <>
-    <div style={{background:"linear-gradient(135deg,"+(C.dk||"#080B12")+","+(C.da||"#101828")+")",borderRadius:16,padding:"28px 36px",marginBottom:24,color:"#fff"}}><div style={{fontSize:20,fontWeight:700}}>Калькулятор конверсий</div><div style={{fontSize:14,opacity:0.7,marginTop:4}}>Введи цель - платформа посчитает</div></div>
+    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:"28px 36px",marginBottom:24,color:"#fff"}}><div style={{fontSize:20,fontWeight:700}}>Калькулятор конверсий</div><div style={{fontSize:14,opacity:0.7,marginTop:4}}>Введи цель - платформа посчитает</div></div>
     <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:isMobile?12:20,marginBottom:isMobile?16:24}}>
       <Card><div style={{fontSize:16,fontWeight:600,marginBottom:16}}>Цель</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
         <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Сумма</label><input type="number" value={goal.amount} onChange={e=>sGoal({...goal,amount:+e.target.value})} style={iS()}/></div>
@@ -5687,7 +5734,7 @@ function LinksPage({userId}:{userId:string}){
 
   return <>
     {/* Header */}
-    <div style={{background:"linear-gradient(135deg,"+(C.dk||"#080B12")+","+(C.da||"#101828")+")",borderRadius:16,padding:"24px 32px",marginBottom:24,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:"24px 32px",marginBottom:24,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <div>
         <div style={{fontSize:20,fontWeight:700,color:"#fff"}}>База ссылок</div>
         <div style={{fontSize:13,color:"rgba(255,255,255,0.5)",marginTop:4}}>{links.length} сохранено · Быстрый доступ к нужным сайтам</div>
@@ -5843,7 +5890,7 @@ function FilesPage({userId}:{userId:string}){
   const filtered=files.filter((f:any)=>f.name.toLowerCase().includes(search.toLowerCase()));
 
   return <>
-    <div style={{background:"linear-gradient(135deg,"+(C.dk||"#080B12")+","+(C.da||"#101828")+")",borderRadius:16,padding:isMobile?"16px":"24px 32px",marginBottom:isMobile?16:24,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:isMobile?"16px":"24px 32px",marginBottom:isMobile?16:24,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <div>
         <div style={{fontSize:20,fontWeight:700,color:"#fff"}}>База файлов</div>
         <div style={{fontSize:13,color:"rgba(255,255,255,0.5)",marginTop:4}}>{files.length} файлов · Облачное хранилище</div>
@@ -7875,7 +7922,7 @@ function ToolsPage(){
   const progress=isBreak?(1-(time/(5*60)))*100:(1-(time/(activeMins*60)))*100;
 
   return <div style={{maxWidth:520,margin:"0 auto"}}>
-    <div style={{background:"linear-gradient(135deg,"+(C.dk||"#080B12")+","+(C.da||"#101828")+")",borderRadius:24,padding:"40px",textAlign:"center",marginBottom:24}}>
+    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:24,padding:"40px",textAlign:"center",marginBottom:24}}>
       <div style={{fontSize:13,color:"rgba(255,255,255,0.6)",marginBottom:6,letterSpacing:1}}>{isBreak?"ОТДЫХ":"ФОКУС"}</div>
       <div style={{position:"relative",display:"inline-flex",alignItems:"center",justifyContent:"center",marginBottom:28}}>
         <svg width="180" height="180" style={{transform:"rotate(-90deg)"}}>
