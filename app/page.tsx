@@ -728,8 +728,12 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 /* ============ MAIN APP ============ */
 export default function App() {
   const [user, setUser] = useState<any>(null);
+  const VALID_PAGES=["dashboard","strategy","crm","calls","content","pnl","sheets","media","ads","links","board","files","ai","script","product","stories","calc","tools","mailings"];
   const [page, setPage] = useState(()=>{
-    try{return localStorage.getItem("ff_page")||"dashboard";}catch{return "dashboard";}
+    try{
+      const saved=localStorage.getItem("ff_page")||"dashboard";
+      return VALID_PAGES.includes(saved)?saved:"dashboard";
+    }catch{return "dashboard";}
   });
 
   // Save page to localStorage on every change
