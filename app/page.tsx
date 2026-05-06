@@ -513,7 +513,7 @@ function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onL
                   <span style={{
                     fontSize:9,fontWeight:700,
                     color:hasActiveItem
-                      ?(group.items.find(i=>i.id===active)?.accent||"rgba(79,142,247,0.7)")+"bb"
+                      ?((group.items.find(i=>i.id===active)?.accent||"rgba(79,142,247,0.7)")+"bb")
                       :"rgba(255,255,255,0.18)",
                     letterSpacing:1.8,textTransform:"uppercase",
                   }}>{group.label}</span>
@@ -732,11 +732,21 @@ export default function App() {
   const [page, setPage] = useState(()=>{
     try{
       const saved=localStorage.getItem("ff_page")||"dashboard";
-      return VALID_PAGES.includes(saved)?saved:"dashboard";
+      if(!VALID_PAGES.includes(saved)){
+        localStorage.removeItem("ff_page");
+        return "dashboard";
+      }
+      return saved;
     }catch{return "dashboard";}
   });
 
-  // Save page to localStorage on every change
+  // Сбрасываем на dashboard если нет контента (на случай битого state)
+  useEffect(()=>{
+    if(!VALID_PAGES.includes(page)){
+      setPage("dashboard");
+    }
+  },[page]);
+
   useEffect(()=>{
     try{localStorage.setItem("ff_page",page);}catch{}
   },[page]);
