@@ -1144,14 +1144,16 @@ function DashPage({userId,name,avatar,onNav,onAvatarChange}:{userId:string,name:
 
   const upcomingCalls = useMemo(()=>{
     return calls.data
-      .filter((c:any)=>c.date >= td)
-      .sort((a:any,b:any)=>a.date===b.date?a.time_start.localeCompare(b.time_start):a.date.localeCompare(b.date))
+      .filter((c:any)=>c.date>=td&&c.time_start)
+      .sort((a:any,b:any)=>a.date===b.date?(a.time_start||"").localeCompare(b.time_start||""):a.date.localeCompare(b.date))
       .slice(0,5);
   },[calls.data, td]);
 
   const minsUntilCall = (c:any) => {
+    if(!c.time_start)return 999;
     const now = new Date();
-    const [h,m] = c.time_start.split(":").map(Number);
+    const parts = (c.time_start||"00:00").split(":");
+    const h=parseInt(parts[0]||"0"), m=parseInt(parts[1]||"0");
     const callTime = new Date(c.date);
     callTime.setHours(h, m, 0, 0);
     return Math.round((callTime.getTime() - now.getTime()) / 60000);
@@ -1161,7 +1163,7 @@ function DashPage({userId,name,avatar,onNav,onAvatarChange}:{userId:string,name:
 
   return <>
     {/* Hero greeting with avatar */}
-    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:isMobile?"18px 20px":"28px 36px",marginBottom:isMobile?16:24,color:"#fff",display:"flex",alignItems:"center",gap:16}}>
+    <div style={{background:"linear-gradient(135deg,"+(C.dk||"#080B12")+","+(C.da||"#101828")+")",borderRadius:16,padding:isMobile?"18px 20px":"28px 36px",marginBottom:isMobile?16:24,color:"#fff",display:"flex",alignItems:"center",gap:16}}>
       <label style={{cursor:"pointer",flexShrink:0}}>
         <div style={{width:isMobile?52:64,height:isMobile?52:64,borderRadius:"50%",border:"3px solid rgba(255,255,255,0.3)",overflow:"hidden",background:"rgba(255,255,255,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
           {avatarUploading
@@ -2258,7 +2260,7 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
     {toast&&<div style={{position:"fixed",bottom:isMobile?72:24,left:"50%",transform:"translateX(-50%)",background:C.dk,color:"#fff",padding:"12px 20px",borderRadius:12,fontSize:13,fontWeight:500,zIndex:1000,boxShadow:"0 8px 24px rgba(0,0,0,0.2)",maxWidth:360,textAlign:"center"}}>{toast}</div>}
 
     {/* Header */}
-    <div style={{padding:"18px 24px",background:`linear-gradient(135deg,${C.dk},${C.da})`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+    <div style={{padding:"18px 24px",background:"linear-gradient(135deg,"+(C.dk||"#080B12")+","+(C.da||"#101828")+")",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
         <div style={{width:32,height:32,borderRadius:10,background:"rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center"}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
@@ -5143,7 +5145,7 @@ function MediaPage({userId}:{userId:string}){
   const chartW=260;
 
   return <>
-    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:"24px 32px",marginBottom:24,color:"#fff",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+    <div style={{background:"linear-gradient(135deg,"+(C.dk||"#080B12")+","+(C.da||"#101828")+")",borderRadius:16,padding:"24px 32px",marginBottom:24,color:"#fff",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <div><div style={{fontSize:20,fontWeight:700}}>Медийность</div><div style={{fontSize:13,opacity:0.6,marginTop:4}}>Динамика аудитории и охватов</div></div>
       <Btn onClick={()=>setShow(!show)} style={{background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.25)"}}>+ Данные</Btn>
     </div>
@@ -5341,7 +5343,7 @@ function CallsPage({userId}:{userId:string}){
     return days;
   },[calDate,calView]);
 
-  const callsForDay=(d:Date)=>calls.filter((c:any)=>c.date===ds(d)).sort((a:any,b:any)=>a.time_start.localeCompare(b.time_start));
+  const callsForDay=(d:Date)=>calls.filter((c:any)=>c.date===ds(d)).sort((a:any,b:any)=>(a.time_start||"").localeCompare(b.time_start||""));
 
   const changeDay=(delta:number)=>{
     const d=new Date(calDate);
@@ -5360,7 +5362,7 @@ function CallsPage({userId}:{userId:string}){
     const nowStr=today()+"T"+new Date().toTimeString().substring(0,5);
     return calls
       .filter((c:any)=>!c.completed&&(c.date>td||(c.date===td&&(c.time_start||"00:00")>=new Date().toTimeString().substring(0,5))))
-      .sort((a:any,b:any)=>a.date===b.date?a.time_start.localeCompare(b.time_start):a.date.localeCompare(b.date))
+      .sort((a:any,b:any)=>a.date===b.date?(a.time_start||"").localeCompare(b.time_start||""):a.date.localeCompare(b.date))
       .slice(0,5);
   },[calls,td]);
 
@@ -5502,7 +5504,7 @@ function CallsPage({userId}:{userId:string}){
       {/* Sidebar */}
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
         {/* Add button */}
-        <button onClick={()=>openCreate(td)} style={{width:"100%",padding:"12px",background:`linear-gradient(135deg,${C.dk},${C.da})`,color:"#fff",border:"none",borderRadius:14,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+        <button onClick={()=>openCreate(td)} style={{width:"100%",padding:"12px",background:"linear-gradient(135deg,"+(C.dk||"#080B12")+","+(C.da||"#101828")+")",color:"#fff",border:"none",borderRadius:14,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Новый созвон
         </button>
@@ -5601,7 +5603,7 @@ function CalcPage(){
     {label:"Оптимист",pr:{...p,convCall:Math.min(p.convCall*1.4,100),convLead:Math.min(p.convLead*1.4,100),convTraffic:Math.min(p.convTraffic*1.4,100)}},
   ];
   return <>
-    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:"28px 36px",marginBottom:24,color:"#fff"}}><div style={{fontSize:20,fontWeight:700}}>Калькулятор конверсий</div><div style={{fontSize:14,opacity:0.7,marginTop:4}}>Введи цель - платформа посчитает</div></div>
+    <div style={{background:"linear-gradient(135deg,"+(C.dk||"#080B12")+","+(C.da||"#101828")+")",borderRadius:16,padding:"28px 36px",marginBottom:24,color:"#fff"}}><div style={{fontSize:20,fontWeight:700}}>Калькулятор конверсий</div><div style={{fontSize:14,opacity:0.7,marginTop:4}}>Введи цель - платформа посчитает</div></div>
     <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:isMobile?12:20,marginBottom:isMobile?16:24}}>
       <Card><div style={{fontSize:16,fontWeight:600,marginBottom:16}}>Цель</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
         <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Сумма</label><input type="number" value={goal.amount} onChange={e=>sGoal({...goal,amount:+e.target.value})} style={iS()}/></div>
@@ -5685,7 +5687,7 @@ function LinksPage({userId}:{userId:string}){
 
   return <>
     {/* Header */}
-    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:"24px 32px",marginBottom:24,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+    <div style={{background:"linear-gradient(135deg,"+(C.dk||"#080B12")+","+(C.da||"#101828")+")",borderRadius:16,padding:"24px 32px",marginBottom:24,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <div>
         <div style={{fontSize:20,fontWeight:700,color:"#fff"}}>База ссылок</div>
         <div style={{fontSize:13,color:"rgba(255,255,255,0.5)",marginTop:4}}>{links.length} сохранено · Быстрый доступ к нужным сайтам</div>
@@ -5841,7 +5843,7 @@ function FilesPage({userId}:{userId:string}){
   const filtered=files.filter((f:any)=>f.name.toLowerCase().includes(search.toLowerCase()));
 
   return <>
-    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:isMobile?"16px":"24px 32px",marginBottom:isMobile?16:24,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+    <div style={{background:"linear-gradient(135deg,"+(C.dk||"#080B12")+","+(C.da||"#101828")+")",borderRadius:16,padding:isMobile?"16px":"24px 32px",marginBottom:isMobile?16:24,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <div>
         <div style={{fontSize:20,fontWeight:700,color:"#fff"}}>База файлов</div>
         <div style={{fontSize:13,color:"rgba(255,255,255,0.5)",marginTop:4}}>{files.length} файлов · Облачное хранилище</div>
@@ -7873,7 +7875,7 @@ function ToolsPage(){
   const progress=isBreak?(1-(time/(5*60)))*100:(1-(time/(activeMins*60)))*100;
 
   return <div style={{maxWidth:520,margin:"0 auto"}}>
-    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:24,padding:"40px",textAlign:"center",marginBottom:24}}>
+    <div style={{background:"linear-gradient(135deg,"+(C.dk||"#080B12")+","+(C.da||"#101828")+")",borderRadius:24,padding:"40px",textAlign:"center",marginBottom:24}}>
       <div style={{fontSize:13,color:"rgba(255,255,255,0.6)",marginBottom:6,letterSpacing:1}}>{isBreak?"ОТДЫХ":"ФОКУС"}</div>
       <div style={{position:"relative",display:"inline-flex",alignItems:"center",justifyContent:"center",marginBottom:28}}>
         <svg width="180" height="180" style={{transform:"rotate(-90deg)"}}>
