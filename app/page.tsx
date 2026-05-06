@@ -792,32 +792,53 @@ export default function App() {
   );
 }
 
+// ── Error boundary for pages ──────────────────────────────
+class PageErrorBoundary extends React.Component<{children:React.ReactNode,name:string},{err:Error|null}>{
+  constructor(p:any){super(p);this.state={err:null};}
+  static getDerivedStateFromError(e:Error){return{err:e};}
+  render(){
+    if(this.state.err)return(
+      <div style={{padding:40,textAlign:"center"}}>
+        <div style={{fontSize:32,marginBottom:12}}>⚠️</div>
+        <div style={{fontSize:18,fontWeight:700,marginBottom:8,color:"#EF4444"}}>Ошибка в разделе {this.props.name}</div>
+        <div style={{fontSize:12,color:"#64748B",marginBottom:20,fontFamily:"monospace",maxWidth:600,margin:"0 auto 20px"}}>{this.state.err.message}</div>
+        <button onClick={()=>this.setState({err:null})} style={{padding:"10px 20px",background:"#2563EB",color:"#fff",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:600}}>Обновить раздел</button>
+      </div>
+    );
+    return this.props.children;
+  }
+}
+
+function SafePage({name,children}:{name:string,children:React.ReactNode}){
+  return<PageErrorBoundary name={name}>{children}</PageErrorBoundary>;
+}
+
 function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,nav,dark}:any){
   const isMobile=useIsMobile();
   const[sideCollapsed,setSideCollapsed]=useState(false);
   const sideW=sideCollapsed?60:240;
 
   const pageContent=<>
-    {page === "dashboard" && <DashPage userId={user.id} name={userName} avatar={userAvatar} onNav={setPage} onAvatarChange={async(url:string)=>{setUserAvatar(url);await supabase.from("profiles").upsert({id:user.id,avatar_url:url},{onConflict:"id"});}}/>}
-    {page === "strategy" && <StrategyPage userId={user.id}/>}
-    {page === "crm" && <CrmPage userId={user.id}/>}
-    {page === "calls" && <CallsPage userId={user.id}/>}
-    {page === "mailings" && <MailingsPage userId={user.id}/>}
-    {page === "content" && <ContentPage userId={user.id}/>}
-    {page === "pnl" && <PnlPage userId={user.id}/>}
-    {page === "sheets" && <SheetsPage userId={user.id}/>}
-    {page === "media" && <MediaPage userId={user.id}/>}
-    {page === "ads" && <AdsPage userId={user.id}/>}
-    {page === "calc" && <CalcPage/>}
-    {page === "tools" && <ToolsPage/>}
-    {page === "links" && <LinksPage userId={user.id}/>}
-    {page === "board" && <BoardPage userId={user.id}/>}
-    {page === "files" && <FilesPage userId={user.id}/>}
-    {page === "ai" && <AIPage/>}
-    {page === "script" && <ScriptAIPage/>}
-    {page === "product" && <ProductAIPage/>}
-    {page === "stories" && <StoriesAIPage/>}
-    {!["dashboard","strategy","crm","calls","mailings","content","pnl","sheets","media","ads","calc","tools","links","board","files","ai","script","product","stories"].includes(page) && nav && <Placeholder title={nav.label} ic={nav.ic}/>}
+    {page==="dashboard"&&<SafePage name="Dashboard"><DashPage userId={user.id} name={userName} avatar={userAvatar} onNav={setPage} onAvatarChange={async(url:string)=>{setUserAvatar(url);await supabase.from("profiles").upsert({id:user.id,avatar_url:url},{onConflict:"id"});}}/></SafePage>}
+    {page==="strategy"&&<SafePage name="War Room"><StrategyPage userId={user.id}/></SafePage>}
+    {page==="crm"&&<SafePage name="CRM"><CrmPage userId={user.id}/></SafePage>}
+    {page==="calls"&&<SafePage name="Созвоны"><CallsPage userId={user.id}/></SafePage>}
+    {page==="mailings"&&<SafePage name="Рассылки"><MailingsPage userId={user.id}/></SafePage>}
+    {page==="content"&&<SafePage name="Контент"><ContentPage userId={user.id}/></SafePage>}
+    {page==="pnl"&&<SafePage name="P&L"><PnlPage userId={user.id}/></SafePage>}
+    {page==="sheets"&&<SafePage name="Таблицы"><SheetsPage userId={user.id}/></SafePage>}
+    {page==="media"&&<SafePage name="Медийность"><MediaPage userId={user.id}/></SafePage>}
+    {page==="ads"&&<SafePage name="Реклама"><AdsPage userId={user.id}/></SafePage>}
+    {page==="calc"&&<SafePage name="Калькулятор"><CalcPage/></SafePage>}
+    {page==="tools"&&<SafePage name="Инструменты"><ToolsPage/></SafePage>}
+    {page==="links"&&<SafePage name="База ссылок"><LinksPage userId={user.id}/></SafePage>}
+    {page==="board"&&<SafePage name="Доска"><BoardPage userId={user.id}/></SafePage>}
+    {page==="files"&&<SafePage name="Файлы"><FilesPage userId={user.id}/></SafePage>}
+    {page==="ai"&&<SafePage name="AI"><AIPage/></SafePage>}
+    {page==="script"&&<SafePage name="Copy AI"><ScriptAIPage/></SafePage>}
+    {page==="product"&&<SafePage name="Product AI"><ProductAIPage/></SafePage>}
+    {page==="stories"&&<SafePage name="Stories AI"><StoriesAIPage/></SafePage>}
+    {!["dashboard","strategy","crm","calls","mailings","content","pnl","sheets","media","ads","calc","tools","links","board","files","ai","script","product","stories"].includes(page)&&nav&&<Placeholder title={nav.label} ic={nav.ic}/>}
   </>;
 
   return (
