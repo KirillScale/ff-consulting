@@ -1153,16 +1153,18 @@ function DashPage({userId,name,avatar,onNav,onAvatarChange}:{userId:string,name:
 
   const upcomingCalls = useMemo(()=>{
     return calls.data
-      .filter((c:any)=>c.date >= td)
-      .sort((a:any,b:any)=>a.date===b.date?a.time_start.localeCompare(b.time_start):a.date.localeCompare(b.date))
+      .filter((c:any)=>c.date>=td&&c.time_start)
+      .sort((a:any,b:any)=>a.date===b.date?(a.time_start||"").localeCompare(b.time_start||""):a.date.localeCompare(b.date))
       .slice(0,5);
   },[calls.data, td]);
 
   const minsUntilCall = (c:any) => {
+    if(!c.time_start)return 999;
     const now = new Date();
-    const [h,m] = c.time_start.split(":").map(Number);
+    const parts = (c.time_start||"00:00").split(":");
+    const h=parseInt(parts[0]||"0"), m2=parseInt(parts[1]||"0");
     const callTime = new Date(c.date);
-    callTime.setHours(h, m, 0, 0);
+    callTime.setHours(h, m2, 0, 0);
     return Math.round((callTime.getTime() - now.getTime()) / 60000);
   };
 
@@ -5390,7 +5392,7 @@ function CallsPage({userId}:{userId:string}){
     return days;
   },[calDate,calView]);
 
-  const callsForDay=(d:Date)=>calls.filter((c:any)=>c.date===ds(d)).sort((a:any,b:any)=>a.time_start.localeCompare(b.time_start));
+  const callsForDay=(d:Date)=>calls.filter((c:any)=>c.date===ds(d)).sort((a:any,b:any)=>(a.time_start||"").localeCompare(b.time_start||""));
 
   const changeDay=(delta:number)=>{
     const d=new Date(calDate);
@@ -5409,7 +5411,7 @@ function CallsPage({userId}:{userId:string}){
     const nowStr=today()+"T"+new Date().toTimeString().substring(0,5);
     return calls
       .filter((c:any)=>!c.completed&&(c.date>td||(c.date===td&&(c.time_start||"00:00")>=new Date().toTimeString().substring(0,5))))
-      .sort((a:any,b:any)=>a.date===b.date?a.time_start.localeCompare(b.time_start):a.date.localeCompare(b.date))
+      .sort((a:any,b:any)=>a.date===b.date?(a.time_start||"").localeCompare(b.time_start||""):a.date.localeCompare(b.date))
       .slice(0,5);
   },[calls,td]);
 
