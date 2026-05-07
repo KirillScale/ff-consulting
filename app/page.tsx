@@ -285,13 +285,24 @@ function useIsMobile(){
 }
 
 /* ============ SIDEBAR — Deep Dark Glass ============ */
-function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onLogout:()=>void}){
+function Side({active,onNav,onLogout,onCollapseChange}:{active:string,onNav:(id:string)=>void,onLogout:()=>void,onCollapseChange?:(collapsed:boolean)=>void}){
   const{dark,toggle}=useTheme();
   const[collapsed,setCollapsed]=useState(false);
   const activeGroupIdx=NAV_GROUPS.findIndex(g=>g.items.some(i=>i.id===active));
-  const[openGroups,setOpenGroups]=useState<number[]>(()=>[activeGroupIdx>=0?activeGroupIdx:0]);
+  const[openGroups,setOpenGroups]=useState<number[]>(()=>Array.from(new Set([0,activeGroupIdx>=0?activeGroupIdx:0])));
+
+  // Keep the pinned top group (Dashboard / War Room / P&L) always visible.
+  // Previously it could be collapsed with no header to reopen, so Dashboard and War Room disappeared.
+  useEffect(()=>{
+    if(activeGroupIdx>=0){
+      setOpenGroups(p=>Array.from(new Set([0,...p,activeGroupIdx])));
+    }
+  },[activeGroupIdx]);
+
+  useEffect(()=>{onCollapseChange?.(collapsed);},[collapsed,onCollapseChange]);
 
   const toggleGroup=(idx:number)=>{
+    if(idx===0)return;
     setOpenGroups(p=>p.includes(idx)?p.filter(i=>i!==idx):[...p,idx]);
   };
 
@@ -438,12 +449,12 @@ function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onL
 
   return(
     <div style={{
-      width:collapsed?64:248,height:"100vh",
+      width:collapsed?64:248,height:"100dvh",minHeight:"100vh",
       background:SB_BG,
       display:"flex",flexDirection:"column",
       transition:"width 0.3s cubic-bezier(0.4,0,0.2,1)",
       position:"fixed",left:0,top:0,zIndex:100,
-      overflowX:"hidden",overflowY:"hidden",
+      overflow:"hidden",
       borderRight:"1px solid rgba(255,255,255,0.05)",
     }}>
       <style>{`
@@ -455,8 +466,11 @@ function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onL
           0%,100%{border-color:rgba(79,142,247,0.15)}
           50%{border-color:rgba(79,142,247,0.4)}
         }
-        .sb-scroll::-webkit-scrollbar{width:2px}
-        .sb-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.05);border-radius:2px}
+        .sb-scroll{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.22) transparent;overscroll-behavior:contain;}
+        .sb-scroll::-webkit-scrollbar{width:6px}
+        .sb-scroll::-webkit-scrollbar-track{background:transparent}
+        .sb-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.16);border-radius:999px}
+        .sb-scroll:hover::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.28)}
       `}</style>
 
       {/* Top ambient glow */}
@@ -492,9 +506,9 @@ function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onL
       </div>
 
       {/* Nav */}
-      <div className="sb-scroll" style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"10px 8px 0"}}>
+      <div className="sb-scroll" style={{flex:"1 1 auto",minHeight:0,overflowY:"auto",overflowX:"hidden",padding:"10px 8px 12px",scrollbarGutter:"stable" as any}}>
         {NAV_GROUPS.map((group,gi)=>{
-          const isOpen=collapsed||openGroups.includes(gi);
+          const isOpen=collapsed||gi===0||openGroups.includes(gi);
           const hasActiveItem=group.items.some(i=>i.id===active);
 
           return(
@@ -835,7 +849,7 @@ function SafePage({name,children}:{name:string,children:React.ReactNode}){
 function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,nav,dark}:any){
   const isMobile=useIsMobile();
   const[sideCollapsed,setSideCollapsed]=useState(false);
-  const sideW=sideCollapsed?60:240;
+  const sideW=sideCollapsed?64:248;
 
   const pageContent=<>
     {page==="dashboard"&&<SafePage name="Dashboard"><DashPage userId={user.id} name={userName} avatar={userAvatar} onNav={setPage} onAvatarChange={async(url:string)=>{setUserAvatar(url);await supabase.from("profiles").upsert({id:user.id,avatar_url:url},{onConflict:"id"});}}/></SafePage>}
@@ -1025,8 +1039,8 @@ function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,n
           <div style={{padding:"16px 16px 0"}}>{pageContent}</div>
         </div>
       </> : <>
-        <Side active={page} onNav={setPage} onLogout={logout}/>
-        <div style={{marginLeft:sideW,minHeight:"100vh",transition:"margin-left 0.25s cubic-bezier(0.4,0,0.2,1)"}}>
+        <Side active={page} onNav={setPage} onLogout={logout} onCollapseChange={setSideCollapsed}/>
+        <div style={{marginLeft:sideW,minHeight:"100dvh",transition:"margin-left 0.25s cubic-bezier(0.4,0,0.2,1)"}}>
           <Head name={userName}/>
           <div style={{padding:"28px 32px"}}>{pageContent}</div>
         </div>
