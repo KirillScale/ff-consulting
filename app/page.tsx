@@ -3599,8 +3599,8 @@ function CrmPage({userId}:{userId:string}){
     const isEditing=editLeadId===l.id;
 
     return <div key={l.id}>
-      {/* ── Edit modal ── */}
-      {isEditing&&(
+      {/* ── Edit modal is rendered globally so it also works from List view */}
+      {false&&isEditing&&(
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setEditLeadId(null)}>
           <div style={{background:C.w,borderRadius:18,padding:28,width:"100%",maxWidth:480,border:"1px solid "+C.bd,boxShadow:"0 24px 60px rgba(0,0,0,0.4)"}} onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:16,fontWeight:700,color:C.t1,marginBottom:20}}>✏️ Редактировать лида</div>
@@ -4034,6 +4034,62 @@ function CrmPage({userId}:{userId:string}){
 
   // ── SCREEN: FUNNEL INNER ─────────────────────────────────────────
   return <>
+    {/* ── Global edit lead modal: works from Kanban and List views ── */}
+    {editLeadId&&(
+      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setEditLeadId(null)}>
+        <div style={{background:C.w,borderRadius:20,padding:isMobile?20:28,width:"100%",maxWidth:520,maxHeight:"calc(100dvh - 40px)",overflowY:"auto",border:"1px solid "+C.bd,boxShadow:"0 24px 60px rgba(0,0,0,0.4)",boxSizing:"border-box" as const}} onClick={e=>e.stopPropagation()}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:20}}>
+            <div>
+              <div style={{fontSize:16,fontWeight:800,color:C.t1}}>✏️ Редактировать лида</div>
+              <div style={{fontSize:11,color:C.t2,marginTop:3}}>Изменения сохранятся в текущей воронке и будут видны в канбане и списке.</div>
+            </div>
+            <button onClick={()=>setEditLeadId(null)} style={{width:32,height:32,borderRadius:10,border:"1px solid "+C.bd,background:C.ib,color:C.t2,cursor:"pointer",fontSize:18,lineHeight:1}}>×</button>
+          </div>
+
+          <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:20}}>
+            <label style={{cursor:"pointer",flexShrink:0}}>
+              <div style={{width:72,height:72,borderRadius:"50%",background:C.ib,border:"2px dashed "+C.bd,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",position:"relative",transition:"border-color 0.15s"}}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.a;}}
+                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;}}>
+                {avatarUpl===editLeadId
+                  ?<div style={{width:22,height:22,border:"2px solid "+C.bd,borderTopColor:C.a,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+                  :editLeadData.avatar_url
+                  ?<img src={editLeadData.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>
+                  :<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                }
+              </div>
+              <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0]&&editLeadId)uploadLeadAvatar(e.target.files[0],editLeadId);}}/>
+            </label>
+            <div style={{minWidth:0}}>
+              <div style={{fontSize:13,fontWeight:700,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{editLeadData.name||"Лид"}</div>
+              <div style={{fontSize:11,color:C.t2,marginTop:2}}>Нажми на фото, чтобы изменить</div>
+              {editLeadData.avatar_url&&<button onClick={()=>setEditLeadData({...editLeadData,avatar_url:""})}
+                style={{fontSize:10,color:C.r,background:"transparent",border:"none",cursor:"pointer",padding:0,marginTop:5}}>✕ Удалить фото</button>}
+            </div>
+          </div>
+
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12,marginBottom:12}}>
+            {([["name","Имя *"],["contact","Контакт"],["phone","Телефон"],["email","Email"],["deal","Сделка, ₽"],["source","Источник"]] as const).map(([k,label])=>(
+              <div key={k}>
+                <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>{label}</label>
+                <input type={k==="deal"?"number":"text"} value={editLeadData[k]||""} onChange={e=>setEditLeadData({...editLeadData,[k]:e.target.value})}
+                  style={{width:"100%",padding:"10px 12px",border:"1px solid "+C.bd,borderRadius:11,fontSize:12,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"Montserrat, sans-serif"}}/>
+              </div>
+            ))}
+          </div>
+          <div style={{marginBottom:18}}>
+            <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>Заметка</label>
+            <textarea value={editLeadData.note||""} onChange={e=>setEditLeadData({...editLeadData,note:e.target.value})} rows={4}
+              style={{width:"100%",padding:"10px 12px",border:"1px solid "+C.bd,borderRadius:11,fontSize:12,outline:"none",background:C.ib,color:C.t1,resize:"vertical",fontFamily:"Montserrat, sans-serif",boxSizing:"border-box" as const,lineHeight:1.5}}/>
+          </div>
+          <div style={{display:"flex",gap:10,justifyContent:"flex-end",flexWrap:"wrap"}}>
+            <button onClick={()=>setEditLeadId(null)} style={{padding:"10px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:11,fontSize:13,cursor:"pointer",fontWeight:600}}>Отмена</button>
+            <button onClick={saveEditLead} disabled={!String(editLeadData.name||"").trim()} style={{padding:"10px 20px",background:String(editLeadData.name||"").trim()?"linear-gradient(135deg,"+C.a+","+C.ah+")":C.bd,color:"#fff",border:"none",borderRadius:11,fontSize:13,fontWeight:800,cursor:String(editLeadData.name||"").trim()?"pointer":"default",boxShadow:String(editLeadData.name||"").trim()?"0 0 18px "+C.a+"35":"none"}}>Сохранить</button>
+          </div>
+        </div>
+      </div>
+    )}
+
     {/* Breadcrumb + funnel switcher */}
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20,flexWrap:"wrap"}}>
       <button onClick={backToList}
