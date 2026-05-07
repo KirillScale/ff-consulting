@@ -3680,7 +3680,7 @@ function CrmPage({userId}:{userId:string}){
         onClick={()=>setOpenLead(isOpen?null:l.id)}
         style={{
           background:C.w,borderRadius:11,padding:"11px 12px",marginBottom:6,
-          cursor:"grab",userSelect:"none",
+          cursor:"grab",userSelect:"none",boxSizing:"border-box" as const,
           border:"1px solid "+C.bd,
           borderLeft:`3px solid ${stageColor}`,
           opacity:dragId===l.id?0.4:1,
@@ -3736,74 +3736,74 @@ function CrmPage({userId}:{userId:string}){
           </div>
 
           {/* Action row */}
-          <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+          <div style={{display:"flex",gap:6,alignItems:"stretch",flexWrap:"wrap"}}>
             <button onClick={e=>{e.stopPropagation();toggleTouchPanel(l.id);}}
-              style={{flex:1,padding:"7px 10px",background:"linear-gradient(135deg,#4F46E514,#7C3AED12)",color:"#6D48F7",border:"1px solid rgba(124,58,237,0.26)",borderRadius:9,fontSize:11,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,transition:"all 0.15s",boxShadow:openTouchLeadId===l.id?"0 0 16px rgba(124,58,237,0.22)":"0 0 12px rgba(124,58,237,0.08)"}}
+              style={{flex:"1 1 140px",padding:"8px 10px",background:"linear-gradient(135deg,#4F46E514,#7C3AED12)",color:"#6D48F7",border:"1px solid rgba(124,58,237,0.26)",borderRadius:10,fontSize:11,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,transition:"all 0.15s",boxShadow:openTouchLeadId===l.id?"0 0 16px rgba(124,58,237,0.22)":"0 0 12px rgba(124,58,237,0.08)",minHeight:34,boxSizing:"border-box" as const}}
               onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#4F46E5,#7C3AED)";(e.currentTarget as HTMLElement).style.color="#fff";(e.currentTarget as HTMLElement).style.boxShadow="0 0 20px rgba(124,58,237,0.30)";}}
               onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#4F46E514,#7C3AED12)";(e.currentTarget as HTMLElement).style.color="#6D48F7";(e.currentTarget as HTMLElement).style.boxShadow=openTouchLeadId===l.id?"0 0 16px rgba(124,58,237,0.22)":"0 0 12px rgba(124,58,237,0.08)";}}>
               ✨ Шаблон касания
             </button>
             {/* Написать button */}
             {getWriteUrl(l)&&<a href={getWriteUrl(l)!} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}
-              style={{flex:1,padding:"7px 10px",background:"linear-gradient(135deg,#22C55E14,#16A34A10)",color:"#16A34A",border:"1px solid #22C55E30",borderRadius:9,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,textDecoration:"none",transition:"all 0.15s"}}
+              style={{flex:"1 1 92px",padding:"8px 10px",background:"linear-gradient(135deg,#22C55E14,#16A34A10)",color:"#16A34A",border:"1px solid #22C55E30",borderRadius:10,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,textDecoration:"none",transition:"all 0.15s",minHeight:34,boxSizing:"border-box" as const}}
               onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#22C55E,#16A34A)";(e.currentTarget as HTMLElement).style.color="#fff";(e.currentTarget as HTMLElement).style.boxShadow="0 0 12px #22C55E40";}}
               onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#22C55E14,#16A34A10)";(e.currentTarget as HTMLElement).style.color="#16A34A";(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
               ✉️ Написать
             </a>}
             {/* Edit button */}
             <button onClick={e=>{e.stopPropagation();openEditLead(l);}}
-              style={{flex:1,padding:"7px 10px",background:C.a+"12",color:C.a,border:"1px solid "+C.a+"30",borderRadius:9,fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,transition:"all 0.15s"}}
+              style={{flex:"1 1 92px",padding:"8px 10px",background:C.a+"12",color:C.a,border:"1px solid "+C.a+"30",borderRadius:10,fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,transition:"all 0.15s",minHeight:34,boxSizing:"border-box" as const}}
               onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.a+"20";(e.currentTarget as HTMLElement).style.boxShadow="0 0 12px "+C.a+"20";}}
               onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=C.a+"12";(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
               ✏️ Изменить
             </button>
             {/* Delete button */}
             <button onClick={e=>{e.stopPropagation();setDeleteConfirmId(l.id);}}
-              style={{padding:"7px 10px",background:"#E91E8C10",color:"#E91E8C",border:"1px solid #E91E8C30",borderRadius:9,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.15s"}}
+              style={{padding:"8px 10px",background:"#E91E8C10",color:"#E91E8C",border:"1px solid #E91E8C30",borderRadius:10,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.15s",minHeight:34,minWidth:36,boxSizing:"border-box" as const}}
               onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#FF6B9D,#E91E8C)";(e.currentTarget as HTMLElement).style.color="#fff";(e.currentTarget as HTMLElement).style.boxShadow="0 0 16px rgba(233,30,140,0.4)";}}
               onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="#E91E8C10";(e.currentTarget as HTMLElement).style.color="#E91E8C";(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
               🗑
             </button>
           </div>
 
-          {openTouchLeadId===l.id&&<div onClick={e=>e.stopPropagation()} style={{marginTop:10,padding:12,borderRadius:14,background:"linear-gradient(135deg, rgba(79,70,229,0.05), rgba(124,58,237,0.06))",border:"1px solid rgba(124,58,237,0.16)",boxShadow:"0 0 16px rgba(124,58,237,0.10)"}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:10,flexWrap:"wrap"}}>
-              <div>
+          {openTouchLeadId===l.id&&<div onClick={e=>e.stopPropagation()} style={{marginTop:10,width:"100%",padding:10,borderRadius:16,background:"linear-gradient(180deg, rgba(248,245,255,0.92), rgba(244,240,255,0.86))",border:"1px solid rgba(124,58,237,0.14)",boxShadow:"0 10px 28px rgba(124,58,237,0.08)",boxSizing:"border-box" as const,overflow:"hidden"}}>
+            <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+              <div style={{minWidth:0}}>
                 <div style={{fontSize:12,fontWeight:800,color:C.t1}}>Шаблон касания</div>
-                <div style={{fontSize:10,color:C.t2,marginTop:2}}>Пропиши сообщение и дату/время отправки для этого лида.</div>
+                <div style={{fontSize:10,color:C.t2,marginTop:2,lineHeight:1.35}}>Пропиши сообщение и дату/время отправки для этого лида.</div>
               </div>
-              {touchSavedLeadId===l.id&&<div style={{fontSize:10,fontWeight:800,color:"#16A34A",padding:"6px 10px",borderRadius:999,background:"#22C55E10",border:"1px solid #22C55E22"}}>Сохранено</div>}
+              {touchSavedLeadId===l.id&&<div style={{fontSize:10,fontWeight:800,color:"#16A34A",padding:"5px 8px",borderRadius:999,background:"#22C55E10",border:"1px solid #22C55E22",whiteSpace:"nowrap"}}>Сохранено</div>}
             </div>
 
-            <div style={{display:"grid",gap:10}}>
+            <div style={{display:"grid",gap:8}}>
               {(touchesByLead[l.id]||[]).map((touch:any,index:number)=>{
                 const isFilled=String(touch.message||"").trim().length>0;
-                return <div key={touch.id} style={{background:C.w,borderRadius:12,padding:10,border:"1px solid "+C.bd}}>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:8}}>
+                return <div key={touch.id} style={{background:"rgba(255,255,255,0.9)",borderRadius:14,padding:9,border:"1px solid rgba(124,58,237,0.10)",boxSizing:"border-box" as const,overflow:"hidden"}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:8,flexWrap:"wrap"}}>
                     <div style={{fontSize:11,fontWeight:800,color:"#6D48F7"}}>{`Касание ${index+1}`}</div>
-                    <div style={{display:"flex",alignItems:"center",gap:6}}>
-                      {isFilled&&<button onClick={()=>updateTouch(l.id,touch.id,{sent:!touch.sent})} style={{padding:"4px 8px",borderRadius:999,border:"1px solid "+(touch.sent?"#22C55E30":"rgba(124,58,237,0.18)"),background:touch.sent?"#22C55E10":"rgba(124,58,237,0.08)",color:touch.sent?"#16A34A":"#6D48F7",fontSize:10,fontWeight:800,cursor:"pointer"}}>{touch.sent?"Отправлено":"Не отправлено"}</button>}
-                      {(touchesByLead[l.id]||[]).length>1&&<button onClick={()=>removeTouchRow(l.id,touch.id)} style={{width:24,height:24,borderRadius:999,border:"1px solid "+C.bd,background:"transparent",color:C.t2,cursor:"pointer",fontSize:14,lineHeight:1}}>×</button>}
+                    <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                      {isFilled&&<button onClick={()=>updateTouch(l.id,touch.id,{sent:!touch.sent})} style={{padding:"4px 8px",borderRadius:999,border:"1px solid "+(touch.sent?"#22C55E30":"rgba(124,58,237,0.18)"),background:touch.sent?"#22C55E10":"rgba(124,58,237,0.08)",color:touch.sent?"#16A34A":"#6D48F7",fontSize:10,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap"}}>{touch.sent?"Отправлено":"Не отправлено"}</button>}
+                      {(touchesByLead[l.id]||[]).length>1&&<button onClick={()=>removeTouchRow(l.id,touch.id)} style={{width:24,height:24,borderRadius:999,border:"1px solid "+C.bd,background:"transparent",color:C.t2,cursor:"pointer",fontSize:14,lineHeight:1,flexShrink:0}}>×</button>}
                     </div>
                   </div>
-                  <textarea value={touch.message||""} onChange={e=>updateTouch(l.id,touch.id,{message:e.target.value,sent:false})} placeholder="Текст сообщения / follow-up..." rows={3}
-                    style={{width:"100%",padding:"10px 12px",border:"1px solid "+C.bd,borderRadius:10,fontSize:12,outline:"none",background:C.ib,color:C.t1,resize:"vertical",fontFamily:"Montserrat, sans-serif",boxSizing:"border-box" as const}}/>
-                  <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:8,marginTop:8}}>
-                    <input type="date" value={touch.date||""} onChange={e=>updateTouch(l.id,touch.id,{date:e.target.value,sent:false})} style={{width:"100%",padding:"9px 10px",border:"1px solid "+C.bd,borderRadius:10,fontSize:12,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"Montserrat, sans-serif"}}/>
-                    <input type="time" value={touch.time||""} onChange={e=>updateTouch(l.id,touch.id,{time:e.target.value,sent:false})} style={{width:"100%",padding:"9px 10px",border:"1px solid "+C.bd,borderRadius:10,fontSize:12,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"Montserrat, sans-serif"}}/>
+                  <textarea value={touch.message||""} onChange={e=>updateTouch(l.id,touch.id,{message:e.target.value,sent:false})} placeholder="Текст сообщения / follow-up..." rows={2}
+                    style={{width:"100%",minHeight:78,padding:"10px 12px",border:"1px solid "+C.bd,borderRadius:11,fontSize:12,outline:"none",background:C.ib,color:C.t1,resize:"vertical",fontFamily:"Montserrat, sans-serif",lineHeight:1.45,boxSizing:"border-box" as const}}/>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr",gap:8,marginTop:8}}>
+                    <input type="date" value={touch.date||""} onChange={e=>updateTouch(l.id,touch.id,{date:e.target.value,sent:false})} style={{width:"100%",padding:"9px 10px",border:"1px solid "+C.bd,borderRadius:11,fontSize:12,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"Montserrat, sans-serif"}}/>
+                    <input type="time" value={touch.time||""} onChange={e=>updateTouch(l.id,touch.id,{time:e.target.value,sent:false})} style={{width:"100%",padding:"9px 10px",border:"1px solid "+C.bd,borderRadius:11,fontSize:12,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"Montserrat, sans-serif"}}/>
                   </div>
 
-                  {isFilled&&<div style={{marginTop:9,display:"flex",flexDirection:"column",alignItems:"flex-start",gap:6}}>
-                    <div style={{maxWidth:"100%",padding:"9px 12px",borderRadius:"16px 16px 16px 6px",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",fontSize:12,lineHeight:1.45,boxShadow:"0 0 18px rgba(124,58,237,0.18)",whiteSpace:"pre-wrap",wordBreak:"break-word",opacity:touch.sent?0.72:1}}>{touch.message}</div>
-                    {(touch.date||touch.time)&&<div style={{fontSize:10,fontWeight:700,color:touch.sent?"#16A34A":"#6D48F7",padding:"5px 9px",borderRadius:999,background:touch.sent?"#22C55E10":"rgba(124,58,237,0.08)",border:"1px solid "+(touch.sent?"#22C55E22":"rgba(124,58,237,0.16)")}}>{touch.sent?"Отправлено":"Запланировано"}{touch.date?` · ${touch.date}`:""}{touch.time?` · ${touch.time}`:""}</div>}
+                  {isFilled&&<div style={{marginTop:9,display:"flex",flexDirection:"column",alignItems:"flex-start",gap:6,maxWidth:"100%"}}>
+                    <div style={{maxWidth:"100%",padding:"9px 12px",borderRadius:"16px 16px 16px 6px",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",fontSize:12,lineHeight:1.45,boxShadow:"0 0 18px rgba(124,58,237,0.15)",whiteSpace:"pre-wrap",wordBreak:"break-word",opacity:touch.sent?0.72:1,boxSizing:"border-box" as const}}>{touch.message}</div>
+                    {(touch.date||touch.time)&&<div style={{fontSize:10,fontWeight:700,color:touch.sent?"#16A34A":"#6D48F7",padding:"5px 9px",borderRadius:999,background:touch.sent?"#22C55E10":"rgba(124,58,237,0.08)",border:"1px solid "+(touch.sent?"#22C55E22":"rgba(124,58,237,0.16)"),maxWidth:"100%",wordBreak:"break-word"}}>{touch.sent?"Отправлено":"Запланировано"}{touch.date?` · ${touch.date}`:""}{touch.time?` · ${touch.time}`:""}</div>}
                   </div>}
                 </div>
               })}
             </div>
 
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginTop:10,flexWrap:"wrap"}}>
-              <button onClick={()=>addTouchRow(l.id)} style={{padding:"9px 12px",background:"transparent",color:"#6D48F7",border:"1px dashed rgba(124,58,237,0.28)",borderRadius:10,fontSize:11,fontWeight:800,cursor:"pointer"}}>+ Добавить касание</button>
-              <button onClick={()=>saveTouchRows(l.id)} style={{padding:"9px 14px",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",border:"none",borderRadius:10,fontSize:11,fontWeight:800,cursor:"pointer",boxShadow:"0 0 18px rgba(124,58,237,0.28)"}}>Сохранить касания</button>
+            <div style={{display:"grid",gridTemplateColumns:"1fr",gap:8,marginTop:10}}>
+              <button onClick={()=>addTouchRow(l.id)} style={{width:"100%",padding:"10px 12px",background:"transparent",color:"#6D48F7",border:"1px dashed rgba(124,58,237,0.28)",borderRadius:11,fontSize:11,fontWeight:800,cursor:"pointer",boxSizing:"border-box" as const}}>+ Добавить касание</button>
+              <button onClick={()=>saveTouchRows(l.id)} style={{width:"100%",padding:"10px 14px",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",border:"none",borderRadius:11,fontSize:11,fontWeight:800,cursor:"pointer",boxShadow:"0 0 18px rgba(124,58,237,0.22)",boxSizing:"border-box" as const}}>Сохранить касания</button>
             </div>
           </div>}
         </div>}
