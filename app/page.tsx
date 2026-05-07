@@ -73,6 +73,7 @@ const NAV_GROUPS=[
     label:"Программы",
     items:[
       {id:"board",label:"Vizzy Map",accent:"#FBBF24",ic:"M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"},
+      {id:"visitext",label:"Vizzy Text",accent:"#93C5FD",ic:"M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z M14 3v5h5 M9 13h6 M9 17h6 M9 9h2"},
       {id:"sheets",label:"Vizzy Tables",accent:"#4ADE80",ic:"M3 10h18M3 6h18M3 14h18M3 18h18M10 3v18M6 3v18"},
     ]
   },
@@ -494,7 +495,7 @@ function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onL
       {/* Nav */}
       <div className="sb-scroll" style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"10px 8px 0"}}>
         {NAV_GROUPS.map((group,gi)=>{
-          const isOpen=collapsed||openGroups.includes(gi);
+          const isOpen=collapsed||!group.label||openGroups.includes(gi);
           const hasActiveItem=group.items.some(i=>i.id===active);
 
           return(
@@ -729,7 +730,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const APP_VERSION="v2.1"; // bump this to force-clear stale localStorage
-  const VALID_PAGES=["dashboard","strategy","crm","calls","content","pnl","sheets","media","ads","links","board","files","ai","script","product","stories","calc","tools","mailings"];
+  const VALID_PAGES=["dashboard","strategy","crm","calls","content","pnl","sheets","visitext","media","ads","links","board","files","ai","script","product","stories","calc","tools","mailings"];
 
   // Clear stale localStorage on version change
   useEffect(()=>{
@@ -845,6 +846,7 @@ function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,n
     {page==="mailings"&&<SafePage name="Рассылки"><MailingsPage userId={user.id}/></SafePage>}
     {page==="content"&&<SafePage name="Контент"><ContentPage userId={user.id}/></SafePage>}
     {page==="pnl"&&<SafePage name="P&L"><PnlPage userId={user.id}/></SafePage>}
+    {page==="visitext"&&<SafePage name="Vizzy Text"><VisiTextPage userId={user.id}/></SafePage>}
     {page==="sheets"&&<SafePage name="Таблицы"><SheetsPage userId={user.id}/></SafePage>}
     {page==="media"&&<SafePage name="Медийность"><MediaPage userId={user.id}/></SafePage>}
     {page==="ads"&&<SafePage name="Реклама"><AdsPage userId={user.id}/></SafePage>}
@@ -857,7 +859,7 @@ function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,n
     {page==="script"&&<SafePage name="Copy AI"><ScriptAIPage/></SafePage>}
     {page==="product"&&<SafePage name="Product AI"><ProductAIPage/></SafePage>}
     {page==="stories"&&<SafePage name="Stories AI"><StoriesAIPage/></SafePage>}
-    {!["dashboard","strategy","crm","calls","mailings","content","pnl","sheets","media","ads","calc","tools","links","board","files","ai","script","product","stories"].includes(page)&&nav&&<Placeholder title={nav.label} ic={nav.ic}/>}
+    {!["dashboard","strategy","crm","calls","mailings","content","pnl","sheets","visitext","media","ads","calc","tools","links","board","files","ai","script","product","stories"].includes(page)&&nav&&<Placeholder title={nav.label} ic={nav.ic}/>}
   </>;
 
   return (
@@ -7229,6 +7231,278 @@ function MailingsPage({userId}:{userId:string}){
   );
 }
 
+
+/* ============ VISITEXT — LIGHT WORD-LIKE EDITOR ============ */
+type VisiTextDoc={id:string;title:string;html:string;fontSize:number;lineHeight:string;pageCount:number;createdAt:number;updatedAt:number};
+const VISITEXT_MAX_DOCS=30;
+const VISITEXT_MAX_PAGES=500;
+const VISITEXT_A4_HEIGHT=1123;
+const VISITEXT_HIGHLIGHTS=[
+  {name:"Лимон",color:"#FEF3C7"},
+  {name:"Мята",color:"#D1FAE5"},
+  {name:"Небо",color:"#DBEAFE"},
+  {name:"Роза",color:"#FCE7F3"},
+  {name:"Лаванда",color:"#EDE9FE"},
+];
+
+const visitextContent=(doc:Partial<VisiTextDoc>)=>JSON.stringify({
+  html:doc.html||"<p>Начни писать здесь...</p>",
+  fontSize:doc.fontSize||16,
+  lineHeight:doc.lineHeight||"1.5",
+});
+const visitextStamp=(v:any)=>v?new Date(v).getTime():Date.now();
+const parseVisiTextDoc=(row:any):VisiTextDoc=>{
+  let parsed:any=null;
+  try{parsed=JSON.parse(row?.content||"");}catch{}
+  const html=typeof parsed?.html==="string"?parsed.html:(row?.content||"<p>Начни писать здесь...</p>");
+  return{
+    id:row.id,
+    title:row.title||"Без названия",
+    html,
+    fontSize:Number(parsed?.fontSize||16),
+    lineHeight:String(parsed?.lineHeight||"1.5"),
+    pageCount:Number(row.page_count||1),
+    createdAt:visitextStamp(row.created_at),
+    updatedAt:visitextStamp(row.updated_at||row.created_at),
+  };
+};
+
+function VisiTextPage({userId}:{userId:string}){
+  const {dark}=useTheme();
+  const isMobile=useIsMobile();
+  const editorRef=useRef<HTMLDivElement|null>(null);
+  const fileRef=useRef<HTMLInputElement|null>(null);
+  const saveTimer=useRef<any>(null);
+  const seededRef=useRef(false);
+  const vt=useTable("visitext_docs",userId);
+  const docs=useMemo(()=>vt.data.map(parseVisiTextDoc),[vt.data]);
+  const [activeId,setActiveId]=useState<string|null>(null);
+  const [pages,setPages]=useState(1);
+  const [notice,setNotice]=useState("");
+
+  const activeDoc=docs.find(d=>d.id===activeId)||docs[0]||null;
+
+  useEffect(()=>{
+    if(!activeId&&docs[0])setActiveId(docs[0].id);
+    if(activeId&&!docs.some(d=>d.id===activeId))setActiveId(docs[0]?.id||null);
+  },[docs,activeId]);
+
+  useEffect(()=>{
+    if(vt.loading||seededRef.current||docs.length>0)return;
+    seededRef.current=true;
+    vt.add({
+      title:"Мой первый документ",
+      content:visitextContent({html:"<h1>Мой первый документ</h1><p>Начни писать здесь...</p>",fontSize:16,lineHeight:"1.5"}),
+      page_count:1,
+    }).then((row:any)=>{if(row)setActiveId(row.id);});
+  },[vt.loading,docs.length]);
+
+  useEffect(()=>{
+    if(!activeDoc||!editorRef.current)return;
+    editorRef.current.innerHTML=activeDoc.html||"";
+    requestAnimationFrame(()=>calcPages());
+  },[activeDoc?.id]);
+
+  const calcPages=()=>{
+    const el=editorRef.current;
+    if(!el)return 1;
+    const next=Math.max(1,Math.ceil(el.scrollHeight/VISITEXT_A4_HEIGHT));
+    setPages(next);
+    if(next>VISITEXT_MAX_PAGES)setNotice("Лимит одного документа — 500 страниц. Сократи текст или изображения, чтобы сохранить изменения.");
+    return next;
+  };
+
+  const patchActive=async(patch:Partial<VisiTextDoc>)=>{
+    if(!activeDoc)return;
+    const next={...activeDoc,...patch,updatedAt:Date.now()};
+    const pageCount=patch.pageCount||calcPages();
+    if(pageCount>VISITEXT_MAX_PAGES){setNotice("Лимит одного документа — 500 страниц. Изменения не сохранены.");return;}
+    try{
+      await vt.update(activeDoc.id,{
+        title:next.title||"Без названия",
+        content:visitextContent(next),
+        page_count:pageCount,
+      });
+    }catch(e){
+      console.error("visitext save",e);
+      setNotice("Не удалось сохранить документ в Supabase. Проверь таблицу visitext_docs и RLS-политики.");
+    }
+  };
+
+  const persistContent=(immediate=false)=>{
+    const el=editorRef.current;
+    if(!el||!activeDoc)return;
+    const p=calcPages();
+    if(p>VISITEXT_MAX_PAGES)return;
+    const html=el.innerHTML;
+    if(immediate){patchActive({html,pageCount:p});return;}
+    clearTimeout(saveTimer.current);
+    saveTimer.current=setTimeout(()=>patchActive({html,pageCount:p}),450);
+  };
+
+  const runCmd=(cmd:string,value?:string)=>{
+    editorRef.current?.focus();
+    try{document.execCommand(cmd,false,value);}catch{}
+    persistContent(true);
+  };
+
+  const changeFontSize=(size:number)=>{
+    patchActive({fontSize:size});
+    setTimeout(()=>persistContent(true),0);
+  };
+
+  const changeLineHeight=(lh:string)=>{
+    patchActive({lineHeight:lh});
+    setTimeout(()=>persistContent(true),0);
+  };
+
+  const createDoc=async()=>{
+    if(docs.length>=VISITEXT_MAX_DOCS){setNotice("Можно создать максимум 30 документов в Vizzy Text.");return;}
+    const row=await vt.add({
+      title:"Документ "+(docs.length+1),
+      content:visitextContent({html:"<p>Начни писать здесь...</p>",fontSize:16,lineHeight:"1.5"}),
+      page_count:1,
+    });
+    if(row){setActiveId(row.id);setNotice("Создан новый документ.");}
+    else setNotice("Не удалось создать документ в Supabase.");
+  };
+
+  const duplicateDoc=async()=>{
+    if(!activeDoc)return;
+    if(docs.length>=VISITEXT_MAX_DOCS){setNotice("Можно создать максимум 30 документов в Vizzy Text.");return;}
+    const row=await vt.add({
+      title:activeDoc.title+" — копия",
+      content:visitextContent(activeDoc),
+      page_count:activeDoc.pageCount||pages||1,
+    });
+    if(row)setActiveId(row.id);
+    else setNotice("Не удалось создать копию документа.");
+  };
+
+  const deleteDoc=async()=>{
+    if(!activeDoc)return;
+    if(docs.length<=1){setNotice("Нельзя удалить последний документ.");return;}
+    if(!confirm("Удалить документ «"+activeDoc.title+"»?"))return;
+    await vt.remove(activeDoc.id);
+    const next=docs.filter(d=>d.id!==activeDoc.id);
+    setActiveId(next[0]?.id||null);
+  };
+
+  const renameDoc=(title:string)=>patchActive({title:title||"Без названия"});
+
+  const insertImage=(file:File)=>{
+    if(!file.type.startsWith("image/"))return;
+    if(file.size>2.5*1024*1024){setNotice("Изображение слишком большое. Для стабильной работы выбери файл до 2.5 МБ.");return;}
+    const reader=new FileReader();
+    reader.onload=()=>{
+      const src=String(reader.result||"");
+      const html=`<p><img src="${src}" style="max-width:100%;height:auto;border-radius:10px;display:block;margin:18px auto;box-shadow:0 8px 24px rgba(15,23,42,0.12);" /></p><p><br></p>`;
+      runCmd("insertHTML",html);
+      requestAnimationFrame(()=>persistContent(true));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const exportHtml=()=>{
+    if(!activeDoc)return;
+    persistContent(true);
+    const blob=new Blob([`<!doctype html><html><head><meta charset="utf-8"><title>${activeDoc.title}</title><style>body{font-family:Montserrat,Arial,sans-serif;background:#f3f4f6;padding:32px}.page{width:794px;min-height:1123px;background:#fff;margin:0 auto;padding:72px;box-shadow:0 10px 40px rgba(0,0,0,.12);font-size:${activeDoc.fontSize}px;line-height:${activeDoc.lineHeight}}</style></head><body><div class="page">${editorRef.current?.innerHTML||activeDoc.html}</div></body></html>`],{type:"text/html;charset=utf-8"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);a.download=(activeDoc.title||"visitext")+".html";a.click();URL.revokeObjectURL(a.href);
+  };
+
+  const toolBtn=(label:string,onClick:()=>void,active=false,style?:React.CSSProperties)=><button onClick={onClick} style={{height:34,minWidth:34,padding:"0 10px",borderRadius:9,border:"1px solid "+(active?C.a:C.bd),background:active?C.a:(dark?"rgba(255,255,255,0.04)":"#fff"),color:active?"#fff":C.t1,fontSize:13,fontWeight:700,cursor:"pointer",...style}}>{label}</button>;
+
+  if(vt.loading)return <Card><div style={{fontSize:15,color:C.t2}}>Загружаю документы Vizzy Text из Supabase...</div></Card>;
+
+  return <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"280px 1fr",gap:20,alignItems:"start"}}>
+    <Card style={{padding:0,overflow:"hidden",position:isMobile?"relative":"sticky",top:20}}>
+      <div style={{padding:18,borderBottom:"1px solid "+C.bd,background:dark?"rgba(255,255,255,0.02)":"#F8FAFC"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:12}}>
+          <div>
+            <div style={{fontSize:18,fontWeight:800,color:C.t1}}>Vizzy Text</div>
+            <div style={{fontSize:12,color:C.t2,marginTop:2}}>Word-like редактор · Supabase · A4</div>
+          </div>
+          <div style={{fontSize:11,fontWeight:800,color:docs.length>=VISITEXT_MAX_DOCS?C.r:C.a,background:(docs.length>=VISITEXT_MAX_DOCS?C.r:C.a)+"12",borderRadius:999,padding:"5px 9px"}}>{docs.length}/{VISITEXT_MAX_DOCS}</div>
+        </div>
+        <Btn onClick={createDoc} disabled={docs.length>=VISITEXT_MAX_DOCS} style={{width:"100%",padding:"10px 12px"}}>+ Новый документ</Btn>
+      </div>
+      <div style={{maxHeight:isMobile?220:"calc(100vh - 260px)",overflowY:"auto",padding:10}}>
+        {docs.map(d=>{
+          const isAct=d.id===activeDoc?.id;
+          return <button key={d.id} onClick={()=>setActiveId(d.id)} style={{width:"100%",textAlign:"left",border:"1px solid "+(isAct?C.a:C.bd),background:isAct?(dark?"rgba(79,142,247,0.16)":"#EFF6FF"):(dark?"rgba(255,255,255,0.025)":"#fff"),borderRadius:12,padding:12,marginBottom:8,cursor:"pointer"}}>
+            <div style={{display:"flex",gap:10,alignItems:"center"}}>
+              <div style={{width:34,height:44,borderRadius:5,background:"#fff",border:"1px solid #E5E7EB",boxShadow:"0 2px 6px rgba(0,0,0,0.08)",flexShrink:0}}/>
+              <div style={{minWidth:0,flex:1}}>
+                <div style={{fontSize:13,fontWeight:800,color:isAct?C.a:C.t1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{d.title||"Без названия"}</div>
+                <div style={{fontSize:11,color:C.t2,marginTop:4}}>изменён {new Date(d.updatedAt).toLocaleDateString("ru-RU")}</div>
+              </div>
+            </div>
+          </button>;
+        })}
+      </div>
+    </Card>
+
+    <div style={{minWidth:0}}>
+      <Card style={{padding:16,marginBottom:16,position:"sticky",top:14,zIndex:20,backdropFilter:"blur(18px)",background:dark?"rgba(15,20,32,0.92)":"rgba(255,255,255,0.92)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+          <input value={activeDoc?.title||""} onChange={e=>renameDoc(e.target.value)} placeholder="Название документа" style={{...iS(),width:260,fontWeight:700}}/>
+          <select value={activeDoc?.fontSize||16} onChange={e=>changeFontSize(+e.target.value)} style={{...iS(),width:112}}>
+            {[12,14,16,18,20,24,28,32,36,48].map(s=><option key={s} value={s}>{s}px</option>)}
+          </select>
+          <select value={activeDoc?.lineHeight||"1.5"} onChange={e=>changeLineHeight(e.target.value)} style={{...iS(),width:142}}>
+            <option value="1">Интервал 1.0</option><option value="1.15">Интервал 1.15</option><option value="1.5">Интервал 1.5</option><option value="2">Интервал 2.0</option><option value="2.5">Интервал 2.5</option>
+          </select>
+          <div style={{width:1,height:28,background:C.bd}}/>
+          {toolBtn("B",()=>runCmd("bold"),false,{fontWeight:900})}
+          {toolBtn("I",()=>runCmd("italic"),false,{fontStyle:"italic"})}
+          {toolBtn("U",()=>runCmd("underline"),false,{textDecoration:"underline"})}
+          <div style={{display:"flex",alignItems:"center",gap:5,padding:"0 4px"}}>
+            {VISITEXT_HIGHLIGHTS.map(h=><button key={h.color} title={h.name} onClick={()=>runCmd("backColor",h.color)} style={{width:26,height:26,borderRadius:8,border:"1px solid rgba(0,0,0,0.08)",background:h.color,cursor:"pointer",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.8)"}}/>)}
+          </div>
+          {toolBtn("✕ маркер",()=>runCmd("removeFormat"),false,{fontWeight:600,minWidth:78})}
+          <div style={{width:1,height:28,background:C.bd}}/>
+          {toolBtn("Фото",()=>fileRef.current?.click(),false,{minWidth:62})}
+          {toolBtn("Копия",duplicateDoc,false,{minWidth:64})}
+          {toolBtn("HTML",exportHtml,false,{minWidth:58})}
+          {toolBtn("Удалить",deleteDoc,false,{minWidth:72,color:C.r})}
+        </div>
+      </Card>
+
+      {notice&&<div style={{marginBottom:14,padding:"11px 14px",borderRadius:12,background:(notice.includes("Лимит")||notice.includes("максимум")||notice.includes("большой")||notice.includes("Не удалось")?C.r:C.a)+"12",color:notice.includes("Лимит")||notice.includes("максимум")||notice.includes("большой")||notice.includes("Не удалось")?C.r:C.a,fontSize:13,fontWeight:700,display:"flex",justifyContent:"space-between",gap:12}}><span>{notice}</span><button onClick={()=>setNotice("")} style={{border:"none",background:"transparent",color:"inherit",cursor:"pointer",fontWeight:900}}>×</button></div>}
+
+      <div style={{display:"flex",justifyContent:"center",padding:"10px 0 28px",overflowX:"auto"}}>
+        <div style={{position:"relative"}}>
+          <div style={{position:isMobile?"relative":"absolute",right:isMobile?"auto":-78,top:isMobile?0:10,display:"flex",flexDirection:isMobile?"row":"column",gap:8,alignItems:"center",justifyContent:isMobile?"center":"flex-start",marginBottom:isMobile?10:0}}>
+            <div style={{padding:"8px 10px",borderRadius:10,background:dark?"#0F1420":"#fff",border:"1px solid "+C.bd,boxShadow:C.sh,fontSize:11,fontWeight:800,color:pages>VISITEXT_MAX_PAGES?C.r:C.t2,whiteSpace:"nowrap"}}>{pages} / {VISITEXT_MAX_PAGES} стр.</div>
+            <div style={{fontSize:10,color:C.t2,writingMode:isMobile?"horizontal-tb":"vertical-rl",textTransform:"uppercase",letterSpacing:1}}>A4 лист</div>
+          </div>
+          <div
+            ref={editorRef}
+            contentEditable
+            suppressContentEditableWarning
+            onInput={()=>persistContent(false)}
+            onBlur={()=>persistContent(true)}
+            onPaste={e=>{
+              const files=Array.from(e.clipboardData.files||[]);
+              const img=files.find(f=>f.type.startsWith("image/"));
+              if(img){e.preventDefault();insertImage(img);return;}
+            }}
+            style={{
+              width:isMobile?"min(794px, calc(100vw - 48px))":794,minHeight:isMobile?Math.round(VISITEXT_A4_HEIGHT*0.72):VISITEXT_A4_HEIGHT,background:"#fff",color:"#111827",
+              padding:isMobile?"36px":"72px",outline:"none",borderRadius:2,
+              boxShadow:dark?"0 24px 80px rgba(0,0,0,0.55)":"0 20px 70px rgba(15,23,42,0.18)",
+              border:"1px solid #E5E7EB",fontFamily:"'Montserrat',Arial,sans-serif",
+              fontSize:activeDoc?.fontSize||16,lineHeight:activeDoc?.lineHeight||"1.5",
+              overflowWrap:"break-word",wordBreak:"break-word",caretColor:C.a,
+            }}
+          />
+        </div>
+      </div>
+      <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const f=e.target.files?.[0];if(f)insertImage(f);e.currentTarget.value="";}}/>
+    </div>
+  </div>;
+}
 
 /* ============ SHEETS v3 — Full Excel-like per TZ ============ */
 const SH_MAX_WB=30;
