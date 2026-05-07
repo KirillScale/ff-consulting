@@ -73,7 +73,7 @@ const NAV_GROUPS=[
     label:"Программы",
     items:[
       {id:"board",label:"Vizzy Map",accent:"#FBBF24",ic:"M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"},
-      {id:"visitext",label:"VisiText",accent:"#93C5FD",ic:"M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z M14 3v5h5 M9 13h6 M9 17h6 M9 9h2"},
+      {id:"visitext",label:"Vizzy Text",accent:"#93C5FD",ic:"M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z M14 3v5h5 M9 13h6 M9 17h6 M9 9h2"},
       {id:"sheets",label:"Vizzy Tables",accent:"#4ADE80",ic:"M3 10h18M3 6h18M3 14h18M3 18h18M10 3v18M6 3v18"},
     ]
   },
@@ -295,11 +295,24 @@ function useIsMobile(){
 }
 
 /* ============ SIDEBAR — Deep Dark Glass ============ */
-function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onLogout:()=>void}){
+function Side({active,onNav,onLogout,onCollapseChange}:{active:string,onNav:(id:string)=>void,onLogout:()=>void,onCollapseChange?:(collapsed:boolean)=>void}){
   const{dark,toggle}=useTheme();
-  const[collapsed,setCollapsed]=useState(false);
+  const[collapsed,setCollapsedState]=useState(false);
+  const setCollapsed=(value:boolean|((prev:boolean)=>boolean))=>{
+    setCollapsedState(prev=>{
+      const next=typeof value==="function"?(value as (p:boolean)=>boolean)(prev):value;
+      onCollapseChange?.(next);
+      return next;
+    });
+  };
   const activeGroupIdx=NAV_GROUPS.findIndex(g=>g.items.some(i=>i.id===active));
   const[openGroups,setOpenGroups]=useState<number[]>(()=>[activeGroupIdx>=0?activeGroupIdx:0]);
+
+  useEffect(()=>{
+    if(activeGroupIdx>=0){
+      setOpenGroups(p=>p.includes(activeGroupIdx)?p:[...p,activeGroupIdx]);
+    }
+  },[activeGroupIdx]);
 
   const toggleGroup=(idx:number)=>{
     setOpenGroups(p=>p.includes(idx)?p.filter(i=>i!==idx):[...p,idx]);
@@ -448,7 +461,7 @@ function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onL
 
   return(
     <div style={{
-      width:collapsed?64:248,height:"100vh",
+      width:collapsed?64:248,height:"100dvh",
       background:SB_BG,
       display:"flex",flexDirection:"column",
       transition:"width 0.3s cubic-bezier(0.4,0,0.2,1)",
@@ -465,8 +478,9 @@ function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onL
           0%,100%{border-color:rgba(79,142,247,0.15)}
           50%{border-color:rgba(79,142,247,0.4)}
         }
-        .sb-scroll::-webkit-scrollbar{width:2px}
-        .sb-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.05);border-radius:2px}
+        .sb-scroll::-webkit-scrollbar{width:4px}
+        .sb-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.14);border-radius:4px}
+        .sb-scroll::-webkit-scrollbar-track{background:transparent}
       `}</style>
 
       {/* Top ambient glow */}
@@ -504,7 +518,7 @@ function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onL
       {/* Nav */}
       <div className="sb-scroll" style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"10px 8px 0"}}>
         {NAV_GROUPS.map((group,gi)=>{
-          const isOpen=collapsed||openGroups.includes(gi);
+          const isOpen=collapsed||!group.label||openGroups.includes(gi);
           const hasActiveItem=group.items.some(i=>i.id===active);
 
           return(
@@ -739,7 +753,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const APP_VERSION="v2.1"; // bump this to force-clear stale localStorage
-  const VALID_PAGES=["dashboard","strategy","crm","calls","content","pnl","sheets","media","ads","links","board","files","ai","script","product","stories","calc","tools","mailings"];
+  const VALID_PAGES=["dashboard","strategy","crm","calls","content","pnl","sheets","visitext","media","ads","links","board","files","ai","script","product","stories","calc","tools","mailings"];
 
   // Clear stale localStorage on version change
   useEffect(()=>{
@@ -845,7 +859,7 @@ function SafePage({name,children}:{name:string,children:React.ReactNode}){
 function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,nav,dark}:any){
   const isMobile=useIsMobile();
   const[sideCollapsed,setSideCollapsed]=useState(false);
-  const sideW=sideCollapsed?60:240;
+  const sideW=sideCollapsed?64:248;
 
   const pageContent=<>
     {page==="dashboard"&&<SafePage name="Dashboard"><DashPage userId={user.id} name={userName} avatar={userAvatar} onNav={setPage} onAvatarChange={async(url:string)=>{setUserAvatar(url);await supabase.from("profiles").upsert({id:user.id,avatar_url:url},{onConflict:"id"});}}/></SafePage>}
@@ -856,7 +870,7 @@ function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,n
     {page==="content"&&<SafePage name="Контент"><ContentPage userId={user.id}/></SafePage>}
     {page==="pnl"&&<SafePage name="P&L"><PnlPage userId={user.id}/></SafePage>}
     {page==="sheets"&&<SafePage name="Таблицы"><SheetsPage userId={user.id}/></SafePage>}
-    {page==="visitext"&&<SafePage name="VisiText"><VisiTextPage userId={user.id}/></SafePage>}
+    {page==="visitext"&&<SafePage name="Vizzy Text"><VisiTextPage userId={user.id}/></SafePage>}
     {page==="media"&&<SafePage name="Медийность"><MediaPage userId={user.id}/></SafePage>}
     {page==="ads"&&<SafePage name="Реклама"><AdsPage userId={user.id}/></SafePage>}
     {page==="calc"&&<SafePage name="Калькулятор"><CalcPage/></SafePage>}
@@ -1036,7 +1050,7 @@ function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,n
           <div style={{padding:"16px 16px 0"}}>{pageContent}</div>
         </div>
       </> : <>
-        <Side active={page} onNav={setPage} onLogout={logout}/>
+        <Side active={page} onNav={setPage} onLogout={logout} onCollapseChange={setSideCollapsed}/>
         <div style={{marginLeft:sideW,minHeight:"100vh",transition:"margin-left 0.25s cubic-bezier(0.4,0,0.2,1)"}}>
           <Head name={userName}/>
           <div style={{padding:"28px 32px"}}>{pageContent}</div>
@@ -7271,7 +7285,7 @@ function VisiTextPage({userId}:{userId:string}){
   };
 
   const createDoc=async()=>{
-    if(docs.length>=VISITEXT_MAX_DOCS){setNotice("Можно создать максимум 30 документов в VisiText.");return;}
+    if(docs.length>=VISITEXT_MAX_DOCS){setNotice("Можно создать максимум 30 документов в Vizzy Text.");return;}
     const row=await vt.add({
       title:"Документ "+(docs.length+1),
       content:visitextContent({html:"<p>Начни писать здесь...</p>",fontSize:16,lineHeight:"1.5"}),
@@ -7283,7 +7297,7 @@ function VisiTextPage({userId}:{userId:string}){
 
   const duplicateDoc=async()=>{
     if(!activeDoc)return;
-    if(docs.length>=VISITEXT_MAX_DOCS){setNotice("Можно создать максимум 30 документов в VisiText.");return;}
+    if(docs.length>=VISITEXT_MAX_DOCS){setNotice("Можно создать максимум 30 документов в Vizzy Text.");return;}
     const row=await vt.add({
       title:activeDoc.title+" — копия",
       content:visitextContent(activeDoc),
@@ -7327,14 +7341,14 @@ function VisiTextPage({userId}:{userId:string}){
 
   const toolBtn=(label:string,onClick:()=>void,active=false,style?:React.CSSProperties)=><button onClick={onClick} style={{height:34,minWidth:34,padding:"0 10px",borderRadius:9,border:"1px solid "+(active?C.a:C.bd),background:active?C.a:(dark?"rgba(255,255,255,0.04)":"#fff"),color:active?"#fff":C.t1,fontSize:13,fontWeight:700,cursor:"pointer",...style}}>{label}</button>;
 
-  if(vt.loading)return <Card><div style={{fontSize:15,color:C.t2}}>Загружаю документы VisiText из Supabase...</div></Card>;
+  if(vt.loading)return <Card><div style={{fontSize:15,color:C.t2}}>Загружаю документы Vizzy Text из Supabase...</div></Card>;
 
   return <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"280px 1fr",gap:20,alignItems:"start"}}>
     <Card style={{padding:0,overflow:"hidden",position:isMobile?"relative":"sticky",top:20}}>
       <div style={{padding:18,borderBottom:"1px solid "+C.bd,background:dark?"rgba(255,255,255,0.02)":"#F8FAFC"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:12}}>
           <div>
-            <div style={{fontSize:18,fontWeight:800,color:C.t1}}>VisiText</div>
+            <div style={{fontSize:18,fontWeight:800,color:C.t1}}>Vizzy Text</div>
             <div style={{fontSize:12,color:C.t2,marginTop:2}}>Word-like редактор · Supabase · A4</div>
           </div>
           <div style={{fontSize:11,fontWeight:800,color:docs.length>=VISITEXT_MAX_DOCS?C.r:C.a,background:(docs.length>=VISITEXT_MAX_DOCS?C.r:C.a)+"12",borderRadius:999,padding:"5px 9px"}}>{docs.length}/{VISITEXT_MAX_DOCS}</div>
@@ -7438,6 +7452,8 @@ function SheetsPage({userId}:{userId:string}){
   const[editing,setEditing]=useState(false);
   const[editVal,setEditVal]=useState("");
   const[formulaInput,setFormulaInput]=useState("");
+  const[formulaBarFocused,setFormulaBarFocused]=useState(false);
+  const[formulaPickRange,setFormulaPickRange]=useState<SHRange|null>(null);
   const[dragStart,setDragStart]=useState<{r:number;c:number}|null>(null);
   const[scrollTop,setScrollTop]=useState(0);
   const[scrollLeft,setScrollLeft]=useState(0);
@@ -7451,6 +7467,7 @@ function SheetsPage({userId}:{userId:string}){
   const formulaRef=useRef<HTMLInputElement|null>(null);
   const resizingCol=useRef<{col:number;startX:number;startW:number}|null>(null);
   const resizingRow=useRef<{row:number;startY:number;startH:number}|null>(null);
+  const formulaPickRef=useRef<{start:{r:number;c:number};token:string;source:"bar"|"cell"}|null>(null);
 
   const wb=wbs.find(w=>w.id===activeWbId)||null;
   const sheet=wb?(wb.sheets[wb.si]||wb.sheets[0]):null;
@@ -7523,10 +7540,43 @@ function SheetsPage({userId}:{userId:string}){
     if(!editing)return;
     setCellRaw(sel.r,sel.c,editVal);
     setEditing(false);
+    formulaPickRef.current=null;
+    setFormulaPickRange(null);
     if(move){const nr=Math.max(0,Math.min((sheet?.rows||100)-1,sel.r+(move==="down"?1:move==="up"?-1:0)));const nc=Math.max(0,Math.min((sheet?.cols||26)-1,sel.c+(move==="right"?1:move==="left"?-1:0)));setSel({r:nr,c:nc});setSelRange(null);}
   };
-  const startEdit=(r=sel.r,c=sel.c,init?:string)=>{setSel({r,c});setSelRange(null);setEditVal(init!==undefined?init:(getCell(r,c).f||getCell(r,c).v||""));setEditing(true);};
-  const applyFormulaBar=()=>{setCellRaw(sel.r,sel.c,formulaInput);setFormulaInput(formulaInput);showToast("✓ Ячейка обновлена");};
+  const startEdit=(r=sel.r,c=sel.c,init?:string)=>{setSel({r,c});setSelRange(null);setFormulaPickRange(null);setEditVal(init!==undefined?init:(getCell(r,c).f||getCell(r,c).v||""));setEditing(true);};
+  const applyFormulaBar=()=>{setCellRaw(sel.r,sel.c,formulaInput);setFormulaInput(formulaInput);formulaPickRef.current=null;setFormulaPickRange(null);showToast("✓ Ячейка обновлена");};
+
+  const getFormulaPickSource=():"bar"|"cell"|null=>{
+    if(editing&&editVal.startsWith("="))return "cell";
+    if(formulaBarFocused&&formulaInput.startsWith("="))return "bar";
+    return null;
+  };
+  const insertIntoFormula=(value:string,refText:string,replaceToken?:string,input?:HTMLInputElement|null)=>{
+    if(replaceToken){
+      const idx=value.lastIndexOf(replaceToken);
+      if(idx>=0)return value.slice(0,idx)+refText+value.slice(idx+replaceToken.length);
+    }
+    const start=input?.selectionStart??value.length;
+    const end=input?.selectionEnd??start;
+    return value.slice(0,start)+refText+value.slice(end);
+  };
+  const insertFormulaReference=(refText:string,replaceToken?:string,sourceOverride?:"bar"|"cell")=>{
+    const source=sourceOverride||getFormulaPickSource();
+    if(!source)return false;
+    if(source==="cell"){
+      setEditVal(v=>insertIntoFormula(v,refText,replaceToken,editRef.current));
+      setTimeout(()=>editRef.current?.focus(),0);
+    }else{
+      setFormulaInput(v=>insertIntoFormula(v,refText,replaceToken,formulaRef.current));
+      setTimeout(()=>formulaRef.current?.focus(),0);
+    }
+    return true;
+  };
+  const formulaRangeText=(a:{r:number;c:number},b:{r:number;c:number})=>{
+    const rr=shNormRange({r1:a.r,c1:a.c,r2:b.r,c2:b.c});
+    return rr.r1===rr.r2&&rr.c1===rr.c2?shRef(rr.r1,rr.c1):shRangeLabel(rr);
+  };
 
   const applyRange=(fn:(cell:SHCell,r:number,c:number)=>SHCell)=>updateSheet(s=>{const nd={...s.data};for(let r=range.r1;r<=range.r2;r++)for(let c=range.c1;c<=range.c2;c++){const k=shKey(r,c);const next=fn(nd[k]||shEmptyCell(),r,c);if(!next.v&&!next.f&&Object.keys(next.fmt).length===0)delete nd[k];else nd[k]=next;}return{...s,data:nd};});
   const formatRange=(patch:SHFmt)=>applyRange(cell=>({...cell,fmt:{...cell.fmt,...patch}}));
@@ -7561,7 +7611,7 @@ function SheetsPage({userId}:{userId:string}){
   const redo=()=>{if(!sheet||!redoStack.current.length)return;const next=redoStack.current.shift()!;undoStack.current=[JSON.parse(JSON.stringify(sheet)),...undoStack.current.slice(0,SH_UNDO_DEPTH-1)];updateSheet(()=>next,false);showToast("↪ Повторено");};
 
   useEffect(()=>{
-    const onUp=()=>{if(dragStart)setDragStart(null);resizingCol.current=null;resizingRow.current=null;};
+    const onUp=()=>{if(dragStart)setDragStart(null);formulaPickRef.current=null;resizingCol.current=null;resizingRow.current=null;};
     const onMove=(e:MouseEvent)=>{if(resizingCol.current&&sheet){const{col,startX,startW}=resizingCol.current;const w=Math.max(48,startW+e.clientX-startX);updateSheet(s=>({...s,cw:{...s.cw,[col]:w}}),false);}if(resizingRow.current&&sheet){const{row,startY,startH}=resizingRow.current;const h=Math.max(22,startH+e.clientY-startY);updateSheet(s=>({...s,rh:{...s.rh,[row]:h}}),false);}};
     window.addEventListener("mouseup",onUp);window.addEventListener("mousemove",onMove);return()=>{window.removeEventListener("mouseup",onUp);window.removeEventListener("mousemove",onMove);};
   },[dragStart,sheet]);
@@ -7656,7 +7706,7 @@ function SheetsPage({userId}:{userId:string}){
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:10}}>
           <div style={{height:34,minWidth:68,border:"1px solid "+C.bd,borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,color:C.a,background:dark?"rgba(255,255,255,.03)":"#fff"}}>{shRef(sel.r,sel.c)}</div>
-          <input ref={formulaRef} value={formulaInput} onChange={e=>setFormulaInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")applyFormulaBar();}} onBlur={applyFormulaBar} placeholder="fx  =SUM(A1:A10)" style={{...iS(),flex:1,minWidth:220,height:34,padding:"7px 10px",fontFamily:"monospace"}}/>
+          <input ref={formulaRef} value={formulaInput} onFocus={()=>setFormulaBarFocused(true)} onChange={e=>{setFormulaInput(e.target.value);if(!e.target.value.startsWith("="))setFormulaPickRange(null);}} onKeyDown={e=>{if(e.key==="Enter"){applyFormulaBar();setFormulaBarFocused(false);(e.target as HTMLInputElement).blur();}else if(e.key==="Escape"){setFormulaInput(activeRaw);setFormulaPickRange(null);setFormulaBarFocused(false);(e.target as HTMLInputElement).blur();}}} onBlur={()=>{if(!formulaPickRef.current){applyFormulaBar();setFormulaBarFocused(false);}}} placeholder="fx  =SUM(A1:A10)" style={{...iS(),flex:1,minWidth:220,height:34,padding:"7px 10px",fontFamily:"monospace"}}/>
         </div>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
           {toolbarBtn("B",()=>toggleFmt("bold"),!!activeCell.fmt.bold,{fontWeight:900})}{toolbarBtn("I",()=>toggleFmt("italic"),!!activeCell.fmt.italic,{fontStyle:"italic"})}{toolbarBtn("U",()=>toggleFmt("underline"),!!activeCell.fmt.underline,{textDecoration:"underline"})}
@@ -7669,7 +7719,7 @@ function SheetsPage({userId}:{userId:string}){
           <button onClick={()=>addRows()} style={{height:32,padding:"0 10px",borderRadius:8,border:"1px solid "+C.bd,background:"transparent",color:C.t1,cursor:"pointer"}}>+ строки</button>
           <button onClick={()=>addCols()} style={{height:32,padding:"0 10px",borderRadius:8,border:"1px solid "+C.bd,background:"transparent",color:C.t1,cursor:"pointer"}}>+ столбцы</button>
         </div>
-        {formulaInput.startsWith("=")&&<div style={{marginTop:8,fontSize:11,color:C.t2}}>Функции: SUM/СУММ, AVERAGE/СРЗНАЧ, MIN/МИН, MAX/МАКС, COUNT/СЧЁТ. Пример: =SUM(A1:A10)</div>}
+        {(formulaInput.startsWith("=")||editVal.startsWith("="))&&<div style={{marginTop:8,fontSize:11,color:C.t2}}>Формулы: нажми <b>=</b>, затем кликай по ячейкам, чтобы вставлять ссылки. Для диапазона зажми мышь и протяни по ячейкам. Функции: SUM/СУММ, AVERAGE/СРЗНАЧ, MIN/МИН, MAX/МАКС, COUNT/СЧЁТ.</div>}
       </Card>
 
       {activeTable&&<div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",padding:"10px 12px",border:"1px solid "+C.bd,borderRadius:14,background:dark?"#0F1420":"#fff",boxShadow:C.sh}}>
@@ -7692,8 +7742,8 @@ function SheetsPage({userId}:{userId:string}){
           <div style={{width:SH_HDR_W,flexShrink:0,position:"relative",overflow:"hidden",background:dark?"#101827":"#F8FAFC",borderRight:"1px solid "+C.bd}}><div style={{position:"relative",height:sheetH,transform:`translateY(${-scrollTop}px)`}}>{Array.from({length:visible.r1-visible.r0+1},(_,i)=>visible.r0+i).map(r=><div key={r} onClick={()=>{setSel({r,c:0});setSelRange({r1:r,c1:0,r2:r,c2:sheet.cols-1});}} style={{position:"absolute",top:rowTop(r),left:0,width:SH_HDR_W,height:rh(r),borderBottom:"1px solid "+C.bd,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:r>=range.r1&&r<=range.r2?C.a:C.t2,cursor:"pointer",userSelect:"none"}}>{r+1}<span onMouseDown={e=>{e.stopPropagation();resizingRow.current={row:r,startY:e.clientY,startH:rh(r)};}} style={{position:"absolute",bottom:-3,left:0,height:6,width:"100%",cursor:"row-resize"}}/></div>)}</div></div>
           <div ref={gridRef} onScroll={e=>{setScrollTop(e.currentTarget.scrollTop);setScrollLeft(e.currentTarget.scrollLeft);}} onPaste={e=>{e.preventDefault();pasteText(e.clipboardData.getData("text/plain"));}} style={{flex:1,overflow:"auto",position:"relative",background:dark?"#0B0F18":"#fff"}}>
             <div style={{position:"relative",width:sheetW,height:sheetH}}>
-              {Array.from({length:visible.r1-visible.r0+1},(_,ri)=>visible.r0+ri).map(r=>Array.from({length:visible.c1-visible.c0+1},(_,ci)=>visible.c0+ci).map(c=>{const cell=getCell(r,c),isSel=r===sel.r&&c===sel.c,isIn=r>=range.r1&&r<=range.r2&&c>=range.c1&&c<=range.c2,isErr=display(r,c).startsWith("#");return <div key={r+","+c} onMouseDown={e=>{if(e.button!==0)return;commitEdit();setSel({r,c});setSelRange(null);setDragStart({r,c});}} onMouseEnter={()=>{if(dragStart)setSelRange({r1:dragStart.r,c1:dragStart.c,r2:r,c2:c});}} onDoubleClick={()=>startEdit(r,c)} onContextMenu={e=>{e.preventDefault();setSel({r,c});setContext({x:e.clientX,y:e.clientY,r,c});}} style={{...cellStyle(r,c,cell),outline:isSel?"2px solid "+C.a:isIn?"1px solid rgba(37,99,235,.35)":"none",outlineOffset:-1,zIndex:isSel?5:isIn?4:1}}>
-                {isSel&&editing?<input ref={editRef} value={editVal} onChange={e=>setEditVal(e.target.value)} onBlur={()=>commitEdit()} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();commitEdit(e.shiftKey?"up":"down");}else if(e.key==="Tab"){e.preventDefault();commitEdit(e.shiftKey?"left":"right");}else if(e.key==="Escape"){setEditing(false);}e.stopPropagation();}} style={{position:"absolute",inset:0,border:"none",outline:"none",background:dark?"#111827":"#fff",color:C.t1,fontSize:12,fontFamily:"monospace",padding:"0 6px",zIndex:20}}/>:<span style={{color:isErr?C.r:undefined}}>{display(r,c)}</span>}
+              {Array.from({length:visible.r1-visible.r0+1},(_,ri)=>visible.r0+ri).map(r=>Array.from({length:visible.c1-visible.c0+1},(_,ci)=>visible.c0+ci).map(c=>{const cell=getCell(r,c),isSel=r===sel.r&&c===sel.c,isIn=r>=range.r1&&r<=range.r2&&c>=range.c1&&c<=range.c2,isErr=display(r,c).startsWith("#");const isFormulaRef=formulaPickRange&&r>=shNormRange(formulaPickRange).r1&&r<=shNormRange(formulaPickRange).r2&&c>=shNormRange(formulaPickRange).c1&&c<=shNormRange(formulaPickRange).c2;return <div key={r+","+c} onMouseDown={e=>{if(e.button!==0)return;const src=getFormulaPickSource();if(src){e.preventDefault();e.stopPropagation();const token=shRef(r,c);formulaPickRef.current={start:{r,c},token,source:src};setFormulaPickRange({r1:r,c1:c,r2:r,c2:c});insertFormulaReference(token,undefined,src);return;}commitEdit();setSel({r,c});setSelRange(null);setDragStart({r,c});}} onMouseEnter={()=>{if(formulaPickRef.current){const fp=formulaPickRef.current;const next=formulaRangeText(fp.start,{r,c});insertFormulaReference(next,fp.token,fp.source);fp.token=next;setFormulaPickRange({r1:fp.start.r,c1:fp.start.c,r2:r,c2:c});return;}if(dragStart)setSelRange({r1:dragStart.r,c1:dragStart.c,r2:r,c2:c});}} onDoubleClick={()=>startEdit(r,c)} onContextMenu={e=>{e.preventDefault();setSel({r,c});setContext({x:e.clientX,y:e.clientY,r,c});}} style={{...cellStyle(r,c,cell),outline:isSel?"2px solid "+C.a:isFormulaRef?"2px solid "+C.g:isIn?"1px solid rgba(37,99,235,.35)":"none",outlineOffset:-1,zIndex:isSel?5:isFormulaRef?4:isIn?4:1}}>
+                {isSel&&editing?<input ref={editRef} value={editVal} onChange={e=>{setEditVal(e.target.value);if(!e.target.value.startsWith("="))setFormulaPickRange(null);}} onBlur={()=>commitEdit()} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();commitEdit(e.shiftKey?"up":"down");}else if(e.key==="Tab"){e.preventDefault();commitEdit(e.shiftKey?"left":"right");}else if(e.key==="Escape"){formulaPickRef.current=null;setFormulaPickRange(null);setEditing(false);}e.stopPropagation();}} style={{position:"absolute",inset:0,border:"none",outline:"none",background:dark?"#111827":"#fff",color:C.t1,fontSize:12,fontFamily:"monospace",padding:"0 6px",zIndex:20}}/>:<span style={{color:isErr?C.r:undefined}}>{display(r,c)}</span>}
               </div>;}))}
             </div>
           </div>
