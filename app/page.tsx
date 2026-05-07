@@ -3380,7 +3380,8 @@ function CrmPage({userId}:{userId:string}){
 
   // Touch templates / follow-up messages (stored locally per user)
   const touchStorageKey=`ff_crm_touchpoints_${userId}`;
-  const[openTouchLeadId,setOpenTouchLeadId]=useState<string|null>(null);
+  const[touchModalLeadId,setTouchModalLeadId]=useState<string|null>(null);
+  const[openTouchItemId,setOpenTouchItemId]=useState<string|null>(null);
   const[touchSavedLeadId,setTouchSavedLeadId]=useState<string|null>(null);
   const[touchesByLead,setTouchesByLead]=useState<Record<string,any[]>>(()=>{
     try{return JSON.parse(localStorage.getItem(touchStorageKey)||"{}");}catch{return {};}
@@ -3449,18 +3450,28 @@ function CrmPage({userId}:{userId:string}){
     return new Date(d.getTime()-tz).toISOString().slice(0,10);
   };
 
+  const createDefaultTouchRows=()=>[1,2,3].map(i=>({
+    id:`touch_${Date.now()}_${i}_${Math.random().toString(36).slice(2,6)}`,
+    message:"",date:"",time:"",sent:false
+  }));
+
   const ensureTouchRows=(leadId:string)=>{
-    setTouchesByLead(prev=>{
-      const current=prev[leadId]||[];
-      if(current.length>0)return prev;
-      const base=[1,2,3].map(i=>({id:`touch_${Date.now()}_${i}_${Math.random().toString(36).slice(2,6)}`,message:"",date:"",time:"",sent:false}));
-      return {...prev,[leadId]:base};
-    });
+    const current=touchesByLead[leadId]||[];
+    if(current.length>0)return current;
+    const base=createDefaultTouchRows();
+    setTouchesByLead(prev=>({...prev,[leadId]:base}));
+    return base;
   };
 
-  const toggleTouchPanel=(leadId:string)=>{
-    ensureTouchRows(leadId);
-    setOpenTouchLeadId(prev=>prev===leadId?null:leadId);
+  const openTouchModal=(leadId:string)=>{
+    const rows=ensureTouchRows(leadId);
+    setTouchModalLeadId(leadId);
+    setOpenTouchItemId(rows[0]?.id||null);
+  };
+
+  const closeTouchModal=()=>{
+    setTouchModalLeadId(null);
+    setOpenTouchItemId(null);
   };
 
   const updateTouch=(leadId:string,touchId:string,patch:any)=>{
@@ -3501,6 +3512,9 @@ function CrmPage({userId}:{userId:string}){
       })))
       .sort((a:any,b:any)=>`${a.touch.date||""} ${a.touch.time||"99:99"}`.localeCompare(`${b.touch.date||""} ${b.touch.time||"99:99"}`));
   },[leads,touchesByLead]);
+
+  const touchModalLead=useMemo(()=>leads.find((lead:any)=>lead.id===touchModalLeadId)||null,[leads,touchModalLeadId]);
+  const touchModalRows=touchModalLeadId?(touchesByLead[touchModalLeadId]||[]):[];
 
   const openFunnel=(id:string)=>{
     setActiveFunnelId(id);
@@ -3739,11 +3753,11 @@ function CrmPage({userId}:{userId:string}){
 
           {/* Action row */}
           <div style={{display:"flex",gap:6,alignItems:"stretch",flexWrap:"wrap"}}>
-            <button onClick={e=>{e.stopPropagation();toggleTouchPanel(l.id);}}
-              style={{flex:"1 1 140px",padding:"8px 10px",background:"linear-gradient(135deg,#4F46E514,#7C3AED12)",color:"#6D48F7",border:"1px solid rgba(124,58,237,0.26)",borderRadius:10,fontSize:11,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,transition:"all 0.15s",boxShadow:openTouchLeadId===l.id?"0 0 16px rgba(124,58,237,0.22)":"0 0 12px rgba(124,58,237,0.08)",minHeight:34,boxSizing:"border-box" as const}}
+            <button onClick={e=>{e.stopPropagation();openTouchModal(l.id);}}
+              style={{flex:"1 1 140px",padding:"8px 10px",background:"linear-gradient(135deg,#4F46E514,#7C3AED12)",color:"#6D48F7",border:"1px solid rgba(124,58,237,0.26)",borderRadius:10,fontSize:11,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,transition:"all 0.15s",boxShadow:touchModalLeadId===l.id?"0 0 16px rgba(124,58,237,0.22)":"0 0 12px rgba(124,58,237,0.08)",minHeight:34,boxSizing:"border-box" as const}}
               onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#4F46E5,#7C3AED)";(e.currentTarget as HTMLElement).style.color="#fff";(e.currentTarget as HTMLElement).style.boxShadow="0 0 20px rgba(124,58,237,0.30)";}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#4F46E514,#7C3AED12)";(e.currentTarget as HTMLElement).style.color="#6D48F7";(e.currentTarget as HTMLElement).style.boxShadow=openTouchLeadId===l.id?"0 0 16px rgba(124,58,237,0.22)":"0 0 12px rgba(124,58,237,0.08)";}}>
-              ✨ Шаблон касания
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#4F46E514,#7C3AED12)";(e.currentTarget as HTMLElement).style.color="#6D48F7";(e.currentTarget as HTMLElement).style.boxShadow=touchModalLeadId===l.id?"0 0 16px rgba(124,58,237,0.22)":"0 0 12px rgba(124,58,237,0.08)";}}>
+              ✨ Касания
             </button>
             {/* Написать button */}
             {getWriteUrl(l)&&<a href={getWriteUrl(l)!} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}
@@ -3768,46 +3782,6 @@ function CrmPage({userId}:{userId:string}){
             </button>
           </div>
 
-          {openTouchLeadId===l.id&&<div onClick={e=>e.stopPropagation()} style={{marginTop:10,width:"100%",padding:10,borderRadius:16,background:"linear-gradient(180deg, rgba(248,245,255,0.92), rgba(244,240,255,0.86))",border:"1px solid rgba(124,58,237,0.14)",boxShadow:"0 10px 28px rgba(124,58,237,0.08)",boxSizing:"border-box" as const,overflow:"hidden"}}>
-            <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8,marginBottom:10,flexWrap:"wrap"}}>
-              <div style={{minWidth:0}}>
-                <div style={{fontSize:12,fontWeight:800,color:C.t1}}>Шаблон касания</div>
-                <div style={{fontSize:10,color:C.t2,marginTop:2,lineHeight:1.35}}>Пропиши сообщение и дату/время отправки для этого лида.</div>
-              </div>
-              {touchSavedLeadId===l.id&&<div style={{fontSize:10,fontWeight:800,color:"#16A34A",padding:"5px 8px",borderRadius:999,background:"#22C55E10",border:"1px solid #22C55E22",whiteSpace:"nowrap"}}>Сохранено</div>}
-            </div>
-
-            <div style={{display:"grid",gap:8}}>
-              {(touchesByLead[l.id]||[]).map((touch:any,index:number)=>{
-                const isFilled=String(touch.message||"").trim().length>0;
-                return <div key={touch.id} style={{background:"rgba(255,255,255,0.9)",borderRadius:14,padding:9,border:"1px solid rgba(124,58,237,0.10)",boxSizing:"border-box" as const,overflow:"hidden"}}>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:8,flexWrap:"wrap"}}>
-                    <div style={{fontSize:11,fontWeight:800,color:"#6D48F7"}}>{`Касание ${index+1}`}</div>
-                    <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-                      {isFilled&&<button onClick={()=>updateTouch(l.id,touch.id,{sent:!touch.sent})} style={{padding:"4px 8px",borderRadius:999,border:"1px solid "+(touch.sent?"#22C55E30":"rgba(124,58,237,0.18)"),background:touch.sent?"#22C55E10":"rgba(124,58,237,0.08)",color:touch.sent?"#16A34A":"#6D48F7",fontSize:10,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap"}}>{touch.sent?"Отправлено":"Не отправлено"}</button>}
-                      {(touchesByLead[l.id]||[]).length>1&&<button onClick={()=>removeTouchRow(l.id,touch.id)} style={{width:24,height:24,borderRadius:999,border:"1px solid "+C.bd,background:"transparent",color:C.t2,cursor:"pointer",fontSize:14,lineHeight:1,flexShrink:0}}>×</button>}
-                    </div>
-                  </div>
-                  <textarea value={touch.message||""} onChange={e=>updateTouch(l.id,touch.id,{message:e.target.value,sent:false})} placeholder="Текст сообщения / follow-up..." rows={2}
-                    style={{width:"100%",minHeight:78,padding:"10px 12px",border:"1px solid "+C.bd,borderRadius:11,fontSize:12,outline:"none",background:C.ib,color:C.t1,resize:"vertical",fontFamily:"Montserrat, sans-serif",lineHeight:1.45,boxSizing:"border-box" as const}}/>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr",gap:8,marginTop:8}}>
-                    <input type="date" value={touch.date||""} onChange={e=>updateTouch(l.id,touch.id,{date:e.target.value,sent:false})} style={{width:"100%",padding:"9px 10px",border:"1px solid "+C.bd,borderRadius:11,fontSize:12,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"Montserrat, sans-serif"}}/>
-                    <input type="time" value={touch.time||""} onChange={e=>updateTouch(l.id,touch.id,{time:e.target.value,sent:false})} style={{width:"100%",padding:"9px 10px",border:"1px solid "+C.bd,borderRadius:11,fontSize:12,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"Montserrat, sans-serif"}}/>
-                  </div>
-
-                  {isFilled&&<div style={{marginTop:9,display:"flex",flexDirection:"column",alignItems:"flex-start",gap:6,maxWidth:"100%"}}>
-                    <div style={{maxWidth:"100%",padding:"9px 12px",borderRadius:"16px 16px 16px 6px",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",fontSize:12,lineHeight:1.45,boxShadow:"0 0 18px rgba(124,58,237,0.15)",whiteSpace:"pre-wrap",wordBreak:"break-word",opacity:touch.sent?0.72:1,boxSizing:"border-box" as const}}>{touch.message}</div>
-                    {(touch.date||touch.time)&&<div style={{fontSize:10,fontWeight:700,color:touch.sent?"#16A34A":"#6D48F7",padding:"5px 9px",borderRadius:999,background:touch.sent?"#22C55E10":"rgba(124,58,237,0.08)",border:"1px solid "+(touch.sent?"#22C55E22":"rgba(124,58,237,0.16)"),maxWidth:"100%",wordBreak:"break-word"}}>{touch.sent?"Отправлено":"Запланировано"}{touch.date?` · ${touch.date}`:""}{touch.time?` · ${touch.time}`:""}</div>}
-                  </div>}
-                </div>
-              })}
-            </div>
-
-            <div style={{display:"grid",gridTemplateColumns:"1fr",gap:8,marginTop:10}}>
-              <button onClick={()=>addTouchRow(l.id)} style={{width:"100%",padding:"10px 12px",background:"transparent",color:"#6D48F7",border:"1px dashed rgba(124,58,237,0.28)",borderRadius:11,fontSize:11,fontWeight:800,cursor:"pointer",boxSizing:"border-box" as const}}>+ Добавить касание</button>
-              <button onClick={()=>saveTouchRows(l.id)} style={{width:"100%",padding:"10px 14px",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",border:"none",borderRadius:11,fontSize:11,fontWeight:800,cursor:"pointer",boxShadow:"0 0 18px rgba(124,58,237,0.22)",boxSizing:"border-box" as const}}>Сохранить касания</button>
-            </div>
-          </div>}
         </div>}
       </div>
     </div>;
@@ -4036,6 +4010,89 @@ function CrmPage({userId}:{userId:string}){
 
   // ── SCREEN: FUNNEL INNER ─────────────────────────────────────────
   return <>
+    {touchModalLead&&touchModalLeadId&&(
+      <div style={{position:"fixed",inset:0,background:"rgba(5,8,15,0.62)",zIndex:320,display:"flex",alignItems:"center",justifyContent:"center",padding:isMobile?12:24,backdropFilter:"blur(8px)"}} onClick={closeTouchModal}>
+        <div style={{width:"100%",maxWidth:860,maxHeight:"88dvh",background:C.w,border:"1px solid "+C.bd,borderRadius:24,boxShadow:"0 28px 80px rgba(0,0,0,0.36)",overflow:"hidden",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+          <div style={{padding:isMobile?18:24,borderBottom:"1px solid "+C.bd,background:"linear-gradient(135deg, rgba(79,70,229,0.10), rgba(124,58,237,0.08), transparent)",position:"relative"}}>
+            <button onClick={closeTouchModal} style={{position:"absolute",right:16,top:16,width:34,height:34,borderRadius:12,border:"1px solid "+C.bd,background:C.w,color:C.t2,cursor:"pointer",fontSize:18,lineHeight:1}}>×</button>
+            <div style={{display:"flex",alignItems:"center",gap:14,paddingRight:42}}>
+              <div style={{width:48,height:48,borderRadius:16,background:"linear-gradient(135deg,#4F46E5,#7C3AED)",boxShadow:"0 0 28px rgba(124,58,237,0.30)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:22}}>✨</div>
+              <div style={{minWidth:0}}>
+                <div style={{fontSize:isMobile?20:24,fontWeight:900,color:C.t1,lineHeight:1.15}}>Касания</div>
+                <div style={{fontSize:13,color:C.t2,marginTop:5,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{touchModalLead.name||"Лид"} · {activeFunnel?.name||"CRM"}</div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{padding:isMobile?14:22,overflowY:"auto",display:"grid",gap:12,background:C.ib}}>
+            <div style={{background:C.w,border:"1px solid "+C.bd,borderRadius:18,padding:isMobile?14:16,display:"flex",alignItems:isMobile?"stretch":"center",justifyContent:"space-between",gap:12,flexDirection:isMobile?"column":"row"}}>
+              <div>
+                <div style={{fontSize:14,fontWeight:800,color:C.t1}}>План касаний по лиду</div>
+                <div style={{fontSize:12,color:C.t2,marginTop:4,lineHeight:1.5}}>Открывай нужное касание, прописывай сообщение, дату и время отправки. Все касания не раскрываются сразу, чтобы карточка оставалась чистой.</div>
+              </div>
+              {touchSavedLeadId===touchModalLeadId&&<div style={{fontSize:12,fontWeight:800,color:"#16A34A",padding:"8px 12px",borderRadius:999,background:"#22C55E10",border:"1px solid #22C55E25",whiteSpace:"nowrap"}}>Сохранено</div>}
+            </div>
+
+            {touchModalRows.map((touch:any,index:number)=>{
+              const isOpen=openTouchItemId===touch.id;
+              const isFilled=String(touch.message||"").trim().length>0;
+              return <div key={touch.id} style={{background:C.w,border:"1px solid "+(isOpen?"rgba(124,58,237,0.36)":C.bd),borderRadius:18,overflow:"hidden",boxShadow:isOpen?"0 14px 36px rgba(124,58,237,0.10)":"none"}}>
+                <button onClick={()=>setOpenTouchItemId(isOpen?null:touch.id)} style={{width:"100%",padding:isMobile?14:16,background:isOpen?"linear-gradient(135deg, rgba(79,70,229,0.08), rgba(124,58,237,0.06))":"transparent",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,textAlign:"left"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:12,minWidth:0}}>
+                    <div style={{width:34,height:34,borderRadius:12,background:isFilled?"linear-gradient(135deg,#4F46E5,#7C3AED)":"rgba(124,58,237,0.10)",color:isFilled?"#fff":"#6D48F7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:900,flexShrink:0}}>{index+1}</div>
+                    <div style={{minWidth:0}}>
+                      <div style={{fontSize:14,fontWeight:900,color:C.t1}}>{`Касание ${index+1}`}</div>
+                      <div style={{fontSize:12,color:C.t2,marginTop:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:isMobile?220:520}}>{isFilled?touch.message:"Сообщение ещё не заполнено"}</div>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+                    {(touch.date||touch.time)&&<span style={{fontSize:11,fontWeight:800,color:touch.sent?"#16A34A":"#6D48F7",padding:"6px 9px",borderRadius:999,background:touch.sent?"#22C55E10":"rgba(124,58,237,0.08)",border:"1px solid "+(touch.sent?"#22C55E25":"rgba(124,58,237,0.16)"),display:isMobile?"none":"inline-block"}}>{touch.sent?"Отправлено":"Запланировано"}</span>}
+                    <span style={{fontSize:18,color:C.t2,transform:isOpen?"rotate(180deg)":"rotate(0deg)",transition:"transform 0.15s"}}>⌄</span>
+                  </div>
+                </button>
+
+                {isOpen&&<div style={{padding:isMobile?14:18,borderTop:"1px solid "+C.bd,display:"grid",gap:14}}>
+                  <div>
+                    <label style={{display:"block",fontSize:12,fontWeight:800,color:C.t2,marginBottom:7}}>Текст сообщения</label>
+                    <textarea value={touch.message||""} onChange={e=>updateTouch(touchModalLeadId!,touch.id,{message:e.target.value,sent:false})} placeholder="Напиши follow-up, напоминание или готовое сообщение для отправки..." rows={5}
+                      style={{width:"100%",padding:"14px 15px",border:"1px solid "+C.bd,borderRadius:14,fontSize:14,outline:"none",background:C.ib,color:C.t1,resize:"vertical",fontFamily:"Montserrat, sans-serif",lineHeight:1.55,boxSizing:"border-box" as const}}/>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12}}>
+                    <div>
+                      <label style={{display:"block",fontSize:12,fontWeight:800,color:C.t2,marginBottom:7}}>Дата отправки</label>
+                      <input type="date" value={touch.date||""} onChange={e=>updateTouch(touchModalLeadId!,touch.id,{date:e.target.value,sent:false})} style={{width:"100%",padding:"12px 13px",border:"1px solid "+C.bd,borderRadius:14,fontSize:14,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"Montserrat, sans-serif"}}/>
+                    </div>
+                    <div>
+                      <label style={{display:"block",fontSize:12,fontWeight:800,color:C.t2,marginBottom:7}}>Время отправки</label>
+                      <input type="time" value={touch.time||""} onChange={e=>updateTouch(touchModalLeadId!,touch.id,{time:e.target.value,sent:false})} style={{width:"100%",padding:"12px 13px",border:"1px solid "+C.bd,borderRadius:14,fontSize:14,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"Montserrat, sans-serif"}}/>
+                    </div>
+                  </div>
+
+                  {isFilled&&<div style={{display:"grid",gap:8}}>
+                    <div style={{fontSize:12,fontWeight:800,color:C.t2}}>Предпросмотр</div>
+                    <div style={{maxWidth:"100%",padding:"12px 15px",borderRadius:"18px 18px 18px 6px",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",fontSize:14,lineHeight:1.55,boxShadow:"0 0 22px rgba(124,58,237,0.18)",whiteSpace:"pre-wrap",wordBreak:"break-word",opacity:touch.sent?0.72:1,boxSizing:"border-box" as const}}>{touch.message}</div>
+                  </div>}
+
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
+                    <button onClick={()=>updateTouch(touchModalLeadId!,touch.id,{sent:!touch.sent})} style={{padding:"10px 13px",borderRadius:12,border:"1px solid "+(touch.sent?"#22C55E35":"rgba(124,58,237,0.20)"),background:touch.sent?"#22C55E10":"rgba(124,58,237,0.08)",color:touch.sent?"#16A34A":"#6D48F7",fontSize:12,fontWeight:900,cursor:"pointer"}}>{touch.sent?"✓ Отправлено":"Отметить отправленным"}</button>
+                    {touchModalRows.length>1&&<button onClick={()=>removeTouchRow(touchModalLeadId!,touch.id)} style={{padding:"10px 13px",borderRadius:12,border:"1px solid rgba(239,68,68,0.22)",background:"rgba(239,68,68,0.08)",color:"#EF4444",fontSize:12,fontWeight:800,cursor:"pointer"}}>Удалить касание</button>}
+                  </div>
+                </div>}
+              </div>
+            })}
+          </div>
+
+          <div style={{padding:isMobile?14:18,borderTop:"1px solid "+C.bd,background:C.w,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
+            <button onClick={()=>{const newTouch={id:`touch_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,message:"",date:"",time:"",sent:false};setTouchesByLead(prev=>({...prev,[touchModalLeadId!]:[...(prev[touchModalLeadId!]||[]),newTouch]}));setOpenTouchItemId(newTouch.id);}} style={{padding:"11px 14px",background:"transparent",color:"#6D48F7",border:"1px dashed rgba(124,58,237,0.30)",borderRadius:13,fontSize:13,fontWeight:900,cursor:"pointer"}}>+ Добавить касание</button>
+            <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+              <button onClick={closeTouchModal} style={{padding:"11px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:13,fontSize:13,fontWeight:800,cursor:"pointer"}}>Закрыть</button>
+              <button onClick={()=>saveTouchRows(touchModalLeadId!)} style={{padding:"11px 18px",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",border:"none",borderRadius:13,fontSize:13,fontWeight:900,cursor:"pointer",boxShadow:"0 0 22px rgba(124,58,237,0.24)"}}>Сохранить касания</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
     {/* ── Global edit lead modal: works from Kanban and List views ── */}
     {editLeadId&&(
       <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setEditLeadId(null)}>
