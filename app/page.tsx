@@ -8515,7 +8515,7 @@ const MAX_BOARDS=20;
 const MAX_BOARD_ITEMS=420;
 const MAX_DRAW_PATH_CHARS=9000;
 
-type BItemType="sticky"|"text"|"image"|"link"|"shape"|"draw";
+type BItemType="sticky"|"text"|"image"|"link"|"shape"|"draw"|"external_card";
 type LineStyle="solid"|"dashed"|"dotted";
 type ArrowTip="none"|"arrow"|"double";
 type DrawMode="pen"|"pencil"|"pointer";
@@ -8531,6 +8531,13 @@ interface BItem{
   linkUrl?:string; linkTitle?:string; linkFavicon?:string;
   zIndex?:number;
   drawPath?:string; drawColor?:string; drawThickness?:number;
+  externalSource?:"crm"|"content";
+  externalId?:string;
+  externalType?:"lead"|"content";
+  externalTitle?:string;
+  externalSubtitle?:string;
+  externalMeta?:string;
+  externalStatus?:string;
 }
 
 interface BLine{
@@ -8550,7 +8557,31 @@ const bid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36);
 
 function itemCenter(it:BItem){return{x:it.x+it.w/2,y:it.y+it.h/2};}
 
+function parseExternalCardPayload(raw?:string){
+  try{
+    const p=JSON.parse(raw||"{}");
+    return p&&typeof p==="object"?p:{};
+  }catch{return {};}
+}
+
+function externalCardPayload(it:BItem){
+  return JSON.stringify({
+    source:it.externalSource,
+    externalId:it.externalId,
+    externalType:it.externalType,
+    title:it.externalTitle||it.text||"Карточка",
+    subtitle:it.externalSubtitle||"",
+    meta:it.externalMeta||"",
+    status:it.externalStatus||"",
+    color:it.color||"#7C3AED",
+  });
+}
+
 function BoardPage({userId}:{userId:string}){
+  const crmFunnels=useTable("crm_funnels",userId);
+  const crmLeads=useTable("leads",userId);
+  const contentRows=useTable("content",userId);
+
   // Board list
   const[boards,setBoards]=useState<BBoard[]>([]);
   const[activeBoardId,setActiveBoardId]=useState<string|null>(null);
@@ -8627,6 +8658,13 @@ function BoardPage({userId}:{userId:string}){
   const imgInputRef=useRef<HTMLInputElement>(null);
   const[imgClickPos,setImgClickPos]=useState({x:200,y:200});
 
+  // External cards side panel
+  const[externalPanel,setExternalPanel]=useState(false);
+  const[externalSource,setExternalSource]=useState<"crm"|"content">("crm");
+  const[externalSearch,setExternalSearch]=useState("");
+  const[externalFunnelId,setExternalFunnelId]=useState<string>("all");
+  const[externalDropHint,setExternalDropHint]=useState(false);
+
   // Sync live refs on every state change
   useEffect(()=>{itemsRef.current=items;},[items]);
   useEffect(()=>{linesRef.current=lines;},[lines]);
@@ -8651,22 +8689,27 @@ function BoardPage({userId}:{userId:string}){
         supabase.from("board_items").select("*").eq("board_id",activeBoardId).order("z_index"),
         supabase.from("board_lines").select("*").eq("board_id",activeBoardId),
       ]);
-      setItems((its||[]).map((d:any):BItem=>({
-        id:d.id,type:d.type,x:d.x,y:d.y,w:d.w,h:d.h,
-        text:d.text||"",color:d.color||"",fontSize:d.font_size||14,
-        fontBold:d.font_bold||false,fontItalic:d.font_italic||false,fontFamily:d.type!=="link"?(d.link_favicon||"Montserrat"):"Montserrat",
-        shapeKind:d.shape_kind||"rect",imageUrl:d.image_url||"",
-        linkUrl:d.link_url||"",linkTitle:d.link_title||"",linkFavicon:d.link_favicon||"",
-        zIndex:d.z_index||0,
-        drawPath:d.draw_path||undefined,drawColor:d.draw_color||undefined,drawThickness:d.draw_thickness||undefined,
-      })));
+      const mappedItems=(its||[]).map((d:any):BItem=>{
+        const ext=d.type==="external_card"?parseExternalCardPayload(d.text):{};
+        return {
+          id:d.id,type:d.type,x:d.x,y:d.y,w:d.w,h:d.h,
+          text:d.type==="external_card"?(ext.title||d.link_title||"Карточка"):(d.text||""),color:d.color||ext.color||"",fontSize:d.font_size||14,
+          fontBold:d.font_bold||false,fontItalic:d.font_italic||false,fontFamily:d.type!=="link"?(d.link_favicon||"Montserrat"):"Montserrat",
+          shapeKind:d.shape_kind||"rect",imageUrl:d.image_url||"",
+          linkUrl:d.link_url||"",linkTitle:d.link_title||"",linkFavicon:d.link_favicon||"",
+          zIndex:d.z_index||0,
+          drawPath:d.draw_path||undefined,drawColor:d.draw_color||undefined,drawThickness:d.draw_thickness||undefined,
+          externalSource:ext.source,externalId:ext.externalId,externalType:ext.externalType,externalTitle:ext.title,externalSubtitle:ext.subtitle,externalMeta:ext.meta,externalStatus:ext.status,
+        };
+      });
+      setItems(mappedItems);
       setLines((lns||[]).map((d:any):BLine=>({
         id:d.id,fromId:d.from_id,toId:d.to_id,
         color:d.color||"#64748B",thickness:d.thickness||2,
         style:d.style||"solid",arrow:d.arrow||"arrow",
       })));
       // Sync refs
-      itemsRef.current=(its||[]).map((d:any):BItem=>({id:d.id,type:d.type,x:d.x,y:d.y,w:d.w,h:d.h,text:d.text||"",color:d.color||"",fontSize:d.font_size||14,fontBold:d.font_bold||false,fontItalic:d.font_italic||false,fontFamily:d.type!=="link"?(d.link_favicon||"Montserrat"):"Montserrat",shapeKind:d.shape_kind||"rect",imageUrl:d.image_url||"",linkUrl:d.link_url||"",linkTitle:d.link_title||"",linkFavicon:d.type==="link"?(d.link_favicon||""):"",zIndex:d.z_index||0,drawPath:d.draw_path||undefined,drawColor:d.draw_color||undefined,drawThickness:d.draw_thickness||undefined}));
+      itemsRef.current=mappedItems;
       linesRef.current=(lns||[]).map((d:any):BLine=>({id:d.id,fromId:d.from_id,toId:d.to_id,color:d.color||"#64748B",thickness:d.thickness||2,style:d.style||"solid",arrow:d.arrow||"arrow"}));
       setLoadingCanvas(false);
     })();
@@ -8682,7 +8725,7 @@ function BoardPage({userId}:{userId:string}){
         const itemRows=newItems.map((it,i)=>({
           id:it.id,board_id:activeBoardId,user_id:userId,type:it.type,
           x:Math.round(it.x),y:Math.round(it.y),w:Math.round(it.w),h:Math.round(it.h),
-          text:it.text||"",color:it.color||"",font_size:it.fontSize||14,
+          text:it.type==="external_card"?externalCardPayload(it):(it.text||""),color:it.color||"",font_size:it.fontSize||14,
           font_bold:it.fontBold||false,font_italic:it.fontItalic||false,
           shape_kind:it.shapeKind||null,image_url:it.imageUrl||"",
           link_url:it.linkUrl||"",link_title:it.linkTitle||"",link_favicon:it.type==="link"?(it.linkFavicon||""):(it.fontFamily||"Montserrat"),
@@ -8760,6 +8803,72 @@ function BoardPage({userId}:{userId:string}){
     setSelectedIds(new Set([it.id]));
     setTool("select");
     return it;
+  };
+
+  const externalCards=useMemo(()=>{
+    const q=externalSearch.trim().toLowerCase();
+    if(externalSource==="crm"){
+      return crmLeads.data
+        .filter((lead:any)=>externalFunnelId==="all"||lead.funnel_id===externalFunnelId)
+        .filter((lead:any)=>!q||[lead.name,lead.contact,lead.phone,lead.email,lead.source].some(v=>String(v||"").toLowerCase().includes(q)))
+        .map((lead:any)=>({
+          source:"crm" as const,
+          externalType:"lead" as const,
+          id:lead.id,
+          title:lead.name||"Без имени",
+          subtitle:lead.contact||lead.phone||lead.email||"CRM-лид",
+          meta:[lead.source,lead.deal?`${lead.deal} ₽`:""].filter(Boolean).join(" · "),
+          status:lead.status||"",
+          color:"#38BDF8",
+          raw:lead,
+        }));
+    }
+    return contentRows.data
+      .filter((item:any)=>!q||[item.topic,item.type,item.platform,item.status,item.date].some(v=>String(v||"").toLowerCase().includes(q)))
+      .map((item:any)=>({
+        source:"content" as const,
+        externalType:"content" as const,
+        id:item.id,
+        title:item.topic||item.type||"Контент",
+        subtitle:[item.platform,item.type].filter(Boolean).join(" · ")||"Контент-карточка",
+        meta:[item.status,item.date||item.publish_date].filter(Boolean).join(" · "),
+        status:item.status||"",
+        color:"#A855F7",
+        raw:item,
+      }));
+  },[externalSource,externalSearch,externalFunnelId,crmLeads.data,contentRows.data]);
+
+  const addExternalCardToBoard=(card:any,clientX?:number,clientY?:number)=>{
+    const center=canvasRef.current&&clientX&&clientY?toCanvas(clientX,clientY):{x:320+itemsRef.current.length*18,y:260+itemsRef.current.length*18};
+    const it=addItem({
+      type:"external_card",
+      w:260,h:138,
+      color:card.color||"#7C3AED",
+      text:card.title,
+      externalSource:card.source,
+      externalId:card.id,
+      externalType:card.externalType,
+      externalTitle:card.title,
+      externalSubtitle:card.subtitle,
+      externalMeta:card.meta,
+      externalStatus:card.status,
+    },center.x,center.y);
+    if(it){setExternalPanel(false);setExternalDropHint(false);}
+  };
+
+  const refreshExternalCards=()=>{
+    const next=items.map(it=>{
+      if(it.type!=="external_card")return it;
+      if(it.externalSource==="crm"){
+        const lead=crmLeads.data.find((l:any)=>l.id===it.externalId);
+        if(!lead)return it;
+        return {...it,text:lead.name||it.text,externalTitle:lead.name||it.externalTitle,externalSubtitle:lead.contact||lead.phone||lead.email||"CRM-лид",externalMeta:[lead.source,lead.deal?`${lead.deal} ₽`:""].filter(Boolean).join(" · "),externalStatus:lead.status||""};
+      }
+      const c=contentRows.data.find((x:any)=>x.id===it.externalId);
+      if(!c)return it;
+      return {...it,text:c.topic||c.type||it.text,externalTitle:c.topic||c.type||it.externalTitle,externalSubtitle:[c.platform,c.type].filter(Boolean).join(" · ")||"Контент-карточка",externalMeta:[c.status,c.date||c.publish_date].filter(Boolean).join(" · "),externalStatus:c.status||""};
+    });
+    updItems(next);
   };
 
   // ── Canvas click ──
@@ -8973,10 +9082,20 @@ function BoardPage({userId}:{userId:string}){
 
   // ── External drag-drop onto canvas ──
   const onCanvasDragOver=(e:React.DragEvent)=>{
-    if(e.dataTransfer.types.includes("Files")){e.preventDefault();e.dataTransfer.dropEffect="copy";}
+    if(e.dataTransfer.types.includes("application/x-vizzy-card")||e.dataTransfer.types.includes("Files")){
+      e.preventDefault();
+      e.dataTransfer.dropEffect="copy";
+      if(e.dataTransfer.types.includes("application/x-vizzy-card"))setExternalDropHint(true);
+    }
   };
   const onCanvasDrop=async(e:React.DragEvent)=>{
     e.preventDefault();
+    setExternalDropHint(false);
+    const rawCard=e.dataTransfer.getData("application/x-vizzy-card");
+    if(rawCard){
+      try{addExternalCardToBoard(JSON.parse(rawCard),e.clientX,e.clientY);}catch{}
+      return;
+    }
     const files=Array.from(e.dataTransfer.files).filter(f=>f.type.startsWith("image/"));
     if(!files.length)return;
     const rect=canvasRef.current!.getBoundingClientRect();
@@ -9253,6 +9372,15 @@ function BoardPage({userId}:{userId:string}){
         </button>
 
         <div style={{fontSize:14,fontWeight:700,color:C.t1,flex:1}}>{activeBoard.name}</div>
+
+        <button onClick={()=>setExternalPanel(true)}
+          style={{display:"flex",alignItems:"center",gap:7,padding:"8px 12px",border:"1px solid #DDD6FE",background:"linear-gradient(135deg,#F5F3FF,#EEF2FF)",color:"#6D28D9",borderRadius:10,fontSize:12,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap",boxShadow:"0 0 14px rgba(124,58,237,0.12)"}}>
+          ＋ Добавить карточку
+        </button>
+        <button onClick={refreshExternalCards} title="Обновить данные внешних карточек"
+          style={{display:"flex",alignItems:"center",gap:6,padding:"8px 10px",border:"1px solid #E2E8F0",background:"#fff",color:C.t2,borderRadius:10,fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
+          ↻ Обновить
+        </button>
 
         {/* Tool buttons */}
         <div style={{display:"flex",gap:2,background:"#F1F5F9",borderRadius:10,padding:"3px"}}>
@@ -9568,6 +9696,25 @@ function BoardPage({userId}:{userId:string}){
                   </a>
                 )}
 
+                {/* ── EXTERNAL CARD ── */}
+                {it.type==="external_card"&&(
+                  <div style={{width:"100%",height:"100%",borderRadius:16,background:"#fff",border:"1px solid #E2E8F0",boxShadow:"0 10px 28px rgba(15,23,42,0.10)",overflow:"hidden",display:"flex",flexDirection:"column"}}>
+                    <div style={{height:6,background:`linear-gradient(90deg, ${it.color||"#7C3AED"}, #60A5FA)`}}/>
+                    <div style={{padding:"12px 14px",display:"flex",gap:10,alignItems:"flex-start",flex:1,minHeight:0}}>
+                      <div style={{width:34,height:34,borderRadius:12,background:(it.color||"#7C3AED")+"18",border:"1px solid "+(it.color||"#7C3AED")+"30",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{it.externalSource==="crm"?"👤":"🗂"}</div>
+                      <div style={{minWidth:0,flex:1}}>
+                        <div style={{fontSize:12,fontWeight:900,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.externalTitle||it.text||"Карточка"}</div>
+                        <div style={{fontSize:10,color:C.t2,marginTop:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.externalSubtitle||"Связанная карточка"}</div>
+                        {it.externalMeta&&<div style={{fontSize:10,color:C.t2,marginTop:8,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.externalMeta}</div>}
+                      </div>
+                    </div>
+                    <div style={{padding:"8px 12px",borderTop:"1px solid #F1F5F9",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+                      <span style={{fontSize:9,fontWeight:900,textTransform:"uppercase",letterSpacing:.7,color:it.color||"#7C3AED"}}>{it.externalSource==="crm"?"CRM":"Контент"}</span>
+                      {it.externalStatus&&<span style={{fontSize:9,fontWeight:800,padding:"3px 7px",borderRadius:999,background:(it.color||"#7C3AED")+"12",color:it.color||"#7C3AED",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.externalStatus}</span>}
+                    </div>
+                  </div>
+                )}
+
                 {/* ── SHAPE ── */}
                 {it.type==="shape"&&!isEdit&&renderShapeFill(it)}
                 {it.type==="shape"&&isEdit&&(
@@ -9633,6 +9780,65 @@ function BoardPage({userId}:{userId:string}){
           </div>
         )}
       </div>
+
+      {externalDropHint&&(
+        <div style={{position:"absolute",inset:0,top:48,zIndex:55,pointerEvents:"none",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <div style={{padding:"18px 26px",borderRadius:18,background:"rgba(124,58,237,0.92)",color:"#fff",fontSize:15,fontWeight:900,boxShadow:"0 18px 50px rgba(124,58,237,0.35)"}}>Отпусти карточку на доску</div>
+        </div>
+      )}
+
+      {externalPanel&&(
+        <div style={{position:"absolute",top:48,right:0,bottom:0,width:360,zIndex:90,background:"rgba(255,255,255,0.97)",backdropFilter:"blur(14px)",borderLeft:"1px solid #E2E8F0",boxShadow:"-16px 0 40px rgba(15,23,42,0.10)",display:"flex",flexDirection:"column"}}>
+          <div style={{padding:18,borderBottom:"1px solid #E2E8F0"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:14}}>
+              <div>
+                <div style={{fontSize:18,fontWeight:900,color:C.t1}}>Добавить карточку</div>
+                <div style={{fontSize:12,color:C.t2,marginTop:3}}>Перетащи или нажми «Добавить»</div>
+              </div>
+              <button onClick={()=>setExternalPanel(false)} style={{width:32,height:32,borderRadius:10,border:"1px solid #E2E8F0",background:"#fff",cursor:"pointer",fontSize:16,color:C.t2}}>×</button>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+              {([{"id":"crm","label":"CRM"},{"id":"content","label":"Контент"}] as const).map(s=>(
+                <button key={s.id} onClick={()=>{setExternalSource(s.id);setExternalSearch("");}}
+                  style={{padding:"10px 12px",borderRadius:12,border:"1px solid "+(externalSource===s.id?"#7C3AED":"#E2E8F0"),background:externalSource===s.id?"linear-gradient(135deg,#F5F3FF,#EEF2FF)":"#fff",color:externalSource===s.id?"#6D28D9":C.t2,fontSize:12,fontWeight:900,cursor:"pointer"}}>{s.label}</button>
+              ))}
+            </div>
+            {externalSource==="crm"&&(
+              <select value={externalFunnelId} onChange={e=>setExternalFunnelId(e.target.value)} style={{width:"100%",padding:"10px 12px",border:"1px solid #E2E8F0",borderRadius:12,background:"#fff",fontSize:12,fontWeight:700,color:C.t1,outline:"none",marginBottom:10}}>
+                <option value="all">Все воронки</option>
+                {crmFunnels.data.map((f:any)=><option key={f.id} value={f.id}>{f.name||"Воронка"}</option>)}
+              </select>
+            )}
+            <input value={externalSearch} onChange={e=>setExternalSearch(e.target.value)} placeholder={externalSource==="crm"?"Поиск лида...":"Поиск контента..."}
+              style={{width:"100%",boxSizing:"border-box",padding:"11px 13px",border:"1px solid #E2E8F0",borderRadius:12,outline:"none",fontSize:13,background:"#F8FAFC",color:C.t1}}/>
+          </div>
+          <div style={{padding:14,overflowY:"auto",flex:1,display:"grid",gap:10,alignContent:"start"}}>
+            {(externalSource==="crm"?crmLeads.loading:contentRows.loading)
+              ?<div style={{padding:30,textAlign:"center",fontSize:13,color:C.t2}}>Загрузка карточек...</div>
+              :externalCards.length===0
+              ?<div style={{padding:30,textAlign:"center",fontSize:13,color:C.t2}}>Ничего не найдено</div>
+              :externalCards.slice(0,80).map((card:any)=>(
+                <div key={`${card.source}_${card.id}`} draggable
+                  onDragStart={e=>{e.dataTransfer.setData("application/x-vizzy-card",JSON.stringify(card));e.dataTransfer.effectAllowed="copy";}}
+                  style={{background:"#fff",border:"1px solid #E2E8F0",borderLeft:"4px solid "+card.color,borderRadius:14,padding:12,cursor:"grab",boxShadow:"0 4px 16px rgba(15,23,42,0.05)"}}>
+                  <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
+                    <div style={{width:34,height:34,borderRadius:12,background:card.color+"18",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{card.source==="crm"?"👤":"🗂"}</div>
+                    <div style={{minWidth:0,flex:1}}>
+                      <div style={{fontSize:13,fontWeight:900,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{card.title}</div>
+                      <div style={{fontSize:11,color:C.t2,marginTop:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{card.subtitle}</div>
+                      {card.meta&&<div style={{fontSize:10,color:C.t2,marginTop:7,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{card.meta}</div>}
+                    </div>
+                  </div>
+                  <div style={{display:"flex",gap:8,marginTop:12}}>
+                    <button onClick={()=>addExternalCardToBoard(card)} style={{flex:1,padding:"8px 10px",border:"none",borderRadius:10,background:"linear-gradient(135deg,#7C3AED,#2563EB)",color:"#fff",fontSize:11,fontWeight:900,cursor:"pointer",boxShadow:"0 0 14px rgba(124,58,237,0.22)"}}>Добавить</button>
+                    <button onClick={()=>alert(card.source==="crm"?"Открой раздел CRM для полной карточки лида":"Открой раздел Контент для полной карточки")} style={{padding:"8px 10px",border:"1px solid #E2E8F0",borderRadius:10,background:"#fff",color:C.t2,fontSize:11,fontWeight:800,cursor:"pointer"}}>Источник</button>
+                  </div>
+                </div>
+              ))}
+          </div>
+          <div style={{padding:"12px 16px",borderTop:"1px solid #E2E8F0",fontSize:11,color:C.t2,lineHeight:1.5}}>Карточка на доске хранит связь с оригиналом: источник, ID, тип и отображаемые поля. Кнопка «Обновить» подтягивает свежие данные.</div>
+        </div>
+      )}
 
       {/* ── Link modal ── */}
       {linkModal&&(
