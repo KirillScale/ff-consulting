@@ -285,9 +285,8 @@ function useIsMobile(){
 }
 
 /* ============ SIDEBAR — Deep Dark Glass ============ */
-function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onLogout:()=>void}){
+function Side({active,onNav,onLogout,collapsed,onCollapsedChange}:{active:string,onNav:(id:string)=>void,onLogout:()=>void,collapsed:boolean,onCollapsedChange:(v:boolean)=>void}){
   const{dark,toggle}=useTheme();
-  const[collapsed,setCollapsed]=useState(false);
   const activeGroupIdx=NAV_GROUPS.findIndex(g=>g.items.some(i=>i.id===active));
   const[openGroups,setOpenGroups]=useState<number[]>(()=>[activeGroupIdx>=0?activeGroupIdx:0]);
 
@@ -584,7 +583,7 @@ function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onL
         </div>
 
         {/* Collapse */}
-        <button onClick={()=>setCollapsed(!collapsed)}
+        <button onClick={()=>onCollapsedChange(!collapsed)}
           style={{
             width:"100%",display:"flex",alignItems:"center",gap:8,
             padding:collapsed?"10px 0":"7px 10px",
@@ -835,7 +834,7 @@ function SafePage({name,children}:{name:string,children:React.ReactNode}){
 function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,nav,dark}:any){
   const isMobile=useIsMobile();
   const[sideCollapsed,setSideCollapsed]=useState(false);
-  const sideW=sideCollapsed?60:240;
+  const sideW=sideCollapsed?64:248;
 
   const pageContent=<>
     {page==="dashboard"&&<SafePage name="Dashboard"><DashPage userId={user.id} name={userName} avatar={userAvatar} onNav={setPage} onAvatarChange={async(url:string)=>{setUserAvatar(url);await supabase.from("profiles").upsert({id:user.id,avatar_url:url},{onConflict:"id"});}}/></SafePage>}
@@ -1025,8 +1024,8 @@ function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,n
           <div style={{padding:"16px 16px 0"}}>{pageContent}</div>
         </div>
       </> : <>
-        <Side active={page} onNav={setPage} onLogout={logout}/>
-        <div style={{marginLeft:sideW,minHeight:"100vh",transition:"margin-left 0.25s cubic-bezier(0.4,0,0.2,1)"}}>
+        <Side active={page} onNav={setPage} onLogout={logout} collapsed={sideCollapsed} onCollapsedChange={setSideCollapsed}/>
+        <div style={{marginLeft:sideW,width:`calc(100vw - ${sideW}px)`,minHeight:"100vh",transition:"margin-left 0.25s cubic-bezier(0.4,0,0.2,1), width 0.25s cubic-bezier(0.4,0,0.2,1)"}}>
           <Head name={userName}/>
           <div style={{padding:"28px 32px"}}>{pageContent}</div>
         </div>
