@@ -8556,6 +8556,70 @@ interface BBoard{
 // ── helpers ──
 const bid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36);
 
+const safeNum=(value:any,fallback:number)=>{
+  const n=Number(value);
+  return Number.isFinite(n)?n:fallback;
+};
+
+const isValidBoardItem=(it:any):it is BItem=>{
+  return !!it&&typeof it==="object"&&typeof it.id==="string"&&it.id.trim().length>0&&typeof it.type==="string";
+};
+
+const normalizeBoardItems=(raw:any[]):BItem[]=>{
+  const seen=new Set<string>();
+  return (Array.isArray(raw)?raw:[])
+    .filter(isValidBoardItem)
+    .filter((it:any)=>{
+      if(seen.has(it.id))return false;
+      seen.add(it.id);
+      return true;
+    })
+    .slice(0,MAX_BOARD_ITEMS)
+    .map((it:any,index:number)=>{
+      const type=(it.type||"sticky") as BItemType;
+      const w=safeNum(it.w,type==="text"?180:type==="external_card"?260:200);
+      const h=safeNum(it.h,type==="text"?50:type==="external_card"?140:160);
+      return {
+        ...it,
+        id:String(it.id),
+        type,
+        x:safeNum(it.x,120+index*8),
+        y:safeNum(it.y,120+index*8),
+        w:Math.max(20,w),
+        h:Math.max(20,h),
+        zIndex:safeNum(it.zIndex,index),
+        text:typeof it.text==="string"?it.text:(it.text==null?"":String(it.text)),
+        color:it.color||"",
+        fontSize:safeNum(it.fontSize,14),
+        fontBold:!!it.fontBold,
+        fontItalic:!!it.fontItalic,
+        fontFamily:it.fontFamily||"Montserrat",
+      } as BItem;
+    });
+};
+
+const normalizeBoardLines=(raw:any[],validItemIds?:Set<string>):BLine[]=>{
+  const seen=new Set<string>();
+  return (Array.isArray(raw)?raw:[])
+    .filter((ln:any)=>!!ln&&typeof ln==="object"&&typeof ln.id==="string"&&typeof ln.fromId==="string"&&typeof ln.toId==="string")
+    .filter((ln:any)=>{
+      if(seen.has(ln.id))return false;
+      if(validItemIds&&(!validItemIds.has(ln.fromId)||!validItemIds.has(ln.toId)))return false;
+      seen.add(ln.id);
+      return true;
+    })
+    .map((ln:any)=>({
+      ...ln,
+      id:String(ln.id),
+      fromId:String(ln.fromId),
+      toId:String(ln.toId),
+      color:ln.color||"#64748B",
+      thickness:Math.max(1,safeNum(ln.thickness,2)),
+      style:ln.style||"solid",
+      arrow:ln.arrow||"arrow",
+    } as BLine));
+};
+
 function itemCenter(it:BItem){return{x:it.x+it.w/2,y:it.y+it.h/2};}
 
 function parseExternalCardPayload(raw?:string){
@@ -8691,40 +8755,45 @@ function BoardPage({userId}:{userId:string}){
         supabase.from("board_items").select("*").eq("board_id",activeBoardId).order("z_index"),
         supabase.from("board_lines").select("*").eq("board_id",activeBoardId),
       ]);
-      const mappedItems=(its||[]).map((d:any):BItem=>{
-        const ext=d.type==="external_card"?parseExternalCardPayload(d.text):{};
+      const mappedItems=normalizeBoardItems((its||[]).map((d:any):BItem=>{
+        const ext=d?.type==="external_card"?parseExternalCardPayload(d.text):{};
         return {
-          id:d.id,type:d.type,x:d.x,y:d.y,w:d.w,h:d.h,
-          text:d.type==="external_card"?(ext.title||d.link_title||"Карточка"):(d.text||""),color:d.color||ext.color||"",fontSize:d.font_size||14,
-          fontBold:d.font_bold||false,fontItalic:d.font_italic||false,fontFamily:d.type!=="link"?(d.link_favicon||"Montserrat"):"Montserrat",
-          shapeKind:d.shape_kind||"rect",imageUrl:d.image_url||"",
-          linkUrl:d.link_url||"",linkTitle:d.link_title||"",linkFavicon:d.link_favicon||"",
-          zIndex:d.z_index||0,
-          drawPath:d.draw_path||undefined,drawColor:d.draw_color||undefined,drawThickness:d.draw_thickness||undefined,
+          id:d?.id,type:d?.type,x:d?.x,y:d?.y,w:d?.w,h:d?.h,
+          text:d?.type==="external_card"?(ext.title||d?.link_title||"Карточка"):(d?.text||""),color:d?.color||ext.color||"",fontSize:d?.font_size||14,
+          fontBold:d?.font_bold||false,fontItalic:d?.font_italic||false,fontFamily:d?.type!=="link"?(d?.link_favicon||"Montserrat"):"Montserrat",
+          shapeKind:d?.shape_kind||"rect",imageUrl:d?.image_url||"",
+          linkUrl:d?.link_url||"",linkTitle:d?.link_title||"",linkFavicon:d?.link_favicon||"",
+          zIndex:d?.z_index||0,
+          drawPath:d?.draw_path||undefined,drawColor:d?.draw_color||undefined,drawThickness:d?.draw_thickness||undefined,
           externalSource:ext.source,externalId:ext.externalId,externalType:ext.externalType,externalTitle:ext.title,externalSubtitle:ext.subtitle,externalMeta:ext.meta,externalStatus:ext.status,externalPlatform:ext.platform,
-        };
-      });
+        } as BItem;
+      }));
+      const mappedItemIds=new Set(mappedItems.map(i=>i.id));
+      const mappedLines=normalizeBoardLines((lns||[]).map((d:any):BLine=>({
+        id:d?.id,fromId:d?.from_id,toId:d?.to_id,
+        color:d?.color||"#64748B",thickness:d?.thickness||2,
+        style:d?.style||"solid",arrow:d?.arrow||"arrow",
+      })),mappedItemIds);
       setItems(mappedItems);
-      setLines((lns||[]).map((d:any):BLine=>({
-        id:d.id,fromId:d.from_id,toId:d.to_id,
-        color:d.color||"#64748B",thickness:d.thickness||2,
-        style:d.style||"solid",arrow:d.arrow||"arrow",
-      })));
+      setLines(mappedLines);
       // Sync refs
       itemsRef.current=mappedItems;
-      linesRef.current=(lns||[]).map((d:any):BLine=>({id:d.id,fromId:d.from_id,toId:d.to_id,color:d.color||"#64748B",thickness:d.thickness||2,style:d.style||"solid",arrow:d.arrow||"arrow"}));
+      linesRef.current=mappedLines;
       setLoadingCanvas(false);
     })();
   },[activeBoardId]);
 
   // ── Auto-save (upsert-based — no full delete on every save) ──
   const triggerSave=(newItems:BItem[],newLines:BLine[])=>{
+    const cleanItems=normalizeBoardItems(newItems as any[]);
+    const validItemIds=new Set(cleanItems.map(i=>i.id));
+    const cleanLines=normalizeBoardLines(newLines as any[],validItemIds);
     setSaved(false);
     clearTimeout(saveTimer.current);
     saveTimer.current=setTimeout(async()=>{
       if(!activeBoardId)return;
       try{
-        const itemRows=newItems.map((it,i)=>({
+        const itemRows=cleanItems.map((it,i)=>({
           id:it.id,board_id:activeBoardId,user_id:userId,type:it.type,
           x:Math.round(it.x),y:Math.round(it.y),w:Math.round(it.w),h:Math.round(it.h),
           text:it.type==="external_card"?externalCardPayload(it):(it.text||""),color:it.color||"",font_size:it.fontSize||14,
@@ -8733,7 +8802,7 @@ function BoardPage({userId}:{userId:string}){
           link_url:it.linkUrl||"",link_title:it.linkTitle||"",link_favicon:it.type==="link"?(it.linkFavicon||""):(it.fontFamily||"Montserrat"),
           z_index:i,draw_path:it.drawPath||null,draw_color:it.drawColor||null,draw_thickness:it.drawThickness||null,
         }));
-        const lineRows=newLines.map(ln=>({
+        const lineRows=cleanLines.map(ln=>({
           id:ln.id,board_id:activeBoardId,user_id:userId,
           from_id:ln.fromId,to_id:ln.toId,
           color:ln.color||"#64748B",thickness:ln.thickness||2,style:ln.style||"solid",arrow:ln.arrow||"arrow",
@@ -8743,8 +8812,8 @@ function BoardPage({userId}:{userId:string}){
           supabase.from("board_items").select("id").eq("board_id",activeBoardId),
           supabase.from("board_lines").select("id").eq("board_id",activeBoardId),
         ]);
-        const curItemIds=new Set(newItems.map(i=>i.id));
-        const curLineIds=new Set(newLines.map(l=>l.id));
+        const curItemIds=new Set(cleanItems.map(i=>i.id));
+        const curLineIds=new Set(cleanLines.map(l=>l.id));
         const delIt=(dbIt||[]).filter((r:any)=>!curItemIds.has(r.id)).map((r:any)=>r.id);
         const delLn=(dbLn||[]).filter((r:any)=>!curLineIds.has(r.id)).map((r:any)=>r.id);
         await Promise.all([
@@ -8758,9 +8827,23 @@ function BoardPage({userId}:{userId:string}){
     },900);
   };
 
-  const updItems=(next:BItem[])=>{itemsRef.current=next;setItems(next);triggerSave(next,linesRef.current);};
-  const updLines=(next:BLine[])=>{linesRef.current=next;setLines(next);triggerSave(itemsRef.current,next);};
-  const updBoth=(ni:BItem[],nl:BLine[])=>{itemsRef.current=ni;linesRef.current=nl;setItems(ni);setLines(nl);triggerSave(ni,nl);};
+  const updItems=(next:BItem[])=>{
+    const clean=normalizeBoardItems(next as any[]);
+    const validIds=new Set(clean.map(i=>i.id));
+    const cleanLines=normalizeBoardLines(linesRef.current as any[],validIds);
+    itemsRef.current=clean;linesRef.current=cleanLines;setItems(clean);setLines(cleanLines);triggerSave(clean,cleanLines);
+  };
+  const updLines=(next:BLine[])=>{
+    const validIds=new Set(itemsRef.current.map(i=>i.id));
+    const clean=normalizeBoardLines(next as any[],validIds);
+    linesRef.current=clean;setLines(clean);triggerSave(itemsRef.current,clean);
+  };
+  const updBoth=(ni:BItem[],nl:BLine[])=>{
+    const cleanItems=normalizeBoardItems(ni as any[]);
+    const validIds=new Set(cleanItems.map(i=>i.id));
+    const cleanLines=normalizeBoardLines(nl as any[],validIds);
+    itemsRef.current=cleanItems;linesRef.current=cleanLines;setItems(cleanItems);setLines(cleanLines);triggerSave(cleanItems,cleanLines);
+  };
 
   // ── Board management ──
   const createBoard=async()=>{
@@ -8798,9 +8881,10 @@ function BoardPage({userId}:{userId:string}){
 
   // ── Add item helper ──
   const addItem=(partial:Partial<BItem>&{type:BItemType},cx:number,cy:number)=>{
-    if(itemsRef.current.length>=MAX_BOARD_ITEMS){alert(`На одной доске максимум ${MAX_BOARD_ITEMS} элементов. Удали лишнее или создай новую доску.`);return null as any;}
-    const it:BItem={id:bid(),x:cx-100,y:cy-80,w:200,h:160,zIndex:items.length,fontFamily:"Montserrat",...partial};
-    const next=[...items,it];
+    const base=normalizeBoardItems(itemsRef.current as any[]);
+    if(base.length>=MAX_BOARD_ITEMS){alert(`На одной доске максимум ${MAX_BOARD_ITEMS} элементов. Удали лишнее или создай новую доску.`);return null as any;}
+    const it:BItem={id:bid(),x:cx-100,y:cy-80,w:200,h:160,zIndex:base.length,fontFamily:"Montserrat",...partial};
+    const next=[...base,it];
     updItems(next);
     setSelectedIds(new Set([it.id]));
     setTool("select");
@@ -8877,7 +8961,7 @@ function BoardPage({userId}:{userId:string}){
   };
 
   const refreshExternalCards=()=>{
-    const next=items.map(it=>{
+    const next=normalizeBoardItems(items as any[]).map(it=>{
       if(it.type!=="external_card")return it;
       if(it.externalSource==="crm"){
         const lead=crmLeads.data.find((l:any)=>l.id===it.externalId);
@@ -8959,7 +9043,7 @@ function BoardPage({userId}:{userId:string}){
     if(dragState.current){
       const dx=(e.clientX-dragState.current.startMx)/zoom;
       const dy=(e.clientY-dragState.current.startMy)/zoom;
-      setItems(prev=>prev.map(it=>dragState.current!.ids.includes(it.id)?{...it,x:dragState.current!.startPos[it.id].x+dx,y:dragState.current!.startPos[it.id].y+dy}:it));
+      setItems(prev=>normalizeBoardItems(prev as any[]).map(it=>dragState.current!.ids.includes(it.id)&&dragState.current!.startPos[it.id]?{...it,x:dragState.current!.startPos[it.id].x+dx,y:dragState.current!.startPos[it.id].y+dy}:it));
     } else if(resizeState.current){
       const dx=(e.clientX-resizeState.current.startMx)/zoom;
       const dy=(e.clientY-resizeState.current.startMy)/zoom;
@@ -8968,9 +9052,9 @@ function BoardPage({userId}:{userId:string}){
       if(it0?.type==="image"&&it0.imageW&&it0.imageH){
         const ratio=it0.imageW/it0.imageH;
         const newW=Math.max(60,resizeState.current.startW+dx);
-        setItems(prev=>prev.map(it=>it.id===resizeState.current!.id?{...it,w:newW,h:Math.max(40,newW/ratio)}:it));
+        setItems(prev=>normalizeBoardItems(prev as any[]).map(it=>it.id===resizeState.current!.id?{...it,w:newW,h:Math.max(40,newW/ratio)}:it));
       } else {
-        setItems(prev=>prev.map(it=>it.id===resizeState.current!.id?{...it,w:Math.max(60,resizeState.current!.startW+dx),h:Math.max(40,resizeState.current!.startH+dy)}:it));
+        setItems(prev=>normalizeBoardItems(prev as any[]).map(it=>it.id===resizeState.current!.id?{...it,w:Math.max(60,resizeState.current!.startW+dx),h:Math.max(40,resizeState.current!.startH+dy)}:it));
       }
     } else if(panState.current){
       setPan({x:panState.current.startPx+(e.clientX-panState.current.startMx),y:panState.current.startPy+(e.clientY-panState.current.startMy)});
@@ -9009,8 +9093,9 @@ function BoardPage({userId}:{userId:string}){
         const minX=Math.min(0,...xs),minY=Math.min(0,...ys);
         const maxX=Math.max(0,...xs),maxY=Math.max(0,...ys);
         const w=Math.max(40,maxX-minX),h=Math.max(40,maxY-minY);
-        const it:BItem={id:bid(),type:"draw",x:startX+minX,y:startY+minY,w,h,drawPath:drawPreview.slice(0,MAX_DRAW_PATH_CHARS),drawColor:drawMode==="pencil"?"rgba(30,41,59,0.75)":drawColor,drawThickness:drawMode==="pencil"?Math.max(1,drawThickness-1):drawThickness,zIndex:items.length};
-        updItems([...items,it]);
+        const base=normalizeBoardItems(itemsRef.current as any[]);
+        const it:BItem={id:bid(),type:"draw",x:startX+minX,y:startY+minY,w,h,drawPath:drawPreview.slice(0,MAX_DRAW_PATH_CHARS),drawColor:drawMode==="pencil"?"rgba(30,41,59,0.75)":drawColor,drawThickness:drawMode==="pencil"?Math.max(1,drawThickness-1):drawThickness,zIndex:base.length};
+        updItems([...base,it]);
       }
     }
     setIsDrawing(false);drawingRef.current=null;setDrawPreview("");
@@ -9020,7 +9105,7 @@ function BoardPage({userId}:{userId:string}){
       const{fromId,fromAnchor,mx,my}=connectorDrag;
       type AnchorHit={id:string;side:"top"|"bottom"|"left"|"right";dist:number};
       let best:AnchorHit|null=null;
-      items.filter(i=>i.id!==fromId).forEach(it=>{
+      normalizeBoardItems(items as any[]).filter(i=>i.id!==fromId).forEach(it=>{
         const{side,dist}=nearestAnchor(it,mx,my);
         if(dist<40&&(!best||dist<best.dist))best={id:it.id,side,dist};
       });
@@ -9218,9 +9303,12 @@ function BoardPage({userId}:{userId:string}){
 
   // ── SVG line rendering ──
   const svgLines=useMemo(()=>{
-    return lines.map(ln=>{
-      const from=items.find(i=>i.id===ln.fromId);
-      const to=items.find(i=>i.id===ln.toId);
+    const safeItems=normalizeBoardItems(items as any[]);
+    const safeItemIds=new Set(safeItems.map(i=>i.id));
+    const safeLines=normalizeBoardLines(lines as any[],safeItemIds);
+    return safeLines.map(ln=>{
+      const from=safeItems.find(i=>i.id===ln.fromId);
+      const to=safeItems.find(i=>i.id===ln.toId);
       if(!from||!to)return null;
       // Use anchor points if defined, else centers
       const a=ln.fromAnchor?anchorPos(from,ln.fromAnchor):itemCenter(from);
@@ -9274,7 +9362,8 @@ function BoardPage({userId}:{userId:string}){
     }
   };
 
-  const sel1=selectedIds.size===1?items.find(i=>i.id==[...selectedIds][0]):null;
+  const safeItemsForSelection=normalizeBoardItems(items as any[]);
+  const sel1=selectedIds.size===1?safeItemsForSelection.find(i=>i.id==[...selectedIds][0]):null;
   const selLine=lines.find(l=>l.id===selectedLineId);
 
   const cursorMap:Record<string,string>={select:"default",pan:"grab",sticky:"cell",text:"text",image:"cell",link:"cell",shape:"crosshair",line:"crosshair",draw:"crosshair"};
@@ -9643,7 +9732,7 @@ function BoardPage({userId}:{userId:string}){
           </svg>
 
           {/* Items */}
-          {[...items].sort((a,b)=>(a.zIndex||0)-(b.zIndex||0)).map(it=>{
+          {normalizeBoardItems(items as any[]).sort((a,b)=>(a.zIndex||0)-(b.zIndex||0)).map(it=>{
             const isSel=selectedIds.has(it.id);
             const isEdit=editingId===it.id;
             const isLineSrc=lineFrom===it.id;
@@ -9799,7 +9888,7 @@ function BoardPage({userId}:{userId:string}){
         </div>
 
         {/* Empty hint */}
-        {items.length===0&&!loadingCanvas&&(
+        {normalizeBoardItems(items as any[]).length===0&&!loadingCanvas&&(
           <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
             <div style={{fontSize:48,marginBottom:12}}>🎨</div>
             <div style={{fontSize:16,fontWeight:700,color:"#94A3B8",marginBottom:6}}>Доска пуста</div>
