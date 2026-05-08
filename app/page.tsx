@@ -8503,6 +8503,8 @@ function ToolsPage(){
 }
 
 /* ============ BOARD (MIRO-style v2) ============ */
+const BOARD_STICKY_PALETTE=["#FEF9A6","#FFE568","#FDBA74","#FB8B8F","#F5B7E6","#ED78D1","#A7C7F7","#9B8CF5","#89D9F0","#76A7EA","#6EDBD2","#54D37D","#C8EB8D","#A8E64F","#F8FAFC","#1F2937"];
+const BOARD_DRAW_COLORS=["#EF4444","#2563EB","#111827","#22C55E","#06B6D4","#FACC15","#7C3AED"];
 const BOARD_PALETTE=["#FEF08A","#BBF7D0","#BFDBFE","#FED7AA","#F9A8D4","#E9D5FF","#FECACA","#A7F3D0","#ffffff","#F1F5F9","#1E293B","#7C3AED","#2563EB","#DC2626","#16A34A","#D97706"];
 const BOARD_FONTS=[
   {id:"Montserrat",label:"Montserrat"},
@@ -8515,7 +8517,7 @@ const MAX_BOARDS=20;
 const MAX_BOARD_ITEMS=420;
 const MAX_DRAW_PATH_CHARS=9000;
 
-type BItemType="sticky"|"text"|"image"|"link"|"shape"|"draw"|"external_card";
+type BItemType="sticky"|"text"|"image"|"link"|"shape"|"draw"|"external_card"|"doc"|"table";
 type LineStyle="solid"|"dashed"|"dotted";
 type ArrowTip="none"|"arrow"|"double";
 type DrawMode="pen"|"pencil"|"pointer";
@@ -8525,7 +8527,7 @@ interface BItem{
   x:number; y:number; w:number; h:number;
   text?:string; color?:string;
   fontSize?:number; fontBold?:boolean; fontItalic?:boolean; fontFamily?:string;
-  shapeKind?:"rect"|"circle"|"diamond"|"triangle"|"parallelogram"|"square";
+  shapeKind?:"rect"|"circle"|"diamond"|"triangle"|"parallelogram"|"square"|"cloud"|"pentagon";
   shapeText?:string; // text inside shape
   imageUrl?:string; imageW?:number; imageH?:number;
   linkUrl?:string; linkTitle?:string; linkFavicon?:string;
@@ -8664,10 +8666,14 @@ function BoardPage({userId}:{userId:string}){
   const[loadingCanvas,setLoadingCanvas]=useState(false);
   const[saved,setSaved]=useState(true);
   const saveTimer=useRef<any>(null);
+  const historyPast=useRef<{items:BItem[];lines:BLine[]}[]>([]);
+  const historyFuture=useRef<{items:BItem[];lines:BLine[]}[]>([]);
+  const historySkip=useRef(false);
 
   // Tool state
   const[tool,setTool]=useState<"select"|"pan"|"sticky"|"text"|"image"|"link"|"shape"|"line"|"draw">("select");
-  const[shapeKind,setShapeKind]=useState<"rect"|"circle"|"diamond"|"triangle"|"parallelogram"|"square">("rect");
+  const[toolPanel,setToolPanel]=useState<null|"create"|"sticky"|"shape"|"draw">(null);
+  const[shapeKind,setShapeKind]=useState<"rect"|"circle"|"diamond"|"triangle"|"parallelogram"|"square"|"cloud"|"pentagon">("rect");
   const[drawColor,setDrawColor]=useState("#2563EB");
   const[drawThickness,setDrawThickness]=useState(3);
   const[drawMode,setDrawMode]=useState<DrawMode>("pen");
@@ -8827,18 +8833,51 @@ function BoardPage({userId}:{userId:string}){
     },900);
   };
 
+  const pushBoardHistory=()=>{
+    if(historySkip.current)return;
+    historyPast.current=[{items:normalizeBoardItems(itemsRef.current as any[]),lines:normalizeBoardLines(linesRef.current as any[],new Set(normalizeBoardItems(itemsRef.current as any[]).map(i=>i.id)))},...historyPast.current.slice(0,2)];
+    historyFuture.current=[];
+  };
+
+  const restoreBoardSnapshot=(snap:{items:BItem[];lines:BLine[]})=>{
+    historySkip.current=true;
+    const cleanItems=normalizeBoardItems(snap.items as any[]);
+    const validIds=new Set(cleanItems.map(i=>i.id));
+    const cleanLines=normalizeBoardLines(snap.lines as any[],validIds);
+    itemsRef.current=cleanItems;linesRef.current=cleanLines;
+    setItems(cleanItems);setLines(cleanLines);triggerSave(cleanItems,cleanLines);
+    window.setTimeout(()=>{historySkip.current=false;},0);
+  };
+
+  const undoBoard=()=>{
+    const prev=historyPast.current.shift();
+    if(!prev)return;
+    historyFuture.current=[{items:normalizeBoardItems(itemsRef.current as any[]),lines:normalizeBoardLines(linesRef.current as any[],new Set(itemsRef.current.map(i=>i.id)))},...historyFuture.current.slice(0,2)];
+    restoreBoardSnapshot(prev);
+  };
+
+  const redoBoard=()=>{
+    const next=historyFuture.current.shift();
+    if(!next)return;
+    historyPast.current=[{items:normalizeBoardItems(itemsRef.current as any[]),lines:normalizeBoardLines(linesRef.current as any[],new Set(itemsRef.current.map(i=>i.id)))},...historyPast.current.slice(0,2)];
+    restoreBoardSnapshot(next);
+  };
+
   const updItems=(next:BItem[])=>{
+    pushBoardHistory();
     const clean=normalizeBoardItems(next as any[]);
     const validIds=new Set(clean.map(i=>i.id));
     const cleanLines=normalizeBoardLines(linesRef.current as any[],validIds);
     itemsRef.current=clean;linesRef.current=cleanLines;setItems(clean);setLines(cleanLines);triggerSave(clean,cleanLines);
   };
   const updLines=(next:BLine[])=>{
+    pushBoardHistory();
     const validIds=new Set(itemsRef.current.map(i=>i.id));
     const clean=normalizeBoardLines(next as any[],validIds);
     linesRef.current=clean;setLines(clean);triggerSave(itemsRef.current,clean);
   };
   const updBoth=(ni:BItem[],nl:BLine[])=>{
+    pushBoardHistory();
     const cleanItems=normalizeBoardItems(ni as any[]);
     const validIds=new Set(cleanItems.map(i=>i.id));
     const cleanLines=normalizeBoardLines(nl as any[],validIds);
@@ -8889,6 +8928,14 @@ function BoardPage({userId}:{userId:string}){
     setSelectedIds(new Set([it.id]));
     setTool("select");
     return it;
+  };
+
+  const addBoardDoc=(cx=360,cy=260)=>addItem({type:"doc",text:"Новый документ",color:"#EEF2FF",w:240,h:110,fontSize:16,fontBold:true},cx,cy);
+  const addBoardTable=(cx=380,cy=280)=>addItem({type:"table",text:"Новая таблица",color:"#ECFDF5",w:260,h:130,fontSize:16,fontBold:true},cx,cy);
+  const addStickyWithColor=(color:string,cx=360,cy=260)=>addItem({type:"sticky",text:"",color,w:200,h:180,fontFamily:"Montserrat"},cx,cy);
+  const addShapeFromMenu=(kind:BItem["shapeKind"],cx=400,cy=300)=>{
+    if(kind==="parallelogram"){return addItem({type:"shape",shapeKind:"parallelogram",color:"#60A5FA",w:190,h:95,text:""},cx,cy);}
+    return addItem({type:"shape",shapeKind:kind||"rect",color:"#60A5FA",w:kind==="circle"?130:kind==="triangle"?140:170,h:kind==="circle"?130:kind==="triangle"?120:100,text:""},cx,cy);
   };
 
   const getContentImage=(item:any)=>item.cover_url||item.image_url||item.thumbnail_url||item.photo_url||item.media_url||item.preview_url||"";
@@ -9019,9 +9066,11 @@ function BoardPage({userId}:{userId:string}){
     const newSel=new Set(selectedIds.has(id)?selectedIds:[id]);
     setSelectedIds(newSel);
 
+    const safeStartItems=normalizeBoardItems(items as any[]);
     const startPos:Record<string,{x:number,y:number}>={};
-    newSel.forEach(sid=>{const it=items.find(i=>i.id===sid);if(it)startPos[sid]={x:it.x,y:it.y};});
-    dragState.current={ids:[...newSel],startMx:e.clientX,startMy:e.clientY,startPos};
+    newSel.forEach(sid=>{const it=safeStartItems.find(i=>i.id===sid);if(it)startPos[sid]={x:it.x,y:it.y};});
+    const ids=[...newSel].filter(id=>!!startPos[id]);
+    dragState.current=ids.length?{ids,startMx:e.clientX,startMy:e.clientY,startPos}:null;
   };
 
   // ── Mouse down on canvas (pan) ──
@@ -9040,10 +9089,13 @@ function BoardPage({userId}:{userId:string}){
   };
 
   const onMouseMove=(e:React.MouseEvent)=>{
-    if(dragState.current){
-      const dx=(e.clientX-dragState.current.startMx)/zoom;
-      const dy=(e.clientY-dragState.current.startMy)/zoom;
-      setItems(prev=>normalizeBoardItems(prev as any[]).map(it=>dragState.current!.ids.includes(it.id)&&dragState.current!.startPos[it.id]?{...it,x:dragState.current!.startPos[it.id].x+dx,y:dragState.current!.startPos[it.id].y+dy}:it));
+    const drag=dragState.current;
+    if(drag){
+      if(!Array.isArray(drag.ids)||!drag.startPos){dragState.current=null;return;}
+      const dx=(e.clientX-drag.startMx)/zoom;
+      const dy=(e.clientY-drag.startMy)/zoom;
+      const dragIds=new Set(drag.ids.filter((id:any)=>typeof id==="string"&&id));
+      setItems(prev=>normalizeBoardItems(prev as any[]).map(it=>dragIds.has(it.id)&&drag.startPos[it.id]?{...it,x:drag.startPos[it.id].x+dx,y:drag.startPos[it.id].y+dy}:it));
     } else if(resizeState.current){
       const dx=(e.clientX-resizeState.current.startMx)/zoom;
       const dy=(e.clientY-resizeState.current.startMy)/zoom;
@@ -9078,7 +9130,9 @@ function BoardPage({userId}:{userId:string}){
   };
 
   const onMouseUp=(e:React.MouseEvent)=>{
-    if(dragState.current||resizeState.current)triggerSave(items,lines);
+    const hadDrag=!!dragState.current;
+    const hadResize=!!resizeState.current;
+    if(hadDrag||hadResize)triggerSave(normalizeBoardItems(items as any[]),lines);
     dragState.current=null;resizeState.current=null;panState.current=null;
 
     // Finish drawing
@@ -9353,6 +9407,12 @@ function BoardPage({userId}:{userId:string}){
       case"triangle":return<div style={{width:"100%",height:"100%",background:c,clipPath:"polygon(50% 0%,100% 100%,0% 100%)",position:"relative"}}>
         {txt&&<div style={{...textStyle,paddingTop:"40%"}}>{txt}</div>}
       </div>;
+      case"cloud":return<div style={{width:"100%",height:"100%",background:c,clipPath:"ellipse(45% 34% at 50% 55%)",borderRadius:999,boxShadow:"0 4px 20px "+c+"55",position:"relative"}}>
+        {txt&&<div style={textStyle}>{txt}</div>}
+      </div>;
+      case"pentagon":return<div style={{width:"100%",height:"100%",background:c,clipPath:"polygon(50% 0%,96% 35%,78% 100%,22% 100%,4% 35%)",boxShadow:"0 4px 20px "+c+"55",position:"relative"}}>
+        {txt&&<div style={textStyle}>{txt}</div>}
+      </div>;
       case"parallelogram":return<div style={{width:"100%",height:"100%",background:c,clipPath:"polygon(15% 0%,100% 0%,85% 100%,0% 100%)",boxShadow:"0 4px 20px "+c+"55",position:"relative"}}>
         {txt&&<div style={textStyle}>{txt}</div>}
       </div>;
@@ -9491,26 +9551,7 @@ function BoardPage({userId}:{userId:string}){
           ↻ Обновить
         </button>
 
-        {/* Tool buttons */}
-        <div style={{display:"flex",gap:2,background:"#F1F5F9",borderRadius:10,padding:"3px"}}>
-          {([
-            {id:"select",icon:"⬜",tip:"Выбор (V)"},
-            {id:"pan",icon:"✋",tip:"Перемещение (H)"},
-            {id:"sticky",icon:"📌",tip:"Стикер (S)"},
-            {id:"text",icon:"T",tip:"Текст (T)"},
-            {id:"image",icon:"🖼",tip:"Изображение (I)"},
-            {id:"link",icon:"🔗",tip:"Ссылка (L)"},
-            {id:"shape",icon:"⬡",tip:"Фигура (F)"},
-            {id:"line",icon:"↗",tip:"Линия (C)"},
-            {id:"draw",icon:"✏️",tip:"Рисование: ручка, карандаш, указка (M)"},
-          ] as {id:string;icon:string;tip:string}[]).map(tb=>(
-            <button key={tb.id} onClick={()=>{setTool(tb.id as any);if(tb.id==="image"){setImgClickPos({x:400,y:300});imgInputRef.current?.click();}}} title={tb.tip}
-              style={{width:34,height:34,borderRadius:8,border:"none",background:tool===tb.id?"#fff":"transparent",color:tool===tb.id?C.t1:C.t2,fontSize:tb.id==="text"||tb.id==="line"?13:17,cursor:"pointer",fontWeight:tool===tb.id?700:400,boxShadow:tool===tb.id?"0 1px 4px rgba(0,0,0,0.1)":"none",transition:"all 0.12s"}}>
-              {tb.icon}
-            </button>
-          ))}
-        </div>
-
+        {/* Main tools moved to the left Miro-style toolbar */}
         {/* Draw tool options */}
         {tool==="draw"&&(
           <div style={{display:"flex",gap:6,alignItems:"center",background:"#F1F5F9",borderRadius:10,padding:"4px 8px"}}>
@@ -9577,14 +9618,92 @@ function BoardPage({userId}:{userId:string}){
         </div>
       </div>
 
-      {/* ── CONTEXT TOOLBAR (selected item) ── */}
-      {(sel1||selLine)&&!editingId&&(
-        <div style={{position:"absolute",top:60,left:"50%",transform:"translateX(-50%)",zIndex:60,display:"flex",gap:5,background:"rgba(255,255,255,0.97)",backdropFilter:"blur(8px)",borderRadius:12,padding:"6px 10px",boxShadow:"0 4px 20px rgba(0,0,0,0.1)",border:"1px solid rgba(0,0,0,0.06)",alignItems:"center",flexWrap:"wrap"}}>
+      {/* ── LEFT MIRO-STYLE TOOLBAR ── */}
+      <div style={{position:"absolute",left:14,top:86,zIndex:130,display:"flex",flexDirection:"column",gap:10,alignItems:"center"}}>
+        <div style={{width:58,height:58,borderRadius:22,background:"linear-gradient(135deg,#4F46E5,#A855F7)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:24,boxShadow:"0 18px 36px rgba(79,70,229,0.28)",border:"1px solid rgba(255,255,255,0.7)"}}>✦</div>
+        <div style={{width:54,background:"rgba(255,255,255,0.96)",border:"1px solid rgba(15,23,42,0.08)",boxShadow:"0 14px 34px rgba(15,23,42,0.12)",borderRadius:16,padding:6,display:"flex",flexDirection:"column",gap:5,alignItems:"center"}}>
+          {[
+            {id:"select",label:"Курсор",icon:"➤",on:()=>{setTool("select");setToolPanel(null);}},
+            {id:"create",label:"Документ / таблица",icon:"▣+",on:()=>{setTool("select");setToolPanel(toolPanel==="create"?null:"create");}},
+            {id:"sticky",label:"Стикеры",icon:"◰",on:()=>{setTool("sticky");setToolPanel(toolPanel==="sticky"?null:"sticky");}},
+            {id:"text",label:"Текст",icon:"T",on:()=>{setTool("text");setToolPanel(null);}},
+            {id:"shape",label:"Фигуры и стрелки",icon:"▧↗",on:()=>{setTool("shape");setToolPanel(toolPanel==="shape"?null:"shape");}},
+            {id:"draw",label:"Рисование",icon:"✎",on:()=>{setTool("draw");setToolPanel(toolPanel==="draw"?null:"draw");}},
+            {id:"image",label:"Изображение",icon:"＋",on:()=>{setTool("image");setToolPanel(null);setImgClickPos({x:400,y:300});imgInputRef.current?.click();}},
+          ].map((b:any)=><button key={b.id} title={b.label} onClick={b.on} style={{width:42,height:42,borderRadius:10,border:"none",background:(tool===b.id||toolPanel===b.id)?"#E8EDFF":"transparent",color:(tool===b.id||toolPanel===b.id)?"#3155E7":"#1F2937",cursor:"pointer",fontSize:b.id==="text"?27:20,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .12s"}}>{b.icon}</button>)}
+          <div style={{width:34,height:1,background:"#E5E7EB",margin:"4px 0"}}/>
+          <button title="Добавить внешнюю карточку" onClick={()=>setExternalPanel(true)} style={{width:42,height:42,borderRadius:10,border:"none",background:"#111827",color:"#fff",cursor:"pointer",fontSize:22,fontWeight:900}}>+</button>
+        </div>
+        <div style={{width:54,background:"rgba(255,255,255,0.96)",border:"1px solid rgba(15,23,42,0.08)",boxShadow:"0 14px 34px rgba(15,23,42,0.12)",borderRadius:16,padding:6,display:"flex",flexDirection:"column",gap:5,alignItems:"center"}}>
+          <button title="Назад на 1 шаг" onClick={undoBoard} style={{width:42,height:42,borderRadius:10,border:"none",background:"transparent",cursor:"pointer",fontSize:24,color:historyPast.current.length?"#111827":"#A3AAB8"}}>↶</button>
+          <button title="Вперёд на 1 шаг" onClick={redoBoard} style={{width:42,height:42,borderRadius:10,border:"none",background:"transparent",cursor:"pointer",fontSize:24,color:historyFuture.current.length?"#111827":"#A3AAB8"}}>↷</button>
+        </div>
+      </div>
+
+      {toolPanel==="create"&&<div style={{position:"absolute",left:86,top:184,zIndex:135,width:250,background:"#fff",borderRadius:18,padding:14,boxShadow:"0 22px 55px rgba(15,23,42,.16)",border:"1px solid #E5E7EB"}}>
+        <button onClick={()=>{addBoardDoc();setToolPanel(null);}} style={{width:"100%",padding:"14px 14px",border:"none",borderRadius:13,background:"#EEF2FF",fontSize:14,fontWeight:800,color:"#3730A3",cursor:"pointer",marginBottom:10,textAlign:"left"}}>📄 Создать документ Docs</button>
+        <button onClick={()=>{addBoardTable();setToolPanel(null);}} style={{width:"100%",padding:"14px 14px",border:"none",borderRadius:13,background:"#ECFDF5",fontSize:14,fontWeight:800,color:"#047857",cursor:"pointer",textAlign:"left"}}>▦ Создать таблицу</button>
+        <div style={{fontSize:11,color:C.t2,marginTop:10,lineHeight:1.45}}>Эти элементы появляются на доске как быстрые карточки и дальше могут быть связаны с Vizzy Text / Vizzy Tables.</div>
+      </div>}
+
+      {toolPanel==="sticky"&&<div style={{position:"absolute",left:86,top:238,zIndex:135,width:216,background:"#fff",borderRadius:18,padding:14,boxShadow:"0 22px 55px rgba(15,23,42,.16)",border:"1px solid #E5E7EB"}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:12}}>
+          {BOARD_STICKY_PALETTE.map(c=><button key={c} draggable onDragStart={e=>e.dataTransfer.setData("vizzy/sticky-color",c)} onClick={()=>addStickyWithColor(c)} title="Клик — добавить, перетащи — разместить" style={{height:72,borderRadius:2,background:c,border:"1px solid rgba(15,23,42,.18)",boxShadow:"0 7px 18px rgba(15,23,42,.12)",cursor:"grab"}}/>)}
+        </div>
+        <button onClick={()=>addStickyWithColor(BOARD_STICKY_PALETTE[0])} style={{marginTop:12,width:"100%",height:42,border:"none",borderRadius:10,background:"#E5E7EB",fontSize:14,fontWeight:800,cursor:"pointer"}}>✦ Generate</button>
+        <button onClick={()=>addStickyWithColor(BOARD_STICKY_PALETTE[1])} style={{marginTop:8,width:"100%",height:42,border:"none",borderRadius:10,background:"#E5E7EB",fontSize:14,fontWeight:800,cursor:"pointer"}}>▱ Stack</button>
+      </div>}
+
+      {toolPanel==="shape"&&<div style={{position:"absolute",left:86,top:288,zIndex:135,width:284,background:"#fff",borderRadius:18,padding:12,boxShadow:"0 22px 55px rgba(15,23,42,.16)",border:"1px solid #E5E7EB"}}>
+        {[
+          {label:"Line",icon:"╱",act:()=>{setTool("line");setShapeKind("rect");setToolPanel(null);}},
+          {label:"Arrow",icon:"↗",act:()=>{setTool("line");setShapeKind("rect");setToolPanel(null);}},
+          {label:"Rectangle",icon:"□",act:()=>{setTool("shape");setShapeKind("rect");setToolPanel(null);}},
+          {label:"Oval",icon:"○",act:()=>{setTool("shape");setShapeKind("circle");setToolPanel(null);}},
+          {label:"Rhombus",icon:"◇",act:()=>{setTool("shape");setShapeKind("diamond");setToolPanel(null);}},
+          {label:"Triangle",icon:"△",act:()=>{setTool("shape");setShapeKind("triangle");setToolPanel(null);}},
+          {label:"Cloud",icon:"☁",act:()=>{setTool("shape");setShapeKind("cloud");setToolPanel(null);}},
+          {label:"Pentagon",icon:"⬟",act:()=>{setTool("shape");setShapeKind("pentagon");setToolPanel(null);}},
+        ].map((s:any)=><button key={s.label} onClick={s.act} style={{width:"100%",height:42,border:"none",borderRadius:10,background:(tool==="shape"&&s.label.toLowerCase().includes(shapeKind||""))?"#E8EDFF":"transparent",display:"flex",alignItems:"center",gap:14,padding:"0 12px",fontSize:15,fontWeight:650,color:"#1F2937",cursor:"pointer",textAlign:"left"}}><span style={{width:24,fontSize:21}}>{s.icon}</span>{s.label}</button>)}
+      </div>}
+
+      {toolPanel==="draw"&&<div style={{position:"absolute",left:86,top:344,zIndex:135,width:78,background:"#fff",borderRadius:18,padding:10,boxShadow:"0 22px 55px rgba(15,23,42,.16)",border:"1px solid #E5E7EB",display:"flex",flexDirection:"column",gap:9,alignItems:"center"}}>
+        {([{id:"pencil",icon:"✐",label:"Карандаш"},{id:"pen",icon:"✎",label:"Ручка"},{id:"pointer",icon:"☄",label:"Указка"}] as {id:DrawMode;icon:string;label:string}[]).map(m=><button key={m.id} title={m.label} onClick={()=>{setTool("draw");setDrawMode(m.id);}} style={{width:46,height:46,borderRadius:12,border:"none",background:drawMode===m.id?"#E8EDFF":"transparent",color:drawMode===m.id?"#3155E7":"#1F2937",fontSize:24,cursor:"pointer"}}>{m.icon}</button>)}
+        <div style={{width:38,height:1,background:"#E5E7EB",margin:"2px 0"}}/>
+        {BOARD_DRAW_COLORS.map(c=><button key={c} onClick={()=>setDrawColor(c)} style={{width:36,height:36,borderRadius:"50%",background:c,border:drawColor===c?"3px solid #3155E7":"2px solid #E5E7EB",boxShadow:"inset 0 0 0 3px #fff",cursor:"pointer"}}/>)}
+      </div>}
+
+      {/* ── FLOATING CONTEXT TOOLBAR — stays visible while editing text ── */}
+      {(sel1||selLine)&&(
+        <div style={{
+          position:"absolute",
+          top:sel1?Math.max(56,pan.y+(sel1.y*zoom)-62):60,
+          left:sel1?pan.x+((sel1.x+sel1.w/2)*zoom):"50%",
+          transform:"translateX(-50%)",
+          zIndex:120,
+          display:"flex",
+          gap:6,
+          background:"rgba(255,255,255,0.98)",
+          backdropFilter:"blur(14px)",
+          WebkitBackdropFilter:"blur(14px)",
+          borderRadius:14,
+          padding:"7px 9px",
+          boxShadow:"0 12px 36px rgba(15,23,42,0.14), 0 2px 8px rgba(15,23,42,0.08)",
+          border:"1px solid rgba(15,23,42,0.08)",
+          alignItems:"center",
+          flexWrap:"nowrap",
+          maxWidth:"calc(100vw - 360px)",
+          overflowX:"auto",
+          overflowY:"visible",
+          scrollbarWidth:"none",
+        }}>
+
+          {sel1&&["sticky","text","shape"].includes(sel1.type)&&<div style={{width:34,height:34,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,fontWeight:700,color:"#0F172A",background:"#F8FAFC",border:"1px solid #E2E8F0",flexShrink:0}}>T</div>}
 
           {/* Color */}
-          <div style={{position:"relative"}}>
+          <div style={{position:"relative",flexShrink:0}}>
             <button onClick={()=>setColorTarget(colorTarget?null:sel1?"item":"line")}
-              style={{width:26,height:26,borderRadius:8,background:sel1?sel1.color||"#FEF08A":selLine?.color||"#64748B",border:"2px solid rgba(0,0,0,0.15)",cursor:"pointer"}}/>
+              style={{width:34,height:34,borderRadius:10,background:sel1?sel1.color||"#FEF08A":selLine?.color||"#64748B",border:"2px solid rgba(0,0,0,0.12)",cursor:"pointer",boxShadow:"inset 0 0 0 1px rgba(255,255,255,0.45)",flexShrink:0}}/>
             {colorTarget&&(
               <div style={{position:"absolute",top:"calc(100% + 6px)",left:0,background:"#fff",borderRadius:12,padding:10,boxShadow:"0 8px 24px rgba(0,0,0,0.14)",width:172,zIndex:200,border:"1px solid #E2E8F0"}}>
                 <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:8}}>
@@ -9616,18 +9735,18 @@ function BoardPage({userId}:{userId:string}){
           {/* Item-specific controls */}
           {sel1&&["sticky","text","shape"].includes(sel1.type)&&<>
             <select value={sel1.fontFamily||"Montserrat"} onChange={e=>updItems(items.map(it=>it.id===sel1.id?{...it,fontFamily:e.target.value}:it))}
-              style={{height:26,border:"1px solid #E2E8F0",borderRadius:7,background:"#fff",fontSize:11,fontWeight:600,color:C.t1,outline:"none",maxWidth:118}}>
+              style={{height:34,border:"1px solid #E2E8F0",borderRadius:10,background:"#fff",fontSize:13,fontWeight:500,color:C.t1,outline:"none",minWidth:132,maxWidth:160,padding:"0 8px",flexShrink:0}}>
               {BOARD_FONTS.map(f=><option key={f.id} value={f.id}>{f.label}</option>)}
             </select>
             <button onClick={()=>updItems(items.map(it=>it.id===sel1.id?{...it,fontSize:Math.max(8,(it.fontSize||14)-2)}:it))}
-              style={{width:26,height:26,border:"1px solid #E2E8F0",borderRadius:7,background:"transparent",cursor:"pointer",fontSize:11,fontWeight:700}}>A−</button>
-            <span style={{fontSize:11,color:C.t2,minWidth:18,textAlign:"center"}}>{sel1.fontSize||14}</span>
+              style={{width:32,height:34,border:"1px solid #E2E8F0",borderRadius:10,background:"#fff",cursor:"pointer",fontSize:12,fontWeight:700,flexShrink:0}}>A−</button>
+            <span style={{height:34,minWidth:36,padding:"0 8px",border:"1px solid #E2E8F0",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,color:C.t1,fontWeight:600,background:"#fff",flexShrink:0}}>{sel1.fontSize||14}</span>
             <button onClick={()=>updItems(items.map(it=>it.id===sel1.id?{...it,fontSize:Math.min(72,(it.fontSize||14)+2)}:it))}
-              style={{width:26,height:26,border:"1px solid #E2E8F0",borderRadius:7,background:"transparent",cursor:"pointer",fontSize:11,fontWeight:700}}>A+</button>
+              style={{width:32,height:34,border:"1px solid #E2E8F0",borderRadius:10,background:"#fff",cursor:"pointer",fontSize:12,fontWeight:700,flexShrink:0}}>A+</button>
             <button onClick={()=>updItems(items.map(it=>it.id===sel1.id?{...it,fontBold:!it.fontBold}:it))}
-              style={{width:26,height:26,border:"1px solid #E2E8F0",borderRadius:7,background:sel1.fontBold?"#EFF6FF":"transparent",cursor:"pointer",fontSize:12,fontWeight:800,color:sel1.fontBold?"#2563EB":C.t1}}>B</button>
+              style={{width:34,height:34,border:"1px solid #E2E8F0",borderRadius:10,background:sel1.fontBold?"#EFF6FF":"#fff",cursor:"pointer",fontSize:16,fontWeight:900,color:sel1.fontBold?"#2563EB":C.t1,flexShrink:0}}>B</button>
             <button onClick={()=>updItems(items.map(it=>it.id===sel1.id?{...it,fontItalic:!it.fontItalic}:it))}
-              style={{width:26,height:26,border:"1px solid #E2E8F0",borderRadius:7,background:sel1.fontItalic?"#EFF6FF":"transparent",cursor:"pointer",fontSize:12,fontStyle:"italic",color:sel1.fontItalic?"#2563EB":C.t1}}>I</button>
+              style={{width:34,height:34,border:"1px solid #E2E8F0",borderRadius:10,background:sel1.fontItalic?"#EFF6FF":"#fff",cursor:"pointer",fontSize:16,fontStyle:"italic",fontWeight:700,color:sel1.fontItalic?"#2563EB":C.t1,flexShrink:0}}>I</button>
           </>}
 
           {/* Line controls */}
@@ -9662,8 +9781,8 @@ function BoardPage({userId}:{userId:string}){
 
           {/* Edit text */}
           {sel1&&!["image","link","draw"].includes(sel1.type)&&(
-            <button onClick={()=>{setEditingId(sel1.id);setEditText(sel1.text||"");}}
-              style={{padding:"4px 10px",border:"1px solid #E2E8F0",borderRadius:7,background:"transparent",cursor:"pointer",fontSize:11,color:C.t1}}>✏️ Текст</button>
+            <button onClick={()=>{if(editingId===sel1.id){setEditingId(null);return;}setEditingId(sel1.id);setEditText(sel1.type==="shape"?(sel1.shapeText||sel1.text||""):(sel1.text||""));}}
+              style={{height:34,padding:"0 12px",border:"1px solid #E2E8F0",borderRadius:10,background:editingId===sel1.id?"#EFF6FF":"#fff",cursor:"pointer",fontSize:12,fontWeight:700,color:editingId===sel1.id?"#2563EB":C.t1,whiteSpace:"nowrap",flexShrink:0}}>{editingId===sel1.id?"✓ Готово":"✏️ Текст"}</button>
           )}
 
           {/* Duplicate */}
@@ -9743,7 +9862,7 @@ function BoardPage({userId}:{userId:string}){
                 onDoubleClick={e=>{e.stopPropagation();if(it.type!=="image"){setEditingId(it.id);setEditText(it.type==="shape"?(it.shapeText||it.text||""):(it.text||""));setSelectedIds(new Set([it.id]));}}}
                 style={{
                   position:"absolute",left:it.x,top:it.y,width:it.w,height:it.h,
-                  cursor:tool==="line"?"crosshair":dragState.current?.ids.includes(it.id)?"grabbing":"grab",
+                  cursor:tool==="line"?"crosshair":(dragState.current&&Array.isArray(dragState.current.ids)&&dragState.current.ids.includes(it.id))?"grabbing":"grab",
                   zIndex:(it.zIndex||0)+5,
                   outline:isSel?"2px solid #2563EB":isLineSrc?"2px solid #F59E0B":"none",
                   outlineOffset:isSel||isLineSrc?3:0,
@@ -9775,6 +9894,17 @@ function BoardPage({userId}:{userId:string}){
                           style={{flex:1,border:"none",background:"transparent",resize:"none",outline:"none",fontFamily:it.fontFamily||"Montserrat",fontSize:it.fontSize||16,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:it.color||"#1E293B",lineHeight:1.4,width:"100%",minHeight:"100%"}}/>
                       :<div style={{fontFamily:it.fontFamily||"Montserrat",fontSize:it.fontSize||16,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:it.color||"#1E293B",lineHeight:1.4,wordBreak:"break-word",whiteSpace:"pre-wrap",width:"100%"}}>{it.text||"Текст"}</div>
                     }
+                  </div>
+                )}
+
+                {/* ── DOCUMENT / TABLE QUICK CARDS ── */}
+                {(it.type==="doc"||it.type==="table")&&(
+                  <div style={{width:"100%",height:"100%",borderRadius:16,background:it.type==="doc"?"linear-gradient(135deg,#EEF2FF,#FFFFFF)":"linear-gradient(135deg,#ECFDF5,#FFFFFF)",border:"1px solid "+(it.type==="doc"?"#C7D2FE":"#A7F3D0"),boxShadow:"0 10px 26px rgba(15,23,42,.10)",padding:16,display:"flex",alignItems:"center",gap:12,boxSizing:"border-box" as const}}>
+                    <div style={{width:44,height:44,borderRadius:14,background:it.type==="doc"?"#4F46E5":"#10B981",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:23,flexShrink:0}}>{it.type==="doc"?"📄":"▦"}</div>
+                    <div style={{minWidth:0}}>
+                      <div style={{fontSize:15,fontWeight:900,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.text|| (it.type==="doc"?"Документ":"Таблица")}</div>
+                      <div style={{fontSize:11,color:C.t2,marginTop:4}}>{it.type==="doc"?"Vizzy Text document":"Vizzy Tables sheet"}</div>
+                    </div>
                   </div>
                 )}
 
