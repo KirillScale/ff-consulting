@@ -4469,7 +4469,7 @@ function ContentPage({userId}:{userId:string}){
   const[show,setShow]=useState(false);
   const[editId,setEditId]=useState<string|null>(null);
   const[coverUploading,setCoverUploading]=useState(false);
-  const emptyF=()=>({platform:"instagram",type:"Пост",topic:"",status:"idea",date:today(),link:"",scenario:"",cover_url:"",content_url:"",deadline_prep:"",deadline_dev:"",deadline_pub:"",publish_date:""});
+  const emptyF=()=>({platform:"instagram",type:"Пост",topic:"",status:"idea",date:"",link:"",scenario:"",cover_url:"",content_url:"",publish_date:""});
   const[f,sF]=useState<any>(emptyF());
   const[calMonth,setCalMonth]=useState(()=>{const d=new Date();return{y:d.getFullYear(),m:d.getMonth()};});
 
@@ -4526,13 +4526,29 @@ function ContentPage({userId}:{userId:string}){
 
   const sub=async()=>{
     if(!f.topic.trim())return;
-    if(editId){await update(editId,f);setEditId(null);}
-    else{await add(f);}
+    const payload={
+      platform:f.platform||"instagram",
+      type:f.type||"Пост",
+      topic:f.topic.trim(),
+      status:f.status||"idea",
+      date:f.publish_date||"",
+      publish_date:f.publish_date||"",
+      link:f.content_url||"",
+      content_url:f.content_url||"",
+      scenario:f.scenario||"",
+      cover_url:f.cover_url||"",
+      deadline_prep:null,
+      deadline_dev:null,
+      deadline_pub:null,
+    };
+    if(editId){await update(editId,payload);setEditId(null);}
+    else{await add(payload);}
     sF(emptyF());setShow(false);
   };
 
   const startEdit=(item:any)=>{
-    sF({platform:item.platform||"instagram",type:item.type||"Пост",topic:item.topic||"",status:item.status||"idea",date:item.date||today(),link:item.link||"",scenario:item.scenario||"",cover_url:item.cover_url||"",content_url:item.content_url||"",deadline_prep:item.deadline_prep||"",deadline_dev:item.deadline_dev||"",deadline_pub:item.deadline_pub||"",publish_date:item.publish_date||""});
+    const publishDate=item.publish_date||item.date||"";
+    sF({platform:item.platform||"instagram",type:item.type||"Пост",topic:item.topic||"",status:item.status||"idea",date:publishDate,link:item.content_url||item.link||"",scenario:item.scenario||"",cover_url:item.cover_url||"",content_url:item.content_url||item.link||"",publish_date:publishDate});
     setEditId(item.id);setShow(true);
   };
 
@@ -4601,13 +4617,6 @@ function ContentPage({userId}:{userId:string}){
     const[y,m]=key.split("-");
     return`${MS[parseInt(m)-1]} ${y}`;
   };
-
-  const DEADLINES=[
-    {key:"deadline_prep",label:"Дедлайн подготовки",color:"#8B5CF6"},
-    {key:"deadline_dev",label:"Дедлайн разработки",color:C.y},
-    {key:"deadline_pub",label:"Дедлайн публикации",color:C.r},
-    {key:"publish_date",label:"Дата публикации",color:C.g},
-  ];
 
   const[platformFilter,setPlatformFilter]=useState<string>("all");
 
@@ -4742,19 +4751,8 @@ function ContentPage({userId}:{userId:string}){
           <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Дата публикации</label><input type="date" value={f.publish_date||""} onChange={e=>sF({...f,publish_date:e.target.value,date:e.target.value})} style={iS()}/></div>
           <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Ссылка на контент</label><input value={f.content_url} onChange={e=>sF({...f,content_url:e.target.value})} placeholder="https://..." style={iS()}/></div>
 
-          {/* Deadlines — optional */}
-          <div style={{gridColumn:"span 3"}}>
-            <label style={{fontSize:12,color:C.t2,display:"block",marginBottom:8,fontWeight:600}}>Дедлайны <span style={{fontWeight:400,opacity:0.6}}>(необязательно)</span></label>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
-              {DEADLINES.filter(d=>d.key!=="publish_date").map(d=><div key={d.key}>
-                <label style={{fontSize:11,display:"block",marginBottom:4,color:d.color}}>{d.label}</label>
-                <input type="date" value={f[d.key]||""} onChange={e=>sF({...f,[d.key]:e.target.value})} style={{...iS(),fontSize:12,borderColor:f[d.key]?d.color:C.bd}}/>
-              </div>)}
-            </div>
-          </div>
-
           {/* Scenario / content text — full width, large */}
-          <div style={{gridColumn:"span 3"}}>
+          <div style={{gridColumn:isMobile?"1 / -1":"span 3"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
               <label style={{fontSize:12,color:C.t2,fontWeight:600}}>Сценарий / Текст контента</label>
               <span style={{fontSize:10,color:C.t2,opacity:0.6}}>{f.scenario?.length||0} символов</span>
@@ -7330,6 +7328,9 @@ function VisiTextPage({userId}:{userId:string}){
   const editorRef=useRef<HTMLDivElement|null>(null);
   const fileRef=useRef<HTMLInputElement|null>(null);
   const saveTimer=useRef<any>(null);
+  const historyPast=useRef<{items:BItem[];lines:BLine[]}[]>([]);
+  const historyFuture=useRef<{items:BItem[];lines:BLine[]}[]>([]);
+  const historySkip=useRef(false);
   const seededRef=useRef(false);
   const vt=useTable("visitext_docs",userId);
   const docs=useMemo(()=>vt.data.map(parseVisiTextDoc),[vt.data]);
@@ -8517,7 +8518,7 @@ const MAX_BOARDS=20;
 const MAX_BOARD_ITEMS=420;
 const MAX_DRAW_PATH_CHARS=9000;
 
-type BItemType="sticky"|"text"|"image"|"link"|"shape"|"draw"|"external_card"|"doc"|"table";
+type BItemType="sticky"|"text"|"image"|"link"|"shape"|"draw"|"external_card"|"doc"|"table"|"icon";
 type LineStyle="solid"|"dashed"|"dotted";
 type ArrowTip="none"|"arrow"|"double";
 type DrawMode="pen"|"pencil"|"pointer";
@@ -8541,6 +8542,11 @@ interface BItem{
   externalMeta?:string;
   externalStatus?:string;
   externalPlatform?:string;
+  iconKey?:string;
+  iconLabel?:string;
+  iconGlyph?:string;
+  iconCategory?:"emoji"|"social"|"business";
+  iconStyle?:"emoji"|"outline"|"glyph";
 }
 
 interface BLine{
@@ -8645,62 +8651,46 @@ function externalCardPayload(it:BItem){
   });
 }
 
-
-function makeEmbeddedDocPayload(title="Новый документ"){
-  return JSON.stringify({
-    kind:"doc",
-    title,
-    body:"Начни писать документ прямо здесь...",
-    updatedAt:new Date().toISOString(),
-  });
-}
-
-function makeEmbeddedTablePayload(title="Новая таблица"){
-  return JSON.stringify({
-    kind:"table",
-    title,
-    cells:Array.from({length:8},()=>Array.from({length:5},()=>"")),
-    updatedAt:new Date().toISOString(),
-  });
-}
-
-function parseEmbeddedPayload(it:Partial<BItem>|null|undefined){
-  const type=it?.type;
-  const fallback=type==="table"
-    ?{kind:"table",title:it?.text&&!(it.text||"").trim().startsWith("{")?it.text:"Новая таблица",cells:Array.from({length:8},()=>Array.from({length:5},()=>"")),updatedAt:""}
-    :{kind:"doc",title:it?.text&&!(it.text||"").trim().startsWith("{")?it.text:"Новый документ",body:"Начни писать документ прямо здесь...",updatedAt:""};
+function parseBoardIconPayload(raw?:string){
   try{
-    const raw=String(it?.text||"");
-    const parsed=raw.trim().startsWith("{")?JSON.parse(raw):fallback;
-    if(type==="table"){
-      const cells=Array.isArray(parsed.cells)?parsed.cells:Array.from({length:8},()=>Array.from({length:5},()=>""));
-      return {...fallback,...parsed,kind:"table",cells};
-    }
-    return {...fallback,...parsed,kind:"doc",body:String(parsed.body??fallback.body)};
-  }catch{return fallback;}
+    const p=JSON.parse(raw||"{}");
+    return p&&typeof p==="object"?p:{};
+  }catch{return {};}
 }
 
-function serializeEmbeddedPayload(payload:any){
+function boardIconPayload(it:BItem){
   return JSON.stringify({
-    ...payload,
-    title:String(payload?.title||"Без названия"),
-    updatedAt:new Date().toISOString(),
+    key:it.iconKey||"",
+    label:it.iconLabel||"",
+    glyph:it.iconGlyph||"",
+    category:it.iconCategory||"emoji",
+    style:it.iconStyle||"emoji",
   });
 }
 
-function embeddedTitle(it:Partial<BItem>|null|undefined){
-  return parseEmbeddedPayload(it).title||((it?.type)==="table"?"Новая таблица":"Новый документ");
-}
+const BOARD_EMOJI_ICONS=[
+  ["smile","Улыбка","😀","улыбка smile happy"],["joy","Радость","😃","радость joy happy"],["grin","Сильная радость","😄","радость grin happy"],["beaming","Довольный","😁","довольный beaming grin"],["laugh","Смех","😆","смех laugh"],["tears","Смех до слёз","😂","смех слез tears laugh"],["rofl","Ржёт","🤣","ржёт rofl laugh"],["blush","Милая улыбка","😊","милая улыбка blush"],["angel","Ангел","😇","ангел angel"],["slight","Спокойная улыбка","🙂","спокойная улыбка slight"],["upside","Ирония","🙃","ирония upside down"],["wink","Подмигивание","😉","подмигивание wink"],["relieved","Спокойствие","😌","спокойствие calm relieved"],["heart-eyes","Влюблённость","😍","влюблённость love heart eyes"],["loving","Любовь","🥰","любовь loving hearts"],["kiss","Поцелуй","😘","поцелуй kiss"],["cool","Крутой","😎","крутой cool"],["star-struck","Восторг","🤩","восторг star struck"],["party","Праздник","🥳","праздник party"],["smirk","Самодовольный","😏","самодовольный smirk"],["neutral","Нейтральный","😐","нейтральный neutral"],["expressionless","Без эмоций","😑","без эмоций expressionless"],["silent","Молчание","😶","молчание silence"],["thinking","Думает","🤔","думает thinking"],["salute","Салют","🫡","салют salute"],["raised-brow","Сомнение","🤨","сомнение raised brow"],["grimace","Неловкость","😬","неловкость grimace"],["roll-eyes","Закатил глаза","🙄","закатил глаза roll eyes"],["surprised","Удивление","😮","удивление surprised"],["hushed","Шок","😯","шок hushed"],["astonished","Сильное удивление","😲","сильное удивление astonished"],["flushed","Смущение","😳","смущение flushed"],["pleading","Просьба","🥺","просьба pleading"],["cry","Грусть","😢","грусть cry sad"],["sob","Плач","😭","плач sob cry"],["triumph","Злость","😤","злость angry"],["angry","Гнев","😡","гнев angry"],["mindblown","Взрыв мозга","🤯","взрыв мозга mind blown"],["sleep","Сон","😴","сон sleep"],["sick","Болезнь","🤒","болезнь sick"],["thumbsup","Лайк","👍","лайк like thumbs up"],["thumbsdown","Дизлайк","👎","дизлайк thumbs down"],["clap","Аплодисменты","👏","аплодисменты clap"],["hooray","Ура","🙌","ура hooray"],["handshake","Рукопожатие","🤝","рукопожатие handshake"],["muscle","Сила","💪","сила muscle"],["peace","Мир","✌️","мир peace"],["crossed","Надежда","🤞","надежда crossed fingers"],["ok","Окей","👌","окей ok"],["pinched","Акцент","🤌","акцент pinched fingers"],["call","Позвони","🤙","позвони call me"],["wave","Привет","👋","привет wave"],["point-right","Указание вправо","👉","вправо point right"],["point-left","Указание влево","👈","влево point left"],["up","Важно","☝️","важно up"],["down","Вниз","👇","вниз down"],["pray","Спасибо / просьба","🙏","спасибо просьба pray"],["heart-hands","Сердце руками","🫶","сердце руками heart hands"],["stop","Стоп","🖐️","стоп hand"],["write","Пишу","✍️","пишу write"],["heart-red","Сердце","❤️","сердце red heart"],["heart-orange","Оранжевое сердце","🧡","оранжевое сердце orange heart"],["heart-yellow","Жёлтое сердце","💛","желтое сердце yellow heart"],["heart-green","Зелёное сердце","💚","зеленое сердце green heart"],["heart-blue","Синее сердце","💙","синее сердце blue heart"],["heart-purple","Фиолетовое сердце","💜","фиолетовое сердце purple heart"],["heart-black","Чёрное сердце","🖤","черное сердце black heart"],["heart-white","Белое сердце","🤍","белое сердце white heart"],["heart-broken","Разбитое сердце","💔","разбитое сердце broken heart"],["fire","Огонь","🔥","огонь fire hot"],["sparkles","Искра","✨","искра sparkles"],["star","Звезда","⭐","звезда star"],["dizzy","Сияние","💫","сияние dizzy"],["zap","Молния","⚡","молния lightning"],["boom","Взрыв","💥","взрыв boom"],["hundred","Сто процентов","💯","сто процентов hundred"],["check","Готово","✅","готово check"],["cross","Ошибка","❌","ошибка cross"],["bang","Важно","❗","важно exclamation"],["question","Вопрос","❓","вопрос question"],["idea","Идея","💡","идея lightbulb"],["brain","Мозг","🧠","мозг brain"],["eyes","Внимание","👀","внимание eyes"],["target","Цель","🎯","цель target"],["rocket","Рост / запуск","🚀","рост запуск rocket"],["trophy","Победа","🏆","победа trophy"],["gold","Первое место","🥇","первое место gold"],["pin","Закрепить","📌","закрепить pin"],["location","Метка","📍","метка location"],["note","Заметка","📝","заметка note"],["document","Документ","📄","документ file"],["chart","График","📊","график chart"],["trend-up","Рост","📈","рост chart up"],["trend-down","Падение","📉","падение chart down"],["money","Деньги","💰","деньги money"],["diamond","Премиум","💎","премиум diamond"],["tools","Инструменты","🛠️","инструменты tools"],["settings","Настройки","⚙️","настройки settings"],["puzzle","Элемент","🧩","элемент puzzle"],["image","Изображение","🖼️","изображение image picture"]
+].map(([key,label,glyph,search])=>({key:`emoji-${key}`,label,glyph,search,category:"emoji" as const,style:"emoji" as const,defaultColor:"#111827"}));
 
-function embeddedSummary(it:Partial<BItem>|null|undefined){
-  const data=parseEmbeddedPayload(it);
-  if((it?.type)==="table"){
-    const cells=Array.isArray(data.cells)?data.cells:[];
-    const filled=cells.flat().filter((v:any)=>String(v||"").trim()).length;
-    return filled?`${filled} заполненных ячеек`:"Пустая таблица";
+const BOARD_SOCIAL_ICONS=[
+  ["instagram","Instagram","IG","instagram инстаграм", "#111827"],["tiktok","TikTok","TT","tiktok тикток", "#111827"],["youtube","YouTube","YT","youtube ютуб", "#111827"],["telegram","Telegram","TG","telegram телеграм", "#111827"],["whatsapp","WhatsApp","WA","whatsapp ватсап", "#111827"],["facebook","Facebook","f","facebook фейсбук", "#111827"],["x","X / Twitter","X","x twitter твиттер", "#111827"],["linkedin","LinkedIn","in","linkedin линкедин", "#111827"],["vk","VK","VK","vk вконтакте", "#111827"],["discord","Discord","DS","discord дискорд", "#111827"],["twitch","Twitch","TW","twitch твич", "#111827"],["snapchat","Snapchat","SC","snapchat снапчат", "#111827"],["pinterest","Pinterest","P","pinterest пинтерест", "#111827"],["reddit","Reddit","R","reddit реддит", "#111827"],["threads","Threads","@","threads тредс", "#111827"],["behance","Behance","Be","behance беханс", "#111827"],["dribbble","Dribbble","Dr","dribbble дрибббл", "#111827"],["github","GitHub","GH","github гитхаб", "#111827"],["medium","Medium","M","medium медиум", "#111827"],["spotify","Spotify","SP","spotify спотифай", "#111827"]
+].map(([key,label,glyph,search,defaultColor])=>({key:`social-${key}`,label,glyph,search,category:"social" as const,style:"outline" as const,defaultColor}));
+
+const BOARD_BUSINESS_ICONS=[
+  ["document","Документ","📄","документ file"],["table","Таблица","▦","таблица table grid"],["presentation","Презентация","▣","презентация slides"],["folder","Папка","🗂","папка folder"],["file","Файл","◫","файл file"],["note","Заметка","📝","заметка note"],["checklist","Чеклист","☑","чеклист checklist"],["calendar","Календарь","🗓","календарь calendar"],["clock","Часы","◷","часы clock time"],["bookmark","Закладка","🔖","закладка bookmark"],["money","Деньги","₽","деньги money ruble"],["card","Карта оплаты","💳","карта оплаты card"],["growth","График роста","↗","рост growth chart"],["decline","График падения","↘","падение decline chart"],["funnel","Воронка продаж","⏷","воронка funnel"],["target","Цель","◎","цель target"],["cup","Кубок","🏆","кубок trophy"],["diamond","Бриллиант","◆","бриллиант diamond"],["rocket","Ракета","🚀","ракета rocket"],["magnet","Магнит","🧲","магнит magnet"],["message","Сообщение","✉","сообщение message"],["chat","Чат","💬","чат chat"],["comment","Комментарий","🗨","комментарий comment"],["notification","Уведомление","🔔","уведомление notification bell"],["mail","Почта","✉️","почта mail"],["phone","Телефон","☎","телефон phone"],["microphone","Микрофон","🎤","микрофон microphone"],["camera","Камера","📷","камера camera"],["video","Видеозвонок","🎥","видеозвонок video"],["volume","Громкость","🔊","громкость volume"],["plus","Плюс","＋","плюс plus"],["minus","Минус","－","минус minus"],["check","Галочка","✓","галочка check"],["cross","Крестик","✕","крестик cross"],["arrow-right","Стрелка вправо","→","стрелка вправо arrow right"],["arrow-up","Стрелка вверх","↑","стрелка вверх arrow up"],["link","Ссылка","🔗","ссылка link"],["lock","Замок","🔒","замок lock"],["settings","Настройки","⚙","настройки settings"],["search","Поиск","⌕","поиск search"]
+].map(([key,label,glyph,search])=>({key:`business-${key}`,label,glyph,search,category:"business" as const,style:"glyph" as const,defaultColor:"#2563EB"}));
+
+const BOARD_ICON_LIBRARY=[...BOARD_EMOJI_ICONS,...BOARD_SOCIAL_ICONS,...BOARD_BUSINESS_ICONS];
+
+function renderBoardLibraryIcon(icon:{glyph?:string;label?:string;category?:"emoji"|"social"|"business";style?:"emoji"|"outline"|"glyph";defaultColor?:string},color?:string,size=28){
+  const col=color||icon.defaultColor||"#111827";
+  if(icon.category==="emoji"||icon.style==="emoji"){
+    return <span style={{fontSize:size,lineHeight:1,display:"inline-flex",alignItems:"center",justifyContent:"center"}}>{icon.glyph||"✨"}</span>;
   }
-  const body=String(data.body||"").replace(/\s+/g," ").trim();
-  return body?body.slice(0,96):"Пустой документ";
+  if(icon.category==="social"||icon.style==="outline"){
+    return <div style={{width:size,height:size,borderRadius:Math.max(10,Math.round(size*0.28)),border:`2px solid ${col}`,display:"flex",alignItems:"center",justifyContent:"center",color:col,fontSize:Math.max(11,Math.round(size*0.32)),fontWeight:900,lineHeight:1,letterSpacing:-0.3,background:"rgba(255,255,255,0.9)",boxSizing:"border-box"}}>{icon.glyph||"IG"}</div>;
+  }
+  return <div style={{display:"inline-flex",alignItems:"center",justifyContent:"center",color:col,fontSize:size,fontWeight:900,lineHeight:1}}>{icon.glyph||"◎"}</div>;
 }
 
 function BoardPage({userId}:{userId:string}){
@@ -8730,7 +8720,7 @@ function BoardPage({userId}:{userId:string}){
 
   // Tool state
   const[tool,setTool]=useState<"select"|"pan"|"sticky"|"text"|"image"|"link"|"shape"|"line"|"draw">("select");
-  const[toolPanel,setToolPanel]=useState<null|"create"|"sticky"|"shape"|"draw">(null);
+  const[toolPanel,setToolPanel]=useState<null|"create"|"sticky"|"icons"|"shape"|"draw">(null);
   const[shapeKind,setShapeKind]=useState<"rect"|"circle"|"diamond"|"triangle"|"parallelogram"|"square"|"cloud"|"pentagon">("rect");
   const[drawColor,setDrawColor]=useState("#2563EB");
   const[drawThickness,setDrawThickness]=useState(3);
@@ -8777,6 +8767,7 @@ function BoardPage({userId}:{userId:string}){
 
   // Color picker
   const[colorTarget,setColorTarget]=useState<"item"|"line"|null>(null);
+  const[shapeColorOpen,setShapeColorOpen]=useState(false);
 
   // Link modal
   const[linkModal,setLinkModal]=useState(false);
@@ -8795,9 +8786,10 @@ function BoardPage({userId}:{userId:string}){
   const[externalFunnelId,setExternalFunnelId]=useState<string>("all");
   const[externalDropHint,setExternalDropHint]=useState(false);
 
-  // Embedded docs/tables editor inside Vizzy Map
-  const[openEmbeddedItemId,setOpenEmbeddedItemId]=useState<string|null>(null);
-  const[embeddedDraft,setEmbeddedDraft]=useState<any>(null);
+  const[iconTab,setIconTab]=useState<"emoji"|"social"|"business">("emoji");
+  const[iconSearch,setIconSearch]=useState("");
+  const[recentIconKeys,setRecentIconKeys]=useState<string[]>([]);
+  const[favoriteIconKeys,setFavoriteIconKeys]=useState<string[]>([]);
 
   // Sync live refs on every state change
   useEffect(()=>{itemsRef.current=items;},[items]);
@@ -8825,15 +8817,17 @@ function BoardPage({userId}:{userId:string}){
       ]);
       const mappedItems=normalizeBoardItems((its||[]).map((d:any):BItem=>{
         const ext=d?.type==="external_card"?parseExternalCardPayload(d.text):{};
+        const icon=d?.type==="icon"?parseBoardIconPayload(d.text):{};
         return {
           id:d?.id,type:d?.type,x:d?.x,y:d?.y,w:d?.w,h:d?.h,
-          text:d?.type==="external_card"?(ext.title||d?.link_title||"Карточка"):(d?.text||""),color:d?.color||ext.color||"",fontSize:d?.font_size||14,
+          text:d?.type==="external_card"?(ext.title||d?.link_title||"Карточка"):(d?.type==="icon"?(icon.label||""):(d?.text||"")),color:d?.color||ext.color||"",fontSize:d?.font_size||14,
           fontBold:d?.font_bold||false,fontItalic:d?.font_italic||false,fontFamily:d?.type!=="link"?(d?.link_favicon||"Montserrat"):"Montserrat",
           shapeKind:d?.shape_kind||"rect",imageUrl:d?.image_url||"",
           linkUrl:d?.link_url||"",linkTitle:d?.link_title||"",linkFavicon:d?.link_favicon||"",
           zIndex:d?.z_index||0,
           drawPath:d?.draw_path||undefined,drawColor:d?.draw_color||undefined,drawThickness:d?.draw_thickness||undefined,
           externalSource:ext.source,externalId:ext.externalId,externalType:ext.externalType,externalTitle:ext.title,externalSubtitle:ext.subtitle,externalMeta:ext.meta,externalStatus:ext.status,externalPlatform:ext.platform,
+          iconKey:icon.key,iconLabel:icon.label,iconGlyph:icon.glyph,iconCategory:icon.category,iconStyle:icon.style,
         } as BItem;
       }));
       const mappedItemIds=new Set(mappedItems.map(i=>i.id));
@@ -8864,7 +8858,7 @@ function BoardPage({userId}:{userId:string}){
         const itemRows=cleanItems.map((it,i)=>({
           id:it.id,board_id:activeBoardId,user_id:userId,type:it.type,
           x:Math.round(it.x),y:Math.round(it.y),w:Math.round(it.w),h:Math.round(it.h),
-          text:it.type==="external_card"?externalCardPayload(it):(it.text||""),color:it.color||"",font_size:it.fontSize||14,
+          text:it.type==="external_card"?externalCardPayload(it):it.type==="icon"?boardIconPayload(it):(it.text||""),color:it.color||"",font_size:it.fontSize||14,
           font_bold:it.fontBold||false,font_italic:it.fontItalic||false,
           shape_kind:it.shapeKind||null,image_url:it.imageUrl||"",
           link_url:it.linkUrl||"",link_title:it.linkTitle||"",link_favicon:it.type==="link"?(it.linkFavicon||""):(it.fontFamily||"Montserrat"),
@@ -8988,38 +8982,37 @@ function BoardPage({userId}:{userId:string}){
     const next=[...base,it];
     updItems(next);
     setSelectedIds(new Set([it.id]));
-    setTool("select");
+    setTool("select");setShapeColorOpen(false);
     return it;
   };
 
-  const openEmbeddedEditor=(it:BItem)=>{
-    if(it.type!=="doc"&&it.type!=="table")return;
-    setOpenEmbeddedItemId(it.id);
-    setEmbeddedDraft(parseEmbeddedPayload(it));
-  };
-
-  const saveEmbeddedDraft=()=>{
-    if(!openEmbeddedItemId||!embeddedDraft)return;
-    const next=normalizeBoardItems(itemsRef.current as any[]).map(it=>
-      it.id===openEmbeddedItemId?{...it,text:serializeEmbeddedPayload(embeddedDraft)}:it
-    );
-    updItems(next);
-  };
-
-  const addBoardDoc=(cx=360,cy=260)=>{
-    const it=addItem({type:"doc",text:makeEmbeddedDocPayload("Новый документ"),color:"#EEF2FF",w:280,h:145,fontSize:16,fontBold:true},cx,cy);
-    if(it)setTimeout(()=>openEmbeddedEditor(it),80);
-    return it;
-  };
-  const addBoardTable=(cx=380,cy=280)=>{
-    const it=addItem({type:"table",text:makeEmbeddedTablePayload("Новая таблица"),color:"#ECFDF5",w:300,h:165,fontSize:16,fontBold:true},cx,cy);
-    if(it)setTimeout(()=>openEmbeddedEditor(it),80);
-    return it;
-  };
+  const addBoardDoc=(cx=360,cy=260)=>addItem({type:"doc",text:"Новый документ",color:"#EEF2FF",w:240,h:110,fontSize:16,fontBold:true},cx,cy);
+  const addBoardTable=(cx=380,cy=280)=>addItem({type:"table",text:"Новая таблица",color:"#ECFDF5",w:260,h:130,fontSize:16,fontBold:true},cx,cy);
   const addStickyWithColor=(color:string,cx=360,cy=260)=>addItem({type:"sticky",text:"",color,w:200,h:180,fontFamily:"Montserrat"},cx,cy);
+  const iconByKey=useMemo(()=>Object.fromEntries(BOARD_ICON_LIBRARY.map(icon=>[icon.key,icon])),[] as any);
+  const filteredLibraryIcons=useMemo(()=>{
+    const q=iconSearch.trim().toLowerCase();
+    return BOARD_ICON_LIBRARY.filter(icon=>icon.category===iconTab).filter(icon=>!q||`${icon.label} ${icon.search} ${icon.key}`.toLowerCase().includes(q));
+  },[iconTab,iconSearch]);
+  const favoriteIcons=useMemo(()=>favoriteIconKeys.map(k=>iconByKey[k]).filter(Boolean),[favoriteIconKeys,iconByKey]);
+  const recentIcons=useMemo(()=>recentIconKeys.map(k=>iconByKey[k]).filter(Boolean),[recentIconKeys,iconByKey]);
+  const rememberRecentIcon=(key:string)=>setRecentIconKeys(prev=>[key,...prev.filter(x=>x!==key)].slice(0,12));
+  const toggleFavoriteIcon=(key:string)=>setFavoriteIconKeys(prev=>prev.includes(key)?prev.filter(x=>x!==key):[key,...prev].slice(0,24));
+  const addBoardIcon=(icon:any,cx=360,cy=260)=>{
+    rememberRecentIcon(icon.key);
+    return addItem({type:"icon",text:icon.label,color:icon.defaultColor||"#111827",w:icon.category==="emoji"?92:96,h:icon.category==="emoji"?92:110,fontSize:icon.category==="emoji"?46:18,fontBold:true,iconKey:icon.key,iconLabel:icon.label,iconGlyph:icon.glyph,iconCategory:icon.category,iconStyle:icon.style},cx,cy);
+  };
   const addShapeFromMenu=(kind:BItem["shapeKind"],cx=400,cy=300)=>{
     if(kind==="parallelogram"){return addItem({type:"shape",shapeKind:"parallelogram",color:"#60A5FA",w:190,h:95,text:""},cx,cy);}
     return addItem({type:"shape",shapeKind:kind||"rect",color:"#60A5FA",w:kind==="circle"?130:kind==="triangle"?140:170,h:kind==="circle"?130:kind==="triangle"?120:100,text:""},cx,cy);
+  };
+
+  const updateSelectedShapeColor=(nextColor:string)=>{
+    const selectedId=[...selectedIds][0];
+    if(!selectedId)return;
+    const next=itemsRef.current.map(item=>item.id===selectedId&&item.type==="shape"?{...item,color:nextColor}:item);
+    updItems(next);
+    setCustomColorInput(nextColor);
   };
 
   const getContentImage=(item:any)=>item.cover_url||item.image_url||item.thumbnail_url||item.photo_url||item.media_url||item.preview_url||"";
@@ -9325,7 +9318,7 @@ function BoardPage({userId}:{userId:string}){
 
   // ── External drag-drop onto canvas ──
   const onCanvasDragOver=(e:React.DragEvent)=>{
-    if(e.dataTransfer.types.includes("application/x-vizzy-card")||e.dataTransfer.types.includes("Files")){
+    if(e.dataTransfer.types.includes("application/x-vizzy-card")||e.dataTransfer.types.includes("application/x-vizzy-icon")||e.dataTransfer.types.includes("vizzy/sticky-color")||e.dataTransfer.types.includes("Files")){
       e.preventDefault();
       e.dataTransfer.dropEffect="copy";
       if(e.dataTransfer.types.includes("application/x-vizzy-card"))setExternalDropHint(true);
@@ -9339,11 +9332,18 @@ function BoardPage({userId}:{userId:string}){
       try{addExternalCardToBoard(JSON.parse(rawCard),e.clientX,e.clientY);}catch{}
       return;
     }
-    const files=Array.from(e.dataTransfer.files).filter(f=>f.type.startsWith("image/"));
-    if(!files.length)return;
     const rect=canvasRef.current!.getBoundingClientRect();
     const cx=(e.clientX-rect.left-pan.x)/zoom;
     const cy=(e.clientY-rect.top-pan.y)/zoom;
+    const rawIcon=e.dataTransfer.getData("application/x-vizzy-icon");
+    if(rawIcon){
+      try{addBoardIcon(JSON.parse(rawIcon),cx,cy);}catch{}
+      return;
+    }
+    const stickyColor=e.dataTransfer.getData("vizzy/sticky-color");
+    if(stickyColor){addStickyWithColor(stickyColor,cx,cy);return;}
+    const files=Array.from(e.dataTransfer.files).filter(f=>f.type.startsWith("image/"));
+    if(!files.length)return;
     for(let i=0;i<files.length;i++){
       await uploadImageFile(files[i],cx+i*20,cy+i*20);
     }
@@ -9509,27 +9509,6 @@ function BoardPage({userId}:{userId:string}){
   const safeItemsForSelection=normalizeBoardItems(items as any[]);
   const sel1=selectedIds.size===1?safeItemsForSelection.find(i=>i.id==[...selectedIds][0]):null;
   const selLine=lines.find(l=>l.id===selectedLineId);
-
-  const applyBoardColor=(nextColor:string)=>{
-    const color=(nextColor||"").trim();
-    if(!color)return;
-    if(sel1?.id){
-      const id=sel1.id;
-      const base=normalizeBoardItems(itemsRef.current as any[]);
-      updItems(base.map(it=>it.id===id?{...it,color}:it));
-      setSelectedIds(new Set([id]));
-      setSelectedLineId(null);
-    }else if(selLine?.id){
-      const id=selLine.id;
-      const validIds=new Set(itemsRef.current.map(i=>i.id));
-      const base=normalizeBoardLines(linesRef.current as any[],validIds);
-      updLines(base.map(l=>l.id===id?{...l,color}:l));
-      setSelectedLineId(id);
-      setSelectedIds(new Set());
-    }
-    setCustomColorInput(color);
-    setColorTarget(null);
-  };
 
   const cursorMap:Record<string,string>={select:"default",pan:"grab",sticky:"cell",text:"text",image:"cell",link:"cell",shape:"crosshair",line:"crosshair",draw:"crosshair"};
 
@@ -9731,6 +9710,7 @@ function BoardPage({userId}:{userId:string}){
             {id:"select",label:"Курсор",icon:"➤",on:()=>{setTool("select");setToolPanel(null);}},
             {id:"create",label:"Документ / таблица",icon:"▣+",on:()=>{setTool("select");setToolPanel(toolPanel==="create"?null:"create");}},
             {id:"sticky",label:"Стикеры",icon:"◰",on:()=>{setTool("sticky");setToolPanel(toolPanel==="sticky"?null:"sticky");}},
+            {id:"icons",label:"Иконки",icon:"◫",on:()=>{setTool("select");setToolPanel(toolPanel==="icons"?null:"icons");}},
             {id:"text",label:"Текст",icon:"T",on:()=>{setTool("text");setToolPanel(null);}},
             {id:"shape",label:"Фигуры и стрелки",icon:"▧↗",on:()=>{setTool("shape");setToolPanel(toolPanel==="shape"?null:"shape");}},
             {id:"draw",label:"Рисование",icon:"✎",on:()=>{setTool("draw");setToolPanel(toolPanel==="draw"?null:"draw");}},
@@ -9759,7 +9739,46 @@ function BoardPage({userId}:{userId:string}){
         <button onClick={()=>addStickyWithColor(BOARD_STICKY_PALETTE[1])} style={{marginTop:8,width:"100%",height:42,border:"none",borderRadius:10,background:"#E5E7EB",fontSize:14,fontWeight:800,cursor:"pointer"}}>▱ Stack</button>
       </div>}
 
-      {toolPanel==="shape"&&<div style={{position:"absolute",left:86,top:288,zIndex:135,width:284,background:"#fff",borderRadius:18,padding:12,boxShadow:"0 22px 55px rgba(15,23,42,.16)",border:"1px solid #E5E7EB"}}>
+      {toolPanel==="icons"&&<div style={{position:"absolute",left:86,top:292,zIndex:135,width:392,maxHeight:"72vh",overflow:"hidden",background:"#fff",borderRadius:20,padding:14,boxShadow:"0 22px 55px rgba(15,23,42,.16)",border:"1px solid #E5E7EB",display:"flex",flexDirection:"column",gap:12}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+          <div>
+            <div style={{fontSize:16,fontWeight:900,color:C.t1}}>Иконки</div>
+            <div style={{fontSize:11,color:C.t2,marginTop:3}}>Эмодзи, соцсети и бизнес-иконки. Клик — добавить, drag & drop — разместить.</div>
+          </div>
+          <div style={{fontSize:11,fontWeight:800,color:"#6366F1",padding:"6px 10px",borderRadius:999,background:"#EEF2FF"}}>{filteredLibraryIcons.length}</div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+          {([{id:"emoji",label:"Эмодзи"},{id:"social",label:"Соцсети"},{id:"business",label:"Бизнес"}] as const).map(tab=><button key={tab.id} onClick={()=>setIconTab(tab.id)} style={{height:38,borderRadius:12,border:"1px solid "+(iconTab===tab.id?"#C7D2FE":"#E5E7EB"),background:iconTab===tab.id?"#EEF2FF":"#fff",color:iconTab===tab.id?"#3730A3":"#475569",fontSize:13,fontWeight:800,cursor:"pointer"}}>{tab.label}</button>)}
+        </div>
+        <input value={iconSearch} onChange={e=>setIconSearch(e.target.value)} placeholder="Поиск по названию..." style={{width:"100%",height:40,border:"1px solid #E2E8F0",borderRadius:12,padding:"0 12px",fontSize:13,outline:"none"}}/>
+        <div style={{overflowY:"auto",paddingRight:4,display:"flex",flexDirection:"column",gap:12}}>
+          {favoriteIcons.filter((icon:any)=>icon.category===iconTab).length>0&&<div>
+            <div style={{fontSize:11,fontWeight:900,color:"#64748B",textTransform:"uppercase",letterSpacing:.7,marginBottom:8}}>Избранные</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(6,minmax(0,1fr))",gap:8}}>
+              {favoriteIcons.filter((icon:any)=>icon.category===iconTab).map((icon:any)=><button key={icon.key} draggable onDragStart={e=>e.dataTransfer.setData("application/x-vizzy-icon",JSON.stringify(icon))} onClick={()=>addBoardIcon(icon)} style={{height:52,borderRadius:12,border:"1px solid #E5E7EB",background:"#FFFBEB",display:"flex",alignItems:"center",justifyContent:"center",cursor:"grab",position:"relative"}} title={icon.label}><div style={{position:"absolute",top:4,right:5,fontSize:11,color:"#F59E0B"}}>★</div>{renderBoardLibraryIcon(icon,undefined,icon.category==="emoji"?28:26)}</button>)}
+            </div>
+          </div>}
+
+          {recentIcons.filter((icon:any)=>icon.category===iconTab).length>0&&<div>
+            <div style={{fontSize:11,fontWeight:900,color:"#64748B",textTransform:"uppercase",letterSpacing:.7,marginBottom:8}}>Недавние</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(6,minmax(0,1fr))",gap:8}}>
+              {recentIcons.filter((icon:any)=>icon.category===iconTab).map((icon:any)=><button key={icon.key} draggable onDragStart={e=>e.dataTransfer.setData("application/x-vizzy-icon",JSON.stringify(icon))} onClick={()=>addBoardIcon(icon)} style={{height:52,borderRadius:12,border:"1px solid #E5E7EB",background:"#F8FAFC",display:"flex",alignItems:"center",justifyContent:"center",cursor:"grab",position:"relative"}} title={icon.label}><button onClick={e=>{e.stopPropagation();toggleFavoriteIcon(icon.key);}} style={{position:"absolute",top:4,right:4,width:16,height:16,border:"none",background:"transparent",cursor:"pointer",fontSize:11,color:favoriteIconKeys.includes(icon.key)?"#F59E0B":"#CBD5E1",padding:0}}>★</button>{renderBoardLibraryIcon(icon,undefined,icon.category==="emoji"?28:26)}</button>)}
+            </div>
+          </div>}
+
+          <div>
+            <div style={{fontSize:11,fontWeight:900,color:"#64748B",textTransform:"uppercase",letterSpacing:.7,marginBottom:8}}>{iconTab==="emoji"?"Эмодзи":iconTab==="social"?"Соцсети":"Бизнес"}</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(6,minmax(0,1fr))",gap:8}}>
+              {filteredLibraryIcons.map((icon:any)=><button key={icon.key} draggable onDragStart={e=>e.dataTransfer.setData("application/x-vizzy-icon",JSON.stringify(icon))} onClick={()=>addBoardIcon(icon)} style={{height:56,borderRadius:14,border:"1px solid #E5E7EB",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",cursor:"grab",position:"relative",boxShadow:"0 2px 8px rgba(15,23,42,0.04)"}} title={icon.label}><button onClick={e=>{e.stopPropagation();toggleFavoriteIcon(icon.key);}} style={{position:"absolute",top:4,right:4,width:16,height:16,border:"none",background:"transparent",cursor:"pointer",fontSize:11,color:favoriteIconKeys.includes(icon.key)?"#F59E0B":"#CBD5E1",padding:0}}>★</button>{renderBoardLibraryIcon(icon,undefined,icon.category==="emoji"?30:28)}</button>)}
+            </div>
+          </div>
+
+          {filteredLibraryIcons.length===0&&<div style={{padding:"22px 12px",textAlign:"center",fontSize:13,color:C.t2}}>Ничего не найдено. Попробуй другой запрос.</div>}
+        </div>
+      </div>}
+
+
+      {toolPanel==="shape"&&<div style={{position:"absolute",left:86,top:346,zIndex:135,width:284,background:"#fff",borderRadius:18,padding:12,boxShadow:"0 22px 55px rgba(15,23,42,.16)",border:"1px solid #E5E7EB"}}>
         {[
           {label:"Line",icon:"╱",act:()=>{setTool("line");setShapeKind("rect");setToolPanel(null);}},
           {label:"Arrow",icon:"↗",act:()=>{setTool("line");setShapeKind("rect");setToolPanel(null);}},
@@ -9772,7 +9791,7 @@ function BoardPage({userId}:{userId:string}){
         ].map((s:any)=><button key={s.label} onClick={s.act} style={{width:"100%",height:42,border:"none",borderRadius:10,background:(tool==="shape"&&s.label.toLowerCase().includes(shapeKind||""))?"#E8EDFF":"transparent",display:"flex",alignItems:"center",gap:14,padding:"0 12px",fontSize:15,fontWeight:650,color:"#1F2937",cursor:"pointer",textAlign:"left"}}><span style={{width:24,fontSize:21}}>{s.icon}</span>{s.label}</button>)}
       </div>}
 
-      {toolPanel==="draw"&&<div style={{position:"absolute",left:86,top:344,zIndex:135,width:78,background:"#fff",borderRadius:18,padding:10,boxShadow:"0 22px 55px rgba(15,23,42,.16)",border:"1px solid #E5E7EB",display:"flex",flexDirection:"column",gap:9,alignItems:"center"}}>
+      {toolPanel==="draw"&&<div style={{position:"absolute",left:86,top:400,zIndex:135,width:78,background:"#fff",borderRadius:18,padding:10,boxShadow:"0 22px 55px rgba(15,23,42,.16)",border:"1px solid #E5E7EB",display:"flex",flexDirection:"column",gap:9,alignItems:"center"}}>
         {([{id:"pencil",icon:"✐",label:"Карандаш"},{id:"pen",icon:"✎",label:"Ручка"},{id:"pointer",icon:"☄",label:"Указка"}] as {id:DrawMode;icon:string;label:string}[]).map(m=><button key={m.id} title={m.label} onClick={()=>{setTool("draw");setDrawMode(m.id);}} style={{width:46,height:46,borderRadius:12,border:"none",background:drawMode===m.id?"#E8EDFF":"transparent",color:drawMode===m.id?"#3155E7":"#1F2937",fontSize:24,cursor:"pointer"}}>{m.icon}</button>)}
         <div style={{width:38,height:1,background:"#E5E7EB",margin:"2px 0"}}/>
         {BOARD_DRAW_COLORS.map(c=><button key={c} onClick={()=>setDrawColor(c)} style={{width:36,height:36,borderRadius:"50%",background:c,border:drawColor===c?"3px solid #3155E7":"2px solid #E5E7EB",boxShadow:"inset 0 0 0 3px #fff",cursor:"pointer"}}/>)}
@@ -9807,27 +9826,61 @@ function BoardPage({userId}:{userId:string}){
 
           {/* Color */}
           <div style={{position:"relative",flexShrink:0}}>
-            <button onClick={()=>setColorTarget(colorTarget?null:sel1?"item":"line")}
+            <button onClick={()=>{setColorTarget(colorTarget?null:sel1?"item":"line");setShapeColorOpen(false);}}
               style={{width:34,height:34,borderRadius:10,background:sel1?sel1.color||"#FEF08A":selLine?.color||"#64748B",border:"2px solid rgba(0,0,0,0.12)",cursor:"pointer",boxShadow:"inset 0 0 0 1px rgba(255,255,255,0.45)",flexShrink:0}}/>
             {colorTarget&&(
               <div style={{position:"absolute",top:"calc(100% + 6px)",left:0,background:"#fff",borderRadius:12,padding:10,boxShadow:"0 8px 24px rgba(0,0,0,0.14)",width:172,zIndex:200,border:"1px solid #E2E8F0"}}>
                 <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:8}}>
                   {BOARD_PALETTE.map(c=>(
-                    <button key={c} onClick={()=>applyBoardColor(c)} style={{width:24,height:24,borderRadius:6,background:c,border:"1px solid rgba(0,0,0,0.1)",cursor:"pointer"}}/>
+                    <button key={c} onClick={()=>{
+                      if(sel1)updItems(items.map(it=>it.id===sel1.id?{...it,color:c}:it));
+                      else if(selLine)updLines(lines.map(l=>l.id===selLine.id?{...l,color:c}:l));
+                      setColorTarget(null);
+                    }} style={{width:24,height:24,borderRadius:6,background:c,border:"1px solid rgba(0,0,0,0.1)",cursor:"pointer"}}/>
                   ))}
                 </div>
                 {/* HEX input */}
                 <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:6}}>
                   <span style={{fontSize:10,color:"#64748B",fontWeight:500}}>HEX</span>
                   <input value={customColorInput} onChange={e=>setCustomColorInput(e.target.value)}
-                    onKeyDown={e=>{if(e.key==="Enter")applyBoardColor(customColorInput);}}
+                    onKeyDown={e=>{if(e.key==="Enter"){if(sel1)updItems(items.map(it=>it.id===sel1.id?{...it,color:customColorInput}:it));else if(selLine)updLines(lines.map(l=>l.id===selLine.id?{...l,color:customColorInput}:l));setColorTarget(null);}}}
                     style={{flex:1,padding:"4px 7px",border:"1px solid #E2E8F0",borderRadius:7,fontSize:12,outline:"none",fontFamily:"monospace"}} placeholder="#000000"/>
                 </div>
                 {/* Native color picker */}
-                <input type="color" value={customColorInput} onChange={e=>applyBoardColor(e.target.value)} style={{width:"100%",height:28,border:"none",cursor:"pointer",borderRadius:7}}/>
+                <input type="color" value={customColorInput} onChange={e=>{
+                  setCustomColorInput(e.target.value);
+                  if(sel1)updItems(items.map(it=>it.id===sel1.id?{...it,color:e.target.value}:it));
+                  else if(selLine)updLines(lines.map(l=>l.id===selLine.id?{...l,color:e.target.value}:l));
+                }} style={{width:"100%",height:28,border:"none",cursor:"pointer",borderRadius:7}}/>
               </div>
             )}
           </div>
+
+          {sel1?.type==="shape"&&(
+            <div style={{position:"relative",flexShrink:0}}>
+              <button onClick={()=>{setShapeColorOpen(v=>!v);setColorTarget(null);}} title="Цвет фигуры"
+                style={{height:34,padding:"0 12px",borderRadius:10,border:"1px solid #E2E8F0",background:"#fff",cursor:"pointer",display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:800,color:"#0F172A",whiteSpace:"nowrap",boxShadow:shapeColorOpen?"0 4px 14px rgba(37,99,235,0.12)":"none"}}>
+                <span style={{width:18,height:18,borderRadius:6,background:sel1.color||"#3B82F6",border:"2px solid rgba(15,23,42,0.14)",boxShadow:"inset 0 0 0 2px rgba(255,255,255,0.55)"}}/>
+                Цвет фигуры
+              </button>
+              {shapeColorOpen&&(
+                <div style={{position:"absolute",top:"calc(100% + 8px)",left:0,width:204,zIndex:260,background:"#fff",border:"1px solid #E2E8F0",borderRadius:14,padding:10,boxShadow:"0 14px 34px rgba(15,23,42,0.16)"}}>
+                  <div style={{fontSize:11,fontWeight:900,color:"#64748B",marginBottom:8}}>Цвет заливки</div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:6,marginBottom:10}}>
+                    {BOARD_PALETTE.map(color=>(
+                      <button key={color} onClick={()=>{updateSelectedShapeColor(color);setShapeColorOpen(false);}} title={color}
+                        style={{width:25,height:25,borderRadius:7,background:color,border:color.toLowerCase()===(sel1.color||"").toLowerCase()?"2px solid #2563EB":"1px solid rgba(15,23,42,0.14)",cursor:"pointer",boxShadow:color==="#ffffff"?"inset 0 0 0 1px #CBD5E1":"none"}}/>
+                    ))}
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <input type="color" value={sel1.color||"#3B82F6"} onChange={e=>updateSelectedShapeColor(e.target.value)} style={{width:40,height:32,border:"none",cursor:"pointer",borderRadius:8,padding:0,background:"transparent"}}/>
+                    <input value={sel1.color||"#3B82F6"} onChange={e=>updateSelectedShapeColor(e.target.value)} placeholder="#3B82F6"
+                      style={{flex:1,height:32,border:"1px solid #E2E8F0",borderRadius:9,padding:"0 9px",fontSize:12,fontFamily:"monospace",outline:"none"}}/>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Item-specific controls */}
           {sel1&&["sticky","text","shape"].includes(sel1.type)&&<>
@@ -9994,28 +10047,28 @@ function BoardPage({userId}:{userId:string}){
                   </div>
                 )}
 
-                {/* ── EMBEDDED DOCUMENT / TABLE ── */}
-                {(it.type==="doc"||it.type==="table")&&(()=>{
-                  const data=parseEmbeddedPayload(it);
-                  const isDoc=it.type==="doc";
-                  const cells=Array.isArray(data.cells)?data.cells:[];
-                  return <div style={{width:"100%",height:"100%",borderRadius:18,background:isDoc?"linear-gradient(135deg,#EEF2FF,#FFFFFF)":"linear-gradient(135deg,#ECFDF5,#FFFFFF)",border:"1px solid "+(isDoc?"#C7D2FE":"#A7F3D0"),boxShadow:"0 12px 30px rgba(15,23,42,.12)",padding:14,display:"flex",flexDirection:"column",gap:10,boxSizing:"border-box" as const,overflow:"hidden"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
-                      <div style={{width:40,height:40,borderRadius:14,background:isDoc?"#4F46E5":"#10B981",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{isDoc?"📄":"▦"}</div>
-                      <div style={{minWidth:0,flex:1}}>
-                        <div style={{fontSize:14,fontWeight:900,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{data.title|| (isDoc?"Документ":"Таблица")}</div>
-                        <div style={{fontSize:10,color:C.t2,marginTop:3}}>{isDoc?"Редактируемый Vizzy Text":"Редактируемая Vizzy Table"}</div>
-                      </div>
+                {/* ── DOCUMENT / TABLE QUICK CARDS ── */}
+                {(it.type==="doc"||it.type==="table")&&(
+                  <div style={{width:"100%",height:"100%",borderRadius:16,background:it.type==="doc"?"linear-gradient(135deg,#EEF2FF,#FFFFFF)":"linear-gradient(135deg,#ECFDF5,#FFFFFF)",border:"1px solid "+(it.type==="doc"?"#C7D2FE":"#A7F3D0"),boxShadow:"0 10px 26px rgba(15,23,42,.10)",padding:16,display:"flex",alignItems:"center",gap:12,boxSizing:"border-box" as const}}>
+                    <div style={{width:44,height:44,borderRadius:14,background:it.type==="doc"?"#4F46E5":"#10B981",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:23,flexShrink:0}}>{it.type==="doc"?"📄":"▦"}</div>
+                    <div style={{minWidth:0}}>
+                      <div style={{fontSize:15,fontWeight:900,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.text|| (it.type==="doc"?"Документ":"Таблица")}</div>
+                      <div style={{fontSize:11,color:C.t2,marginTop:4}}>{it.type==="doc"?"Vizzy Text document":"Vizzy Tables sheet"}</div>
                     </div>
-                    <div style={{flex:1,minHeight:0,borderRadius:12,background:"rgba(255,255,255,0.72)",border:"1px solid rgba(148,163,184,0.22)",padding:isDoc?10:6,overflow:"hidden"}}>
-                      {isDoc
-                        ?<div style={{fontSize:11,lineHeight:1.5,color:C.t2,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{embeddedSummary(it)}</div>
-                        :<div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:2,height:"100%"}}>{Array.from({length:12}).map((_,idx)=><div key={idx} style={{background:idx<4?"#DCFCE7":"#F8FAFC",border:"1px solid #E2E8F0",borderRadius:3,fontSize:8,color:C.t2,overflow:"hidden",padding:2}}>{cells[Math.floor(idx/4)]?.[idx%4]||""}</div>)}</div>
-                      }
+                  </div>
+                )}
+
+                {/* ── ICON ── */}
+                {it.type==="icon"&&(
+                  <div style={{width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,padding:6,boxSizing:"border-box"}}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"center",width:"100%",height:it.iconCategory==="emoji"?"100%":"auto",flex:it.iconCategory==="emoji"?1:undefined}}>
+                      {renderBoardLibraryIcon({glyph:it.iconGlyph,label:it.iconLabel,category:it.iconCategory,style:it.iconStyle,defaultColor:it.color||"#111827"},it.color||undefined,Math.max(24,Math.round(Math.min(it.w,it.h)*(it.iconCategory==="emoji"?0.62:0.48))))}
                     </div>
-                    <button onMouseDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();openEmbeddedEditor(it);}} style={{padding:"8px 10px",border:"none",borderRadius:11,background:isDoc?"linear-gradient(135deg,#4F46E5,#2563EB)":"linear-gradient(135deg,#10B981,#059669)",color:"#fff",fontSize:11,fontWeight:900,cursor:"pointer",boxShadow:isDoc?"0 0 16px rgba(79,70,229,.22)":"0 0 16px rgba(16,185,129,.20)"}}>Открыть и редактировать</button>
-                  </div>;
-                })()}
+                    {it.iconCategory!=="emoji"&&it.iconLabel&&it.h>82&&(
+                      <div style={{fontSize:Math.max(9,Math.min(13,Math.round(it.w/8))),fontWeight:800,color:"#334155",textAlign:"center",lineHeight:1.15,maxWidth:"100%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.iconLabel}</div>
+                    )}
+                  </div>
+                )}
 
                 {/* ── IMAGE ── */}
                 {it.type==="image"&&it.imageUrl&&(
@@ -10147,54 +10200,6 @@ function BoardPage({userId}:{userId:string}){
         </div>
       )}
 
-      {openEmbeddedItemId&&embeddedDraft&&(
-        <div style={{position:"absolute",top:48,right:0,bottom:0,width:Math.min(520,typeof window!=="undefined"?window.innerWidth-320:520),minWidth:360,zIndex:92,background:"rgba(255,255,255,0.98)",backdropFilter:"blur(16px)",borderLeft:"1px solid #E2E8F0",boxShadow:"-18px 0 46px rgba(15,23,42,0.12)",display:"flex",flexDirection:"column"}}>
-          <div style={{padding:"18px 20px",borderBottom:"1px solid #E2E8F0",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
-            <div style={{minWidth:0}}>
-              <div style={{fontSize:18,fontWeight:900,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{embeddedDraft.kind==="table"?"Редактирование таблицы":"Редактирование документа"}</div>
-              <div style={{fontSize:12,color:C.t2,marginTop:3}}>Изменения сохраняются в объекте на доске</div>
-            </div>
-            <button onClick={()=>setOpenEmbeddedItemId(null)} style={{width:34,height:34,borderRadius:11,border:"1px solid #E2E8F0",background:"#fff",cursor:"pointer",fontSize:18,color:C.t2}}>×</button>
-          </div>
-
-          <div style={{padding:18,display:"flex",gap:12,flexDirection:"column",overflowY:"auto",flex:1}}>
-            <label style={{display:"grid",gap:6}}>
-              <span style={{fontSize:11,fontWeight:800,color:C.t2,textTransform:"uppercase",letterSpacing:.6}}>Название</span>
-              <input value={embeddedDraft.title||""} onChange={e=>setEmbeddedDraft((p:any)=>({...p,title:e.target.value}))}
-                style={{width:"100%",boxSizing:"border-box",padding:"12px 14px",border:"1px solid #E2E8F0",borderRadius:13,outline:"none",fontSize:15,fontWeight:800,color:C.t1,background:"#F8FAFC",fontFamily:"Montserrat, sans-serif"}}/>
-            </label>
-
-            {embeddedDraft.kind==="table"?
-              <div style={{background:"#fff",border:"1px solid #E2E8F0",borderRadius:16,overflow:"hidden",boxShadow:"0 8px 24px rgba(15,23,42,0.06)"}}>
-                <div style={{display:"grid",gridTemplateColumns:"46px repeat(5, minmax(82px,1fr))",background:"#F8FAFC",borderBottom:"1px solid #E2E8F0"}}>
-                  <div style={{padding:8,borderRight:"1px solid #E2E8F0"}}/>
-                  {Array.from({length:5}).map((_,c)=><div key={c} style={{padding:"9px 8px",fontSize:11,fontWeight:900,color:C.t2,textAlign:"center",borderRight:c<4?"1px solid #E2E8F0":"none"}}>{String.fromCharCode(65+c)}</div>)}
-                </div>
-                {(embeddedDraft.cells||[]).map((row:any[],r:number)=>(
-                  <div key={r} style={{display:"grid",gridTemplateColumns:"46px repeat(5, minmax(82px,1fr))",borderBottom:r<(embeddedDraft.cells||[]).length-1?"1px solid #E2E8F0":"none"}}>
-                    <div style={{padding:"9px 8px",fontSize:11,fontWeight:900,color:C.t2,textAlign:"center",background:"#F8FAFC",borderRight:"1px solid #E2E8F0"}}>{r+1}</div>
-                    {Array.from({length:5}).map((_,c)=><input key={c} value={row?.[c]||""} onChange={e=>setEmbeddedDraft((p:any)=>{const cells=(p.cells||[]).map((rr:any[])=>[...rr]);while(cells.length<8)cells.push(Array.from({length:5},()=>""));while(cells[r].length<5)cells[r].push("");cells[r][c]=e.target.value;return{...p,cells};})}
-                      style={{minWidth:0,padding:"9px 8px",border:"none",borderRight:c<4?"1px solid #E2E8F0":"none",outline:"none",fontSize:12,fontFamily:"Montserrat, sans-serif",color:C.t1,background:"#fff"}}/>)}
-                  </div>
-                ))}
-              </div>
-              :<div style={{background:"#F1F5F9",borderRadius:18,padding:18,border:"1px solid #E2E8F0"}}>
-                <div style={{width:"100%",minHeight:620,background:"#fff",borderRadius:12,boxShadow:"0 16px 40px rgba(15,23,42,0.12)",padding:"48px 54px",boxSizing:"border-box"}}>
-                  <textarea value={embeddedDraft.body||""} onChange={e=>setEmbeddedDraft((p:any)=>({...p,body:e.target.value}))}
-                    placeholder="Начни писать документ..."
-                    style={{width:"100%",minHeight:520,border:"none",outline:"none",resize:"vertical",fontSize:16,lineHeight:1.65,fontFamily:"Montserrat, sans-serif",color:C.t1,background:"transparent"}}/>
-                </div>
-              </div>
-            }
-          </div>
-
-          <div style={{padding:18,borderTop:"1px solid #E2E8F0",display:"flex",gap:10,justifyContent:"flex-end",background:"#fff"}}>
-            <button onClick={()=>{setEmbeddedDraft(openEmbeddedItemId?parseEmbeddedPayload(itemsRef.current.find(i=>i.id===openEmbeddedItemId)):null);}} style={{padding:"10px 14px",border:"1px solid #E2E8F0",borderRadius:12,background:"#fff",color:C.t2,fontSize:12,fontWeight:800,cursor:"pointer"}}>Сбросить</button>
-            <button onClick={()=>{saveEmbeddedDraft();setOpenEmbeddedItemId(null);}} style={{padding:"10px 16px",border:"none",borderRadius:12,background:"linear-gradient(135deg,#2563EB,#7C3AED)",color:"#fff",fontSize:12,fontWeight:900,cursor:"pointer",boxShadow:"0 0 18px rgba(37,99,235,0.28)"}}>Сохранить</button>
-          </div>
-        </div>
-      )}
-
       {externalPanel&&(
         <div style={{position:"absolute",top:48,right:0,bottom:0,width:360,zIndex:90,background:"rgba(255,255,255,0.97)",backdropFilter:"blur(14px)",borderLeft:"1px solid #E2E8F0",boxShadow:"-16px 0 40px rgba(15,23,42,0.10)",display:"flex",flexDirection:"column"}}>
           <div style={{padding:18,borderBottom:"1px solid #E2E8F0"}}>
@@ -10272,7 +10277,7 @@ function BoardPage({userId}:{userId:string}){
 
       {/* Status bar */}
       <div style={{position:"absolute",bottom:10,left:16,zIndex:50,background:"rgba(255,255,255,0.88)",backdropFilter:"blur(6px)",borderRadius:10,padding:"5px 12px",fontSize:10,color:C.t2,border:"1px solid rgba(0,0,0,0.06)",boxShadow:"0 2px 8px rgba(0,0,0,0.05)"}}>
-        V-выбор · H-пан · S-стикер · T-текст · I-фото · L-ссылка · F-фигура · C-линия · M-рисование · Del-удалить · Ctrl+D-дублировать
+        V-выбор · H-пан · S-стикер · T-текст · I-фото · L-ссылка · F-фигура · C-линия · M-рисование · Иконки — в левой панели · Del-удалить · Ctrl+D-дублировать
       </div>
     </div>
   );
