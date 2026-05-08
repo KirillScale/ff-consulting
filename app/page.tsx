@@ -9426,6 +9426,27 @@ function BoardPage({userId}:{userId:string}){
   const sel1=selectedIds.size===1?safeItemsForSelection.find(i=>i.id==[...selectedIds][0]):null;
   const selLine=lines.find(l=>l.id===selectedLineId);
 
+  const applyBoardColor=(nextColor:string)=>{
+    const color=(nextColor||"").trim();
+    if(!color)return;
+    if(sel1?.id){
+      const id=sel1.id;
+      const base=normalizeBoardItems(itemsRef.current as any[]);
+      updItems(base.map(it=>it.id===id?{...it,color}:it));
+      setSelectedIds(new Set([id]));
+      setSelectedLineId(null);
+    }else if(selLine?.id){
+      const id=selLine.id;
+      const validIds=new Set(itemsRef.current.map(i=>i.id));
+      const base=normalizeBoardLines(linesRef.current as any[],validIds);
+      updLines(base.map(l=>l.id===id?{...l,color}:l));
+      setSelectedLineId(id);
+      setSelectedIds(new Set());
+    }
+    setCustomColorInput(color);
+    setColorTarget(null);
+  };
+
   const cursorMap:Record<string,string>={select:"default",pan:"grab",sticky:"cell",text:"text",image:"cell",link:"cell",shape:"crosshair",line:"crosshair",draw:"crosshair"};
 
   // ── If no board selected → show board list ──
@@ -9708,26 +9729,18 @@ function BoardPage({userId}:{userId:string}){
               <div style={{position:"absolute",top:"calc(100% + 6px)",left:0,background:"#fff",borderRadius:12,padding:10,boxShadow:"0 8px 24px rgba(0,0,0,0.14)",width:172,zIndex:200,border:"1px solid #E2E8F0"}}>
                 <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:8}}>
                   {BOARD_PALETTE.map(c=>(
-                    <button key={c} onClick={()=>{
-                      if(sel1)updItems(items.map(it=>it.id===sel1.id?{...it,color:c}:it));
-                      else if(selLine)updLines(lines.map(l=>l.id===selLine.id?{...l,color:c}:l));
-                      setColorTarget(null);
-                    }} style={{width:24,height:24,borderRadius:6,background:c,border:"1px solid rgba(0,0,0,0.1)",cursor:"pointer"}}/>
+                    <button key={c} onClick={()=>applyBoardColor(c)} style={{width:24,height:24,borderRadius:6,background:c,border:"1px solid rgba(0,0,0,0.1)",cursor:"pointer"}}/>
                   ))}
                 </div>
                 {/* HEX input */}
                 <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:6}}>
                   <span style={{fontSize:10,color:"#64748B",fontWeight:500}}>HEX</span>
                   <input value={customColorInput} onChange={e=>setCustomColorInput(e.target.value)}
-                    onKeyDown={e=>{if(e.key==="Enter"){if(sel1)updItems(items.map(it=>it.id===sel1.id?{...it,color:customColorInput}:it));else if(selLine)updLines(lines.map(l=>l.id===selLine.id?{...l,color:customColorInput}:l));setColorTarget(null);}}}
+                    onKeyDown={e=>{if(e.key==="Enter")applyBoardColor(customColorInput);}}
                     style={{flex:1,padding:"4px 7px",border:"1px solid #E2E8F0",borderRadius:7,fontSize:12,outline:"none",fontFamily:"monospace"}} placeholder="#000000"/>
                 </div>
                 {/* Native color picker */}
-                <input type="color" value={customColorInput} onChange={e=>{
-                  setCustomColorInput(e.target.value);
-                  if(sel1)updItems(items.map(it=>it.id===sel1.id?{...it,color:e.target.value}:it));
-                  else if(selLine)updLines(lines.map(l=>l.id===selLine.id?{...l,color:e.target.value}:l));
-                }} style={{width:"100%",height:28,border:"none",cursor:"pointer",borderRadius:7}}/>
+                <input type="color" value={customColorInput} onChange={e=>applyBoardColor(e.target.value)} style={{width:"100%",height:28,border:"none",cursor:"pointer",borderRadius:7}}/>
               </div>
             )}
           </div>
