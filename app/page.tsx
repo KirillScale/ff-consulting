@@ -8538,6 +8538,7 @@ interface BItem{
   externalSubtitle?:string;
   externalMeta?:string;
   externalStatus?:string;
+  externalPlatform?:string;
 }
 
 interface BLine{
@@ -8574,6 +8575,7 @@ function externalCardPayload(it:BItem){
     meta:it.externalMeta||"",
     status:it.externalStatus||"",
     color:it.color||"#7C3AED",
+    platform:it.externalPlatform||"",
   });
 }
 
@@ -8699,7 +8701,7 @@ function BoardPage({userId}:{userId:string}){
           linkUrl:d.link_url||"",linkTitle:d.link_title||"",linkFavicon:d.link_favicon||"",
           zIndex:d.z_index||0,
           drawPath:d.draw_path||undefined,drawColor:d.draw_color||undefined,drawThickness:d.draw_thickness||undefined,
-          externalSource:ext.source,externalId:ext.externalId,externalType:ext.externalType,externalTitle:ext.title,externalSubtitle:ext.subtitle,externalMeta:ext.meta,externalStatus:ext.status,
+          externalSource:ext.source,externalId:ext.externalId,externalType:ext.externalType,externalTitle:ext.title,externalSubtitle:ext.subtitle,externalMeta:ext.meta,externalStatus:ext.status,externalPlatform:ext.platform,
         };
       });
       setItems(mappedItems);
@@ -8805,6 +8807,18 @@ function BoardPage({userId}:{userId:string}){
     return it;
   };
 
+  const getContentImage=(item:any)=>item.cover_url||item.image_url||item.thumbnail_url||item.photo_url||item.media_url||item.preview_url||"";
+  const getContentPlatform=(item:any)=>String(item.platform||item.source||"other").toLowerCase();
+
+  const platformColor=(pid:string)=>{
+    const p=String(pid||"").toLowerCase();
+    if(p.includes("instagram"))return "#E1306C";
+    if(p.includes("youtube"))return "#FF0000";
+    if(p.includes("telegram"))return "#29B6F6";
+    if(p.includes("vk"))return "#4C75A3";
+    return "#64748B";
+  };
+
   const externalCards=useMemo(()=>{
     const q=externalSearch.trim().toLowerCase();
     if(externalSource==="crm"){
@@ -8820,6 +8834,8 @@ function BoardPage({userId}:{userId:string}){
           meta:[lead.source,lead.deal?`${lead.deal} ₽`:""].filter(Boolean).join(" · "),
           status:lead.status||"",
           color:"#38BDF8",
+          imageUrl:lead.avatar_url||lead.photo_url||lead.image_url||"",
+          platform:"crm",
           raw:lead,
         }));
     }
@@ -8833,7 +8849,9 @@ function BoardPage({userId}:{userId:string}){
         subtitle:[item.platform,item.type].filter(Boolean).join(" · ")||"Контент-карточка",
         meta:[item.status,item.date||item.publish_date].filter(Boolean).join(" · "),
         status:item.status||"",
-        color:"#A855F7",
+        color:platformColor(getContentPlatform(item))||"#A855F7",
+        imageUrl:getContentImage(item),
+        platform:getContentPlatform(item),
         raw:item,
       }));
   },[externalSource,externalSearch,externalFunnelId,crmLeads.data,contentRows.data]);
@@ -8842,9 +8860,10 @@ function BoardPage({userId}:{userId:string}){
     const center=canvasRef.current&&clientX&&clientY?toCanvas(clientX,clientY):{x:320+itemsRef.current.length*18,y:260+itemsRef.current.length*18};
     const it=addItem({
       type:"external_card",
-      w:260,h:138,
+      w:card.imageUrl?286:260,h:card.imageUrl?176:138,
       color:card.color||"#7C3AED",
       text:card.title,
+      imageUrl:card.imageUrl||"",
       externalSource:card.source,
       externalId:card.id,
       externalType:card.externalType,
@@ -8852,6 +8871,7 @@ function BoardPage({userId}:{userId:string}){
       externalSubtitle:card.subtitle,
       externalMeta:card.meta,
       externalStatus:card.status,
+      externalPlatform:card.platform||"",
     },center.x,center.y);
     if(it){setExternalPanel(false);setExternalDropHint(false);}
   };
@@ -8862,11 +8882,11 @@ function BoardPage({userId}:{userId:string}){
       if(it.externalSource==="crm"){
         const lead=crmLeads.data.find((l:any)=>l.id===it.externalId);
         if(!lead)return it;
-        return {...it,text:lead.name||it.text,externalTitle:lead.name||it.externalTitle,externalSubtitle:lead.contact||lead.phone||lead.email||"CRM-лид",externalMeta:[lead.source,lead.deal?`${lead.deal} ₽`:""].filter(Boolean).join(" · "),externalStatus:lead.status||""};
+        return {...it,text:lead.name||it.text,imageUrl:lead.avatar_url||lead.photo_url||lead.image_url||it.imageUrl||"",externalTitle:lead.name||it.externalTitle,externalSubtitle:lead.contact||lead.phone||lead.email||"CRM-лид",externalMeta:[lead.source,lead.deal?`${lead.deal} ₽`:""].filter(Boolean).join(" · "),externalStatus:lead.status||"",externalPlatform:"crm"};
       }
       const c=contentRows.data.find((x:any)=>x.id===it.externalId);
       if(!c)return it;
-      return {...it,text:c.topic||c.type||it.text,externalTitle:c.topic||c.type||it.externalTitle,externalSubtitle:[c.platform,c.type].filter(Boolean).join(" · ")||"Контент-карточка",externalMeta:[c.status,c.date||c.publish_date].filter(Boolean).join(" · "),externalStatus:c.status||""};
+      return {...it,text:c.topic||c.type||it.text,imageUrl:getContentImage(c)||it.imageUrl||"",externalTitle:c.topic||c.type||it.externalTitle,externalSubtitle:[c.platform,c.type].filter(Boolean).join(" · ")||"Контент-карточка",externalMeta:[c.status,c.date||c.publish_date].filter(Boolean).join(" · "),externalStatus:c.status||"",externalPlatform:getContentPlatform(c)};
     });
     updItems(next);
   };
@@ -9698,10 +9718,19 @@ function BoardPage({userId}:{userId:string}){
 
                 {/* ── EXTERNAL CARD ── */}
                 {it.type==="external_card"&&(
-                  <div style={{width:"100%",height:"100%",borderRadius:16,background:"#fff",border:"1px solid #E2E8F0",boxShadow:"0 10px 28px rgba(15,23,42,0.10)",overflow:"hidden",display:"flex",flexDirection:"column"}}>
+                  <div style={{width:"100%",height:"100%",borderRadius:18,background:"#fff",border:"1px solid #E2E8F0",boxShadow:"0 12px 32px rgba(15,23,42,0.12)",overflow:"hidden",display:"flex",flexDirection:"column"}}>
                     <div style={{height:6,background:`linear-gradient(90deg, ${it.color||"#7C3AED"}, #60A5FA)`}}/>
+                    {it.imageUrl&&<div style={{height:54,position:"relative",background:"#F8FAFC",overflow:"hidden",flexShrink:0}}>
+                      <img src={it.imageUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+                      <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg, rgba(15,23,42,0.02), rgba(15,23,42,0.18))"}}/>
+                      <div style={{position:"absolute",right:8,bottom:8,width:28,height:28,borderRadius:10,background:"rgba(255,255,255,0.92)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 6px 18px rgba(15,23,42,0.18)",overflow:"hidden"}}>
+                        {it.externalSource==="content"?<PlatformIcon pid={it.externalPlatform||"other"} size={18}/>:<span style={{fontSize:15}}>👤</span>}
+                      </div>
+                    </div>}
                     <div style={{padding:"12px 14px",display:"flex",gap:10,alignItems:"flex-start",flex:1,minHeight:0}}>
-                      <div style={{width:34,height:34,borderRadius:12,background:(it.color||"#7C3AED")+"18",border:"1px solid "+(it.color||"#7C3AED")+"30",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{it.externalSource==="crm"?"👤":"🗂"}</div>
+                      <div style={{width:38,height:38,borderRadius:13,background:(it.color||"#7C3AED")+"18",border:"1px solid "+(it.color||"#7C3AED")+"30",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0,overflow:"hidden"}}>
+                        {it.imageUrl&&it.externalSource==="crm"?<img src={it.imageUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:it.externalSource==="content"?<PlatformIcon pid={it.externalPlatform||"other"} size={22}/>:<span>👤</span>}
+                      </div>
                       <div style={{minWidth:0,flex:1}}>
                         <div style={{fontSize:12,fontWeight:900,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.externalTitle||it.text||"Карточка"}</div>
                         <div style={{fontSize:10,color:C.t2,marginTop:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.externalSubtitle||"Связанная карточка"}</div>
@@ -9709,7 +9738,10 @@ function BoardPage({userId}:{userId:string}){
                       </div>
                     </div>
                     <div style={{padding:"8px 12px",borderTop:"1px solid #F1F5F9",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-                      <span style={{fontSize:9,fontWeight:900,textTransform:"uppercase",letterSpacing:.7,color:it.color||"#7C3AED"}}>{it.externalSource==="crm"?"CRM":"Контент"}</span>
+                      <span style={{fontSize:9,fontWeight:900,textTransform:"uppercase",letterSpacing:.7,color:it.color||"#7C3AED",display:"flex",alignItems:"center",gap:5}}>
+                        {it.externalSource==="content"&&<PlatformIcon pid={it.externalPlatform||"other"} size={13}/>}
+                        {it.externalSource==="crm"?"CRM":"Контент"}
+                      </span>
                       {it.externalStatus&&<span style={{fontSize:9,fontWeight:800,padding:"3px 7px",borderRadius:999,background:(it.color||"#7C3AED")+"12",color:it.color||"#7C3AED",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.externalStatus}</span>}
                     </div>
                   </div>
@@ -9822,7 +9854,10 @@ function BoardPage({userId}:{userId:string}){
                   onDragStart={e=>{e.dataTransfer.setData("application/x-vizzy-card",JSON.stringify(card));e.dataTransfer.effectAllowed="copy";}}
                   style={{background:"#fff",border:"1px solid #E2E8F0",borderLeft:"4px solid "+card.color,borderRadius:14,padding:12,cursor:"grab",boxShadow:"0 4px 16px rgba(15,23,42,0.05)"}}>
                   <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
-                    <div style={{width:34,height:34,borderRadius:12,background:card.color+"18",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{card.source==="crm"?"👤":"🗂"}</div>
+                    <div style={{width:42,height:42,borderRadius:13,background:card.color+"18",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0,overflow:"hidden",border:"1px solid "+card.color+"22",position:"relative"}}>
+                      {card.imageUrl?<img src={card.imageUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:card.source==="content"?<PlatformIcon pid={card.platform||"other"} size={24}/>:<span>👤</span>}
+                      {card.source==="content"&&card.imageUrl&&<div style={{position:"absolute",right:-1,bottom:-1,width:18,height:18,borderRadius:7,background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(15,23,42,0.16)"}}><PlatformIcon pid={card.platform||"other"} size={13}/></div>}
+                    </div>
                     <div style={{minWidth:0,flex:1}}>
                       <div style={{fontSize:13,fontWeight:900,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{card.title}</div>
                       <div style={{fontSize:11,color:C.t2,marginTop:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{card.subtitle}</div>
