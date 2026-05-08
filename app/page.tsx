@@ -8504,17 +8504,27 @@ function ToolsPage(){
 
 /* ============ BOARD (MIRO-style v2) ============ */
 const BOARD_PALETTE=["#FEF08A","#BBF7D0","#BFDBFE","#FED7AA","#F9A8D4","#E9D5FF","#FECACA","#A7F3D0","#ffffff","#F1F5F9","#1E293B","#7C3AED","#2563EB","#DC2626","#16A34A","#D97706"];
+const BOARD_FONTS=[
+  {id:"Montserrat",label:"Montserrat"},
+  {id:"Inter, sans-serif",label:"Inter"},
+  {id:"Arial, sans-serif",label:"Arial"},
+  {id:"Georgia, serif",label:"Georgia"},
+  {id:"Courier New, monospace",label:"Mono"},
+];
 const MAX_BOARDS=20;
+const MAX_BOARD_ITEMS=420;
+const MAX_DRAW_PATH_CHARS=9000;
 
 type BItemType="sticky"|"text"|"image"|"link"|"shape"|"draw";
-type LineStyle="solid"|"dashed";
-type ArrowTip="none"|"arrow";
+type LineStyle="solid"|"dashed"|"dotted";
+type ArrowTip="none"|"arrow"|"double";
+type DrawMode="pen"|"pencil"|"pointer";
 
 interface BItem{
   id:string; type:BItemType;
   x:number; y:number; w:number; h:number;
   text?:string; color?:string;
-  fontSize?:number; fontBold?:boolean; fontItalic?:boolean;
+  fontSize?:number; fontBold?:boolean; fontItalic?:boolean; fontFamily?:string;
   shapeKind?:"rect"|"circle"|"diamond"|"triangle"|"parallelogram"|"square";
   shapeText?:string; // text inside shape
   imageUrl?:string; imageW?:number; imageH?:number;
@@ -8563,9 +8573,11 @@ function BoardPage({userId}:{userId:string}){
   const[shapeKind,setShapeKind]=useState<"rect"|"circle"|"diamond"|"triangle"|"parallelogram"|"square">("rect");
   const[drawColor,setDrawColor]=useState("#2563EB");
   const[drawThickness,setDrawThickness]=useState(3);
+  const[drawMode,setDrawMode]=useState<DrawMode>("pen");
   const drawingRef=useRef<{path:string;startX:number;startY:number;pointCount:number}|null>(null);
   const[isDrawing,setIsDrawing]=useState(false);
   const[drawPreview,setDrawPreview]=useState("");
+  const[pointerTrail,setPointerTrail]=useState<{path:string;startX:number;startY:number;color:string;thickness:number}|null>(null);
 
   // Live refs — always up to date, no stale closures in handlers
   const itemsRef=useRef<BItem[]>([]);
@@ -8642,7 +8654,7 @@ function BoardPage({userId}:{userId:string}){
       setItems((its||[]).map((d:any):BItem=>({
         id:d.id,type:d.type,x:d.x,y:d.y,w:d.w,h:d.h,
         text:d.text||"",color:d.color||"",fontSize:d.font_size||14,
-        fontBold:d.font_bold||false,fontItalic:d.font_italic||false,
+        fontBold:d.font_bold||false,fontItalic:d.font_italic||false,fontFamily:d.type!=="link"?(d.link_favicon||"Montserrat"):"Montserrat",
         shapeKind:d.shape_kind||"rect",imageUrl:d.image_url||"",
         linkUrl:d.link_url||"",linkTitle:d.link_title||"",linkFavicon:d.link_favicon||"",
         zIndex:d.z_index||0,
@@ -8654,7 +8666,7 @@ function BoardPage({userId}:{userId:string}){
         style:d.style||"solid",arrow:d.arrow||"arrow",
       })));
       // Sync refs
-      itemsRef.current=(its||[]).map((d:any):BItem=>({id:d.id,type:d.type,x:d.x,y:d.y,w:d.w,h:d.h,text:d.text||"",color:d.color||"",fontSize:d.font_size||14,fontBold:d.font_bold||false,fontItalic:d.font_italic||false,shapeKind:d.shape_kind||"rect",imageUrl:d.image_url||"",linkUrl:d.link_url||"",linkTitle:d.link_title||"",linkFavicon:d.link_favicon||"",zIndex:d.z_index||0,drawPath:d.draw_path||undefined,drawColor:d.draw_color||undefined,drawThickness:d.draw_thickness||undefined}));
+      itemsRef.current=(its||[]).map((d:any):BItem=>({id:d.id,type:d.type,x:d.x,y:d.y,w:d.w,h:d.h,text:d.text||"",color:d.color||"",fontSize:d.font_size||14,fontBold:d.font_bold||false,fontItalic:d.font_italic||false,fontFamily:d.type!=="link"?(d.link_favicon||"Montserrat"):"Montserrat",shapeKind:d.shape_kind||"rect",imageUrl:d.image_url||"",linkUrl:d.link_url||"",linkTitle:d.link_title||"",linkFavicon:d.type==="link"?(d.link_favicon||""):"",zIndex:d.z_index||0,drawPath:d.draw_path||undefined,drawColor:d.draw_color||undefined,drawThickness:d.draw_thickness||undefined}));
       linesRef.current=(lns||[]).map((d:any):BLine=>({id:d.id,fromId:d.from_id,toId:d.to_id,color:d.color||"#64748B",thickness:d.thickness||2,style:d.style||"solid",arrow:d.arrow||"arrow"}));
       setLoadingCanvas(false);
     })();
@@ -8673,7 +8685,7 @@ function BoardPage({userId}:{userId:string}){
           text:it.text||"",color:it.color||"",font_size:it.fontSize||14,
           font_bold:it.fontBold||false,font_italic:it.fontItalic||false,
           shape_kind:it.shapeKind||null,image_url:it.imageUrl||"",
-          link_url:it.linkUrl||"",link_title:it.linkTitle||"",link_favicon:it.linkFavicon||"",
+          link_url:it.linkUrl||"",link_title:it.linkTitle||"",link_favicon:it.type==="link"?(it.linkFavicon||""):(it.fontFamily||"Montserrat"),
           z_index:i,draw_path:it.drawPath||null,draw_color:it.drawColor||null,draw_thickness:it.drawThickness||null,
         }));
         const lineRows=newLines.map(ln=>({
@@ -8698,7 +8710,7 @@ function BoardPage({userId}:{userId:string}){
         ].filter(Boolean));
         setSaved(true);
       }catch{setSaved(false);}
-    },1500);
+    },900);
   };
 
   const updItems=(next:BItem[])=>{itemsRef.current=next;setItems(next);triggerSave(next,linesRef.current);};
@@ -8741,7 +8753,8 @@ function BoardPage({userId}:{userId:string}){
 
   // ── Add item helper ──
   const addItem=(partial:Partial<BItem>&{type:BItemType},cx:number,cy:number)=>{
-    const it:BItem={id:bid(),x:cx-100,y:cy-80,w:200,h:160,zIndex:items.length,...partial};
+    if(itemsRef.current.length>=MAX_BOARD_ITEMS){alert(`На одной доске максимум ${MAX_BOARD_ITEMS} элементов. Удали лишнее или создай новую доску.`);return null as any;}
+    const it:BItem={id:bid(),x:cx-100,y:cy-80,w:200,h:160,zIndex:items.length,fontFamily:"Montserrat",...partial};
     const next=[...items,it];
     updItems(next);
     setSelectedIds(new Set([it.id]));
@@ -8759,13 +8772,14 @@ function BoardPage({userId}:{userId:string}){
     const{x,y}=toCanvas(e.clientX,e.clientY);
 
     if(tool==="sticky"){
-      const it=addItem({type:"sticky",text:"",color:BOARD_PALETTE[0],w:200,h:180},x,y);
-      setTimeout(()=>{setEditingId(it.id);setEditText("");},60);
+      const it=addItem({type:"sticky",text:"",color:BOARD_PALETTE[0],w:200,h:180,fontFamily:"Montserrat"},x,y);
+      if(it)setTimeout(()=>{setEditingId(it.id);setEditText("");},60);
     } else if(tool==="text"){
-      const it=addItem({type:"text",text:"Текст",color:"#1E293B",w:180,h:50,fontSize:16},x,y);
-      setTimeout(()=>{setEditingId(it.id);setEditText("Текст");},60);
+      const it=addItem({type:"text",text:"Текст",color:"#1E293B",w:180,h:50,fontSize:16,fontFamily:"Montserrat"},x,y);
+      if(it)setTimeout(()=>{setEditingId(it.id);setEditText("Текст");},60);
     } else if(tool==="shape"){
-      addItem({type:"shape",shapeKind,color:"#3B82F6",w:140,h:100},x,y);
+      const it=addItem({type:"shape",shapeKind,color:"#3B82F6",w:160,h:110,text:"",shapeText:"",fontFamily:"Montserrat",fontSize:14},x,y);
+      if(it)setTimeout(()=>{setEditingId(it.id);setEditText("");},60);
     } else if(tool==="link"){
       setLinkClickPos({x,y});setLinkModal(true);
     } else if(tool==="image"){
@@ -8836,14 +8850,12 @@ function BoardPage({userId}:{userId:string}){
       const dx=x-drawingRef.current.startX;
       const dy=y-drawingRef.current.startY;
       drawingRef.current.pointCount=(drawingRef.current.pointCount||0)+1;
-      // Only add point every 3 moves (throttle) and limit total points to 800
-      if(drawingRef.current.pointCount%3===0&&drawingRef.current.path.length<12000){
+      const step=drawMode==="pencil"?2:drawMode==="pointer"?4:3;
+      const stateStep=drawMode==="pencil"?4:drawMode==="pointer"?8:6;
+      if(drawingRef.current.pointCount%step===0&&drawingRef.current.path.length<MAX_DRAW_PATH_CHARS){
         const newPath=drawingRef.current.path+` L${dx.toFixed(1)},${dy.toFixed(1)}`;
         drawingRef.current.path=newPath;
-        // Only update React state every 6 moves for perf
-        if(drawingRef.current.pointCount%6===0){
-          setDrawPreview(newPath);
-        }
+        if(drawingRef.current.pointCount%stateStep===0){setDrawPreview(newPath);}
       }
     } else if(connectorDrag){
       // Update live connector preview via state
@@ -8859,14 +8871,18 @@ function BoardPage({userId}:{userId:string}){
     // Finish drawing
     if(isDrawing&&drawingRef.current&&drawPreview.length>4){
       const{startX,startY}=drawingRef.current;
-      // Compute bounding box of path
-      const coords=drawPreview.match(/-?\d+\.?\d*/g)?.map(Number)||[];
-      const xs=coords.filter((_,i)=>i%2===0),ys=coords.filter((_,i)=>i%2===1);
-      const minX=Math.min(0,...xs),minY=Math.min(0,...ys);
-      const maxX=Math.max(0,...xs),maxY=Math.max(0,...ys);
-      const w=Math.max(40,maxX-minX),h=Math.max(40,maxY-minY);
-      const it:BItem={id:bid(),type:"draw",x:startX+minX,y:startY+minY,w,h,drawPath:drawPreview,drawColor,drawThickness,zIndex:items.length};
-      updItems([...items,it]);
+      if(drawMode==="pointer"){
+        setPointerTrail({path:drawPreview,startX,startY,color:drawColor,thickness:Math.max(4,drawThickness+2)});
+        window.setTimeout(()=>setPointerTrail(null),900);
+      }else{
+        const coords=drawPreview.match(/-?\d+\.?\d*/g)?.map(Number)||[];
+        const xs=coords.filter((_,i)=>i%2===0),ys=coords.filter((_,i)=>i%2===1);
+        const minX=Math.min(0,...xs),minY=Math.min(0,...ys);
+        const maxX=Math.max(0,...xs),maxY=Math.max(0,...ys);
+        const w=Math.max(40,maxX-minX),h=Math.max(40,maxY-minY);
+        const it:BItem={id:bid(),type:"draw",x:startX+minX,y:startY+minY,w,h,drawPath:drawPreview.slice(0,MAX_DRAW_PATH_CHARS),drawColor:drawMode==="pencil"?"rgba(30,41,59,0.75)":drawColor,drawThickness:drawMode==="pencil"?Math.max(1,drawThickness-1):drawThickness,zIndex:items.length};
+        updItems([...items,it]);
+      }
     }
     setIsDrawing(false);drawingRef.current=null;setDrawPreview("");
 
@@ -8890,8 +8906,8 @@ function BoardPage({userId}:{userId:string}){
 
   const onWheel=(e:React.WheelEvent)=>{
     e.preventDefault();
-    const f=e.deltaY>0?0.9:1.11;
-    setZoom(z=>Math.min(4,Math.max(0.15,z*f)));
+    const f=e.deltaY>0?0.94:1.06;
+    setZoom(z=>Math.min(3,Math.max(0.2,z*f)));
   };
 
   // ── Delete selected ──
@@ -9072,15 +9088,16 @@ function BoardPage({userId}:{userId:string}){
       const b=ln.toAnchor?anchorPos(to,ln.toAnchor):itemCenter(to);
       const col=ln.color||"#64748B";
       const thick=ln.thickness||2;
-      const dashArr=ln.style==="dashed"?`${thick*4} ${thick*3}`:"none";
+      const dashArr=ln.style==="dashed"?`${thick*4} ${thick*3}`:ln.style==="dotted"?`${thick} ${thick*3}`:"none";
       const markerId=`arr-${ln.id}`;
+      const markerStartId=`arr-start-${ln.id}`;
       const isSel=selectedLineId===ln.id;
       return(
         <g key={ln.id}>
-          {ln.arrow==="arrow"&&<defs><marker id={markerId} markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill={col}/></marker></defs>}
+          {(ln.arrow==="arrow"||ln.arrow==="double")&&<defs><marker id={markerId} markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill={col}/></marker>{ln.arrow==="double"&&<marker id={markerStartId} markerWidth="10" markerHeight="7" refX="1" refY="3.5" orient="auto-start-reverse"><polygon points="10 0, 0 3.5, 10 7" fill={col}/></marker>}</defs>}
           {/* Hit area */}
           <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="transparent" strokeWidth={16} style={{cursor:"pointer"}} onClick={e=>{e.stopPropagation();setSelectedLineId(ln.id);setSelectedIds(new Set());}}/>
-          <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={isSel?"#2563EB":col} strokeWidth={isSel?thick+2:thick} strokeDasharray={dashArr} markerEnd={ln.arrow==="arrow"?`url(#${markerId})`:"none"} strokeLinecap="round" style={{pointerEvents:"none"}}/>
+          <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={isSel?"#2563EB":col} strokeWidth={isSel?thick+2:thick} strokeDasharray={dashArr} markerStart={ln.arrow==="double"?`url(#${markerStartId})`:"none"} markerEnd={(ln.arrow==="arrow"||ln.arrow==="double")?`url(#${markerId})`:"none"} strokeLinecap="round" style={{pointerEvents:"none"}}/>
         </g>
       );
     });
@@ -9091,7 +9108,7 @@ function BoardPage({userId}:{userId:string}){
     const c=it.color||"#3B82F6";
     const textStyle:React.CSSProperties={
       position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",
-      fontSize:it.fontSize||13,fontWeight:600,color:"#fff",
+      fontFamily:it.fontFamily||"Montserrat",fontSize:it.fontSize||13,fontWeight:it.fontBold?800:600,fontStyle:it.fontItalic?"italic":"normal",color:"#fff",
       textAlign:"center",padding:"4px 8px",wordBreak:"break-word",
       textShadow:"0 1px 3px rgba(0,0,0,0.4)",pointerEvents:"none",lineHeight:1.3,
     };
@@ -9227,7 +9244,7 @@ function BoardPage({userId}:{userId:string}){
     <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 64px)",overflow:"hidden",background:"#F8FAFC",position:"relative",userSelect:"none"}}>
 
       {/* ── TOP BAR ── */}
-      <div style={{position:"absolute",top:0,left:0,right:0,zIndex:60,display:"flex",alignItems:"center",padding:"8px 12px",background:"rgba(255,255,255,0.95)",backdropFilter:"blur(12px)",borderBottom:"1px solid rgba(0,0,0,0.06)",gap:10}}>
+      <div style={{position:"absolute",top:0,left:0,right:0,zIndex:60,display:"flex",alignItems:"center",padding:"8px 12px",background:"rgba(255,255,255,0.95)",backdropFilter:"blur(12px)",borderBottom:"1px solid rgba(0,0,0,0.06)",gap:10,overflowX:"auto"}}>
         {/* Back */}
         <button onClick={()=>{setSaved(true);setActiveBoardId(null);setSelectedIds(new Set());setEditingId(null);setLineFrom(null);setTool("select");}}
           style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",background:"#F1F5F9",border:"none",borderRadius:9,fontSize:13,fontWeight:600,color:C.t2,cursor:"pointer"}}>
@@ -9248,7 +9265,7 @@ function BoardPage({userId}:{userId:string}){
             {id:"link",icon:"🔗",tip:"Ссылка (L)"},
             {id:"shape",icon:"⬡",tip:"Фигура (F)"},
             {id:"line",icon:"↗",tip:"Линия (C)"},
-            {id:"draw",icon:"✏️",tip:"Маркер (M)"},
+            {id:"draw",icon:"✏️",tip:"Рисование: ручка, карандаш, указка (M)"},
           ] as {id:string;icon:string;tip:string}[]).map(tb=>(
             <button key={tb.id} onClick={()=>{setTool(tb.id as any);if(tb.id==="image"){setImgClickPos({x:400,y:300});imgInputRef.current?.click();}}} title={tb.tip}
               style={{width:34,height:34,borderRadius:8,border:"none",background:tool===tb.id?"#fff":"transparent",color:tool===tb.id?C.t1:C.t2,fontSize:tb.id==="text"||tb.id==="line"?13:17,cursor:"pointer",fontWeight:tool===tb.id?700:400,boxShadow:tool===tb.id?"0 1px 4px rgba(0,0,0,0.1)":"none",transition:"all 0.12s"}}>
@@ -9260,6 +9277,9 @@ function BoardPage({userId}:{userId:string}){
         {/* Draw tool options */}
         {tool==="draw"&&(
           <div style={{display:"flex",gap:6,alignItems:"center",background:"#F1F5F9",borderRadius:10,padding:"4px 8px"}}>
+            {([{id:"pen",label:"Ручка",icon:"🖊"},{id:"pencil",label:"Карандаш",icon:"✏️"},{id:"pointer",label:"Указка",icon:"☄️"}] as {id:DrawMode;label:string;icon:string}[]).map(m=>(
+              <button key={m.id} onClick={()=>setDrawMode(m.id)} title={m.label} style={{height:28,padding:"0 8px",borderRadius:7,border:"1px solid "+(drawMode===m.id?"#2563EB":"#E2E8F0"),background:drawMode===m.id?"#EFF6FF":"#fff",fontSize:12,fontWeight:700,color:drawMode===m.id?"#2563EB":C.t2,cursor:"pointer"}}>{m.icon}</button>
+            ))}
             {/* Color swatch → opens picker */}
             <div style={{position:"relative"}}>
               <button onClick={()=>setStickyColorPick(stickyColorPick==="__draw__"?null:"__draw__")}
@@ -9357,7 +9377,11 @@ function BoardPage({userId}:{userId:string}){
           </div>
 
           {/* Item-specific controls */}
-          {sel1&&sel1.type!=="shape"&&sel1.type!=="image"&&sel1.type!=="link"&&<>
+          {sel1&&["sticky","text","shape"].includes(sel1.type)&&<>
+            <select value={sel1.fontFamily||"Montserrat"} onChange={e=>updItems(items.map(it=>it.id===sel1.id?{...it,fontFamily:e.target.value}:it))}
+              style={{height:26,border:"1px solid #E2E8F0",borderRadius:7,background:"#fff",fontSize:11,fontWeight:600,color:C.t1,outline:"none",maxWidth:118}}>
+              {BOARD_FONTS.map(f=><option key={f.id} value={f.id}>{f.label}</option>)}
+            </select>
             <button onClick={()=>updItems(items.map(it=>it.id===sel1.id?{...it,fontSize:Math.max(8,(it.fontSize||14)-2)}:it))}
               style={{width:26,height:26,border:"1px solid #E2E8F0",borderRadius:7,background:"transparent",cursor:"pointer",fontSize:11,fontWeight:700}}>A−</button>
             <span style={{fontSize:11,color:C.t2,minWidth:18,textAlign:"center"}}>{sel1.fontSize||14}</span>
@@ -9378,14 +9402,18 @@ function BoardPage({userId}:{userId:string}){
                 <div style={{height:th,width:20,background:selLine.thickness===th?"#2563EB":"#64748B",borderRadius:1}}/>
               </button>
             ))}
-            <button onClick={()=>updLines(lines.map(l=>l.id===selLine.id?{...l,style:l.style==="solid"?"dashed":"solid"}:l))}
-              style={{padding:"4px 10px",border:"1px solid #E2E8F0",borderRadius:7,background:selLine.style==="dashed"?"#EFF6FF":"transparent",cursor:"pointer",fontSize:11,fontWeight:600,color:selLine.style==="dashed"?"#2563EB":C.t1}}>
-              {selLine.style==="solid"?"— сплошная":"-- пунктир"}
-            </button>
-            <button onClick={()=>updLines(lines.map(l=>l.id===selLine.id?{...l,arrow:l.arrow==="arrow"?"none":"arrow"}:l))}
-              style={{padding:"4px 10px",border:"1px solid #E2E8F0",borderRadius:7,background:selLine.arrow==="arrow"?"#EFF6FF":"transparent",cursor:"pointer",fontSize:13}}>
-              {selLine.arrow==="arrow"?"→":"—"}
-            </button>
+            {(["solid","dashed","dotted"] as LineStyle[]).map(st=>(
+              <button key={st} onClick={()=>updLines(lines.map(l=>l.id===selLine.id?{...l,style:st}:l))}
+                style={{padding:"4px 8px",border:"1px solid #E2E8F0",borderRadius:7,background:selLine.style===st?"#EFF6FF":"transparent",cursor:"pointer",fontSize:11,fontWeight:600,color:selLine.style===st?"#2563EB":C.t1}}>
+                {st==="solid"?"—":st==="dashed"?"--":"··"}
+              </button>
+            ))}
+            {(["none","arrow","double"] as ArrowTip[]).map(ar=>(
+              <button key={ar} onClick={()=>updLines(lines.map(l=>l.id===selLine.id?{...l,arrow:ar}:l))}
+                style={{padding:"4px 8px",border:"1px solid #E2E8F0",borderRadius:7,background:selLine.arrow===ar?"#EFF6FF":"transparent",cursor:"pointer",fontSize:13,color:selLine.arrow===ar?"#2563EB":C.t1}}>
+                {ar==="none"?"—":ar==="arrow"?"→":"↔"}
+              </button>
+            ))}
           </>}
 
           {/* Layer controls (items only) */}
@@ -9396,7 +9424,7 @@ function BoardPage({userId}:{userId:string}){
           </>}
 
           {/* Edit text */}
-          {sel1&&sel1.type!=="shape"&&sel1.type!=="image"&&sel1.type!=="link"&&(
+          {sel1&&!["image","link","draw"].includes(sel1.type)&&(
             <button onClick={()=>{setEditingId(sel1.id);setEditText(sel1.text||"");}}
               style={{padding:"4px 10px",border:"1px solid #E2E8F0",borderRadius:7,background:"transparent",cursor:"pointer",fontSize:11,color:C.t1}}>✏️ Текст</button>
           )}
@@ -9450,10 +9478,17 @@ function BoardPage({userId}:{userId:string}){
                 </g>;
               })()}
 
+              {/* Pointer trail */}
+              {pointerTrail&&(
+                <g transform={`translate(${pointerTrail.startX},${pointerTrail.startY})`} style={{opacity:0.7,transition:"opacity 0.8s"}}>
+                  <path d={pointerTrail.path} fill="none" stroke={pointerTrail.color} strokeWidth={pointerTrail.thickness} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="10 6"/>
+                </g>
+              )}
+
               {/* Draw preview */}
               {isDrawing&&drawPreview&&drawingRef.current&&(
                 <g transform={`translate(${drawingRef.current.startX},${drawingRef.current.startY})`}>
-                  <path d={drawPreview} fill="none" stroke={drawColor} strokeWidth={drawThickness} strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d={drawPreview} fill="none" stroke={drawMode==="pencil"?"rgba(30,41,59,0.75)":drawColor} strokeWidth={drawMode==="pointer"?Math.max(4,drawThickness+2):drawMode==="pencil"?Math.max(1,drawThickness-1):drawThickness} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={drawMode==="pointer"?"10 6":"none"}/>
                 </g>
               )}
             </g>
@@ -9487,8 +9522,8 @@ function BoardPage({userId}:{userId:string}){
                       ?<textarea autoFocus value={editText} onChange={e=>setEditText(e.target.value)}
                           onKeyDown={e=>{if(e.key==="Escape"||(e.key==="Enter"&&e.ctrlKey)){const next=items.map(i=>i.id===it.id?{...i,text:editText}:i);updItems(next);setEditingId(null);}}}
                           onBlur={()=>{const next=items.map(i=>i.id===it.id?{...i,text:editText}:i);updItems(next);setEditingId(null);}}
-                          style={{flex:1,border:"none",background:"transparent",resize:"none",outline:"none",fontFamily:"'Montserrat',sans-serif",fontSize:it.fontSize||14,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:"rgba(0,0,0,0.8)",lineHeight:1.55}}/>
-                      :<div style={{flex:1,fontSize:it.fontSize||14,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:"rgba(0,0,0,0.8)",lineHeight:1.55,wordBreak:"break-word",whiteSpace:"pre-wrap",overflow:"hidden"}}>{it.text||<span style={{opacity:0.35,fontStyle:"italic"}}>Двойной клик для ввода...</span>}</div>
+                          style={{flex:1,border:"none",background:"transparent",resize:"none",outline:"none",fontFamily:it.fontFamily||"Montserrat",fontSize:it.fontSize||14,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:"rgba(0,0,0,0.8)",lineHeight:1.55}}/>
+                      :<div style={{flex:1,fontFamily:it.fontFamily||"Montserrat",fontSize:it.fontSize||14,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:"rgba(0,0,0,0.8)",lineHeight:1.55,wordBreak:"break-word",whiteSpace:"pre-wrap",overflow:"hidden"}}>{it.text||<span style={{opacity:0.35,fontStyle:"italic"}}>Двойной клик для ввода...</span>}</div>
                     }
                   </div>
                 )}
@@ -9500,8 +9535,8 @@ function BoardPage({userId}:{userId:string}){
                       ?<textarea autoFocus value={editText} onChange={e=>setEditText(e.target.value)}
                           onBlur={()=>{const next=items.map(i=>i.id===it.id?{...i,text:editText}:i);updItems(next);setEditingId(null);}}
                           onKeyDown={e=>{if(e.key==="Escape"){const next=items.map(i=>i.id===it.id?{...i,text:editText}:i);updItems(next);setEditingId(null);}}}
-                          style={{flex:1,border:"none",background:"transparent",resize:"none",outline:"none",fontFamily:"'Montserrat',sans-serif",fontSize:it.fontSize||16,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:it.color||"#1E293B",lineHeight:1.4,width:"100%",minHeight:"100%"}}/>
-                      :<div style={{fontSize:it.fontSize||16,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:it.color||"#1E293B",lineHeight:1.4,wordBreak:"break-word",whiteSpace:"pre-wrap",width:"100%"}}>{it.text||"Текст"}</div>
+                          style={{flex:1,border:"none",background:"transparent",resize:"none",outline:"none",fontFamily:it.fontFamily||"Montserrat",fontSize:it.fontSize||16,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:it.color||"#1E293B",lineHeight:1.4,width:"100%",minHeight:"100%"}}/>
+                      :<div style={{fontFamily:it.fontFamily||"Montserrat",fontSize:it.fontSize||16,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:it.color||"#1E293B",lineHeight:1.4,wordBreak:"break-word",whiteSpace:"pre-wrap",width:"100%"}}>{it.text||"Текст"}</div>
                     }
                   </div>
                 )}
@@ -9541,7 +9576,7 @@ function BoardPage({userId}:{userId:string}){
                       onBlur={()=>{const next=items.map(i=>i.id===it.id?{...i,text:editText,shapeText:editText}:i);updItems(next);setEditingId(null);}}
                       onKeyDown={e=>{if(e.key==="Escape"){const next=items.map(i=>i.id===it.id?{...i,text:editText,shapeText:editText}:i);updItems(next);setEditingId(null);}e.stopPropagation();}}
                       placeholder="Текст..."
-                      style={{width:"80%",maxHeight:"70%",border:"none",background:"rgba(0,0,0,0.5)",backdropFilter:"blur(4px)",borderRadius:8,resize:"none",outline:"none",fontFamily:"'Montserrat',sans-serif",fontSize:it.fontSize||13,fontWeight:600,color:"#fff",textAlign:"center",padding:"8px",lineHeight:1.4}}/>
+                      style={{width:"80%",maxHeight:"70%",border:"none",background:"rgba(0,0,0,0.5)",backdropFilter:"blur(4px)",borderRadius:8,resize:"none",outline:"none",fontFamily:it.fontFamily||"Montserrat",fontSize:it.fontSize||13,fontWeight:it.fontBold?800:600,fontStyle:it.fontItalic?"italic":"normal",color:"#fff",textAlign:"center",padding:"8px",lineHeight:1.4}}/>
                   </div>
                 )}
 
@@ -9620,7 +9655,7 @@ function BoardPage({userId}:{userId:string}){
 
       {/* Status bar */}
       <div style={{position:"absolute",bottom:10,left:16,zIndex:50,background:"rgba(255,255,255,0.88)",backdropFilter:"blur(6px)",borderRadius:10,padding:"5px 12px",fontSize:10,color:C.t2,border:"1px solid rgba(0,0,0,0.06)",boxShadow:"0 2px 8px rgba(0,0,0,0.05)"}}>
-        V-выбор · H-пан · S-стикер · T-текст · I-фото · L-ссылка · F-фигура · C-линия · M-маркер · Del-удалить · Ctrl+D-дублировать
+        V-выбор · H-пан · S-стикер · T-текст · I-фото · L-ссылка · F-фигура · C-линия · M-рисование · Del-удалить · Ctrl+D-дублировать
       </div>
     </div>
   );
