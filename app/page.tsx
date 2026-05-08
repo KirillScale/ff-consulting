@@ -286,9 +286,14 @@ function useIsMobile(){
 }
 
 /* ============ SIDEBAR — Deep Dark Glass ============ */
-function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onLogout:()=>void}){
+function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedChange}:{active:string,onNav:(id:string)=>void,onLogout:()=>void,collapsed?:boolean,onCollapsedChange?:(collapsed:boolean)=>void}){
   const{dark,toggle}=useTheme();
-  const[collapsed,setCollapsed]=useState(false);
+  const[localCollapsed,setLocalCollapsed]=useState(false);
+  const collapsed=controlledCollapsed ?? localCollapsed;
+  const setCollapsed=(next:boolean)=>{
+    if(onCollapsedChange)onCollapsedChange(next);
+    else setLocalCollapsed(next);
+  };
   const activeGroupIdx=NAV_GROUPS.findIndex(g=>g.items.some(i=>i.id===active));
   const[openGroups,setOpenGroups]=useState<number[]>(()=>[activeGroupIdx>=0?activeGroupIdx:0]);
 
@@ -836,7 +841,7 @@ function SafePage({name,children}:{name:string,children:React.ReactNode}){
 function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,nav,dark}:any){
   const isMobile=useIsMobile();
   const[sideCollapsed,setSideCollapsed]=useState(false);
-  const sideW=sideCollapsed?60:240;
+  const sideW=sideCollapsed?64:248;
 
   const pageContent=<>
     {page==="dashboard"&&<SafePage name="Dashboard"><DashPage userId={user.id} name={userName} avatar={userAvatar} onNav={setPage} onAvatarChange={async(url:string)=>{setUserAvatar(url);await supabase.from("profiles").upsert({id:user.id,avatar_url:url},{onConflict:"id"});}}/></SafePage>}
@@ -1027,10 +1032,10 @@ function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,n
           <div style={{padding:"16px 16px 0"}}>{pageContent}</div>
         </div>
       </> : <>
-        <Side active={page} onNav={setPage} onLogout={logout}/>
-        <div style={{marginLeft:sideW,minHeight:"100vh",transition:"margin-left 0.25s cubic-bezier(0.4,0,0.2,1)"}}>
+        <Side active={page} onNav={setPage} onLogout={logout} collapsed={sideCollapsed} onCollapsedChange={setSideCollapsed}/>
+        <div style={{marginLeft:sideW,width:`calc(100vw - ${sideW}px)`,minHeight:"100vh",transition:"margin-left 0.25s cubic-bezier(0.4,0,0.2,1), width 0.25s cubic-bezier(0.4,0,0.2,1)",overflowX:"hidden"}}>
           <Head name={userName}/>
-          <div style={{padding:"28px 32px"}}>{pageContent}</div>
+          <div style={{padding:"28px 32px",width:"100%"}}>{pageContent}</div>
         </div>
       </>}
     </div>
@@ -9817,8 +9822,7 @@ function BoardPage({userId}:{userId:string}){
           alignItems:"center",
           flexWrap:"nowrap",
           maxWidth:"calc(100vw - 360px)",
-          overflowX:"auto",
-          overflowY:"visible",
+          overflow:"visible",
           scrollbarWidth:"none",
         }}>
 
@@ -9833,8 +9837,8 @@ function BoardPage({userId}:{userId:string}){
                 <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:8}}>
                   {BOARD_PALETTE.map(c=>(
                     <button key={c} onClick={()=>{
-                      if(sel1)updItems(items.map(it=>it.id===sel1.id?{...it,color:c}:it));
-                      else if(selLine)updLines(lines.map(l=>l.id===selLine.id?{...l,color:c}:l));
+                      if(sel1)updItems(itemsRef.current.map(it=>it.id===sel1.id?{...it,color:c}:it));
+                      else if(selLine)updLines(linesRef.current.map(l=>l.id===selLine.id?{...l,color:c}:l));
                       setColorTarget(null);
                     }} style={{width:24,height:24,borderRadius:6,background:c,border:"1px solid rgba(0,0,0,0.1)",cursor:"pointer"}}/>
                   ))}
@@ -9843,14 +9847,14 @@ function BoardPage({userId}:{userId:string}){
                 <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:6}}>
                   <span style={{fontSize:10,color:"#64748B",fontWeight:500}}>HEX</span>
                   <input value={customColorInput} onChange={e=>setCustomColorInput(e.target.value)}
-                    onKeyDown={e=>{if(e.key==="Enter"){if(sel1)updItems(items.map(it=>it.id===sel1.id?{...it,color:customColorInput}:it));else if(selLine)updLines(lines.map(l=>l.id===selLine.id?{...l,color:customColorInput}:l));setColorTarget(null);}}}
+                    onKeyDown={e=>{if(e.key==="Enter"){if(sel1)updItems(itemsRef.current.map(it=>it.id===sel1.id?{...it,color:customColorInput}:it));else if(selLine)updLines(linesRef.current.map(l=>l.id===selLine.id?{...l,color:customColorInput}:l));setColorTarget(null);}}}
                     style={{flex:1,padding:"4px 7px",border:"1px solid #E2E8F0",borderRadius:7,fontSize:12,outline:"none",fontFamily:"monospace"}} placeholder="#000000"/>
                 </div>
                 {/* Native color picker */}
                 <input type="color" value={customColorInput} onChange={e=>{
                   setCustomColorInput(e.target.value);
-                  if(sel1)updItems(items.map(it=>it.id===sel1.id?{...it,color:e.target.value}:it));
-                  else if(selLine)updLines(lines.map(l=>l.id===selLine.id?{...l,color:e.target.value}:l));
+                  if(sel1)updItems(itemsRef.current.map(it=>it.id===sel1.id?{...it,color:e.target.value}:it));
+                  else if(selLine)updLines(linesRef.current.map(l=>l.id===selLine.id?{...l,color:e.target.value}:l));
                 }} style={{width:"100%",height:28,border:"none",cursor:"pointer",borderRadius:7}}/>
               </div>
             )}
@@ -9858,27 +9862,11 @@ function BoardPage({userId}:{userId:string}){
 
           {sel1?.type==="shape"&&(
             <div style={{position:"relative",flexShrink:0}}>
-              <button onClick={()=>{setShapeColorOpen(v=>!v);setColorTarget(null);}} title="Цвет фигуры"
-                style={{height:34,padding:"0 12px",borderRadius:10,border:"1px solid #E2E8F0",background:"#fff",cursor:"pointer",display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:800,color:"#0F172A",whiteSpace:"nowrap",boxShadow:shapeColorOpen?"0 4px 14px rgba(37,99,235,0.12)":"none"}}>
+              <button onClick={(e)=>{e.stopPropagation();setShapeColorOpen(v=>!v);setColorTarget(null);}} title="Цвет фигуры"
+                style={{height:34,padding:"0 12px",borderRadius:10,border:"1px solid #E2E8F0",background:shapeColorOpen?"#EFF6FF":"#fff",cursor:"pointer",display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:800,color:shapeColorOpen?"#2563EB":"#0F172A",whiteSpace:"nowrap",boxShadow:shapeColorOpen?"0 4px 14px rgba(37,99,235,0.12)":"none"}}>
                 <span style={{width:18,height:18,borderRadius:6,background:sel1.color||"#3B82F6",border:"2px solid rgba(15,23,42,0.14)",boxShadow:"inset 0 0 0 2px rgba(255,255,255,0.55)"}}/>
                 Цвет фигуры
               </button>
-              {shapeColorOpen&&(
-                <div style={{position:"absolute",top:"calc(100% + 8px)",left:0,width:204,zIndex:260,background:"#fff",border:"1px solid #E2E8F0",borderRadius:14,padding:10,boxShadow:"0 14px 34px rgba(15,23,42,0.16)"}}>
-                  <div style={{fontSize:11,fontWeight:900,color:"#64748B",marginBottom:8}}>Цвет заливки</div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:6,marginBottom:10}}>
-                    {BOARD_PALETTE.map(color=>(
-                      <button key={color} onClick={()=>{updateSelectedShapeColor(color);setShapeColorOpen(false);}} title={color}
-                        style={{width:25,height:25,borderRadius:7,background:color,border:color.toLowerCase()===(sel1.color||"").toLowerCase()?"2px solid #2563EB":"1px solid rgba(15,23,42,0.14)",cursor:"pointer",boxShadow:color==="#ffffff"?"inset 0 0 0 1px #CBD5E1":"none"}}/>
-                    ))}
-                  </div>
-                  <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <input type="color" value={sel1.color||"#3B82F6"} onChange={e=>updateSelectedShapeColor(e.target.value)} style={{width:40,height:32,border:"none",cursor:"pointer",borderRadius:8,padding:0,background:"transparent"}}/>
-                    <input value={sel1.color||"#3B82F6"} onChange={e=>updateSelectedShapeColor(e.target.value)} placeholder="#3B82F6"
-                      style={{flex:1,height:32,border:"1px solid #E2E8F0",borderRadius:9,padding:"0 9px",fontSize:12,fontFamily:"monospace",outline:"none"}}/>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
@@ -9942,6 +9930,44 @@ function BoardPage({userId}:{userId:string}){
           <button onClick={deleteSelected} style={{width:26,height:26,border:"1px solid #FCA5A5",borderRadius:7,background:"#FFF1F1",cursor:"pointer",fontSize:12,color:"#EF4444"}}>🗑</button>
         </div>
       )}
+
+      {shapeColorOpen&&sel1?.type==="shape"&&(
+        <div
+          onMouseDown={e=>e.stopPropagation()}
+          onClick={e=>e.stopPropagation()}
+          style={{
+            position:"absolute",
+            top:Math.max(92,pan.y+((sel1.y+sel1.h)*zoom)+12),
+            left:pan.x+(sel1.x*zoom),
+            width:220,
+            zIndex:520,
+            background:"#fff",
+            border:"1px solid #E2E8F0",
+            borderRadius:16,
+            padding:12,
+            boxShadow:"0 22px 55px rgba(15,23,42,0.22)",
+          }}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:10}}>
+            <div>
+              <div style={{fontSize:12,fontWeight:900,color:"#0F172A"}}>Цвет фигуры</div>
+              <div style={{fontSize:10,color:"#64748B",marginTop:2}}>Заливка выбранной фигуры</div>
+            </div>
+            <button onClick={()=>setShapeColorOpen(false)} style={{width:24,height:24,border:"1px solid #E2E8F0",borderRadius:8,background:"#fff",cursor:"pointer",color:"#64748B",fontSize:14,lineHeight:1}}>×</button>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:7,marginBottom:12}}>
+            {BOARD_PALETTE.map(color=>(
+              <button key={color} onClick={()=>{updateSelectedShapeColor(color);setShapeColorOpen(false);}} title={color}
+                style={{width:26,height:26,borderRadius:8,background:color,border:color.toLowerCase()===(sel1.color||"").toLowerCase()?"2px solid #2563EB":"1px solid rgba(15,23,42,0.16)",cursor:"pointer",boxShadow:color==="#ffffff"?"inset 0 0 0 1px #CBD5E1":"none"}}/>
+            ))}
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <input type="color" value={sel1.color||"#3B82F6"} onChange={e=>updateSelectedShapeColor(e.target.value)} style={{width:42,height:34,border:"none",cursor:"pointer",borderRadius:8,padding:0,background:"transparent"}}/>
+            <input value={sel1.color||"#3B82F6"} onChange={e=>updateSelectedShapeColor(e.target.value)} placeholder="#3B82F6"
+              style={{flex:1,height:34,border:"1px solid #E2E8F0",borderRadius:10,padding:"0 10px",fontSize:12,fontFamily:"monospace",outline:"none",color:"#0F172A"}}/>
+          </div>
+        </div>
+      )}
+
 
       {/* ── CANVAS ── */}
       <div ref={canvasRef} className="board-bg"
