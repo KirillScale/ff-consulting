@@ -8645,6 +8645,64 @@ function externalCardPayload(it:BItem){
   });
 }
 
+
+function makeEmbeddedDocPayload(title="Новый документ"){
+  return JSON.stringify({
+    kind:"doc",
+    title,
+    body:"Начни писать документ прямо здесь...",
+    updatedAt:new Date().toISOString(),
+  });
+}
+
+function makeEmbeddedTablePayload(title="Новая таблица"){
+  return JSON.stringify({
+    kind:"table",
+    title,
+    cells:Array.from({length:8},()=>Array.from({length:5},()=>"")),
+    updatedAt:new Date().toISOString(),
+  });
+}
+
+function parseEmbeddedPayload(it:Partial<BItem>|null|undefined){
+  const type=it?.type;
+  const fallback=type==="table"
+    ?{kind:"table",title:it?.text&&!(it.text||"").trim().startsWith("{")?it.text:"Новая таблица",cells:Array.from({length:8},()=>Array.from({length:5},()=>"")),updatedAt:""}
+    :{kind:"doc",title:it?.text&&!(it.text||"").trim().startsWith("{")?it.text:"Новый документ",body:"Начни писать документ прямо здесь...",updatedAt:""};
+  try{
+    const raw=String(it?.text||"");
+    const parsed=raw.trim().startsWith("{")?JSON.parse(raw):fallback;
+    if(type==="table"){
+      const cells=Array.isArray(parsed.cells)?parsed.cells:Array.from({length:8},()=>Array.from({length:5},()=>""));
+      return {...fallback,...parsed,kind:"table",cells};
+    }
+    return {...fallback,...parsed,kind:"doc",body:String(parsed.body??fallback.body)};
+  }catch{return fallback;}
+}
+
+function serializeEmbeddedPayload(payload:any){
+  return JSON.stringify({
+    ...payload,
+    title:String(payload?.title||"Без названия"),
+    updatedAt:new Date().toISOString(),
+  });
+}
+
+function embeddedTitle(it:Partial<BItem>|null|undefined){
+  return parseEmbeddedPayload(it).title||((it?.type)==="table"?"Новая таблица":"Новый документ");
+}
+
+function embeddedSummary(it:Partial<BItem>|null|undefined){
+  const data=parseEmbeddedPayload(it);
+  if((it?.type)==="table"){
+    const cells=Array.isArray(data.cells)?data.cells:[];
+    const filled=cells.flat().filter((v:any)=>String(v||"").trim()).length;
+    return filled?`${filled} заполненных ячеек`:"Пустая таблица";
+  }
+  const body=String(data.body||"").replace(/\s+/g," ").trim();
+  return body?body.slice(0,96):"Пустой документ";
+}
+
 function BoardPage({userId}:{userId:string}){
   const crmFunnels=useTable("crm_funnels",userId);
   const crmLeads=useTable("leads",userId);
@@ -8736,6 +8794,10 @@ function BoardPage({userId}:{userId:string}){
   const[externalSearch,setExternalSearch]=useState("");
   const[externalFunnelId,setExternalFunnelId]=useState<string>("all");
   const[externalDropHint,setExternalDropHint]=useState(false);
+
+  // Embedded docs/tables editor inside Vizzy Map
+  const[openEmbeddedItemId,setOpenEmbeddedItemId]=useState<string|null>(null);
+  const[embeddedDraft,setEmbeddedDraft]=useState<any>(null);
 
   // Sync live refs on every state change
   useEffect(()=>{itemsRef.current=items;},[items]);
@@ -8930,8 +8992,30 @@ function BoardPage({userId}:{userId:string}){
     return it;
   };
 
-  const addBoardDoc=(cx=360,cy=260)=>addItem({type:"doc",text:"Новый документ",color:"#EEF2FF",w:240,h:110,fontSize:16,fontBold:true},cx,cy);
-  const addBoardTable=(cx=380,cy=280)=>addItem({type:"table",text:"Новая таблица",color:"#ECFDF5",w:260,h:130,fontSize:16,fontBold:true},cx,cy);
+  const openEmbeddedEditor=(it:BItem)=>{
+    if(it.type!=="doc"&&it.type!=="table")return;
+    setOpenEmbeddedItemId(it.id);
+    setEmbeddedDraft(parseEmbeddedPayload(it));
+  };
+
+  const saveEmbeddedDraft=()=>{
+    if(!openEmbeddedItemId||!embeddedDraft)return;
+    const next=normalizeBoardItems(itemsRef.current as any[]).map(it=>
+      it.id===openEmbeddedItemId?{...it,text:serializeEmbeddedPayload(embeddedDraft)}:it
+    );
+    updItems(next);
+  };
+
+  const addBoardDoc=(cx=360,cy=260)=>{
+    const it=addItem({type:"doc",text:makeEmbeddedDocPayload("Новый документ"),color:"#EEF2FF",w:280,h:145,fontSize:16,fontBold:true},cx,cy);
+    if(it)setTimeout(()=>openEmbeddedEditor(it),80);
+    return it;
+  };
+  const addBoardTable=(cx=380,cy=280)=>{
+    const it=addItem({type:"table",text:makeEmbeddedTablePayload("Новая таблица"),color:"#ECFDF5",w:300,h:165,fontSize:16,fontBold:true},cx,cy);
+    if(it)setTimeout(()=>openEmbeddedEditor(it),80);
+    return it;
+  };
   const addStickyWithColor=(color:string,cx=360,cy=260)=>addItem({type:"sticky",text:"",color,w:200,h:180,fontFamily:"Montserrat"},cx,cy);
   const addShapeFromMenu=(kind:BItem["shapeKind"],cx=400,cy=300)=>{
     if(kind==="parallelogram"){return addItem({type:"shape",shapeKind:"parallelogram",color:"#60A5FA",w:190,h:95,text:""},cx,cy);}
@@ -9910,16 +9994,28 @@ function BoardPage({userId}:{userId:string}){
                   </div>
                 )}
 
-                {/* ── DOCUMENT / TABLE QUICK CARDS ── */}
-                {(it.type==="doc"||it.type==="table")&&(
-                  <div style={{width:"100%",height:"100%",borderRadius:16,background:it.type==="doc"?"linear-gradient(135deg,#EEF2FF,#FFFFFF)":"linear-gradient(135deg,#ECFDF5,#FFFFFF)",border:"1px solid "+(it.type==="doc"?"#C7D2FE":"#A7F3D0"),boxShadow:"0 10px 26px rgba(15,23,42,.10)",padding:16,display:"flex",alignItems:"center",gap:12,boxSizing:"border-box" as const}}>
-                    <div style={{width:44,height:44,borderRadius:14,background:it.type==="doc"?"#4F46E5":"#10B981",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:23,flexShrink:0}}>{it.type==="doc"?"📄":"▦"}</div>
-                    <div style={{minWidth:0}}>
-                      <div style={{fontSize:15,fontWeight:900,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.text|| (it.type==="doc"?"Документ":"Таблица")}</div>
-                      <div style={{fontSize:11,color:C.t2,marginTop:4}}>{it.type==="doc"?"Vizzy Text document":"Vizzy Tables sheet"}</div>
+                {/* ── EMBEDDED DOCUMENT / TABLE ── */}
+                {(it.type==="doc"||it.type==="table")&&(()=>{
+                  const data=parseEmbeddedPayload(it);
+                  const isDoc=it.type==="doc";
+                  const cells=Array.isArray(data.cells)?data.cells:[];
+                  return <div style={{width:"100%",height:"100%",borderRadius:18,background:isDoc?"linear-gradient(135deg,#EEF2FF,#FFFFFF)":"linear-gradient(135deg,#ECFDF5,#FFFFFF)",border:"1px solid "+(isDoc?"#C7D2FE":"#A7F3D0"),boxShadow:"0 12px 30px rgba(15,23,42,.12)",padding:14,display:"flex",flexDirection:"column",gap:10,boxSizing:"border-box" as const,overflow:"hidden"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
+                      <div style={{width:40,height:40,borderRadius:14,background:isDoc?"#4F46E5":"#10B981",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{isDoc?"📄":"▦"}</div>
+                      <div style={{minWidth:0,flex:1}}>
+                        <div style={{fontSize:14,fontWeight:900,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{data.title|| (isDoc?"Документ":"Таблица")}</div>
+                        <div style={{fontSize:10,color:C.t2,marginTop:3}}>{isDoc?"Редактируемый Vizzy Text":"Редактируемая Vizzy Table"}</div>
+                      </div>
                     </div>
-                  </div>
-                )}
+                    <div style={{flex:1,minHeight:0,borderRadius:12,background:"rgba(255,255,255,0.72)",border:"1px solid rgba(148,163,184,0.22)",padding:isDoc?10:6,overflow:"hidden"}}>
+                      {isDoc
+                        ?<div style={{fontSize:11,lineHeight:1.5,color:C.t2,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{embeddedSummary(it)}</div>
+                        :<div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:2,height:"100%"}}>{Array.from({length:12}).map((_,idx)=><div key={idx} style={{background:idx<4?"#DCFCE7":"#F8FAFC",border:"1px solid #E2E8F0",borderRadius:3,fontSize:8,color:C.t2,overflow:"hidden",padding:2}}>{cells[Math.floor(idx/4)]?.[idx%4]||""}</div>)}</div>
+                      }
+                    </div>
+                    <button onMouseDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();openEmbeddedEditor(it);}} style={{padding:"8px 10px",border:"none",borderRadius:11,background:isDoc?"linear-gradient(135deg,#4F46E5,#2563EB)":"linear-gradient(135deg,#10B981,#059669)",color:"#fff",fontSize:11,fontWeight:900,cursor:"pointer",boxShadow:isDoc?"0 0 16px rgba(79,70,229,.22)":"0 0 16px rgba(16,185,129,.20)"}}>Открыть и редактировать</button>
+                  </div>;
+                })()}
 
                 {/* ── IMAGE ── */}
                 {it.type==="image"&&it.imageUrl&&(
@@ -10048,6 +10144,54 @@ function BoardPage({userId}:{userId:string}){
       {externalDropHint&&(
         <div style={{position:"absolute",inset:0,top:48,zIndex:55,pointerEvents:"none",display:"flex",alignItems:"center",justifyContent:"center"}}>
           <div style={{padding:"18px 26px",borderRadius:18,background:"rgba(124,58,237,0.92)",color:"#fff",fontSize:15,fontWeight:900,boxShadow:"0 18px 50px rgba(124,58,237,0.35)"}}>Отпусти карточку на доску</div>
+        </div>
+      )}
+
+      {openEmbeddedItemId&&embeddedDraft&&(
+        <div style={{position:"absolute",top:48,right:0,bottom:0,width:Math.min(520,typeof window!=="undefined"?window.innerWidth-320:520),minWidth:360,zIndex:92,background:"rgba(255,255,255,0.98)",backdropFilter:"blur(16px)",borderLeft:"1px solid #E2E8F0",boxShadow:"-18px 0 46px rgba(15,23,42,0.12)",display:"flex",flexDirection:"column"}}>
+          <div style={{padding:"18px 20px",borderBottom:"1px solid #E2E8F0",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+            <div style={{minWidth:0}}>
+              <div style={{fontSize:18,fontWeight:900,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{embeddedDraft.kind==="table"?"Редактирование таблицы":"Редактирование документа"}</div>
+              <div style={{fontSize:12,color:C.t2,marginTop:3}}>Изменения сохраняются в объекте на доске</div>
+            </div>
+            <button onClick={()=>setOpenEmbeddedItemId(null)} style={{width:34,height:34,borderRadius:11,border:"1px solid #E2E8F0",background:"#fff",cursor:"pointer",fontSize:18,color:C.t2}}>×</button>
+          </div>
+
+          <div style={{padding:18,display:"flex",gap:12,flexDirection:"column",overflowY:"auto",flex:1}}>
+            <label style={{display:"grid",gap:6}}>
+              <span style={{fontSize:11,fontWeight:800,color:C.t2,textTransform:"uppercase",letterSpacing:.6}}>Название</span>
+              <input value={embeddedDraft.title||""} onChange={e=>setEmbeddedDraft((p:any)=>({...p,title:e.target.value}))}
+                style={{width:"100%",boxSizing:"border-box",padding:"12px 14px",border:"1px solid #E2E8F0",borderRadius:13,outline:"none",fontSize:15,fontWeight:800,color:C.t1,background:"#F8FAFC",fontFamily:"Montserrat, sans-serif"}}/>
+            </label>
+
+            {embeddedDraft.kind==="table"?
+              <div style={{background:"#fff",border:"1px solid #E2E8F0",borderRadius:16,overflow:"hidden",boxShadow:"0 8px 24px rgba(15,23,42,0.06)"}}>
+                <div style={{display:"grid",gridTemplateColumns:"46px repeat(5, minmax(82px,1fr))",background:"#F8FAFC",borderBottom:"1px solid #E2E8F0"}}>
+                  <div style={{padding:8,borderRight:"1px solid #E2E8F0"}}/>
+                  {Array.from({length:5}).map((_,c)=><div key={c} style={{padding:"9px 8px",fontSize:11,fontWeight:900,color:C.t2,textAlign:"center",borderRight:c<4?"1px solid #E2E8F0":"none"}}>{String.fromCharCode(65+c)}</div>)}
+                </div>
+                {(embeddedDraft.cells||[]).map((row:any[],r:number)=>(
+                  <div key={r} style={{display:"grid",gridTemplateColumns:"46px repeat(5, minmax(82px,1fr))",borderBottom:r<(embeddedDraft.cells||[]).length-1?"1px solid #E2E8F0":"none"}}>
+                    <div style={{padding:"9px 8px",fontSize:11,fontWeight:900,color:C.t2,textAlign:"center",background:"#F8FAFC",borderRight:"1px solid #E2E8F0"}}>{r+1}</div>
+                    {Array.from({length:5}).map((_,c)=><input key={c} value={row?.[c]||""} onChange={e=>setEmbeddedDraft((p:any)=>{const cells=(p.cells||[]).map((rr:any[])=>[...rr]);while(cells.length<8)cells.push(Array.from({length:5},()=>""));while(cells[r].length<5)cells[r].push("");cells[r][c]=e.target.value;return{...p,cells};})}
+                      style={{minWidth:0,padding:"9px 8px",border:"none",borderRight:c<4?"1px solid #E2E8F0":"none",outline:"none",fontSize:12,fontFamily:"Montserrat, sans-serif",color:C.t1,background:"#fff"}}/>)}
+                  </div>
+                ))}
+              </div>
+              :<div style={{background:"#F1F5F9",borderRadius:18,padding:18,border:"1px solid #E2E8F0"}}>
+                <div style={{width:"100%",minHeight:620,background:"#fff",borderRadius:12,boxShadow:"0 16px 40px rgba(15,23,42,0.12)",padding:"48px 54px",boxSizing:"border-box"}}>
+                  <textarea value={embeddedDraft.body||""} onChange={e=>setEmbeddedDraft((p:any)=>({...p,body:e.target.value}))}
+                    placeholder="Начни писать документ..."
+                    style={{width:"100%",minHeight:520,border:"none",outline:"none",resize:"vertical",fontSize:16,lineHeight:1.65,fontFamily:"Montserrat, sans-serif",color:C.t1,background:"transparent"}}/>
+                </div>
+              </div>
+            }
+          </div>
+
+          <div style={{padding:18,borderTop:"1px solid #E2E8F0",display:"flex",gap:10,justifyContent:"flex-end",background:"#fff"}}>
+            <button onClick={()=>{setEmbeddedDraft(openEmbeddedItemId?parseEmbeddedPayload(itemsRef.current.find(i=>i.id===openEmbeddedItemId)):null);}} style={{padding:"10px 14px",border:"1px solid #E2E8F0",borderRadius:12,background:"#fff",color:C.t2,fontSize:12,fontWeight:800,cursor:"pointer"}}>Сбросить</button>
+            <button onClick={()=>{saveEmbeddedDraft();setOpenEmbeddedItemId(null);}} style={{padding:"10px 16px",border:"none",borderRadius:12,background:"linear-gradient(135deg,#2563EB,#7C3AED)",color:"#fff",fontSize:12,fontWeight:900,cursor:"pointer",boxShadow:"0 0 18px rgba(37,99,235,0.28)"}}>Сохранить</button>
+          </div>
         </div>
       )}
 
