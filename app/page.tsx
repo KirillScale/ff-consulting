@@ -73,7 +73,7 @@ const NAV_GROUPS=[
     label:"Программы",
     items:[
       {id:"board",label:"Vizzy Map",accent:"#FBBF24",ic:"M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"},
-      {id:"visitext",label:"VisiText",accent:"#93C5FD",ic:"M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z M14 3v5h5 M9 13h6 M9 17h6 M9 9h2"},
+      {id:"visitext",label:"Vizzy Text",accent:"#93C5FD",ic:"M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z M14 3v5h5 M9 13h6 M9 17h6 M9 9h2"},
       {id:"sheets",label:"Vizzy Tables",accent:"#4ADE80",ic:"M3 10h18M3 6h18M3 14h18M3 18h18M10 3v18M6 3v18"},
     ]
   },
@@ -495,7 +495,7 @@ function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onL
       {/* Nav */}
       <div className="sb-scroll" style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"10px 8px 0"}}>
         {NAV_GROUPS.map((group,gi)=>{
-          const isOpen=collapsed||openGroups.includes(gi);
+          const isOpen=collapsed||!group.label||openGroups.includes(gi);
           const hasActiveItem=group.items.some(i=>i.id===active);
 
           return(
@@ -730,7 +730,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const APP_VERSION="v2.1"; // bump this to force-clear stale localStorage
-  const VALID_PAGES=["dashboard","strategy","crm","calls","content","pnl","sheets","media","ads","links","board","files","ai","script","product","stories","calc","tools","mailings"];
+  const VALID_PAGES=["dashboard","strategy","crm","calls","content","pnl","sheets","visitext","media","ads","links","board","files","ai","script","product","stories","calc","tools","mailings"];
 
   // Clear stale localStorage on version change
   useEffect(()=>{
@@ -846,8 +846,8 @@ function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,n
     {page==="mailings"&&<SafePage name="Рассылки"><MailingsPage userId={user.id}/></SafePage>}
     {page==="content"&&<SafePage name="Контент"><ContentPage userId={user.id}/></SafePage>}
     {page==="pnl"&&<SafePage name="P&L"><PnlPage userId={user.id}/></SafePage>}
+    {page==="visitext"&&<SafePage name="Vizzy Text"><VisiTextPage userId={user.id}/></SafePage>}
     {page==="sheets"&&<SafePage name="Таблицы"><SheetsPage userId={user.id}/></SafePage>}
-    {page==="visitext"&&<SafePage name="VisiText"><VisiTextPage userId={user.id}/></SafePage>}
     {page==="media"&&<SafePage name="Медийность"><MediaPage userId={user.id}/></SafePage>}
     {page==="ads"&&<SafePage name="Реклама"><AdsPage userId={user.id}/></SafePage>}
     {page==="calc"&&<SafePage name="Калькулятор"><CalcPage/></SafePage>}
@@ -3378,6 +3378,18 @@ function CrmPage({userId}:{userId:string}){
   const[f,sF]=useState<any>(emptyLead);
   const[avatarUpl,setAvatarUpl]=useState<string|null>(null); // uploading lead id or "new"
 
+  // Touch templates / follow-up messages (stored locally per user)
+  const touchStorageKey=`ff_crm_touchpoints_${userId}`;
+  const[touchModalLeadId,setTouchModalLeadId]=useState<string|null>(null);
+  const[openTouchItemId,setOpenTouchItemId]=useState<string|null>(null);
+  const[touchSavedLeadId,setTouchSavedLeadId]=useState<string|null>(null);
+  const[touchesByLead,setTouchesByLead]=useState<Record<string,any[]>>(()=>{
+    try{return JSON.parse(localStorage.getItem(touchStorageKey)||"{}");}catch{return {};}
+  });
+  useEffect(()=>{
+    try{localStorage.setItem(touchStorageKey,JSON.stringify(touchesByLead));}catch{}
+  },[touchStorageKey,touchesByLead]);
+
   const uploadLeadAvatar=async(file:File,leadId:string|"new")=>{
     setAvatarUpl(leadId);
     try{
@@ -3431,6 +3443,78 @@ function CrmPage({userId}:{userId:string}){
     const q=search.toLowerCase();
     return leads.filter((l:any)=>l.name?.toLowerCase().includes(q)||(l.contact||"").toLowerCase().includes(q)||(l.phone||"").includes(q)||(l.email||"").toLowerCase().includes(q));
   },[leads,search]);
+
+
+  const localIsoDate=(d=new Date())=>{
+    const tz=d.getTimezoneOffset()*60000;
+    return new Date(d.getTime()-tz).toISOString().slice(0,10);
+  };
+
+  const createDefaultTouchRows=()=>[1,2,3].map(i=>({
+    id:`touch_${Date.now()}_${i}_${Math.random().toString(36).slice(2,6)}`,
+    message:"",date:"",time:"",sent:false
+  }));
+
+  const ensureTouchRows=(leadId:string)=>{
+    const current=touchesByLead[leadId]||[];
+    if(current.length>0)return current;
+    const base=createDefaultTouchRows();
+    setTouchesByLead(prev=>({...prev,[leadId]:base}));
+    return base;
+  };
+
+  const openTouchModal=(leadId:string)=>{
+    const rows=ensureTouchRows(leadId);
+    setTouchModalLeadId(leadId);
+    setOpenTouchItemId(rows[0]?.id||null);
+  };
+
+  const closeTouchModal=()=>{
+    setTouchModalLeadId(null);
+    setOpenTouchItemId(null);
+  };
+
+  const updateTouch=(leadId:string,touchId:string,patch:any)=>{
+    setTouchesByLead(prev=>({
+      ...prev,
+      [leadId]:(prev[leadId]||[]).map((item:any)=>item.id===touchId?{...item,...patch}:item)
+    }));
+  };
+
+  const addTouchRow=(leadId:string)=>{
+    setTouchesByLead(prev=>({
+      ...prev,
+      [leadId]:[...(prev[leadId]||[]),{id:`touch_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,message:"",date:"",time:"",sent:false}]
+    }));
+  };
+
+  const removeTouchRow=(leadId:string,touchId:string)=>{
+    setTouchesByLead(prev=>({
+      ...prev,
+      [leadId]:(prev[leadId]||[]).filter((item:any)=>item.id!==touchId)
+    }));
+  };
+
+  const saveTouchRows=(leadId:string)=>{
+    setTouchSavedLeadId(leadId);
+    window.setTimeout(()=>setTouchSavedLeadId(prev=>prev===leadId?null:prev),1500);
+  };
+
+  const todayTouchAgenda=useMemo(()=>{
+    const today=localIsoDate();
+    return leads.flatMap((lead:any)=>((touchesByLead[lead.id]||[]) as any[])
+      .filter((touch:any)=>String(touch.message||"").trim() && touch.date && !touch.sent && touch.date<=today)
+      .map((touch:any,idx:number)=>({
+        lead,
+        touch,
+        touchIndex: idx+1,
+        overdue: touch.date<today
+      })))
+      .sort((a:any,b:any)=>`${a.touch.date||""} ${a.touch.time||"99:99"}`.localeCompare(`${b.touch.date||""} ${b.touch.time||"99:99"}`));
+  },[leads,touchesByLead]);
+
+  const touchModalLead=useMemo(()=>leads.find((lead:any)=>lead.id===touchModalLeadId)||null,[leads,touchModalLeadId]);
+  const touchModalRows=touchModalLeadId?(touchesByLead[touchModalLeadId]||[]):[];
 
   const openFunnel=(id:string)=>{
     setActiveFunnelId(id);
@@ -3531,8 +3615,8 @@ function CrmPage({userId}:{userId:string}){
     const isEditing=editLeadId===l.id;
 
     return <div key={l.id}>
-      {/* ── Edit modal ── */}
-      {isEditing&&(
+      {/* ── Edit modal is rendered globally so it also works from List view */}
+      {false&&isEditing&&(
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setEditLeadId(null)}>
           <div style={{background:C.w,borderRadius:18,padding:28,width:"100%",maxWidth:480,border:"1px solid "+C.bd,boxShadow:"0 24px 60px rgba(0,0,0,0.4)"}} onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:16,fontWeight:700,color:C.t1,marginBottom:20}}>✏️ Редактировать лида</div>
@@ -3612,7 +3696,7 @@ function CrmPage({userId}:{userId:string}){
         onClick={()=>setOpenLead(isOpen?null:l.id)}
         style={{
           background:C.w,borderRadius:11,padding:"11px 12px",marginBottom:6,
-          cursor:"grab",userSelect:"none",
+          cursor:"grab",userSelect:"none",boxSizing:"border-box" as const,
           border:"1px solid "+C.bd,
           borderLeft:`3px solid ${stageColor}`,
           opacity:dragId===l.id?0.4:1,
@@ -3668,29 +3752,36 @@ function CrmPage({userId}:{userId:string}){
           </div>
 
           {/* Action row */}
-          <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+          <div style={{display:"flex",gap:6,alignItems:"stretch",flexWrap:"wrap"}}>
+            <button onClick={e=>{e.stopPropagation();openTouchModal(l.id);}}
+              style={{flex:"1 1 140px",padding:"8px 10px",background:"linear-gradient(135deg,#4F46E514,#7C3AED12)",color:"#6D48F7",border:"1px solid rgba(124,58,237,0.26)",borderRadius:10,fontSize:11,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,transition:"all 0.15s",boxShadow:touchModalLeadId===l.id?"0 0 16px rgba(124,58,237,0.22)":"0 0 12px rgba(124,58,237,0.08)",minHeight:34,boxSizing:"border-box" as const}}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#4F46E5,#7C3AED)";(e.currentTarget as HTMLElement).style.color="#fff";(e.currentTarget as HTMLElement).style.boxShadow="0 0 20px rgba(124,58,237,0.30)";}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#4F46E514,#7C3AED12)";(e.currentTarget as HTMLElement).style.color="#6D48F7";(e.currentTarget as HTMLElement).style.boxShadow=touchModalLeadId===l.id?"0 0 16px rgba(124,58,237,0.22)":"0 0 12px rgba(124,58,237,0.08)";}}>
+              ✨ Касания
+            </button>
             {/* Написать button */}
             {getWriteUrl(l)&&<a href={getWriteUrl(l)!} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}
-              style={{flex:1,padding:"7px 10px",background:"linear-gradient(135deg,#22C55E14,#16A34A10)",color:"#16A34A",border:"1px solid #22C55E30",borderRadius:9,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,textDecoration:"none",transition:"all 0.15s"}}
+              style={{flex:"1 1 92px",padding:"8px 10px",background:"linear-gradient(135deg,#22C55E14,#16A34A10)",color:"#16A34A",border:"1px solid #22C55E30",borderRadius:10,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,textDecoration:"none",transition:"all 0.15s",minHeight:34,boxSizing:"border-box" as const}}
               onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#22C55E,#16A34A)";(e.currentTarget as HTMLElement).style.color="#fff";(e.currentTarget as HTMLElement).style.boxShadow="0 0 12px #22C55E40";}}
               onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#22C55E14,#16A34A10)";(e.currentTarget as HTMLElement).style.color="#16A34A";(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
               ✉️ Написать
             </a>}
             {/* Edit button */}
             <button onClick={e=>{e.stopPropagation();openEditLead(l);}}
-              style={{flex:1,padding:"7px 10px",background:C.a+"12",color:C.a,border:"1px solid "+C.a+"30",borderRadius:9,fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,transition:"all 0.15s"}}
+              style={{flex:"1 1 92px",padding:"8px 10px",background:C.a+"12",color:C.a,border:"1px solid "+C.a+"30",borderRadius:10,fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,transition:"all 0.15s",minHeight:34,boxSizing:"border-box" as const}}
               onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.a+"20";(e.currentTarget as HTMLElement).style.boxShadow="0 0 12px "+C.a+"20";}}
               onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=C.a+"12";(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
               ✏️ Изменить
             </button>
             {/* Delete button */}
             <button onClick={e=>{e.stopPropagation();setDeleteConfirmId(l.id);}}
-              style={{padding:"7px 10px",background:"#E91E8C10",color:"#E91E8C",border:"1px solid #E91E8C30",borderRadius:9,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.15s"}}
+              style={{padding:"8px 10px",background:"#E91E8C10",color:"#E91E8C",border:"1px solid #E91E8C30",borderRadius:10,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.15s",minHeight:34,minWidth:36,boxSizing:"border-box" as const}}
               onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#FF6B9D,#E91E8C)";(e.currentTarget as HTMLElement).style.color="#fff";(e.currentTarget as HTMLElement).style.boxShadow="0 0 16px rgba(233,30,140,0.4)";}}
               onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="#E91E8C10";(e.currentTarget as HTMLElement).style.color="#E91E8C";(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
               🗑
             </button>
           </div>
+
         </div>}
       </div>
     </div>;
@@ -3919,6 +4010,145 @@ function CrmPage({userId}:{userId:string}){
 
   // ── SCREEN: FUNNEL INNER ─────────────────────────────────────────
   return <>
+    {touchModalLead&&touchModalLeadId&&(
+      <div style={{position:"fixed",inset:0,background:"rgba(5,8,15,0.62)",zIndex:320,display:"flex",alignItems:"center",justifyContent:"center",padding:isMobile?12:24,backdropFilter:"blur(8px)"}} onClick={closeTouchModal}>
+        <div style={{width:"100%",maxWidth:860,maxHeight:"88dvh",background:C.w,border:"1px solid "+C.bd,borderRadius:24,boxShadow:"0 28px 80px rgba(0,0,0,0.36)",overflow:"hidden",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+          <div style={{padding:isMobile?18:24,borderBottom:"1px solid "+C.bd,background:"linear-gradient(135deg, rgba(79,70,229,0.10), rgba(124,58,237,0.08), transparent)",position:"relative"}}>
+            <button onClick={closeTouchModal} style={{position:"absolute",right:16,top:16,width:34,height:34,borderRadius:12,border:"1px solid "+C.bd,background:C.w,color:C.t2,cursor:"pointer",fontSize:18,lineHeight:1}}>×</button>
+            <div style={{display:"flex",alignItems:"center",gap:14,paddingRight:42}}>
+              <div style={{width:48,height:48,borderRadius:16,background:"linear-gradient(135deg,#4F46E5,#7C3AED)",boxShadow:"0 0 28px rgba(124,58,237,0.30)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:22}}>✨</div>
+              <div style={{minWidth:0}}>
+                <div style={{fontSize:isMobile?20:24,fontWeight:900,color:C.t1,lineHeight:1.15}}>Касания</div>
+                <div style={{fontSize:13,color:C.t2,marginTop:5,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{touchModalLead.name||"Лид"} · {activeFunnel?.name||"CRM"}</div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{padding:isMobile?14:22,overflowY:"auto",display:"grid",gap:12,background:C.ib}}>
+            <div style={{background:C.w,border:"1px solid "+C.bd,borderRadius:18,padding:isMobile?14:16,display:"flex",alignItems:isMobile?"stretch":"center",justifyContent:"space-between",gap:12,flexDirection:isMobile?"column":"row"}}>
+              <div>
+                <div style={{fontSize:14,fontWeight:800,color:C.t1}}>План касаний по лиду</div>
+                <div style={{fontSize:12,color:C.t2,marginTop:4,lineHeight:1.5}}>Открывай нужное касание, прописывай сообщение, дату и время отправки. Все касания не раскрываются сразу, чтобы карточка оставалась чистой.</div>
+              </div>
+              {touchSavedLeadId===touchModalLeadId&&<div style={{fontSize:12,fontWeight:800,color:"#16A34A",padding:"8px 12px",borderRadius:999,background:"#22C55E10",border:"1px solid #22C55E25",whiteSpace:"nowrap"}}>Сохранено</div>}
+            </div>
+
+            {touchModalRows.map((touch:any,index:number)=>{
+              const isOpen=openTouchItemId===touch.id;
+              const isFilled=String(touch.message||"").trim().length>0;
+              return <div key={touch.id} style={{background:C.w,border:"1px solid "+(isOpen?"rgba(124,58,237,0.36)":C.bd),borderRadius:18,overflow:"hidden",boxShadow:isOpen?"0 14px 36px rgba(124,58,237,0.10)":"none"}}>
+                <button onClick={()=>setOpenTouchItemId(isOpen?null:touch.id)} style={{width:"100%",padding:isMobile?14:16,background:isOpen?"linear-gradient(135deg, rgba(79,70,229,0.08), rgba(124,58,237,0.06))":"transparent",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,textAlign:"left"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:12,minWidth:0}}>
+                    <div style={{width:34,height:34,borderRadius:12,background:isFilled?"linear-gradient(135deg,#4F46E5,#7C3AED)":"rgba(124,58,237,0.10)",color:isFilled?"#fff":"#6D48F7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:900,flexShrink:0}}>{index+1}</div>
+                    <div style={{minWidth:0}}>
+                      <div style={{fontSize:14,fontWeight:900,color:C.t1}}>{`Касание ${index+1}`}</div>
+                      <div style={{fontSize:12,color:C.t2,marginTop:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:isMobile?220:520}}>{isFilled?touch.message:"Сообщение ещё не заполнено"}</div>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+                    {(touch.date||touch.time)&&<span style={{fontSize:11,fontWeight:800,color:touch.sent?"#16A34A":"#6D48F7",padding:"6px 9px",borderRadius:999,background:touch.sent?"#22C55E10":"rgba(124,58,237,0.08)",border:"1px solid "+(touch.sent?"#22C55E25":"rgba(124,58,237,0.16)"),display:isMobile?"none":"inline-block"}}>{touch.sent?"Отправлено":"Запланировано"}</span>}
+                    <span style={{fontSize:18,color:C.t2,transform:isOpen?"rotate(180deg)":"rotate(0deg)",transition:"transform 0.15s"}}>⌄</span>
+                  </div>
+                </button>
+
+                {isOpen&&<div style={{padding:isMobile?14:18,borderTop:"1px solid "+C.bd,display:"grid",gap:14}}>
+                  <div>
+                    <label style={{display:"block",fontSize:12,fontWeight:800,color:C.t2,marginBottom:7}}>Текст сообщения</label>
+                    <textarea value={touch.message||""} onChange={e=>updateTouch(touchModalLeadId!,touch.id,{message:e.target.value,sent:false})} placeholder="Напиши follow-up, напоминание или готовое сообщение для отправки..." rows={5}
+                      style={{width:"100%",padding:"14px 15px",border:"1px solid "+C.bd,borderRadius:14,fontSize:14,outline:"none",background:C.ib,color:C.t1,resize:"vertical",fontFamily:"Montserrat, sans-serif",lineHeight:1.55,boxSizing:"border-box" as const}}/>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12}}>
+                    <div>
+                      <label style={{display:"block",fontSize:12,fontWeight:800,color:C.t2,marginBottom:7}}>Дата отправки</label>
+                      <input type="date" value={touch.date||""} onChange={e=>updateTouch(touchModalLeadId!,touch.id,{date:e.target.value,sent:false})} style={{width:"100%",padding:"12px 13px",border:"1px solid "+C.bd,borderRadius:14,fontSize:14,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"Montserrat, sans-serif"}}/>
+                    </div>
+                    <div>
+                      <label style={{display:"block",fontSize:12,fontWeight:800,color:C.t2,marginBottom:7}}>Время отправки</label>
+                      <input type="time" value={touch.time||""} onChange={e=>updateTouch(touchModalLeadId!,touch.id,{time:e.target.value,sent:false})} style={{width:"100%",padding:"12px 13px",border:"1px solid "+C.bd,borderRadius:14,fontSize:14,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"Montserrat, sans-serif"}}/>
+                    </div>
+                  </div>
+
+                  {isFilled&&<div style={{display:"grid",gap:8}}>
+                    <div style={{fontSize:12,fontWeight:800,color:C.t2}}>Предпросмотр</div>
+                    <div style={{maxWidth:"100%",padding:"12px 15px",borderRadius:"18px 18px 18px 6px",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",fontSize:14,lineHeight:1.55,boxShadow:"0 0 22px rgba(124,58,237,0.18)",whiteSpace:"pre-wrap",wordBreak:"break-word",opacity:touch.sent?0.72:1,boxSizing:"border-box" as const}}>{touch.message}</div>
+                  </div>}
+
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
+                    <button onClick={()=>updateTouch(touchModalLeadId!,touch.id,{sent:!touch.sent})} style={{padding:"10px 13px",borderRadius:12,border:"1px solid "+(touch.sent?"#22C55E35":"rgba(124,58,237,0.20)"),background:touch.sent?"#22C55E10":"rgba(124,58,237,0.08)",color:touch.sent?"#16A34A":"#6D48F7",fontSize:12,fontWeight:900,cursor:"pointer"}}>{touch.sent?"✓ Отправлено":"Отметить отправленным"}</button>
+                    {touchModalRows.length>1&&<button onClick={()=>removeTouchRow(touchModalLeadId!,touch.id)} style={{padding:"10px 13px",borderRadius:12,border:"1px solid rgba(239,68,68,0.22)",background:"rgba(239,68,68,0.08)",color:"#EF4444",fontSize:12,fontWeight:800,cursor:"pointer"}}>Удалить касание</button>}
+                  </div>
+                </div>}
+              </div>
+            })}
+          </div>
+
+          <div style={{padding:isMobile?14:18,borderTop:"1px solid "+C.bd,background:C.w,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
+            <button onClick={()=>{const newTouch={id:`touch_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,message:"",date:"",time:"",sent:false};setTouchesByLead(prev=>({...prev,[touchModalLeadId!]:[...(prev[touchModalLeadId!]||[]),newTouch]}));setOpenTouchItemId(newTouch.id);}} style={{padding:"11px 14px",background:"transparent",color:"#6D48F7",border:"1px dashed rgba(124,58,237,0.30)",borderRadius:13,fontSize:13,fontWeight:900,cursor:"pointer"}}>+ Добавить касание</button>
+            <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+              <button onClick={closeTouchModal} style={{padding:"11px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:13,fontSize:13,fontWeight:800,cursor:"pointer"}}>Закрыть</button>
+              <button onClick={()=>saveTouchRows(touchModalLeadId!)} style={{padding:"11px 18px",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",border:"none",borderRadius:13,fontSize:13,fontWeight:900,cursor:"pointer",boxShadow:"0 0 22px rgba(124,58,237,0.24)"}}>Сохранить касания</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ── Global edit lead modal: works from Kanban and List views ── */}
+    {editLeadId&&(
+      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setEditLeadId(null)}>
+        <div style={{background:C.w,borderRadius:20,padding:isMobile?20:28,width:"100%",maxWidth:520,maxHeight:"calc(100dvh - 40px)",overflowY:"auto",border:"1px solid "+C.bd,boxShadow:"0 24px 60px rgba(0,0,0,0.4)",boxSizing:"border-box" as const}} onClick={e=>e.stopPropagation()}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:20}}>
+            <div>
+              <div style={{fontSize:16,fontWeight:800,color:C.t1}}>✏️ Редактировать лида</div>
+              <div style={{fontSize:11,color:C.t2,marginTop:3}}>Изменения сохранятся в текущей воронке и будут видны в канбане и списке.</div>
+            </div>
+            <button onClick={()=>setEditLeadId(null)} style={{width:32,height:32,borderRadius:10,border:"1px solid "+C.bd,background:C.ib,color:C.t2,cursor:"pointer",fontSize:18,lineHeight:1}}>×</button>
+          </div>
+
+          <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:20}}>
+            <label style={{cursor:"pointer",flexShrink:0}}>
+              <div style={{width:72,height:72,borderRadius:"50%",background:C.ib,border:"2px dashed "+C.bd,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",position:"relative",transition:"border-color 0.15s"}}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.a;}}
+                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;}}>
+                {avatarUpl===editLeadId
+                  ?<div style={{width:22,height:22,border:"2px solid "+C.bd,borderTopColor:C.a,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+                  :editLeadData.avatar_url
+                  ?<img src={editLeadData.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>
+                  :<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                }
+              </div>
+              <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0]&&editLeadId)uploadLeadAvatar(e.target.files[0],editLeadId);}}/>
+            </label>
+            <div style={{minWidth:0}}>
+              <div style={{fontSize:13,fontWeight:700,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{editLeadData.name||"Лид"}</div>
+              <div style={{fontSize:11,color:C.t2,marginTop:2}}>Нажми на фото, чтобы изменить</div>
+              {editLeadData.avatar_url&&<button onClick={()=>setEditLeadData({...editLeadData,avatar_url:""})}
+                style={{fontSize:10,color:C.r,background:"transparent",border:"none",cursor:"pointer",padding:0,marginTop:5}}>✕ Удалить фото</button>}
+            </div>
+          </div>
+
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12,marginBottom:12}}>
+            {([["name","Имя *"],["contact","Контакт"],["phone","Телефон"],["email","Email"],["deal","Сделка, ₽"],["source","Источник"]] as const).map(([k,label])=>(
+              <div key={k}>
+                <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>{label}</label>
+                <input type={k==="deal"?"number":"text"} value={editLeadData[k]||""} onChange={e=>setEditLeadData({...editLeadData,[k]:e.target.value})}
+                  style={{width:"100%",padding:"10px 12px",border:"1px solid "+C.bd,borderRadius:11,fontSize:12,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"Montserrat, sans-serif"}}/>
+              </div>
+            ))}
+          </div>
+          <div style={{marginBottom:18}}>
+            <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>Заметка</label>
+            <textarea value={editLeadData.note||""} onChange={e=>setEditLeadData({...editLeadData,note:e.target.value})} rows={4}
+              style={{width:"100%",padding:"10px 12px",border:"1px solid "+C.bd,borderRadius:11,fontSize:12,outline:"none",background:C.ib,color:C.t1,resize:"vertical",fontFamily:"Montserrat, sans-serif",boxSizing:"border-box" as const,lineHeight:1.5}}/>
+          </div>
+          <div style={{display:"flex",gap:10,justifyContent:"flex-end",flexWrap:"wrap"}}>
+            <button onClick={()=>setEditLeadId(null)} style={{padding:"10px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:11,fontSize:13,cursor:"pointer",fontWeight:600}}>Отмена</button>
+            <button onClick={saveEditLead} disabled={!String(editLeadData.name||"").trim()} style={{padding:"10px 20px",background:String(editLeadData.name||"").trim()?"linear-gradient(135deg,"+C.a+","+C.ah+")":C.bd,color:"#fff",border:"none",borderRadius:11,fontSize:13,fontWeight:800,cursor:String(editLeadData.name||"").trim()?"pointer":"default",boxShadow:String(editLeadData.name||"").trim()?"0 0 18px "+C.a+"35":"none"}}>Сохранить</button>
+          </div>
+        </div>
+      </div>
+    )}
+
     {/* Breadcrumb + funnel switcher */}
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20,flexWrap:"wrap"}}>
       <button onClick={backToList}
@@ -3963,6 +4193,47 @@ function CrmPage({userId}:{userId:string}){
           <div style={{fontSize:11,color:C.t2}}>{s.l}</div>
         </div>
       ))}
+    </div>
+
+    {/* Today agenda */}
+    <div style={{background:C.w,borderRadius:18,padding:isMobile?16:18,border:"1px solid "+C.bd,marginBottom:18,boxShadow:"0 0 22px rgba(124,58,237,0.08)",position:"relative",overflow:"hidden"}}>
+      <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg, rgba(79,70,229,0.06), rgba(124,58,237,0.02) 45%, transparent 70%)",pointerEvents:"none"}}/>
+      <div style={{display:"flex",alignItems:isMobile?"flex-start":"center",justifyContent:"space-between",gap:12,marginBottom:todayTouchAgenda.length?14:0,flexDirection:isMobile?"column":"row",position:"relative"}}>
+        <div>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
+            <div style={{width:34,height:34,borderRadius:12,background:"linear-gradient(135deg,#4F46E5,#7C3AED)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 0 18px rgba(124,58,237,0.28)",color:"#fff",fontSize:16}}>✉️</div>
+            <div>
+              <div style={{fontSize:16,fontWeight:800,color:C.t1}}>Кому сегодня, что нужно отправить</div>
+              <div style={{fontSize:12,color:C.t2,marginTop:2}}>{activeFunnel?.name?`Воронка: ${activeFunnel.name}`:"Текущая воронка"}</div>
+            </div>
+          </div>
+        </div>
+        <div style={{padding:"7px 12px",borderRadius:999,background:"linear-gradient(135deg, rgba(79,70,229,0.12), rgba(124,58,237,0.12))",border:"1px solid rgba(124,58,237,0.18)",fontSize:12,fontWeight:700,color:"#5B46F5",whiteSpace:"nowrap"}}>
+          {todayTouchAgenda.length?`${todayTouchAgenda.length} задач на сегодня`:"На сегодня касаний нет"}
+        </div>
+      </div>
+
+      {todayTouchAgenda.length>0
+        ?<div style={{display:"grid",gap:10,position:"relative"}}>
+          {todayTouchAgenda.slice(0,8).map((item:any,idx:number)=>{
+            const accent=item.overdue?"#EF4444":"#7C3AED";
+            return <div key={item.touch.id} style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"minmax(0,1.2fr) minmax(0,2fr) auto",gap:10,alignItems:"center",padding:"12px 14px",background:C.ib,borderRadius:14,border:"1px solid "+accent+"22"}}>
+              <div style={{minWidth:0}}>
+                <div style={{fontSize:13,fontWeight:800,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.lead.name||`Лид ${idx+1}`}</div>
+                <div style={{fontSize:11,color:C.t2,marginTop:3}}>{item.lead.source||"Без источника"} · {`Касание ${item.touchIndex}`}</div>
+              </div>
+              <div style={{minWidth:0}}>
+                <div style={{display:"inline-block",maxWidth:"100%",padding:"9px 12px",borderRadius:"16px 16px 16px 6px",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",fontSize:12,lineHeight:1.45,boxShadow:"0 0 18px rgba(124,58,237,0.18)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.touch.message}</div>
+              </div>
+              <div style={{display:"flex",alignItems:isMobile?"stretch":"center",gap:8,justifyContent:isMobile?"flex-start":"flex-end",flexWrap:"wrap"}}>
+                <div style={{fontSize:11,fontWeight:700,color:accent,padding:"7px 10px",borderRadius:999,background:accent+"10",border:"1px solid "+accent+"25"}}>{item.overdue?"Просрочено":"Сегодня"}{item.touch.time?` · ${item.touch.time}`:""}</div>
+                <button onClick={()=>updateTouch(item.lead.id,item.touch.id,{sent:true})} style={{padding:"7px 10px",border:"1px solid #22C55E30",borderRadius:999,background:"#22C55E10",color:"#16A34A",fontSize:11,fontWeight:800,cursor:"pointer"}}>Отметить отправленным</button>
+              </div>
+            </div>
+          })}
+          {todayTouchAgenda.length>8&&<div style={{fontSize:11,color:C.t2,paddingLeft:4}}>Показаны первые 8 касаний. Остальные сохраняются внутри карточек лидов.</div>}
+        </div>
+        :<div style={{position:"relative",padding:"8px 2px 2px",fontSize:12,color:C.t2,lineHeight:1.6}}>Запланируй касания внутри карточек лидов — и здесь автоматически появится список, кому и что нужно отправить именно сегодня по этой воронке.</div>}
     </div>
 
     {/* Tabs */}
@@ -4198,7 +4469,7 @@ function ContentPage({userId}:{userId:string}){
   const[show,setShow]=useState(false);
   const[editId,setEditId]=useState<string|null>(null);
   const[coverUploading,setCoverUploading]=useState(false);
-  const emptyF=()=>({platform:"instagram",type:"Пост",topic:"",status:"idea",date:today(),link:"",scenario:"",cover_url:"",content_url:"",deadline_prep:"",deadline_dev:"",deadline_pub:"",publish_date:""});
+  const emptyF=()=>({platform:"instagram",type:"Пост",topic:"",status:"idea",date:"",link:"",scenario:"",cover_url:"",content_url:"",publish_date:""});
   const[f,sF]=useState<any>(emptyF());
   const[calMonth,setCalMonth]=useState(()=>{const d=new Date();return{y:d.getFullYear(),m:d.getMonth()};});
 
@@ -4255,13 +4526,29 @@ function ContentPage({userId}:{userId:string}){
 
   const sub=async()=>{
     if(!f.topic.trim())return;
-    if(editId){await update(editId,f);setEditId(null);}
-    else{await add(f);}
+    const payload={
+      platform:f.platform||"instagram",
+      type:f.type||"Пост",
+      topic:f.topic.trim(),
+      status:f.status||"idea",
+      date:f.publish_date||"",
+      publish_date:f.publish_date||"",
+      link:f.content_url||"",
+      content_url:f.content_url||"",
+      scenario:f.scenario||"",
+      cover_url:f.cover_url||"",
+      deadline_prep:null,
+      deadline_dev:null,
+      deadline_pub:null,
+    };
+    if(editId){await update(editId,payload);setEditId(null);}
+    else{await add(payload);}
     sF(emptyF());setShow(false);
   };
 
   const startEdit=(item:any)=>{
-    sF({platform:item.platform||"instagram",type:item.type||"Пост",topic:item.topic||"",status:item.status||"idea",date:item.date||today(),link:item.link||"",scenario:item.scenario||"",cover_url:item.cover_url||"",content_url:item.content_url||"",deadline_prep:item.deadline_prep||"",deadline_dev:item.deadline_dev||"",deadline_pub:item.deadline_pub||"",publish_date:item.publish_date||""});
+    const publishDate=item.publish_date||item.date||"";
+    sF({platform:item.platform||"instagram",type:item.type||"Пост",topic:item.topic||"",status:item.status||"idea",date:publishDate,link:item.content_url||item.link||"",scenario:item.scenario||"",cover_url:item.cover_url||"",content_url:item.content_url||item.link||"",publish_date:publishDate});
     setEditId(item.id);setShow(true);
   };
 
@@ -4330,13 +4617,6 @@ function ContentPage({userId}:{userId:string}){
     const[y,m]=key.split("-");
     return`${MS[parseInt(m)-1]} ${y}`;
   };
-
-  const DEADLINES=[
-    {key:"deadline_prep",label:"Дедлайн подготовки",color:"#8B5CF6"},
-    {key:"deadline_dev",label:"Дедлайн разработки",color:C.y},
-    {key:"deadline_pub",label:"Дедлайн публикации",color:C.r},
-    {key:"publish_date",label:"Дата публикации",color:C.g},
-  ];
 
   const[platformFilter,setPlatformFilter]=useState<string>("all");
 
@@ -4471,19 +4751,8 @@ function ContentPage({userId}:{userId:string}){
           <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Дата публикации</label><input type="date" value={f.publish_date||""} onChange={e=>sF({...f,publish_date:e.target.value,date:e.target.value})} style={iS()}/></div>
           <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Ссылка на контент</label><input value={f.content_url} onChange={e=>sF({...f,content_url:e.target.value})} placeholder="https://..." style={iS()}/></div>
 
-          {/* Deadlines — optional */}
-          <div style={{gridColumn:"span 3"}}>
-            <label style={{fontSize:12,color:C.t2,display:"block",marginBottom:8,fontWeight:600}}>Дедлайны <span style={{fontWeight:400,opacity:0.6}}>(необязательно)</span></label>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
-              {DEADLINES.filter(d=>d.key!=="publish_date").map(d=><div key={d.key}>
-                <label style={{fontSize:11,display:"block",marginBottom:4,color:d.color}}>{d.label}</label>
-                <input type="date" value={f[d.key]||""} onChange={e=>sF({...f,[d.key]:e.target.value})} style={{...iS(),fontSize:12,borderColor:f[d.key]?d.color:C.bd}}/>
-              </div>)}
-            </div>
-          </div>
-
           {/* Scenario / content text — full width, large */}
-          <div style={{gridColumn:"span 3"}}>
+          <div style={{gridColumn:isMobile?"1 / -1":"span 3"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
               <label style={{fontSize:12,color:C.t2,fontWeight:600}}>Сценарий / Текст контента</label>
               <span style={{fontSize:10,color:C.t2,opacity:0.6}}>{f.scenario?.length||0} символов</span>
@@ -7018,6 +7287,281 @@ function MailingsPage({userId}:{userId:string}){
 }
 
 
+/* ============ VISITEXT — LIGHT WORD-LIKE EDITOR ============ */
+type VisiTextDoc={id:string;title:string;html:string;fontSize:number;lineHeight:string;pageCount:number;createdAt:number;updatedAt:number};
+const VISITEXT_MAX_DOCS=30;
+const VISITEXT_MAX_PAGES=500;
+const VISITEXT_A4_HEIGHT=1123;
+const VISITEXT_HIGHLIGHTS=[
+  {name:"Лимон",color:"#FEF3C7"},
+  {name:"Мята",color:"#D1FAE5"},
+  {name:"Небо",color:"#DBEAFE"},
+  {name:"Роза",color:"#FCE7F3"},
+  {name:"Лаванда",color:"#EDE9FE"},
+];
+
+const visitextContent=(doc:Partial<VisiTextDoc>)=>JSON.stringify({
+  html:doc.html||"<p>Начни писать здесь...</p>",
+  fontSize:doc.fontSize||16,
+  lineHeight:doc.lineHeight||"1.5",
+});
+const visitextStamp=(v:any)=>v?new Date(v).getTime():Date.now();
+const parseVisiTextDoc=(row:any):VisiTextDoc=>{
+  let parsed:any=null;
+  try{parsed=JSON.parse(row?.content||"");}catch{}
+  const html=typeof parsed?.html==="string"?parsed.html:(row?.content||"<p>Начни писать здесь...</p>");
+  return{
+    id:row.id,
+    title:row.title||"Без названия",
+    html,
+    fontSize:Number(parsed?.fontSize||16),
+    lineHeight:String(parsed?.lineHeight||"1.5"),
+    pageCount:Number(row.page_count||1),
+    createdAt:visitextStamp(row.created_at),
+    updatedAt:visitextStamp(row.updated_at||row.created_at),
+  };
+};
+
+function VisiTextPage({userId}:{userId:string}){
+  const {dark}=useTheme();
+  const isMobile=useIsMobile();
+  const editorRef=useRef<HTMLDivElement|null>(null);
+  const fileRef=useRef<HTMLInputElement|null>(null);
+  const saveTimer=useRef<any>(null);
+  const historyPast=useRef<{items:BItem[];lines:BLine[]}[]>([]);
+  const historyFuture=useRef<{items:BItem[];lines:BLine[]}[]>([]);
+  const historySkip=useRef(false);
+  const seededRef=useRef(false);
+  const vt=useTable("visitext_docs",userId);
+  const docs=useMemo(()=>vt.data.map(parseVisiTextDoc),[vt.data]);
+  const [activeId,setActiveId]=useState<string|null>(null);
+  const [pages,setPages]=useState(1);
+  const [notice,setNotice]=useState("");
+
+  const activeDoc=docs.find(d=>d.id===activeId)||docs[0]||null;
+
+  useEffect(()=>{
+    if(!activeId&&docs[0])setActiveId(docs[0].id);
+    if(activeId&&!docs.some(d=>d.id===activeId))setActiveId(docs[0]?.id||null);
+  },[docs,activeId]);
+
+  useEffect(()=>{
+    if(vt.loading||seededRef.current||docs.length>0)return;
+    seededRef.current=true;
+    vt.add({
+      title:"Мой первый документ",
+      content:visitextContent({html:"<h1>Мой первый документ</h1><p>Начни писать здесь...</p>",fontSize:16,lineHeight:"1.5"}),
+      page_count:1,
+    }).then((row:any)=>{if(row)setActiveId(row.id);});
+  },[vt.loading,docs.length]);
+
+  useEffect(()=>{
+    if(!activeDoc||!editorRef.current)return;
+    editorRef.current.innerHTML=activeDoc.html||"";
+    requestAnimationFrame(()=>calcPages());
+  },[activeDoc?.id]);
+
+  const calcPages=()=>{
+    const el=editorRef.current;
+    if(!el)return 1;
+    const next=Math.max(1,Math.ceil(el.scrollHeight/VISITEXT_A4_HEIGHT));
+    setPages(next);
+    if(next>VISITEXT_MAX_PAGES)setNotice("Лимит одного документа — 500 страниц. Сократи текст или изображения, чтобы сохранить изменения.");
+    return next;
+  };
+
+  const patchActive=async(patch:Partial<VisiTextDoc>)=>{
+    if(!activeDoc)return;
+    const next={...activeDoc,...patch,updatedAt:Date.now()};
+    const pageCount=patch.pageCount||calcPages();
+    if(pageCount>VISITEXT_MAX_PAGES){setNotice("Лимит одного документа — 500 страниц. Изменения не сохранены.");return;}
+    try{
+      await vt.update(activeDoc.id,{
+        title:next.title||"Без названия",
+        content:visitextContent(next),
+        page_count:pageCount,
+      });
+    }catch(e){
+      console.error("visitext save",e);
+      setNotice("Не удалось сохранить документ в Supabase. Проверь таблицу visitext_docs и RLS-политики.");
+    }
+  };
+
+  const persistContent=(immediate=false)=>{
+    const el=editorRef.current;
+    if(!el||!activeDoc)return;
+    const p=calcPages();
+    if(p>VISITEXT_MAX_PAGES)return;
+    const html=el.innerHTML;
+    if(immediate){patchActive({html,pageCount:p});return;}
+    clearTimeout(saveTimer.current);
+    saveTimer.current=setTimeout(()=>patchActive({html,pageCount:p}),450);
+  };
+
+  const runCmd=(cmd:string,value?:string)=>{
+    editorRef.current?.focus();
+    try{document.execCommand(cmd,false,value);}catch{}
+    persistContent(true);
+  };
+
+  const changeFontSize=(size:number)=>{
+    patchActive({fontSize:size});
+    setTimeout(()=>persistContent(true),0);
+  };
+
+  const changeLineHeight=(lh:string)=>{
+    patchActive({lineHeight:lh});
+    setTimeout(()=>persistContent(true),0);
+  };
+
+  const createDoc=async()=>{
+    if(docs.length>=VISITEXT_MAX_DOCS){setNotice("Можно создать максимум 30 документов в Vizzy Text.");return;}
+    const row=await vt.add({
+      title:"Документ "+(docs.length+1),
+      content:visitextContent({html:"<p>Начни писать здесь...</p>",fontSize:16,lineHeight:"1.5"}),
+      page_count:1,
+    });
+    if(row){setActiveId(row.id);setNotice("Создан новый документ.");}
+    else setNotice("Не удалось создать документ в Supabase.");
+  };
+
+  const duplicateDoc=async()=>{
+    if(!activeDoc)return;
+    if(docs.length>=VISITEXT_MAX_DOCS){setNotice("Можно создать максимум 30 документов в Vizzy Text.");return;}
+    const row=await vt.add({
+      title:activeDoc.title+" — копия",
+      content:visitextContent(activeDoc),
+      page_count:activeDoc.pageCount||pages||1,
+    });
+    if(row)setActiveId(row.id);
+    else setNotice("Не удалось создать копию документа.");
+  };
+
+  const deleteDoc=async()=>{
+    if(!activeDoc)return;
+    if(docs.length<=1){setNotice("Нельзя удалить последний документ.");return;}
+    if(!confirm("Удалить документ «"+activeDoc.title+"»?"))return;
+    await vt.remove(activeDoc.id);
+    const next=docs.filter(d=>d.id!==activeDoc.id);
+    setActiveId(next[0]?.id||null);
+  };
+
+  const renameDoc=(title:string)=>patchActive({title:title||"Без названия"});
+
+  const insertImage=(file:File)=>{
+    if(!file.type.startsWith("image/"))return;
+    if(file.size>2.5*1024*1024){setNotice("Изображение слишком большое. Для стабильной работы выбери файл до 2.5 МБ.");return;}
+    const reader=new FileReader();
+    reader.onload=()=>{
+      const src=String(reader.result||"");
+      const html=`<p><img src="${src}" style="max-width:100%;height:auto;border-radius:10px;display:block;margin:18px auto;box-shadow:0 8px 24px rgba(15,23,42,0.12);" /></p><p><br></p>`;
+      runCmd("insertHTML",html);
+      requestAnimationFrame(()=>persistContent(true));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const exportHtml=()=>{
+    if(!activeDoc)return;
+    persistContent(true);
+    const blob=new Blob([`<!doctype html><html><head><meta charset="utf-8"><title>${activeDoc.title}</title><style>body{font-family:Montserrat,Arial,sans-serif;background:#f3f4f6;padding:32px}.page{width:794px;min-height:1123px;background:#fff;margin:0 auto;padding:72px;box-shadow:0 10px 40px rgba(0,0,0,.12);font-size:${activeDoc.fontSize}px;line-height:${activeDoc.lineHeight}}</style></head><body><div class="page">${editorRef.current?.innerHTML||activeDoc.html}</div></body></html>`],{type:"text/html;charset=utf-8"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);a.download=(activeDoc.title||"visitext")+".html";a.click();URL.revokeObjectURL(a.href);
+  };
+
+  const toolBtn=(label:string,onClick:()=>void,active=false,style?:React.CSSProperties)=><button onClick={onClick} style={{height:34,minWidth:34,padding:"0 10px",borderRadius:9,border:"1px solid "+(active?C.a:C.bd),background:active?C.a:(dark?"rgba(255,255,255,0.04)":"#fff"),color:active?"#fff":C.t1,fontSize:13,fontWeight:700,cursor:"pointer",...style}}>{label}</button>;
+
+  if(vt.loading)return <Card><div style={{fontSize:15,color:C.t2}}>Загружаю документы Vizzy Text из Supabase...</div></Card>;
+
+  return <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"280px 1fr",gap:20,alignItems:"start"}}>
+    <Card style={{padding:0,overflow:"hidden",position:isMobile?"relative":"sticky",top:20}}>
+      <div style={{padding:18,borderBottom:"1px solid "+C.bd,background:dark?"rgba(255,255,255,0.02)":"#F8FAFC"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:12}}>
+          <div>
+            <div style={{fontSize:18,fontWeight:800,color:C.t1}}>Vizzy Text</div>
+            <div style={{fontSize:12,color:C.t2,marginTop:2}}>Word-like редактор · Supabase · A4</div>
+          </div>
+          <div style={{fontSize:11,fontWeight:800,color:docs.length>=VISITEXT_MAX_DOCS?C.r:C.a,background:(docs.length>=VISITEXT_MAX_DOCS?C.r:C.a)+"12",borderRadius:999,padding:"5px 9px"}}>{docs.length}/{VISITEXT_MAX_DOCS}</div>
+        </div>
+        <Btn onClick={createDoc} disabled={docs.length>=VISITEXT_MAX_DOCS} style={{width:"100%",padding:"10px 12px"}}>+ Новый документ</Btn>
+      </div>
+      <div style={{maxHeight:isMobile?220:"calc(100vh - 260px)",overflowY:"auto",padding:10}}>
+        {docs.map(d=>{
+          const isAct=d.id===activeDoc?.id;
+          return <button key={d.id} onClick={()=>setActiveId(d.id)} style={{width:"100%",textAlign:"left",border:"1px solid "+(isAct?C.a:C.bd),background:isAct?(dark?"rgba(79,142,247,0.16)":"#EFF6FF"):(dark?"rgba(255,255,255,0.025)":"#fff"),borderRadius:12,padding:12,marginBottom:8,cursor:"pointer"}}>
+            <div style={{display:"flex",gap:10,alignItems:"center"}}>
+              <div style={{width:34,height:44,borderRadius:5,background:"#fff",border:"1px solid #E5E7EB",boxShadow:"0 2px 6px rgba(0,0,0,0.08)",flexShrink:0}}/>
+              <div style={{minWidth:0,flex:1}}>
+                <div style={{fontSize:13,fontWeight:800,color:isAct?C.a:C.t1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{d.title||"Без названия"}</div>
+                <div style={{fontSize:11,color:C.t2,marginTop:4}}>изменён {new Date(d.updatedAt).toLocaleDateString("ru-RU")}</div>
+              </div>
+            </div>
+          </button>;
+        })}
+      </div>
+    </Card>
+
+    <div style={{minWidth:0}}>
+      <Card style={{padding:16,marginBottom:16,position:"sticky",top:14,zIndex:20,backdropFilter:"blur(18px)",background:dark?"rgba(15,20,32,0.92)":"rgba(255,255,255,0.92)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+          <input value={activeDoc?.title||""} onChange={e=>renameDoc(e.target.value)} placeholder="Название документа" style={{...iS(),width:260,fontWeight:700}}/>
+          <select value={activeDoc?.fontSize||16} onChange={e=>changeFontSize(+e.target.value)} style={{...iS(),width:112}}>
+            {[12,14,16,18,20,24,28,32,36,48].map(s=><option key={s} value={s}>{s}px</option>)}
+          </select>
+          <select value={activeDoc?.lineHeight||"1.5"} onChange={e=>changeLineHeight(e.target.value)} style={{...iS(),width:142}}>
+            <option value="1">Интервал 1.0</option><option value="1.15">Интервал 1.15</option><option value="1.5">Интервал 1.5</option><option value="2">Интервал 2.0</option><option value="2.5">Интервал 2.5</option>
+          </select>
+          <div style={{width:1,height:28,background:C.bd}}/>
+          {toolBtn("B",()=>runCmd("bold"),false,{fontWeight:900})}
+          {toolBtn("I",()=>runCmd("italic"),false,{fontStyle:"italic"})}
+          {toolBtn("U",()=>runCmd("underline"),false,{textDecoration:"underline"})}
+          <div style={{display:"flex",alignItems:"center",gap:5,padding:"0 4px"}}>
+            {VISITEXT_HIGHLIGHTS.map(h=><button key={h.color} title={h.name} onClick={()=>runCmd("backColor",h.color)} style={{width:26,height:26,borderRadius:8,border:"1px solid rgba(0,0,0,0.08)",background:h.color,cursor:"pointer",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.8)"}}/>)}
+          </div>
+          {toolBtn("✕ маркер",()=>runCmd("removeFormat"),false,{fontWeight:600,minWidth:78})}
+          <div style={{width:1,height:28,background:C.bd}}/>
+          {toolBtn("Фото",()=>fileRef.current?.click(),false,{minWidth:62})}
+          {toolBtn("Копия",duplicateDoc,false,{minWidth:64})}
+          {toolBtn("HTML",exportHtml,false,{minWidth:58})}
+          {toolBtn("Удалить",deleteDoc,false,{minWidth:72,color:C.r})}
+        </div>
+      </Card>
+
+      {notice&&<div style={{marginBottom:14,padding:"11px 14px",borderRadius:12,background:(notice.includes("Лимит")||notice.includes("максимум")||notice.includes("большой")||notice.includes("Не удалось")?C.r:C.a)+"12",color:notice.includes("Лимит")||notice.includes("максимум")||notice.includes("большой")||notice.includes("Не удалось")?C.r:C.a,fontSize:13,fontWeight:700,display:"flex",justifyContent:"space-between",gap:12}}><span>{notice}</span><button onClick={()=>setNotice("")} style={{border:"none",background:"transparent",color:"inherit",cursor:"pointer",fontWeight:900}}>×</button></div>}
+
+      <div style={{display:"flex",justifyContent:"center",padding:"10px 0 28px",overflowX:"auto"}}>
+        <div style={{position:"relative"}}>
+          <div style={{position:isMobile?"relative":"absolute",right:isMobile?"auto":-78,top:isMobile?0:10,display:"flex",flexDirection:isMobile?"row":"column",gap:8,alignItems:"center",justifyContent:isMobile?"center":"flex-start",marginBottom:isMobile?10:0}}>
+            <div style={{padding:"8px 10px",borderRadius:10,background:dark?"#0F1420":"#fff",border:"1px solid "+C.bd,boxShadow:C.sh,fontSize:11,fontWeight:800,color:pages>VISITEXT_MAX_PAGES?C.r:C.t2,whiteSpace:"nowrap"}}>{pages} / {VISITEXT_MAX_PAGES} стр.</div>
+            <div style={{fontSize:10,color:C.t2,writingMode:isMobile?"horizontal-tb":"vertical-rl",textTransform:"uppercase",letterSpacing:1}}>A4 лист</div>
+          </div>
+          <div
+            ref={editorRef}
+            contentEditable
+            suppressContentEditableWarning
+            onInput={()=>persistContent(false)}
+            onBlur={()=>persistContent(true)}
+            onPaste={e=>{
+              const files=Array.from(e.clipboardData.files||[]);
+              const img=files.find(f=>f.type.startsWith("image/"));
+              if(img){e.preventDefault();insertImage(img);return;}
+            }}
+            style={{
+              width:isMobile?"min(794px, calc(100vw - 48px))":794,minHeight:isMobile?Math.round(VISITEXT_A4_HEIGHT*0.72):VISITEXT_A4_HEIGHT,background:"#fff",color:"#111827",
+              padding:isMobile?"36px":"72px",outline:"none",borderRadius:2,
+              boxShadow:dark?"0 24px 80px rgba(0,0,0,0.55)":"0 20px 70px rgba(15,23,42,0.18)",
+              border:"1px solid #E5E7EB",fontFamily:"'Montserrat',Arial,sans-serif",
+              fontSize:activeDoc?.fontSize||16,lineHeight:activeDoc?.lineHeight||"1.5",
+              overflowWrap:"break-word",wordBreak:"break-word",caretColor:C.a,
+            }}
+          />
+        </div>
+      </div>
+      <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const f=e.target.files?.[0];if(f)insertImage(f);e.currentTarget.value="";}}/>
+    </div>
+  </div>;
+}
+
 /* ============ SHEETS v3 — Full Excel-like per TZ ============ */
 const SH_MAX_WB=30;
 const SH_MAX_SHEETS=5;
@@ -7122,248 +7666,6 @@ function shShift(formula:string,dr:number,dc:number):string{
     const nr=Math.max(0,parseInt(row)-1+dr);
     return shColNm(nc)+(nr+1);
   });
-}
-
-
-/* ============ VISITEXT — LIGHT WORD-LIKE EDITOR ============ */
-type VisiTextDoc={id:string;title:string;html:string;fontSize:number;lineHeight:string;createdAt:number;updatedAt:number};
-const VISITEXT_MAX_DOCS=30;
-const VISITEXT_MAX_PAGES=500;
-const VISITEXT_A4_HEIGHT=1123;
-const VISITEXT_HIGHLIGHTS=[
-  {name:"Лимон",color:"#FEF3C7"},
-  {name:"Мята",color:"#D1FAE5"},
-  {name:"Небо",color:"#DBEAFE"},
-  {name:"Роза",color:"#FCE7F3"},
-  {name:"Лаванда",color:"#EDE9FE"},
-];
-
-function VisiTextPage({userId}:{userId:string}){
-  const {dark}=useTheme();
-  const isMobile=useIsMobile();
-  const storageKey="ff_visitext_docs_"+userId;
-  const editorRef=useRef<HTMLDivElement|null>(null);
-  const fileRef=useRef<HTMLInputElement|null>(null);
-  const saveTimer=useRef<any>(null);
-  const [docs,setDocs]=useState<VisiTextDoc[]>([]);
-  const [activeId,setActiveId]=useState<string|null>(null);
-  const [pages,setPages]=useState(1);
-  const [notice,setNotice]=useState("");
-
-  const activeDoc=docs.find(d=>d.id===activeId)||docs[0]||null;
-
-  const safeSave=(next:VisiTextDoc[])=>{
-    try{localStorage.setItem(storageKey,JSON.stringify(next));}
-    catch{setNotice("Документ слишком большой для локального хранилища. Уменьши размер изображений или текста.");}
-  };
-
-  const makeDoc=(title="Новый документ"):VisiTextDoc=>({
-    id:String(Date.now())+Math.random().toString(16).slice(2),
-    title,
-    html:"<p>Начни писать здесь...</p>",
-    fontSize:16,
-    lineHeight:"1.5",
-    createdAt:Date.now(),
-    updatedAt:Date.now(),
-  });
-
-  useEffect(()=>{
-    try{
-      const raw=localStorage.getItem(storageKey);
-      if(raw){
-        const parsed=JSON.parse(raw);
-        if(Array.isArray(parsed)&&parsed.length){setDocs(parsed);setActiveId(parsed[0].id);return;}
-      }
-    }catch{}
-    const first=makeDoc("Мой первый документ");
-    setDocs([first]);setActiveId(first.id);safeSave([first]);
-  },[storageKey]);
-
-  useEffect(()=>{
-    if(!activeDoc||!editorRef.current)return;
-    editorRef.current.innerHTML=activeDoc.html||"";
-    requestAnimationFrame(()=>calcPages());
-  },[activeDoc?.id]);
-
-  const calcPages=()=>{
-    const el=editorRef.current;
-    if(!el)return 1;
-    const next=Math.max(1,Math.ceil(el.scrollHeight/VISITEXT_A4_HEIGHT));
-    setPages(next);
-    if(next>VISITEXT_MAX_PAGES)setNotice("Лимит одного документа — 500 страниц. Сократи текст или изображения, чтобы сохранить изменения.");
-    return next;
-  };
-
-  const patchActive=(patch:Partial<VisiTextDoc>)=>{
-    if(!activeDoc)return;
-    setDocs(prev=>{
-      const next=prev.map(d=>d.id===activeDoc.id?{...d,...patch,updatedAt:Date.now()}:d);
-      safeSave(next);
-      return next;
-    });
-  };
-
-  const persistContent=(immediate=false)=>{
-    const el=editorRef.current;
-    if(!el||!activeDoc)return;
-    const p=calcPages();
-    if(p>VISITEXT_MAX_PAGES)return;
-    const html=el.innerHTML;
-    if(immediate){patchActive({html});return;}
-    clearTimeout(saveTimer.current);
-    saveTimer.current=setTimeout(()=>patchActive({html}),350);
-  };
-
-  const runCmd=(cmd:string,value?:string)=>{
-    editorRef.current?.focus();
-    try{document.execCommand(cmd,false,value);}catch{}
-    persistContent(true);
-  };
-
-  const changeFontSize=(size:number)=>{
-    patchActive({fontSize:size});
-    setTimeout(()=>persistContent(true),0);
-  };
-
-  const changeLineHeight=(lh:string)=>{
-    patchActive({lineHeight:lh});
-    setTimeout(()=>persistContent(true),0);
-  };
-
-  const createDoc=()=>{
-    if(docs.length>=VISITEXT_MAX_DOCS){setNotice("Можно создать максимум 30 документов в VisiText.");return;}
-    const doc=makeDoc("Документ "+(docs.length+1));
-    const next=[doc,...docs];
-    setDocs(next);setActiveId(doc.id);safeSave(next);setNotice("Создан новый документ.");
-  };
-
-  const duplicateDoc=()=>{
-    if(!activeDoc)return;
-    if(docs.length>=VISITEXT_MAX_DOCS){setNotice("Можно создать максимум 30 документов в VisiText.");return;}
-    const doc={...activeDoc,id:String(Date.now())+Math.random().toString(16).slice(2),title:activeDoc.title+" — копия",createdAt:Date.now(),updatedAt:Date.now()};
-    const next=[doc,...docs];
-    setDocs(next);setActiveId(doc.id);safeSave(next);
-  };
-
-  const deleteDoc=()=>{
-    if(!activeDoc)return;
-    if(docs.length<=1){setNotice("Нельзя удалить последний документ.");return;}
-    if(!confirm("Удалить документ «"+activeDoc.title+"»?"))return;
-    const next=docs.filter(d=>d.id!==activeDoc.id);
-    setDocs(next);setActiveId(next[0]?.id||null);safeSave(next);
-  };
-
-  const renameDoc=(title:string)=>patchActive({title:title||"Без названия"});
-
-  const insertImage=(file:File)=>{
-    if(!file.type.startsWith("image/"))return;
-    const reader=new FileReader();
-    reader.onload=()=>{
-      const src=String(reader.result||"");
-      const html=`<p><img src="${src}" style="max-width:100%;height:auto;border-radius:10px;display:block;margin:18px auto;box-shadow:0 8px 24px rgba(15,23,42,0.12);" /></p><p><br></p>`;
-      runCmd("insertHTML",html);
-      requestAnimationFrame(()=>persistContent(true));
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const exportHtml=()=>{
-    if(!activeDoc)return;
-    persistContent(true);
-    const blob=new Blob([`<!doctype html><html><head><meta charset="utf-8"><title>${activeDoc.title}</title><style>body{font-family:Montserrat,Arial,sans-serif;background:#f3f4f6;padding:32px}.page{width:794px;min-height:1123px;background:#fff;margin:0 auto;padding:72px;box-shadow:0 10px 40px rgba(0,0,0,.12);font-size:${activeDoc.fontSize}px;line-height:${activeDoc.lineHeight}}</style></head><body><div class="page">${editorRef.current?.innerHTML||activeDoc.html}</div></body></html>`],{type:"text/html;charset=utf-8"});
-    const a=document.createElement("a");
-    a.href=URL.createObjectURL(blob);a.download=(activeDoc.title||"visitext")+".html";a.click();URL.revokeObjectURL(a.href);
-  };
-
-  const toolBtn=(label:string,onClick:()=>void,active=false,style?:React.CSSProperties)=><button onClick={onClick} style={{height:34,minWidth:34,padding:"0 10px",borderRadius:9,border:"1px solid "+(active?C.a:C.bd),background:active?C.a:(dark?"rgba(255,255,255,0.04)":"#fff"),color:active?"#fff":C.t1,fontSize:13,fontWeight:700,cursor:"pointer",...style}}>{label}</button>;
-
-  return <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"280px 1fr",gap:20,alignItems:"start"}}>
-    <Card style={{padding:0,overflow:"hidden",position:isMobile?"relative":"sticky",top:20}}>
-      <div style={{padding:18,borderBottom:"1px solid "+C.bd,background:dark?"rgba(255,255,255,0.02)":"#F8FAFC"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:12}}>
-          <div>
-            <div style={{fontSize:18,fontWeight:800,color:C.t1}}>VisiText</div>
-            <div style={{fontSize:12,color:C.t2,marginTop:2}}>Лёгкий аналог Word · A4</div>
-          </div>
-          <div style={{fontSize:11,fontWeight:800,color:docs.length>=VISITEXT_MAX_DOCS?C.r:C.a,background:(docs.length>=VISITEXT_MAX_DOCS?C.r:C.a)+"12",borderRadius:999,padding:"5px 9px"}}>{docs.length}/{VISITEXT_MAX_DOCS}</div>
-        </div>
-        <Btn onClick={createDoc} disabled={docs.length>=VISITEXT_MAX_DOCS} style={{width:"100%",padding:"10px 12px"}}>+ Новый документ</Btn>
-      </div>
-      <div style={{maxHeight:isMobile?220:"calc(100vh - 260px)",overflowY:"auto",padding:10}}>
-        {docs.map(d=>{
-          const isAct=d.id===activeDoc?.id;
-          return <button key={d.id} onClick={()=>setActiveId(d.id)} style={{width:"100%",textAlign:"left",border:"1px solid "+(isAct?C.a:C.bd),background:isAct?(dark?"rgba(79,142,247,0.16)":"#EFF6FF"):(dark?"rgba(255,255,255,0.025)":"#fff"),borderRadius:12,padding:12,marginBottom:8,cursor:"pointer"}}>
-            <div style={{display:"flex",gap:10,alignItems:"center"}}>
-              <div style={{width:34,height:44,borderRadius:5,background:"#fff",border:"1px solid #E5E7EB",boxShadow:"0 2px 6px rgba(0,0,0,0.08)",flexShrink:0}}/>
-              <div style={{minWidth:0,flex:1}}>
-                <div style={{fontSize:13,fontWeight:800,color:isAct?C.a:C.t1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{d.title||"Без названия"}</div>
-                <div style={{fontSize:11,color:C.t2,marginTop:4}}>изменён {new Date(d.updatedAt).toLocaleDateString("ru-RU")}</div>
-              </div>
-            </div>
-          </button>;
-        })}
-      </div>
-    </Card>
-
-    <div style={{minWidth:0}}>
-      <Card style={{padding:16,marginBottom:16,position:"sticky",top:14,zIndex:20,backdropFilter:"blur(18px)",background:dark?"rgba(15,20,32,0.92)":"rgba(255,255,255,0.92)"}}>
-        <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-          <input value={activeDoc?.title||""} onChange={e=>renameDoc(e.target.value)} placeholder="Название документа" style={{...iS(),width:260,fontWeight:700}}/>
-          <select value={activeDoc?.fontSize||16} onChange={e=>changeFontSize(+e.target.value)} style={{...iS(),width:112}}>
-            {[12,14,16,18,20,24,28,32,36,48].map(s=><option key={s} value={s}>{s}px</option>)}
-          </select>
-          <select value={activeDoc?.lineHeight||"1.5"} onChange={e=>changeLineHeight(e.target.value)} style={{...iS(),width:142}}>
-            <option value="1">Интервал 1.0</option><option value="1.15">Интервал 1.15</option><option value="1.5">Интервал 1.5</option><option value="2">Интервал 2.0</option><option value="2.5">Интервал 2.5</option>
-          </select>
-          <div style={{width:1,height:28,background:C.bd}}/>
-          {toolBtn("B",()=>runCmd("bold"),false,{fontWeight:900})}
-          {toolBtn("I",()=>runCmd("italic"),false,{fontStyle:"italic"})}
-          {toolBtn("U",()=>runCmd("underline"),false,{textDecoration:"underline"})}
-          <div style={{display:"flex",alignItems:"center",gap:5,padding:"0 4px"}}>
-            {VISITEXT_HIGHLIGHTS.map(h=><button key={h.color} title={h.name} onClick={()=>runCmd("backColor",h.color)} style={{width:26,height:26,borderRadius:8,border:"1px solid rgba(0,0,0,0.08)",background:h.color,cursor:"pointer",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.8)"}}/>)}
-          </div>
-          {toolBtn("✕ маркер",()=>runCmd("removeFormat"),false,{fontWeight:600,minWidth:78})}
-          <div style={{width:1,height:28,background:C.bd}}/>
-          {toolBtn("Фото",()=>fileRef.current?.click(),false,{minWidth:62})}
-          {toolBtn("Копия",duplicateDoc,false,{minWidth:64})}
-          {toolBtn("HTML",exportHtml,false,{minWidth:58})}
-          {toolBtn("Удалить",deleteDoc,false,{minWidth:72,color:C.r})}
-        </div>
-      </Card>
-
-      {notice&&<div style={{marginBottom:14,padding:"11px 14px",borderRadius:12,background:(notice.includes("Лимит")||notice.includes("максимум")||notice.includes("большой")?C.r:C.a)+"12",color:notice.includes("Лимит")||notice.includes("максимум")||notice.includes("большой")?C.r:C.a,fontSize:13,fontWeight:700,display:"flex",justifyContent:"space-between",gap:12}}><span>{notice}</span><button onClick={()=>setNotice("")} style={{border:"none",background:"transparent",color:"inherit",cursor:"pointer",fontWeight:900}}>×</button></div>}
-
-      <div style={{display:"flex",justifyContent:"center",padding:"10px 0 28px",overflowX:"auto"}}>
-        <div style={{position:"relative"}}>
-          <div style={{position:"absolute",right:-78,top:10,display:"flex",flexDirection:"column",gap:8,alignItems:"center"}}>
-            <div style={{padding:"8px 10px",borderRadius:10,background:dark?"#0F1420":"#fff",border:"1px solid "+C.bd,boxShadow:C.sh,fontSize:11,fontWeight:800,color:pages>VISITEXT_MAX_PAGES?C.r:C.t2,whiteSpace:"nowrap"}}>{pages} / {VISITEXT_MAX_PAGES} стр.</div>
-            <div style={{fontSize:10,color:C.t2,writingMode:"vertical-rl",textTransform:"uppercase",letterSpacing:1}}>A4 лист</div>
-          </div>
-          <div
-            ref={editorRef}
-            contentEditable
-            suppressContentEditableWarning
-            onInput={()=>persistContent(false)}
-            onBlur={()=>persistContent(true)}
-            onPaste={e=>{
-              const files=Array.from(e.clipboardData.files||[]);
-              const img=files.find(f=>f.type.startsWith("image/"));
-              if(img){e.preventDefault();insertImage(img);return;}
-            }}
-            style={{
-              width:isMobile?"min(794px, calc(100vw - 48px))":794,minHeight:isMobile?Math.round(VISITEXT_A4_HEIGHT*0.72):VISITEXT_A4_HEIGHT,background:"#fff",color:"#111827",
-              padding:isMobile?"36px":"72px",outline:"none",borderRadius:2,
-              boxShadow:dark?"0 24px 80px rgba(0,0,0,0.55)":"0 20px 70px rgba(15,23,42,0.18)",
-              border:"1px solid #E5E7EB",fontFamily:"'Montserrat',Arial,sans-serif",
-              fontSize:activeDoc?.fontSize||16,lineHeight:activeDoc?.lineHeight||"1.5",
-              overflowWrap:"break-word",wordBreak:"break-word",caretColor:C.a,
-            }}
-          />
-        </div>
-      </div>
-      <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const f=e.target.files?.[0];if(f)insertImage(f);e.currentTarget.value="";}}/>
-    </div>
-  </div>;
 }
 
 function SheetsPage({userId}:{userId:string}){
@@ -8202,24 +8504,49 @@ function ToolsPage(){
 }
 
 /* ============ BOARD (MIRO-style v2) ============ */
+const BOARD_STICKY_PALETTE=["#FEF9A6","#FFE568","#FDBA74","#FB8B8F","#F5B7E6","#ED78D1","#A7C7F7","#9B8CF5","#89D9F0","#76A7EA","#6EDBD2","#54D37D","#C8EB8D","#A8E64F","#F8FAFC","#1F2937"];
+const BOARD_DRAW_COLORS=["#EF4444","#2563EB","#111827","#22C55E","#06B6D4","#FACC15","#7C3AED"];
 const BOARD_PALETTE=["#FEF08A","#BBF7D0","#BFDBFE","#FED7AA","#F9A8D4","#E9D5FF","#FECACA","#A7F3D0","#ffffff","#F1F5F9","#1E293B","#7C3AED","#2563EB","#DC2626","#16A34A","#D97706"];
+const BOARD_FONTS=[
+  {id:"Montserrat",label:"Montserrat"},
+  {id:"Inter, sans-serif",label:"Inter"},
+  {id:"Arial, sans-serif",label:"Arial"},
+  {id:"Georgia, serif",label:"Georgia"},
+  {id:"Courier New, monospace",label:"Mono"},
+];
 const MAX_BOARDS=20;
+const MAX_BOARD_ITEMS=420;
+const MAX_DRAW_PATH_CHARS=9000;
 
-type BItemType="sticky"|"text"|"image"|"link"|"shape"|"draw";
-type LineStyle="solid"|"dashed";
-type ArrowTip="none"|"arrow";
+type BItemType="sticky"|"text"|"image"|"link"|"shape"|"draw"|"external_card"|"doc"|"table"|"icon";
+type LineStyle="solid"|"dashed"|"dotted";
+type ArrowTip="none"|"arrow"|"double";
+type DrawMode="pen"|"pencil"|"pointer";
 
 interface BItem{
   id:string; type:BItemType;
   x:number; y:number; w:number; h:number;
   text?:string; color?:string;
-  fontSize?:number; fontBold?:boolean; fontItalic?:boolean;
-  shapeKind?:"rect"|"circle"|"diamond"|"triangle"|"parallelogram"|"square";
+  fontSize?:number; fontBold?:boolean; fontItalic?:boolean; fontFamily?:string;
+  shapeKind?:"rect"|"circle"|"diamond"|"triangle"|"parallelogram"|"square"|"cloud"|"pentagon";
   shapeText?:string; // text inside shape
   imageUrl?:string; imageW?:number; imageH?:number;
   linkUrl?:string; linkTitle?:string; linkFavicon?:string;
   zIndex?:number;
   drawPath?:string; drawColor?:string; drawThickness?:number;
+  externalSource?:"crm"|"content";
+  externalId?:string;
+  externalType?:"lead"|"content";
+  externalTitle?:string;
+  externalSubtitle?:string;
+  externalMeta?:string;
+  externalStatus?:string;
+  externalPlatform?:string;
+  iconKey?:string;
+  iconLabel?:string;
+  iconGlyph?:string;
+  iconCategory?:"emoji"|"social"|"business";
+  iconStyle?:"emoji"|"outline"|"glyph";
 }
 
 interface BLine{
@@ -8237,9 +8564,140 @@ interface BBoard{
 // ── helpers ──
 const bid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36);
 
+const safeNum=(value:any,fallback:number)=>{
+  const n=Number(value);
+  return Number.isFinite(n)?n:fallback;
+};
+
+const isValidBoardItem=(it:any):it is BItem=>{
+  return !!it&&typeof it==="object"&&typeof it.id==="string"&&it.id.trim().length>0&&typeof it.type==="string";
+};
+
+const normalizeBoardItems=(raw:any[]):BItem[]=>{
+  const seen=new Set<string>();
+  return (Array.isArray(raw)?raw:[])
+    .filter(isValidBoardItem)
+    .filter((it:any)=>{
+      if(seen.has(it.id))return false;
+      seen.add(it.id);
+      return true;
+    })
+    .slice(0,MAX_BOARD_ITEMS)
+    .map((it:any,index:number)=>{
+      const type=(it.type||"sticky") as BItemType;
+      const w=safeNum(it.w,type==="text"?180:type==="external_card"?260:200);
+      const h=safeNum(it.h,type==="text"?50:type==="external_card"?140:160);
+      return {
+        ...it,
+        id:String(it.id),
+        type,
+        x:safeNum(it.x,120+index*8),
+        y:safeNum(it.y,120+index*8),
+        w:Math.max(20,w),
+        h:Math.max(20,h),
+        zIndex:safeNum(it.zIndex,index),
+        text:typeof it.text==="string"?it.text:(it.text==null?"":String(it.text)),
+        color:it.color||"",
+        fontSize:safeNum(it.fontSize,14),
+        fontBold:!!it.fontBold,
+        fontItalic:!!it.fontItalic,
+        fontFamily:it.fontFamily||"Montserrat",
+      } as BItem;
+    });
+};
+
+const normalizeBoardLines=(raw:any[],validItemIds?:Set<string>):BLine[]=>{
+  const seen=new Set<string>();
+  return (Array.isArray(raw)?raw:[])
+    .filter((ln:any)=>!!ln&&typeof ln==="object"&&typeof ln.id==="string"&&typeof ln.fromId==="string"&&typeof ln.toId==="string")
+    .filter((ln:any)=>{
+      if(seen.has(ln.id))return false;
+      if(validItemIds&&(!validItemIds.has(ln.fromId)||!validItemIds.has(ln.toId)))return false;
+      seen.add(ln.id);
+      return true;
+    })
+    .map((ln:any)=>({
+      ...ln,
+      id:String(ln.id),
+      fromId:String(ln.fromId),
+      toId:String(ln.toId),
+      color:ln.color||"#64748B",
+      thickness:Math.max(1,safeNum(ln.thickness,2)),
+      style:ln.style||"solid",
+      arrow:ln.arrow||"arrow",
+    } as BLine));
+};
+
 function itemCenter(it:BItem){return{x:it.x+it.w/2,y:it.y+it.h/2};}
 
+function parseExternalCardPayload(raw?:string){
+  try{
+    const p=JSON.parse(raw||"{}");
+    return p&&typeof p==="object"?p:{};
+  }catch{return {};}
+}
+
+function externalCardPayload(it:BItem){
+  return JSON.stringify({
+    source:it.externalSource,
+    externalId:it.externalId,
+    externalType:it.externalType,
+    title:it.externalTitle||it.text||"Карточка",
+    subtitle:it.externalSubtitle||"",
+    meta:it.externalMeta||"",
+    status:it.externalStatus||"",
+    color:it.color||"#7C3AED",
+    platform:it.externalPlatform||"",
+  });
+}
+
+function parseBoardIconPayload(raw?:string){
+  try{
+    const p=JSON.parse(raw||"{}");
+    return p&&typeof p==="object"?p:{};
+  }catch{return {};}
+}
+
+function boardIconPayload(it:BItem){
+  return JSON.stringify({
+    key:it.iconKey||"",
+    label:it.iconLabel||"",
+    glyph:it.iconGlyph||"",
+    category:it.iconCategory||"emoji",
+    style:it.iconStyle||"emoji",
+  });
+}
+
+const BOARD_EMOJI_ICONS=[
+  ["smile","Улыбка","😀","улыбка smile happy"],["joy","Радость","😃","радость joy happy"],["grin","Сильная радость","😄","радость grin happy"],["beaming","Довольный","😁","довольный beaming grin"],["laugh","Смех","😆","смех laugh"],["tears","Смех до слёз","😂","смех слез tears laugh"],["rofl","Ржёт","🤣","ржёт rofl laugh"],["blush","Милая улыбка","😊","милая улыбка blush"],["angel","Ангел","😇","ангел angel"],["slight","Спокойная улыбка","🙂","спокойная улыбка slight"],["upside","Ирония","🙃","ирония upside down"],["wink","Подмигивание","😉","подмигивание wink"],["relieved","Спокойствие","😌","спокойствие calm relieved"],["heart-eyes","Влюблённость","😍","влюблённость love heart eyes"],["loving","Любовь","🥰","любовь loving hearts"],["kiss","Поцелуй","😘","поцелуй kiss"],["cool","Крутой","😎","крутой cool"],["star-struck","Восторг","🤩","восторг star struck"],["party","Праздник","🥳","праздник party"],["smirk","Самодовольный","😏","самодовольный smirk"],["neutral","Нейтральный","😐","нейтральный neutral"],["expressionless","Без эмоций","😑","без эмоций expressionless"],["silent","Молчание","😶","молчание silence"],["thinking","Думает","🤔","думает thinking"],["salute","Салют","🫡","салют salute"],["raised-brow","Сомнение","🤨","сомнение raised brow"],["grimace","Неловкость","😬","неловкость grimace"],["roll-eyes","Закатил глаза","🙄","закатил глаза roll eyes"],["surprised","Удивление","😮","удивление surprised"],["hushed","Шок","😯","шок hushed"],["astonished","Сильное удивление","😲","сильное удивление astonished"],["flushed","Смущение","😳","смущение flushed"],["pleading","Просьба","🥺","просьба pleading"],["cry","Грусть","😢","грусть cry sad"],["sob","Плач","😭","плач sob cry"],["triumph","Злость","😤","злость angry"],["angry","Гнев","😡","гнев angry"],["mindblown","Взрыв мозга","🤯","взрыв мозга mind blown"],["sleep","Сон","😴","сон sleep"],["sick","Болезнь","🤒","болезнь sick"],["thumbsup","Лайк","👍","лайк like thumbs up"],["thumbsdown","Дизлайк","👎","дизлайк thumbs down"],["clap","Аплодисменты","👏","аплодисменты clap"],["hooray","Ура","🙌","ура hooray"],["handshake","Рукопожатие","🤝","рукопожатие handshake"],["muscle","Сила","💪","сила muscle"],["peace","Мир","✌️","мир peace"],["crossed","Надежда","🤞","надежда crossed fingers"],["ok","Окей","👌","окей ok"],["pinched","Акцент","🤌","акцент pinched fingers"],["call","Позвони","🤙","позвони call me"],["wave","Привет","👋","привет wave"],["point-right","Указание вправо","👉","вправо point right"],["point-left","Указание влево","👈","влево point left"],["up","Важно","☝️","важно up"],["down","Вниз","👇","вниз down"],["pray","Спасибо / просьба","🙏","спасибо просьба pray"],["heart-hands","Сердце руками","🫶","сердце руками heart hands"],["stop","Стоп","🖐️","стоп hand"],["write","Пишу","✍️","пишу write"],["heart-red","Сердце","❤️","сердце red heart"],["heart-orange","Оранжевое сердце","🧡","оранжевое сердце orange heart"],["heart-yellow","Жёлтое сердце","💛","желтое сердце yellow heart"],["heart-green","Зелёное сердце","💚","зеленое сердце green heart"],["heart-blue","Синее сердце","💙","синее сердце blue heart"],["heart-purple","Фиолетовое сердце","💜","фиолетовое сердце purple heart"],["heart-black","Чёрное сердце","🖤","черное сердце black heart"],["heart-white","Белое сердце","🤍","белое сердце white heart"],["heart-broken","Разбитое сердце","💔","разбитое сердце broken heart"],["fire","Огонь","🔥","огонь fire hot"],["sparkles","Искра","✨","искра sparkles"],["star","Звезда","⭐","звезда star"],["dizzy","Сияние","💫","сияние dizzy"],["zap","Молния","⚡","молния lightning"],["boom","Взрыв","💥","взрыв boom"],["hundred","Сто процентов","💯","сто процентов hundred"],["check","Готово","✅","готово check"],["cross","Ошибка","❌","ошибка cross"],["bang","Важно","❗","важно exclamation"],["question","Вопрос","❓","вопрос question"],["idea","Идея","💡","идея lightbulb"],["brain","Мозг","🧠","мозг brain"],["eyes","Внимание","👀","внимание eyes"],["target","Цель","🎯","цель target"],["rocket","Рост / запуск","🚀","рост запуск rocket"],["trophy","Победа","🏆","победа trophy"],["gold","Первое место","🥇","первое место gold"],["pin","Закрепить","📌","закрепить pin"],["location","Метка","📍","метка location"],["note","Заметка","📝","заметка note"],["document","Документ","📄","документ file"],["chart","График","📊","график chart"],["trend-up","Рост","📈","рост chart up"],["trend-down","Падение","📉","падение chart down"],["money","Деньги","💰","деньги money"],["diamond","Премиум","💎","премиум diamond"],["tools","Инструменты","🛠️","инструменты tools"],["settings","Настройки","⚙️","настройки settings"],["puzzle","Элемент","🧩","элемент puzzle"],["image","Изображение","🖼️","изображение image picture"]
+].map(([key,label,glyph,search])=>({key:`emoji-${key}`,label,glyph,search,category:"emoji" as const,style:"emoji" as const,defaultColor:"#111827"}));
+
+const BOARD_SOCIAL_ICONS=[
+  ["instagram","Instagram","IG","instagram инстаграм", "#111827"],["tiktok","TikTok","TT","tiktok тикток", "#111827"],["youtube","YouTube","YT","youtube ютуб", "#111827"],["telegram","Telegram","TG","telegram телеграм", "#111827"],["whatsapp","WhatsApp","WA","whatsapp ватсап", "#111827"],["facebook","Facebook","f","facebook фейсбук", "#111827"],["x","X / Twitter","X","x twitter твиттер", "#111827"],["linkedin","LinkedIn","in","linkedin линкедин", "#111827"],["vk","VK","VK","vk вконтакте", "#111827"],["discord","Discord","DS","discord дискорд", "#111827"],["twitch","Twitch","TW","twitch твич", "#111827"],["snapchat","Snapchat","SC","snapchat снапчат", "#111827"],["pinterest","Pinterest","P","pinterest пинтерест", "#111827"],["reddit","Reddit","R","reddit реддит", "#111827"],["threads","Threads","@","threads тредс", "#111827"],["behance","Behance","Be","behance беханс", "#111827"],["dribbble","Dribbble","Dr","dribbble дрибббл", "#111827"],["github","GitHub","GH","github гитхаб", "#111827"],["medium","Medium","M","medium медиум", "#111827"],["spotify","Spotify","SP","spotify спотифай", "#111827"]
+].map(([key,label,glyph,search,defaultColor])=>({key:`social-${key}`,label,glyph,search,category:"social" as const,style:"outline" as const,defaultColor}));
+
+const BOARD_BUSINESS_ICONS=[
+  ["document","Документ","📄","документ file"],["table","Таблица","▦","таблица table grid"],["presentation","Презентация","▣","презентация slides"],["folder","Папка","🗂","папка folder"],["file","Файл","◫","файл file"],["note","Заметка","📝","заметка note"],["checklist","Чеклист","☑","чеклист checklist"],["calendar","Календарь","🗓","календарь calendar"],["clock","Часы","◷","часы clock time"],["bookmark","Закладка","🔖","закладка bookmark"],["money","Деньги","₽","деньги money ruble"],["card","Карта оплаты","💳","карта оплаты card"],["growth","График роста","↗","рост growth chart"],["decline","График падения","↘","падение decline chart"],["funnel","Воронка продаж","⏷","воронка funnel"],["target","Цель","◎","цель target"],["cup","Кубок","🏆","кубок trophy"],["diamond","Бриллиант","◆","бриллиант diamond"],["rocket","Ракета","🚀","ракета rocket"],["magnet","Магнит","🧲","магнит magnet"],["message","Сообщение","✉","сообщение message"],["chat","Чат","💬","чат chat"],["comment","Комментарий","🗨","комментарий comment"],["notification","Уведомление","🔔","уведомление notification bell"],["mail","Почта","✉️","почта mail"],["phone","Телефон","☎","телефон phone"],["microphone","Микрофон","🎤","микрофон microphone"],["camera","Камера","📷","камера camera"],["video","Видеозвонок","🎥","видеозвонок video"],["volume","Громкость","🔊","громкость volume"],["plus","Плюс","＋","плюс plus"],["minus","Минус","－","минус minus"],["check","Галочка","✓","галочка check"],["cross","Крестик","✕","крестик cross"],["arrow-right","Стрелка вправо","→","стрелка вправо arrow right"],["arrow-up","Стрелка вверх","↑","стрелка вверх arrow up"],["link","Ссылка","🔗","ссылка link"],["lock","Замок","🔒","замок lock"],["settings","Настройки","⚙","настройки settings"],["search","Поиск","⌕","поиск search"]
+].map(([key,label,glyph,search])=>({key:`business-${key}`,label,glyph,search,category:"business" as const,style:"glyph" as const,defaultColor:"#2563EB"}));
+
+const BOARD_ICON_LIBRARY=[...BOARD_EMOJI_ICONS,...BOARD_SOCIAL_ICONS,...BOARD_BUSINESS_ICONS];
+
+function renderBoardLibraryIcon(icon:{glyph?:string;label?:string;category?:"emoji"|"social"|"business";style?:"emoji"|"outline"|"glyph";defaultColor?:string},color?:string,size=28){
+  const col=color||icon.defaultColor||"#111827";
+  if(icon.category==="emoji"||icon.style==="emoji"){
+    return <span style={{fontSize:size,lineHeight:1,display:"inline-flex",alignItems:"center",justifyContent:"center"}}>{icon.glyph||"✨"}</span>;
+  }
+  if(icon.category==="social"||icon.style==="outline"){
+    return <div style={{width:size,height:size,borderRadius:Math.max(10,Math.round(size*0.28)),border:`2px solid ${col}`,display:"flex",alignItems:"center",justifyContent:"center",color:col,fontSize:Math.max(11,Math.round(size*0.32)),fontWeight:900,lineHeight:1,letterSpacing:-0.3,background:"rgba(255,255,255,0.9)",boxSizing:"border-box"}}>{icon.glyph||"IG"}</div>;
+  }
+  return <div style={{display:"inline-flex",alignItems:"center",justifyContent:"center",color:col,fontSize:size,fontWeight:900,lineHeight:1}}>{icon.glyph||"◎"}</div>;
+}
+
 function BoardPage({userId}:{userId:string}){
+  const crmFunnels=useTable("crm_funnels",userId);
+  const crmLeads=useTable("leads",userId);
+  const contentRows=useTable("content",userId);
+
   // Board list
   const[boards,setBoards]=useState<BBoard[]>([]);
   const[activeBoardId,setActiveBoardId]=useState<string|null>(null);
@@ -8256,15 +8714,21 @@ function BoardPage({userId}:{userId:string}){
   const[loadingCanvas,setLoadingCanvas]=useState(false);
   const[saved,setSaved]=useState(true);
   const saveTimer=useRef<any>(null);
+  const historyPast=useRef<{items:BItem[];lines:BLine[]}[]>([]);
+  const historyFuture=useRef<{items:BItem[];lines:BLine[]}[]>([]);
+  const historySkip=useRef(false);
 
   // Tool state
   const[tool,setTool]=useState<"select"|"pan"|"sticky"|"text"|"image"|"link"|"shape"|"line"|"draw">("select");
-  const[shapeKind,setShapeKind]=useState<"rect"|"circle"|"diamond"|"triangle"|"parallelogram"|"square">("rect");
+  const[toolPanel,setToolPanel]=useState<null|"create"|"sticky"|"icons"|"shape"|"draw">(null);
+  const[shapeKind,setShapeKind]=useState<"rect"|"circle"|"diamond"|"triangle"|"parallelogram"|"square"|"cloud"|"pentagon">("rect");
   const[drawColor,setDrawColor]=useState("#2563EB");
   const[drawThickness,setDrawThickness]=useState(3);
+  const[drawMode,setDrawMode]=useState<DrawMode>("pen");
   const drawingRef=useRef<{path:string;startX:number;startY:number;pointCount:number}|null>(null);
   const[isDrawing,setIsDrawing]=useState(false);
   const[drawPreview,setDrawPreview]=useState("");
+  const[pointerTrail,setPointerTrail]=useState<{path:string;startX:number;startY:number;color:string;thickness:number}|null>(null);
 
   // Live refs — always up to date, no stale closures in handlers
   const itemsRef=useRef<BItem[]>([]);
@@ -8303,6 +8767,7 @@ function BoardPage({userId}:{userId:string}){
 
   // Color picker
   const[colorTarget,setColorTarget]=useState<"item"|"line"|null>(null);
+  const[shapeColorOpen,setShapeColorOpen]=useState(false);
 
   // Link modal
   const[linkModal,setLinkModal]=useState(false);
@@ -8313,6 +8778,18 @@ function BoardPage({userId}:{userId:string}){
   // Image input ref
   const imgInputRef=useRef<HTMLInputElement>(null);
   const[imgClickPos,setImgClickPos]=useState({x:200,y:200});
+
+  // External cards side panel
+  const[externalPanel,setExternalPanel]=useState(false);
+  const[externalSource,setExternalSource]=useState<"crm"|"content">("crm");
+  const[externalSearch,setExternalSearch]=useState("");
+  const[externalFunnelId,setExternalFunnelId]=useState<string>("all");
+  const[externalDropHint,setExternalDropHint]=useState(false);
+
+  const[iconTab,setIconTab]=useState<"emoji"|"social"|"business">("emoji");
+  const[iconSearch,setIconSearch]=useState("");
+  const[recentIconKeys,setRecentIconKeys]=useState<string[]>([]);
+  const[favoriteIconKeys,setFavoriteIconKeys]=useState<string[]>([]);
 
   // Sync live refs on every state change
   useEffect(()=>{itemsRef.current=items;},[items]);
@@ -8338,44 +8815,56 @@ function BoardPage({userId}:{userId:string}){
         supabase.from("board_items").select("*").eq("board_id",activeBoardId).order("z_index"),
         supabase.from("board_lines").select("*").eq("board_id",activeBoardId),
       ]);
-      setItems((its||[]).map((d:any):BItem=>({
-        id:d.id,type:d.type,x:d.x,y:d.y,w:d.w,h:d.h,
-        text:d.text||"",color:d.color||"",fontSize:d.font_size||14,
-        fontBold:d.font_bold||false,fontItalic:d.font_italic||false,
-        shapeKind:d.shape_kind||"rect",imageUrl:d.image_url||"",
-        linkUrl:d.link_url||"",linkTitle:d.link_title||"",linkFavicon:d.link_favicon||"",
-        zIndex:d.z_index||0,
-        drawPath:d.draw_path||undefined,drawColor:d.draw_color||undefined,drawThickness:d.draw_thickness||undefined,
-      })));
-      setLines((lns||[]).map((d:any):BLine=>({
-        id:d.id,fromId:d.from_id,toId:d.to_id,
-        color:d.color||"#64748B",thickness:d.thickness||2,
-        style:d.style||"solid",arrow:d.arrow||"arrow",
-      })));
+      const mappedItems=normalizeBoardItems((its||[]).map((d:any):BItem=>{
+        const ext=d?.type==="external_card"?parseExternalCardPayload(d.text):{};
+        const icon=d?.type==="icon"?parseBoardIconPayload(d.text):{};
+        return {
+          id:d?.id,type:d?.type,x:d?.x,y:d?.y,w:d?.w,h:d?.h,
+          text:d?.type==="external_card"?(ext.title||d?.link_title||"Карточка"):(d?.type==="icon"?(icon.label||""):(d?.text||"")),color:d?.color||ext.color||"",fontSize:d?.font_size||14,
+          fontBold:d?.font_bold||false,fontItalic:d?.font_italic||false,fontFamily:d?.type!=="link"?(d?.link_favicon||"Montserrat"):"Montserrat",
+          shapeKind:d?.shape_kind||"rect",imageUrl:d?.image_url||"",
+          linkUrl:d?.link_url||"",linkTitle:d?.link_title||"",linkFavicon:d?.link_favicon||"",
+          zIndex:d?.z_index||0,
+          drawPath:d?.draw_path||undefined,drawColor:d?.draw_color||undefined,drawThickness:d?.draw_thickness||undefined,
+          externalSource:ext.source,externalId:ext.externalId,externalType:ext.externalType,externalTitle:ext.title,externalSubtitle:ext.subtitle,externalMeta:ext.meta,externalStatus:ext.status,externalPlatform:ext.platform,
+          iconKey:icon.key,iconLabel:icon.label,iconGlyph:icon.glyph,iconCategory:icon.category,iconStyle:icon.style,
+        } as BItem;
+      }));
+      const mappedItemIds=new Set(mappedItems.map(i=>i.id));
+      const mappedLines=normalizeBoardLines((lns||[]).map((d:any):BLine=>({
+        id:d?.id,fromId:d?.from_id,toId:d?.to_id,
+        color:d?.color||"#64748B",thickness:d?.thickness||2,
+        style:d?.style||"solid",arrow:d?.arrow||"arrow",
+      })),mappedItemIds);
+      setItems(mappedItems);
+      setLines(mappedLines);
       // Sync refs
-      itemsRef.current=(its||[]).map((d:any):BItem=>({id:d.id,type:d.type,x:d.x,y:d.y,w:d.w,h:d.h,text:d.text||"",color:d.color||"",fontSize:d.font_size||14,fontBold:d.font_bold||false,fontItalic:d.font_italic||false,shapeKind:d.shape_kind||"rect",imageUrl:d.image_url||"",linkUrl:d.link_url||"",linkTitle:d.link_title||"",linkFavicon:d.link_favicon||"",zIndex:d.z_index||0,drawPath:d.draw_path||undefined,drawColor:d.draw_color||undefined,drawThickness:d.draw_thickness||undefined}));
-      linesRef.current=(lns||[]).map((d:any):BLine=>({id:d.id,fromId:d.from_id,toId:d.to_id,color:d.color||"#64748B",thickness:d.thickness||2,style:d.style||"solid",arrow:d.arrow||"arrow"}));
+      itemsRef.current=mappedItems;
+      linesRef.current=mappedLines;
       setLoadingCanvas(false);
     })();
   },[activeBoardId]);
 
   // ── Auto-save (upsert-based — no full delete on every save) ──
   const triggerSave=(newItems:BItem[],newLines:BLine[])=>{
+    const cleanItems=normalizeBoardItems(newItems as any[]);
+    const validItemIds=new Set(cleanItems.map(i=>i.id));
+    const cleanLines=normalizeBoardLines(newLines as any[],validItemIds);
     setSaved(false);
     clearTimeout(saveTimer.current);
     saveTimer.current=setTimeout(async()=>{
       if(!activeBoardId)return;
       try{
-        const itemRows=newItems.map((it,i)=>({
+        const itemRows=cleanItems.map((it,i)=>({
           id:it.id,board_id:activeBoardId,user_id:userId,type:it.type,
           x:Math.round(it.x),y:Math.round(it.y),w:Math.round(it.w),h:Math.round(it.h),
-          text:it.text||"",color:it.color||"",font_size:it.fontSize||14,
+          text:it.type==="external_card"?externalCardPayload(it):it.type==="icon"?boardIconPayload(it):(it.text||""),color:it.color||"",font_size:it.fontSize||14,
           font_bold:it.fontBold||false,font_italic:it.fontItalic||false,
           shape_kind:it.shapeKind||null,image_url:it.imageUrl||"",
-          link_url:it.linkUrl||"",link_title:it.linkTitle||"",link_favicon:it.linkFavicon||"",
+          link_url:it.linkUrl||"",link_title:it.linkTitle||"",link_favicon:it.type==="link"?(it.linkFavicon||""):(it.fontFamily||"Montserrat"),
           z_index:i,draw_path:it.drawPath||null,draw_color:it.drawColor||null,draw_thickness:it.drawThickness||null,
         }));
-        const lineRows=newLines.map(ln=>({
+        const lineRows=cleanLines.map(ln=>({
           id:ln.id,board_id:activeBoardId,user_id:userId,
           from_id:ln.fromId,to_id:ln.toId,
           color:ln.color||"#64748B",thickness:ln.thickness||2,style:ln.style||"solid",arrow:ln.arrow||"arrow",
@@ -8385,8 +8874,8 @@ function BoardPage({userId}:{userId:string}){
           supabase.from("board_items").select("id").eq("board_id",activeBoardId),
           supabase.from("board_lines").select("id").eq("board_id",activeBoardId),
         ]);
-        const curItemIds=new Set(newItems.map(i=>i.id));
-        const curLineIds=new Set(newLines.map(l=>l.id));
+        const curItemIds=new Set(cleanItems.map(i=>i.id));
+        const curLineIds=new Set(cleanLines.map(l=>l.id));
         const delIt=(dbIt||[]).filter((r:any)=>!curItemIds.has(r.id)).map((r:any)=>r.id);
         const delLn=(dbLn||[]).filter((r:any)=>!curLineIds.has(r.id)).map((r:any)=>r.id);
         await Promise.all([
@@ -8397,12 +8886,59 @@ function BoardPage({userId}:{userId:string}){
         ].filter(Boolean));
         setSaved(true);
       }catch{setSaved(false);}
-    },1500);
+    },900);
   };
 
-  const updItems=(next:BItem[])=>{itemsRef.current=next;setItems(next);triggerSave(next,linesRef.current);};
-  const updLines=(next:BLine[])=>{linesRef.current=next;setLines(next);triggerSave(itemsRef.current,next);};
-  const updBoth=(ni:BItem[],nl:BLine[])=>{itemsRef.current=ni;linesRef.current=nl;setItems(ni);setLines(nl);triggerSave(ni,nl);};
+  const pushBoardHistory=()=>{
+    if(historySkip.current)return;
+    historyPast.current=[{items:normalizeBoardItems(itemsRef.current as any[]),lines:normalizeBoardLines(linesRef.current as any[],new Set(normalizeBoardItems(itemsRef.current as any[]).map(i=>i.id)))},...historyPast.current.slice(0,2)];
+    historyFuture.current=[];
+  };
+
+  const restoreBoardSnapshot=(snap:{items:BItem[];lines:BLine[]})=>{
+    historySkip.current=true;
+    const cleanItems=normalizeBoardItems(snap.items as any[]);
+    const validIds=new Set(cleanItems.map(i=>i.id));
+    const cleanLines=normalizeBoardLines(snap.lines as any[],validIds);
+    itemsRef.current=cleanItems;linesRef.current=cleanLines;
+    setItems(cleanItems);setLines(cleanLines);triggerSave(cleanItems,cleanLines);
+    window.setTimeout(()=>{historySkip.current=false;},0);
+  };
+
+  const undoBoard=()=>{
+    const prev=historyPast.current.shift();
+    if(!prev)return;
+    historyFuture.current=[{items:normalizeBoardItems(itemsRef.current as any[]),lines:normalizeBoardLines(linesRef.current as any[],new Set(itemsRef.current.map(i=>i.id)))},...historyFuture.current.slice(0,2)];
+    restoreBoardSnapshot(prev);
+  };
+
+  const redoBoard=()=>{
+    const next=historyFuture.current.shift();
+    if(!next)return;
+    historyPast.current=[{items:normalizeBoardItems(itemsRef.current as any[]),lines:normalizeBoardLines(linesRef.current as any[],new Set(itemsRef.current.map(i=>i.id)))},...historyPast.current.slice(0,2)];
+    restoreBoardSnapshot(next);
+  };
+
+  const updItems=(next:BItem[])=>{
+    pushBoardHistory();
+    const clean=normalizeBoardItems(next as any[]);
+    const validIds=new Set(clean.map(i=>i.id));
+    const cleanLines=normalizeBoardLines(linesRef.current as any[],validIds);
+    itemsRef.current=clean;linesRef.current=cleanLines;setItems(clean);setLines(cleanLines);triggerSave(clean,cleanLines);
+  };
+  const updLines=(next:BLine[])=>{
+    pushBoardHistory();
+    const validIds=new Set(itemsRef.current.map(i=>i.id));
+    const clean=normalizeBoardLines(next as any[],validIds);
+    linesRef.current=clean;setLines(clean);triggerSave(itemsRef.current,clean);
+  };
+  const updBoth=(ni:BItem[],nl:BLine[])=>{
+    pushBoardHistory();
+    const cleanItems=normalizeBoardItems(ni as any[]);
+    const validIds=new Set(cleanItems.map(i=>i.id));
+    const cleanLines=normalizeBoardLines(nl as any[],validIds);
+    itemsRef.current=cleanItems;linesRef.current=cleanLines;setItems(cleanItems);setLines(cleanLines);triggerSave(cleanItems,cleanLines);
+  };
 
   // ── Board management ──
   const createBoard=async()=>{
@@ -8440,12 +8976,127 @@ function BoardPage({userId}:{userId:string}){
 
   // ── Add item helper ──
   const addItem=(partial:Partial<BItem>&{type:BItemType},cx:number,cy:number)=>{
-    const it:BItem={id:bid(),x:cx-100,y:cy-80,w:200,h:160,zIndex:items.length,...partial};
-    const next=[...items,it];
+    const base=normalizeBoardItems(itemsRef.current as any[]);
+    if(base.length>=MAX_BOARD_ITEMS){alert(`На одной доске максимум ${MAX_BOARD_ITEMS} элементов. Удали лишнее или создай новую доску.`);return null as any;}
+    const it:BItem={id:bid(),x:cx-100,y:cy-80,w:200,h:160,zIndex:base.length,fontFamily:"Montserrat",...partial};
+    const next=[...base,it];
     updItems(next);
     setSelectedIds(new Set([it.id]));
-    setTool("select");
+    setTool("select");setShapeColorOpen(false);
     return it;
+  };
+
+  const addBoardDoc=(cx=360,cy=260)=>addItem({type:"doc",text:"Новый документ",color:"#EEF2FF",w:240,h:110,fontSize:16,fontBold:true},cx,cy);
+  const addBoardTable=(cx=380,cy=280)=>addItem({type:"table",text:"Новая таблица",color:"#ECFDF5",w:260,h:130,fontSize:16,fontBold:true},cx,cy);
+  const addStickyWithColor=(color:string,cx=360,cy=260)=>addItem({type:"sticky",text:"",color,w:200,h:180,fontFamily:"Montserrat"},cx,cy);
+  const iconByKey=useMemo(()=>Object.fromEntries(BOARD_ICON_LIBRARY.map(icon=>[icon.key,icon])),[] as any);
+  const filteredLibraryIcons=useMemo(()=>{
+    const q=iconSearch.trim().toLowerCase();
+    return BOARD_ICON_LIBRARY.filter(icon=>icon.category===iconTab).filter(icon=>!q||`${icon.label} ${icon.search} ${icon.key}`.toLowerCase().includes(q));
+  },[iconTab,iconSearch]);
+  const favoriteIcons=useMemo(()=>favoriteIconKeys.map(k=>iconByKey[k]).filter(Boolean),[favoriteIconKeys,iconByKey]);
+  const recentIcons=useMemo(()=>recentIconKeys.map(k=>iconByKey[k]).filter(Boolean),[recentIconKeys,iconByKey]);
+  const rememberRecentIcon=(key:string)=>setRecentIconKeys(prev=>[key,...prev.filter(x=>x!==key)].slice(0,12));
+  const toggleFavoriteIcon=(key:string)=>setFavoriteIconKeys(prev=>prev.includes(key)?prev.filter(x=>x!==key):[key,...prev].slice(0,24));
+  const addBoardIcon=(icon:any,cx=360,cy=260)=>{
+    rememberRecentIcon(icon.key);
+    return addItem({type:"icon",text:icon.label,color:icon.defaultColor||"#111827",w:icon.category==="emoji"?92:96,h:icon.category==="emoji"?92:110,fontSize:icon.category==="emoji"?46:18,fontBold:true,iconKey:icon.key,iconLabel:icon.label,iconGlyph:icon.glyph,iconCategory:icon.category,iconStyle:icon.style},cx,cy);
+  };
+  const addShapeFromMenu=(kind:BItem["shapeKind"],cx=400,cy=300)=>{
+    if(kind==="parallelogram"){return addItem({type:"shape",shapeKind:"parallelogram",color:"#60A5FA",w:190,h:95,text:""},cx,cy);}
+    return addItem({type:"shape",shapeKind:kind||"rect",color:"#60A5FA",w:kind==="circle"?130:kind==="triangle"?140:170,h:kind==="circle"?130:kind==="triangle"?120:100,text:""},cx,cy);
+  };
+
+  const updateSelectedShapeColor=(nextColor:string)=>{
+    const selectedId=[...selectedIds][0];
+    if(!selectedId)return;
+    const next=itemsRef.current.map(item=>item.id===selectedId&&item.type==="shape"?{...item,color:nextColor}:item);
+    updItems(next);
+    setCustomColorInput(nextColor);
+  };
+
+  const getContentImage=(item:any)=>item.cover_url||item.image_url||item.thumbnail_url||item.photo_url||item.media_url||item.preview_url||"";
+  const getContentPlatform=(item:any)=>String(item.platform||item.source||"other").toLowerCase();
+
+  const platformColor=(pid:string)=>{
+    const p=String(pid||"").toLowerCase();
+    if(p.includes("instagram"))return "#E1306C";
+    if(p.includes("youtube"))return "#FF0000";
+    if(p.includes("telegram"))return "#29B6F6";
+    if(p.includes("vk"))return "#4C75A3";
+    return "#64748B";
+  };
+
+  const externalCards=useMemo(()=>{
+    const q=externalSearch.trim().toLowerCase();
+    if(externalSource==="crm"){
+      return crmLeads.data
+        .filter((lead:any)=>externalFunnelId==="all"||lead.funnel_id===externalFunnelId)
+        .filter((lead:any)=>!q||[lead.name,lead.contact,lead.phone,lead.email,lead.source].some(v=>String(v||"").toLowerCase().includes(q)))
+        .map((lead:any)=>({
+          source:"crm" as const,
+          externalType:"lead" as const,
+          id:lead.id,
+          title:lead.name||"Без имени",
+          subtitle:lead.contact||lead.phone||lead.email||"CRM-лид",
+          meta:[lead.source,lead.deal?`${lead.deal} ₽`:""].filter(Boolean).join(" · "),
+          status:lead.status||"",
+          color:"#38BDF8",
+          imageUrl:lead.avatar_url||lead.photo_url||lead.image_url||"",
+          platform:"crm",
+          raw:lead,
+        }));
+    }
+    return contentRows.data
+      .filter((item:any)=>!q||[item.topic,item.type,item.platform,item.status,item.date].some(v=>String(v||"").toLowerCase().includes(q)))
+      .map((item:any)=>({
+        source:"content" as const,
+        externalType:"content" as const,
+        id:item.id,
+        title:item.topic||item.type||"Контент",
+        subtitle:[item.platform,item.type].filter(Boolean).join(" · ")||"Контент-карточка",
+        meta:[item.status,item.date||item.publish_date].filter(Boolean).join(" · "),
+        status:item.status||"",
+        color:platformColor(getContentPlatform(item))||"#A855F7",
+        imageUrl:getContentImage(item),
+        platform:getContentPlatform(item),
+        raw:item,
+      }));
+  },[externalSource,externalSearch,externalFunnelId,crmLeads.data,contentRows.data]);
+
+  const addExternalCardToBoard=(card:any,clientX?:number,clientY?:number)=>{
+    const center=canvasRef.current&&clientX&&clientY?toCanvas(clientX,clientY):{x:320+itemsRef.current.length*18,y:260+itemsRef.current.length*18};
+    const it=addItem({
+      type:"external_card",
+      w:card.imageUrl?286:260,h:card.imageUrl?176:138,
+      color:card.color||"#7C3AED",
+      text:card.title,
+      imageUrl:card.imageUrl||"",
+      externalSource:card.source,
+      externalId:card.id,
+      externalType:card.externalType,
+      externalTitle:card.title,
+      externalSubtitle:card.subtitle,
+      externalMeta:card.meta,
+      externalStatus:card.status,
+      externalPlatform:card.platform||"",
+    },center.x,center.y);
+    if(it){setExternalPanel(false);setExternalDropHint(false);}
+  };
+
+  const refreshExternalCards=()=>{
+    const next=normalizeBoardItems(items as any[]).map(it=>{
+      if(it.type!=="external_card")return it;
+      if(it.externalSource==="crm"){
+        const lead=crmLeads.data.find((l:any)=>l.id===it.externalId);
+        if(!lead)return it;
+        return {...it,text:lead.name||it.text,imageUrl:lead.avatar_url||lead.photo_url||lead.image_url||it.imageUrl||"",externalTitle:lead.name||it.externalTitle,externalSubtitle:lead.contact||lead.phone||lead.email||"CRM-лид",externalMeta:[lead.source,lead.deal?`${lead.deal} ₽`:""].filter(Boolean).join(" · "),externalStatus:lead.status||"",externalPlatform:"crm"};
+      }
+      const c=contentRows.data.find((x:any)=>x.id===it.externalId);
+      if(!c)return it;
+      return {...it,text:c.topic||c.type||it.text,imageUrl:getContentImage(c)||it.imageUrl||"",externalTitle:c.topic||c.type||it.externalTitle,externalSubtitle:[c.platform,c.type].filter(Boolean).join(" · ")||"Контент-карточка",externalMeta:[c.status,c.date||c.publish_date].filter(Boolean).join(" · "),externalStatus:c.status||"",externalPlatform:getContentPlatform(c)};
+    });
+    updItems(next);
   };
 
   // ── Canvas click ──
@@ -8458,13 +9109,14 @@ function BoardPage({userId}:{userId:string}){
     const{x,y}=toCanvas(e.clientX,e.clientY);
 
     if(tool==="sticky"){
-      const it=addItem({type:"sticky",text:"",color:BOARD_PALETTE[0],w:200,h:180},x,y);
-      setTimeout(()=>{setEditingId(it.id);setEditText("");},60);
+      const it=addItem({type:"sticky",text:"",color:BOARD_PALETTE[0],w:200,h:180,fontFamily:"Montserrat"},x,y);
+      if(it)setTimeout(()=>{setEditingId(it.id);setEditText("");},60);
     } else if(tool==="text"){
-      const it=addItem({type:"text",text:"Текст",color:"#1E293B",w:180,h:50,fontSize:16},x,y);
-      setTimeout(()=>{setEditingId(it.id);setEditText("Текст");},60);
+      const it=addItem({type:"text",text:"Текст",color:"#1E293B",w:180,h:50,fontSize:16,fontFamily:"Montserrat"},x,y);
+      if(it)setTimeout(()=>{setEditingId(it.id);setEditText("Текст");},60);
     } else if(tool==="shape"){
-      addItem({type:"shape",shapeKind,color:"#3B82F6",w:140,h:100},x,y);
+      const it=addItem({type:"shape",shapeKind,color:"#3B82F6",w:160,h:110,text:"",shapeText:"",fontFamily:"Montserrat",fontSize:14},x,y);
+      if(it)setTimeout(()=>{setEditingId(it.id);setEditText("");},60);
     } else if(tool==="link"){
       setLinkClickPos({x,y});setLinkModal(true);
     } else if(tool==="image"){
@@ -8491,9 +9143,11 @@ function BoardPage({userId}:{userId:string}){
     const newSel=new Set(selectedIds.has(id)?selectedIds:[id]);
     setSelectedIds(newSel);
 
+    const safeStartItems=normalizeBoardItems(items as any[]);
     const startPos:Record<string,{x:number,y:number}>={};
-    newSel.forEach(sid=>{const it=items.find(i=>i.id===sid);if(it)startPos[sid]={x:it.x,y:it.y};});
-    dragState.current={ids:[...newSel],startMx:e.clientX,startMy:e.clientY,startPos};
+    newSel.forEach(sid=>{const it=safeStartItems.find(i=>i.id===sid);if(it)startPos[sid]={x:it.x,y:it.y};});
+    const ids=[...newSel].filter(id=>!!startPos[id]);
+    dragState.current=ids.length?{ids,startMx:e.clientX,startMy:e.clientY,startPos}:null;
   };
 
   // ── Mouse down on canvas (pan) ──
@@ -8512,10 +9166,13 @@ function BoardPage({userId}:{userId:string}){
   };
 
   const onMouseMove=(e:React.MouseEvent)=>{
-    if(dragState.current){
-      const dx=(e.clientX-dragState.current.startMx)/zoom;
-      const dy=(e.clientY-dragState.current.startMy)/zoom;
-      setItems(prev=>prev.map(it=>dragState.current!.ids.includes(it.id)?{...it,x:dragState.current!.startPos[it.id].x+dx,y:dragState.current!.startPos[it.id].y+dy}:it));
+    const drag=dragState.current;
+    if(drag){
+      if(!Array.isArray(drag.ids)||!drag.startPos){dragState.current=null;return;}
+      const dx=(e.clientX-drag.startMx)/zoom;
+      const dy=(e.clientY-drag.startMy)/zoom;
+      const dragIds=new Set(drag.ids.filter((id:any)=>typeof id==="string"&&id));
+      setItems(prev=>normalizeBoardItems(prev as any[]).map(it=>dragIds.has(it.id)&&drag.startPos[it.id]?{...it,x:drag.startPos[it.id].x+dx,y:drag.startPos[it.id].y+dy}:it));
     } else if(resizeState.current){
       const dx=(e.clientX-resizeState.current.startMx)/zoom;
       const dy=(e.clientY-resizeState.current.startMy)/zoom;
@@ -8524,9 +9181,9 @@ function BoardPage({userId}:{userId:string}){
       if(it0?.type==="image"&&it0.imageW&&it0.imageH){
         const ratio=it0.imageW/it0.imageH;
         const newW=Math.max(60,resizeState.current.startW+dx);
-        setItems(prev=>prev.map(it=>it.id===resizeState.current!.id?{...it,w:newW,h:Math.max(40,newW/ratio)}:it));
+        setItems(prev=>normalizeBoardItems(prev as any[]).map(it=>it.id===resizeState.current!.id?{...it,w:newW,h:Math.max(40,newW/ratio)}:it));
       } else {
-        setItems(prev=>prev.map(it=>it.id===resizeState.current!.id?{...it,w:Math.max(60,resizeState.current!.startW+dx),h:Math.max(40,resizeState.current!.startH+dy)}:it));
+        setItems(prev=>normalizeBoardItems(prev as any[]).map(it=>it.id===resizeState.current!.id?{...it,w:Math.max(60,resizeState.current!.startW+dx),h:Math.max(40,resizeState.current!.startH+dy)}:it));
       }
     } else if(panState.current){
       setPan({x:panState.current.startPx+(e.clientX-panState.current.startMx),y:panState.current.startPy+(e.clientY-panState.current.startMy)});
@@ -8535,14 +9192,12 @@ function BoardPage({userId}:{userId:string}){
       const dx=x-drawingRef.current.startX;
       const dy=y-drawingRef.current.startY;
       drawingRef.current.pointCount=(drawingRef.current.pointCount||0)+1;
-      // Only add point every 3 moves (throttle) and limit total points to 800
-      if(drawingRef.current.pointCount%3===0&&drawingRef.current.path.length<12000){
+      const step=drawMode==="pencil"?2:drawMode==="pointer"?4:3;
+      const stateStep=drawMode==="pencil"?4:drawMode==="pointer"?8:6;
+      if(drawingRef.current.pointCount%step===0&&drawingRef.current.path.length<MAX_DRAW_PATH_CHARS){
         const newPath=drawingRef.current.path+` L${dx.toFixed(1)},${dy.toFixed(1)}`;
         drawingRef.current.path=newPath;
-        // Only update React state every 6 moves for perf
-        if(drawingRef.current.pointCount%6===0){
-          setDrawPreview(newPath);
-        }
+        if(drawingRef.current.pointCount%stateStep===0){setDrawPreview(newPath);}
       }
     } else if(connectorDrag){
       // Update live connector preview via state
@@ -8552,20 +9207,27 @@ function BoardPage({userId}:{userId:string}){
   };
 
   const onMouseUp=(e:React.MouseEvent)=>{
-    if(dragState.current||resizeState.current)triggerSave(items,lines);
+    const hadDrag=!!dragState.current;
+    const hadResize=!!resizeState.current;
+    if(hadDrag||hadResize)triggerSave(normalizeBoardItems(items as any[]),lines);
     dragState.current=null;resizeState.current=null;panState.current=null;
 
     // Finish drawing
     if(isDrawing&&drawingRef.current&&drawPreview.length>4){
       const{startX,startY}=drawingRef.current;
-      // Compute bounding box of path
-      const coords=drawPreview.match(/-?\d+\.?\d*/g)?.map(Number)||[];
-      const xs=coords.filter((_,i)=>i%2===0),ys=coords.filter((_,i)=>i%2===1);
-      const minX=Math.min(0,...xs),minY=Math.min(0,...ys);
-      const maxX=Math.max(0,...xs),maxY=Math.max(0,...ys);
-      const w=Math.max(40,maxX-minX),h=Math.max(40,maxY-minY);
-      const it:BItem={id:bid(),type:"draw",x:startX+minX,y:startY+minY,w,h,drawPath:drawPreview,drawColor,drawThickness,zIndex:items.length};
-      updItems([...items,it]);
+      if(drawMode==="pointer"){
+        setPointerTrail({path:drawPreview,startX,startY,color:drawColor,thickness:Math.max(4,drawThickness+2)});
+        window.setTimeout(()=>setPointerTrail(null),900);
+      }else{
+        const coords=drawPreview.match(/-?\d+\.?\d*/g)?.map(Number)||[];
+        const xs=coords.filter((_,i)=>i%2===0),ys=coords.filter((_,i)=>i%2===1);
+        const minX=Math.min(0,...xs),minY=Math.min(0,...ys);
+        const maxX=Math.max(0,...xs),maxY=Math.max(0,...ys);
+        const w=Math.max(40,maxX-minX),h=Math.max(40,maxY-minY);
+        const base=normalizeBoardItems(itemsRef.current as any[]);
+        const it:BItem={id:bid(),type:"draw",x:startX+minX,y:startY+minY,w,h,drawPath:drawPreview.slice(0,MAX_DRAW_PATH_CHARS),drawColor:drawMode==="pencil"?"rgba(30,41,59,0.75)":drawColor,drawThickness:drawMode==="pencil"?Math.max(1,drawThickness-1):drawThickness,zIndex:base.length};
+        updItems([...base,it]);
+      }
     }
     setIsDrawing(false);drawingRef.current=null;setDrawPreview("");
 
@@ -8574,7 +9236,7 @@ function BoardPage({userId}:{userId:string}){
       const{fromId,fromAnchor,mx,my}=connectorDrag;
       type AnchorHit={id:string;side:"top"|"bottom"|"left"|"right";dist:number};
       let best:AnchorHit|null=null;
-      items.filter(i=>i.id!==fromId).forEach(it=>{
+      normalizeBoardItems(items as any[]).filter(i=>i.id!==fromId).forEach(it=>{
         const{side,dist}=nearestAnchor(it,mx,my);
         if(dist<40&&(!best||dist<best.dist))best={id:it.id,side,dist};
       });
@@ -8589,8 +9251,8 @@ function BoardPage({userId}:{userId:string}){
 
   const onWheel=(e:React.WheelEvent)=>{
     e.preventDefault();
-    const f=e.deltaY>0?0.9:1.11;
-    setZoom(z=>Math.min(4,Math.max(0.15,z*f)));
+    const f=e.deltaY>0?0.94:1.06;
+    setZoom(z=>Math.min(3,Math.max(0.2,z*f)));
   };
 
   // ── Delete selected ──
@@ -8656,15 +9318,32 @@ function BoardPage({userId}:{userId:string}){
 
   // ── External drag-drop onto canvas ──
   const onCanvasDragOver=(e:React.DragEvent)=>{
-    if(e.dataTransfer.types.includes("Files")){e.preventDefault();e.dataTransfer.dropEffect="copy";}
+    if(e.dataTransfer.types.includes("application/x-vizzy-card")||e.dataTransfer.types.includes("application/x-vizzy-icon")||e.dataTransfer.types.includes("vizzy/sticky-color")||e.dataTransfer.types.includes("Files")){
+      e.preventDefault();
+      e.dataTransfer.dropEffect="copy";
+      if(e.dataTransfer.types.includes("application/x-vizzy-card"))setExternalDropHint(true);
+    }
   };
   const onCanvasDrop=async(e:React.DragEvent)=>{
     e.preventDefault();
-    const files=Array.from(e.dataTransfer.files).filter(f=>f.type.startsWith("image/"));
-    if(!files.length)return;
+    setExternalDropHint(false);
+    const rawCard=e.dataTransfer.getData("application/x-vizzy-card");
+    if(rawCard){
+      try{addExternalCardToBoard(JSON.parse(rawCard),e.clientX,e.clientY);}catch{}
+      return;
+    }
     const rect=canvasRef.current!.getBoundingClientRect();
     const cx=(e.clientX-rect.left-pan.x)/zoom;
     const cy=(e.clientY-rect.top-pan.y)/zoom;
+    const rawIcon=e.dataTransfer.getData("application/x-vizzy-icon");
+    if(rawIcon){
+      try{addBoardIcon(JSON.parse(rawIcon),cx,cy);}catch{}
+      return;
+    }
+    const stickyColor=e.dataTransfer.getData("vizzy/sticky-color");
+    if(stickyColor){addStickyWithColor(stickyColor,cx,cy);return;}
+    const files=Array.from(e.dataTransfer.files).filter(f=>f.type.startsWith("image/"));
+    if(!files.length)return;
     for(let i=0;i<files.length;i++){
       await uploadImageFile(files[i],cx+i*20,cy+i*20);
     }
@@ -8762,24 +9441,28 @@ function BoardPage({userId}:{userId:string}){
 
   // ── SVG line rendering ──
   const svgLines=useMemo(()=>{
-    return lines.map(ln=>{
-      const from=items.find(i=>i.id===ln.fromId);
-      const to=items.find(i=>i.id===ln.toId);
+    const safeItems=normalizeBoardItems(items as any[]);
+    const safeItemIds=new Set(safeItems.map(i=>i.id));
+    const safeLines=normalizeBoardLines(lines as any[],safeItemIds);
+    return safeLines.map(ln=>{
+      const from=safeItems.find(i=>i.id===ln.fromId);
+      const to=safeItems.find(i=>i.id===ln.toId);
       if(!from||!to)return null;
       // Use anchor points if defined, else centers
       const a=ln.fromAnchor?anchorPos(from,ln.fromAnchor):itemCenter(from);
       const b=ln.toAnchor?anchorPos(to,ln.toAnchor):itemCenter(to);
       const col=ln.color||"#64748B";
       const thick=ln.thickness||2;
-      const dashArr=ln.style==="dashed"?`${thick*4} ${thick*3}`:"none";
+      const dashArr=ln.style==="dashed"?`${thick*4} ${thick*3}`:ln.style==="dotted"?`${thick} ${thick*3}`:"none";
       const markerId=`arr-${ln.id}`;
+      const markerStartId=`arr-start-${ln.id}`;
       const isSel=selectedLineId===ln.id;
       return(
         <g key={ln.id}>
-          {ln.arrow==="arrow"&&<defs><marker id={markerId} markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill={col}/></marker></defs>}
+          {(ln.arrow==="arrow"||ln.arrow==="double")&&<defs><marker id={markerId} markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill={col}/></marker>{ln.arrow==="double"&&<marker id={markerStartId} markerWidth="10" markerHeight="7" refX="1" refY="3.5" orient="auto-start-reverse"><polygon points="10 0, 0 3.5, 10 7" fill={col}/></marker>}</defs>}
           {/* Hit area */}
           <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="transparent" strokeWidth={16} style={{cursor:"pointer"}} onClick={e=>{e.stopPropagation();setSelectedLineId(ln.id);setSelectedIds(new Set());}}/>
-          <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={isSel?"#2563EB":col} strokeWidth={isSel?thick+2:thick} strokeDasharray={dashArr} markerEnd={ln.arrow==="arrow"?`url(#${markerId})`:"none"} strokeLinecap="round" style={{pointerEvents:"none"}}/>
+          <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={isSel?"#2563EB":col} strokeWidth={isSel?thick+2:thick} strokeDasharray={dashArr} markerStart={ln.arrow==="double"?`url(#${markerStartId})`:"none"} markerEnd={(ln.arrow==="arrow"||ln.arrow==="double")?`url(#${markerId})`:"none"} strokeLinecap="round" style={{pointerEvents:"none"}}/>
         </g>
       );
     });
@@ -8790,7 +9473,7 @@ function BoardPage({userId}:{userId:string}){
     const c=it.color||"#3B82F6";
     const textStyle:React.CSSProperties={
       position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",
-      fontSize:it.fontSize||13,fontWeight:600,color:"#fff",
+      fontFamily:it.fontFamily||"Montserrat",fontSize:it.fontSize||13,fontWeight:it.fontBold?800:600,fontStyle:it.fontItalic?"italic":"normal",color:"#fff",
       textAlign:"center",padding:"4px 8px",wordBreak:"break-word",
       textShadow:"0 1px 3px rgba(0,0,0,0.4)",pointerEvents:"none",lineHeight:1.3,
     };
@@ -8808,6 +9491,12 @@ function BoardPage({userId}:{userId:string}){
       case"triangle":return<div style={{width:"100%",height:"100%",background:c,clipPath:"polygon(50% 0%,100% 100%,0% 100%)",position:"relative"}}>
         {txt&&<div style={{...textStyle,paddingTop:"40%"}}>{txt}</div>}
       </div>;
+      case"cloud":return<div style={{width:"100%",height:"100%",background:c,clipPath:"ellipse(45% 34% at 50% 55%)",borderRadius:999,boxShadow:"0 4px 20px "+c+"55",position:"relative"}}>
+        {txt&&<div style={textStyle}>{txt}</div>}
+      </div>;
+      case"pentagon":return<div style={{width:"100%",height:"100%",background:c,clipPath:"polygon(50% 0%,96% 35%,78% 100%,22% 100%,4% 35%)",boxShadow:"0 4px 20px "+c+"55",position:"relative"}}>
+        {txt&&<div style={textStyle}>{txt}</div>}
+      </div>;
       case"parallelogram":return<div style={{width:"100%",height:"100%",background:c,clipPath:"polygon(15% 0%,100% 0%,85% 100%,0% 100%)",boxShadow:"0 4px 20px "+c+"55",position:"relative"}}>
         {txt&&<div style={textStyle}>{txt}</div>}
       </div>;
@@ -8817,7 +9506,8 @@ function BoardPage({userId}:{userId:string}){
     }
   };
 
-  const sel1=selectedIds.size===1?items.find(i=>i.id==[...selectedIds][0]):null;
+  const safeItemsForSelection=normalizeBoardItems(items as any[]);
+  const sel1=selectedIds.size===1?safeItemsForSelection.find(i=>i.id==[...selectedIds][0]):null;
   const selLine=lines.find(l=>l.id===selectedLineId);
 
   const cursorMap:Record<string,string>={select:"default",pan:"grab",sticky:"cell",text:"text",image:"cell",link:"cell",shape:"crosshair",line:"crosshair",draw:"crosshair"};
@@ -8926,7 +9616,7 @@ function BoardPage({userId}:{userId:string}){
     <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 64px)",overflow:"hidden",background:"#F8FAFC",position:"relative",userSelect:"none"}}>
 
       {/* ── TOP BAR ── */}
-      <div style={{position:"absolute",top:0,left:0,right:0,zIndex:60,display:"flex",alignItems:"center",padding:"8px 12px",background:"rgba(255,255,255,0.95)",backdropFilter:"blur(12px)",borderBottom:"1px solid rgba(0,0,0,0.06)",gap:10}}>
+      <div style={{position:"absolute",top:0,left:0,right:0,zIndex:60,display:"flex",alignItems:"center",padding:"8px 12px",background:"rgba(255,255,255,0.95)",backdropFilter:"blur(12px)",borderBottom:"1px solid rgba(0,0,0,0.06)",gap:10,overflowX:"auto"}}>
         {/* Back */}
         <button onClick={()=>{setSaved(true);setActiveBoardId(null);setSelectedIds(new Set());setEditingId(null);setLineFrom(null);setTool("select");}}
           style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",background:"#F1F5F9",border:"none",borderRadius:9,fontSize:13,fontWeight:600,color:C.t2,cursor:"pointer"}}>
@@ -8936,29 +9626,22 @@ function BoardPage({userId}:{userId:string}){
 
         <div style={{fontSize:14,fontWeight:700,color:C.t1,flex:1}}>{activeBoard.name}</div>
 
-        {/* Tool buttons */}
-        <div style={{display:"flex",gap:2,background:"#F1F5F9",borderRadius:10,padding:"3px"}}>
-          {([
-            {id:"select",icon:"⬜",tip:"Выбор (V)"},
-            {id:"pan",icon:"✋",tip:"Перемещение (H)"},
-            {id:"sticky",icon:"📌",tip:"Стикер (S)"},
-            {id:"text",icon:"T",tip:"Текст (T)"},
-            {id:"image",icon:"🖼",tip:"Изображение (I)"},
-            {id:"link",icon:"🔗",tip:"Ссылка (L)"},
-            {id:"shape",icon:"⬡",tip:"Фигура (F)"},
-            {id:"line",icon:"↗",tip:"Линия (C)"},
-            {id:"draw",icon:"✏️",tip:"Маркер (M)"},
-          ] as {id:string;icon:string;tip:string}[]).map(tb=>(
-            <button key={tb.id} onClick={()=>{setTool(tb.id as any);if(tb.id==="image"){setImgClickPos({x:400,y:300});imgInputRef.current?.click();}}} title={tb.tip}
-              style={{width:34,height:34,borderRadius:8,border:"none",background:tool===tb.id?"#fff":"transparent",color:tool===tb.id?C.t1:C.t2,fontSize:tb.id==="text"||tb.id==="line"?13:17,cursor:"pointer",fontWeight:tool===tb.id?700:400,boxShadow:tool===tb.id?"0 1px 4px rgba(0,0,0,0.1)":"none",transition:"all 0.12s"}}>
-              {tb.icon}
-            </button>
-          ))}
-        </div>
+        <button onClick={()=>setExternalPanel(true)}
+          style={{display:"flex",alignItems:"center",gap:7,padding:"8px 12px",border:"1px solid #DDD6FE",background:"linear-gradient(135deg,#F5F3FF,#EEF2FF)",color:"#6D28D9",borderRadius:10,fontSize:12,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap",boxShadow:"0 0 14px rgba(124,58,237,0.12)"}}>
+          ＋ Добавить карточку
+        </button>
+        <button onClick={refreshExternalCards} title="Обновить данные внешних карточек"
+          style={{display:"flex",alignItems:"center",gap:6,padding:"8px 10px",border:"1px solid #E2E8F0",background:"#fff",color:C.t2,borderRadius:10,fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
+          ↻ Обновить
+        </button>
 
+        {/* Main tools moved to the left Miro-style toolbar */}
         {/* Draw tool options */}
         {tool==="draw"&&(
           <div style={{display:"flex",gap:6,alignItems:"center",background:"#F1F5F9",borderRadius:10,padding:"4px 8px"}}>
+            {([{id:"pen",label:"Ручка",icon:"🖊"},{id:"pencil",label:"Карандаш",icon:"✏️"},{id:"pointer",label:"Указка",icon:"☄️"}] as {id:DrawMode;label:string;icon:string}[]).map(m=>(
+              <button key={m.id} onClick={()=>setDrawMode(m.id)} title={m.label} style={{height:28,padding:"0 8px",borderRadius:7,border:"1px solid "+(drawMode===m.id?"#2563EB":"#E2E8F0"),background:drawMode===m.id?"#EFF6FF":"#fff",fontSize:12,fontWeight:700,color:drawMode===m.id?"#2563EB":C.t2,cursor:"pointer"}}>{m.icon}</button>
+            ))}
             {/* Color swatch → opens picker */}
             <div style={{position:"relative"}}>
               <button onClick={()=>setStickyColorPick(stickyColorPick==="__draw__"?null:"__draw__")}
@@ -9019,14 +9702,132 @@ function BoardPage({userId}:{userId:string}){
         </div>
       </div>
 
-      {/* ── CONTEXT TOOLBAR (selected item) ── */}
-      {(sel1||selLine)&&!editingId&&(
-        <div style={{position:"absolute",top:60,left:"50%",transform:"translateX(-50%)",zIndex:60,display:"flex",gap:5,background:"rgba(255,255,255,0.97)",backdropFilter:"blur(8px)",borderRadius:12,padding:"6px 10px",boxShadow:"0 4px 20px rgba(0,0,0,0.1)",border:"1px solid rgba(0,0,0,0.06)",alignItems:"center",flexWrap:"wrap"}}>
+      {/* ── LEFT MIRO-STYLE TOOLBAR ── */}
+      <div style={{position:"absolute",left:14,top:86,zIndex:130,display:"flex",flexDirection:"column",gap:10,alignItems:"center"}}>
+        <div style={{width:58,height:58,borderRadius:22,background:"linear-gradient(135deg,#4F46E5,#A855F7)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:24,boxShadow:"0 18px 36px rgba(79,70,229,0.28)",border:"1px solid rgba(255,255,255,0.7)"}}>✦</div>
+        <div style={{width:54,background:"rgba(255,255,255,0.96)",border:"1px solid rgba(15,23,42,0.08)",boxShadow:"0 14px 34px rgba(15,23,42,0.12)",borderRadius:16,padding:6,display:"flex",flexDirection:"column",gap:5,alignItems:"center"}}>
+          {[
+            {id:"select",label:"Курсор",icon:"➤",on:()=>{setTool("select");setToolPanel(null);}},
+            {id:"create",label:"Документ / таблица",icon:"▣+",on:()=>{setTool("select");setToolPanel(toolPanel==="create"?null:"create");}},
+            {id:"sticky",label:"Стикеры",icon:"◰",on:()=>{setTool("sticky");setToolPanel(toolPanel==="sticky"?null:"sticky");}},
+            {id:"icons",label:"Иконки",icon:"◫",on:()=>{setTool("select");setToolPanel(toolPanel==="icons"?null:"icons");}},
+            {id:"text",label:"Текст",icon:"T",on:()=>{setTool("text");setToolPanel(null);}},
+            {id:"shape",label:"Фигуры и стрелки",icon:"▧↗",on:()=>{setTool("shape");setToolPanel(toolPanel==="shape"?null:"shape");}},
+            {id:"draw",label:"Рисование",icon:"✎",on:()=>{setTool("draw");setToolPanel(toolPanel==="draw"?null:"draw");}},
+            {id:"image",label:"Изображение",icon:"＋",on:()=>{setTool("image");setToolPanel(null);setImgClickPos({x:400,y:300});imgInputRef.current?.click();}},
+          ].map((b:any)=><button key={b.id} title={b.label} onClick={b.on} style={{width:42,height:42,borderRadius:10,border:"none",background:(tool===b.id||toolPanel===b.id)?"#E8EDFF":"transparent",color:(tool===b.id||toolPanel===b.id)?"#3155E7":"#1F2937",cursor:"pointer",fontSize:b.id==="text"?27:20,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .12s"}}>{b.icon}</button>)}
+          <div style={{width:34,height:1,background:"#E5E7EB",margin:"4px 0"}}/>
+          <button title="Добавить внешнюю карточку" onClick={()=>setExternalPanel(true)} style={{width:42,height:42,borderRadius:10,border:"none",background:"#111827",color:"#fff",cursor:"pointer",fontSize:22,fontWeight:900}}>+</button>
+        </div>
+        <div style={{width:54,background:"rgba(255,255,255,0.96)",border:"1px solid rgba(15,23,42,0.08)",boxShadow:"0 14px 34px rgba(15,23,42,0.12)",borderRadius:16,padding:6,display:"flex",flexDirection:"column",gap:5,alignItems:"center"}}>
+          <button title="Назад на 1 шаг" onClick={undoBoard} style={{width:42,height:42,borderRadius:10,border:"none",background:"transparent",cursor:"pointer",fontSize:24,color:historyPast.current.length?"#111827":"#A3AAB8"}}>↶</button>
+          <button title="Вперёд на 1 шаг" onClick={redoBoard} style={{width:42,height:42,borderRadius:10,border:"none",background:"transparent",cursor:"pointer",fontSize:24,color:historyFuture.current.length?"#111827":"#A3AAB8"}}>↷</button>
+        </div>
+      </div>
+
+      {toolPanel==="create"&&<div style={{position:"absolute",left:86,top:184,zIndex:135,width:250,background:"#fff",borderRadius:18,padding:14,boxShadow:"0 22px 55px rgba(15,23,42,.16)",border:"1px solid #E5E7EB"}}>
+        <button onClick={()=>{addBoardDoc();setToolPanel(null);}} style={{width:"100%",padding:"14px 14px",border:"none",borderRadius:13,background:"#EEF2FF",fontSize:14,fontWeight:800,color:"#3730A3",cursor:"pointer",marginBottom:10,textAlign:"left"}}>📄 Создать документ Docs</button>
+        <button onClick={()=>{addBoardTable();setToolPanel(null);}} style={{width:"100%",padding:"14px 14px",border:"none",borderRadius:13,background:"#ECFDF5",fontSize:14,fontWeight:800,color:"#047857",cursor:"pointer",textAlign:"left"}}>▦ Создать таблицу</button>
+        <div style={{fontSize:11,color:C.t2,marginTop:10,lineHeight:1.45}}>Эти элементы появляются на доске как быстрые карточки и дальше могут быть связаны с Vizzy Text / Vizzy Tables.</div>
+      </div>}
+
+      {toolPanel==="sticky"&&<div style={{position:"absolute",left:86,top:238,zIndex:135,width:216,background:"#fff",borderRadius:18,padding:14,boxShadow:"0 22px 55px rgba(15,23,42,.16)",border:"1px solid #E5E7EB"}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:12}}>
+          {BOARD_STICKY_PALETTE.map(c=><button key={c} draggable onDragStart={e=>e.dataTransfer.setData("vizzy/sticky-color",c)} onClick={()=>addStickyWithColor(c)} title="Клик — добавить, перетащи — разместить" style={{height:72,borderRadius:2,background:c,border:"1px solid rgba(15,23,42,.18)",boxShadow:"0 7px 18px rgba(15,23,42,.12)",cursor:"grab"}}/>)}
+        </div>
+        <button onClick={()=>addStickyWithColor(BOARD_STICKY_PALETTE[0])} style={{marginTop:12,width:"100%",height:42,border:"none",borderRadius:10,background:"#E5E7EB",fontSize:14,fontWeight:800,cursor:"pointer"}}>✦ Generate</button>
+        <button onClick={()=>addStickyWithColor(BOARD_STICKY_PALETTE[1])} style={{marginTop:8,width:"100%",height:42,border:"none",borderRadius:10,background:"#E5E7EB",fontSize:14,fontWeight:800,cursor:"pointer"}}>▱ Stack</button>
+      </div>}
+
+      {toolPanel==="icons"&&<div style={{position:"absolute",left:86,top:292,zIndex:135,width:392,maxHeight:"72vh",overflow:"hidden",background:"#fff",borderRadius:20,padding:14,boxShadow:"0 22px 55px rgba(15,23,42,.16)",border:"1px solid #E5E7EB",display:"flex",flexDirection:"column",gap:12}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+          <div>
+            <div style={{fontSize:16,fontWeight:900,color:C.t1}}>Иконки</div>
+            <div style={{fontSize:11,color:C.t2,marginTop:3}}>Эмодзи, соцсети и бизнес-иконки. Клик — добавить, drag & drop — разместить.</div>
+          </div>
+          <div style={{fontSize:11,fontWeight:800,color:"#6366F1",padding:"6px 10px",borderRadius:999,background:"#EEF2FF"}}>{filteredLibraryIcons.length}</div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+          {([{id:"emoji",label:"Эмодзи"},{id:"social",label:"Соцсети"},{id:"business",label:"Бизнес"}] as const).map(tab=><button key={tab.id} onClick={()=>setIconTab(tab.id)} style={{height:38,borderRadius:12,border:"1px solid "+(iconTab===tab.id?"#C7D2FE":"#E5E7EB"),background:iconTab===tab.id?"#EEF2FF":"#fff",color:iconTab===tab.id?"#3730A3":"#475569",fontSize:13,fontWeight:800,cursor:"pointer"}}>{tab.label}</button>)}
+        </div>
+        <input value={iconSearch} onChange={e=>setIconSearch(e.target.value)} placeholder="Поиск по названию..." style={{width:"100%",height:40,border:"1px solid #E2E8F0",borderRadius:12,padding:"0 12px",fontSize:13,outline:"none"}}/>
+        <div style={{overflowY:"auto",paddingRight:4,display:"flex",flexDirection:"column",gap:12}}>
+          {favoriteIcons.filter((icon:any)=>icon.category===iconTab).length>0&&<div>
+            <div style={{fontSize:11,fontWeight:900,color:"#64748B",textTransform:"uppercase",letterSpacing:.7,marginBottom:8}}>Избранные</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(6,minmax(0,1fr))",gap:8}}>
+              {favoriteIcons.filter((icon:any)=>icon.category===iconTab).map((icon:any)=><button key={icon.key} draggable onDragStart={e=>e.dataTransfer.setData("application/x-vizzy-icon",JSON.stringify(icon))} onClick={()=>addBoardIcon(icon)} style={{height:52,borderRadius:12,border:"1px solid #E5E7EB",background:"#FFFBEB",display:"flex",alignItems:"center",justifyContent:"center",cursor:"grab",position:"relative"}} title={icon.label}><div style={{position:"absolute",top:4,right:5,fontSize:11,color:"#F59E0B"}}>★</div>{renderBoardLibraryIcon(icon,undefined,icon.category==="emoji"?28:26)}</button>)}
+            </div>
+          </div>}
+
+          {recentIcons.filter((icon:any)=>icon.category===iconTab).length>0&&<div>
+            <div style={{fontSize:11,fontWeight:900,color:"#64748B",textTransform:"uppercase",letterSpacing:.7,marginBottom:8}}>Недавние</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(6,minmax(0,1fr))",gap:8}}>
+              {recentIcons.filter((icon:any)=>icon.category===iconTab).map((icon:any)=><button key={icon.key} draggable onDragStart={e=>e.dataTransfer.setData("application/x-vizzy-icon",JSON.stringify(icon))} onClick={()=>addBoardIcon(icon)} style={{height:52,borderRadius:12,border:"1px solid #E5E7EB",background:"#F8FAFC",display:"flex",alignItems:"center",justifyContent:"center",cursor:"grab",position:"relative"}} title={icon.label}><button onClick={e=>{e.stopPropagation();toggleFavoriteIcon(icon.key);}} style={{position:"absolute",top:4,right:4,width:16,height:16,border:"none",background:"transparent",cursor:"pointer",fontSize:11,color:favoriteIconKeys.includes(icon.key)?"#F59E0B":"#CBD5E1",padding:0}}>★</button>{renderBoardLibraryIcon(icon,undefined,icon.category==="emoji"?28:26)}</button>)}
+            </div>
+          </div>}
+
+          <div>
+            <div style={{fontSize:11,fontWeight:900,color:"#64748B",textTransform:"uppercase",letterSpacing:.7,marginBottom:8}}>{iconTab==="emoji"?"Эмодзи":iconTab==="social"?"Соцсети":"Бизнес"}</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(6,minmax(0,1fr))",gap:8}}>
+              {filteredLibraryIcons.map((icon:any)=><button key={icon.key} draggable onDragStart={e=>e.dataTransfer.setData("application/x-vizzy-icon",JSON.stringify(icon))} onClick={()=>addBoardIcon(icon)} style={{height:56,borderRadius:14,border:"1px solid #E5E7EB",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",cursor:"grab",position:"relative",boxShadow:"0 2px 8px rgba(15,23,42,0.04)"}} title={icon.label}><button onClick={e=>{e.stopPropagation();toggleFavoriteIcon(icon.key);}} style={{position:"absolute",top:4,right:4,width:16,height:16,border:"none",background:"transparent",cursor:"pointer",fontSize:11,color:favoriteIconKeys.includes(icon.key)?"#F59E0B":"#CBD5E1",padding:0}}>★</button>{renderBoardLibraryIcon(icon,undefined,icon.category==="emoji"?30:28)}</button>)}
+            </div>
+          </div>
+
+          {filteredLibraryIcons.length===0&&<div style={{padding:"22px 12px",textAlign:"center",fontSize:13,color:C.t2}}>Ничего не найдено. Попробуй другой запрос.</div>}
+        </div>
+      </div>}
+
+
+      {toolPanel==="shape"&&<div style={{position:"absolute",left:86,top:346,zIndex:135,width:284,background:"#fff",borderRadius:18,padding:12,boxShadow:"0 22px 55px rgba(15,23,42,.16)",border:"1px solid #E5E7EB"}}>
+        {[
+          {label:"Line",icon:"╱",act:()=>{setTool("line");setShapeKind("rect");setToolPanel(null);}},
+          {label:"Arrow",icon:"↗",act:()=>{setTool("line");setShapeKind("rect");setToolPanel(null);}},
+          {label:"Rectangle",icon:"□",act:()=>{setTool("shape");setShapeKind("rect");setToolPanel(null);}},
+          {label:"Oval",icon:"○",act:()=>{setTool("shape");setShapeKind("circle");setToolPanel(null);}},
+          {label:"Rhombus",icon:"◇",act:()=>{setTool("shape");setShapeKind("diamond");setToolPanel(null);}},
+          {label:"Triangle",icon:"△",act:()=>{setTool("shape");setShapeKind("triangle");setToolPanel(null);}},
+          {label:"Cloud",icon:"☁",act:()=>{setTool("shape");setShapeKind("cloud");setToolPanel(null);}},
+          {label:"Pentagon",icon:"⬟",act:()=>{setTool("shape");setShapeKind("pentagon");setToolPanel(null);}},
+        ].map((s:any)=><button key={s.label} onClick={s.act} style={{width:"100%",height:42,border:"none",borderRadius:10,background:(tool==="shape"&&s.label.toLowerCase().includes(shapeKind||""))?"#E8EDFF":"transparent",display:"flex",alignItems:"center",gap:14,padding:"0 12px",fontSize:15,fontWeight:650,color:"#1F2937",cursor:"pointer",textAlign:"left"}}><span style={{width:24,fontSize:21}}>{s.icon}</span>{s.label}</button>)}
+      </div>}
+
+      {toolPanel==="draw"&&<div style={{position:"absolute",left:86,top:400,zIndex:135,width:78,background:"#fff",borderRadius:18,padding:10,boxShadow:"0 22px 55px rgba(15,23,42,.16)",border:"1px solid #E5E7EB",display:"flex",flexDirection:"column",gap:9,alignItems:"center"}}>
+        {([{id:"pencil",icon:"✐",label:"Карандаш"},{id:"pen",icon:"✎",label:"Ручка"},{id:"pointer",icon:"☄",label:"Указка"}] as {id:DrawMode;icon:string;label:string}[]).map(m=><button key={m.id} title={m.label} onClick={()=>{setTool("draw");setDrawMode(m.id);}} style={{width:46,height:46,borderRadius:12,border:"none",background:drawMode===m.id?"#E8EDFF":"transparent",color:drawMode===m.id?"#3155E7":"#1F2937",fontSize:24,cursor:"pointer"}}>{m.icon}</button>)}
+        <div style={{width:38,height:1,background:"#E5E7EB",margin:"2px 0"}}/>
+        {BOARD_DRAW_COLORS.map(c=><button key={c} onClick={()=>setDrawColor(c)} style={{width:36,height:36,borderRadius:"50%",background:c,border:drawColor===c?"3px solid #3155E7":"2px solid #E5E7EB",boxShadow:"inset 0 0 0 3px #fff",cursor:"pointer"}}/>)}
+      </div>}
+
+      {/* ── FLOATING CONTEXT TOOLBAR — stays visible while editing text ── */}
+      {(sel1||selLine)&&(
+        <div style={{
+          position:"absolute",
+          top:sel1?Math.max(56,pan.y+(sel1.y*zoom)-62):60,
+          left:sel1?pan.x+((sel1.x+sel1.w/2)*zoom):"50%",
+          transform:"translateX(-50%)",
+          zIndex:120,
+          display:"flex",
+          gap:6,
+          background:"rgba(255,255,255,0.98)",
+          backdropFilter:"blur(14px)",
+          WebkitBackdropFilter:"blur(14px)",
+          borderRadius:14,
+          padding:"7px 9px",
+          boxShadow:"0 12px 36px rgba(15,23,42,0.14), 0 2px 8px rgba(15,23,42,0.08)",
+          border:"1px solid rgba(15,23,42,0.08)",
+          alignItems:"center",
+          flexWrap:"nowrap",
+          maxWidth:"calc(100vw - 360px)",
+          overflowX:"auto",
+          overflowY:"visible",
+          scrollbarWidth:"none",
+        }}>
+
+          {sel1&&["sticky","text","shape"].includes(sel1.type)&&<div style={{width:34,height:34,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,fontWeight:700,color:"#0F172A",background:"#F8FAFC",border:"1px solid #E2E8F0",flexShrink:0}}>T</div>}
 
           {/* Color */}
-          <div style={{position:"relative"}}>
-            <button onClick={()=>setColorTarget(colorTarget?null:sel1?"item":"line")}
-              style={{width:26,height:26,borderRadius:8,background:sel1?sel1.color||"#FEF08A":selLine?.color||"#64748B",border:"2px solid rgba(0,0,0,0.15)",cursor:"pointer"}}/>
+          <div style={{position:"relative",flexShrink:0}}>
+            <button onClick={()=>{setColorTarget(colorTarget?null:sel1?"item":"line");setShapeColorOpen(false);}}
+              style={{width:34,height:34,borderRadius:10,background:sel1?sel1.color||"#FEF08A":selLine?.color||"#64748B",border:"2px solid rgba(0,0,0,0.12)",cursor:"pointer",boxShadow:"inset 0 0 0 1px rgba(255,255,255,0.45)",flexShrink:0}}/>
             {colorTarget&&(
               <div style={{position:"absolute",top:"calc(100% + 6px)",left:0,background:"#fff",borderRadius:12,padding:10,boxShadow:"0 8px 24px rgba(0,0,0,0.14)",width:172,zIndex:200,border:"1px solid #E2E8F0"}}>
                 <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:8}}>
@@ -9055,17 +9856,47 @@ function BoardPage({userId}:{userId:string}){
             )}
           </div>
 
+          {sel1?.type==="shape"&&(
+            <div style={{position:"relative",flexShrink:0}}>
+              <button onClick={()=>{setShapeColorOpen(v=>!v);setColorTarget(null);}} title="Цвет фигуры"
+                style={{height:34,padding:"0 12px",borderRadius:10,border:"1px solid #E2E8F0",background:"#fff",cursor:"pointer",display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:800,color:"#0F172A",whiteSpace:"nowrap",boxShadow:shapeColorOpen?"0 4px 14px rgba(37,99,235,0.12)":"none"}}>
+                <span style={{width:18,height:18,borderRadius:6,background:sel1.color||"#3B82F6",border:"2px solid rgba(15,23,42,0.14)",boxShadow:"inset 0 0 0 2px rgba(255,255,255,0.55)"}}/>
+                Цвет фигуры
+              </button>
+              {shapeColorOpen&&(
+                <div style={{position:"absolute",top:"calc(100% + 8px)",left:0,width:204,zIndex:260,background:"#fff",border:"1px solid #E2E8F0",borderRadius:14,padding:10,boxShadow:"0 14px 34px rgba(15,23,42,0.16)"}}>
+                  <div style={{fontSize:11,fontWeight:900,color:"#64748B",marginBottom:8}}>Цвет заливки</div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:6,marginBottom:10}}>
+                    {BOARD_PALETTE.map(color=>(
+                      <button key={color} onClick={()=>{updateSelectedShapeColor(color);setShapeColorOpen(false);}} title={color}
+                        style={{width:25,height:25,borderRadius:7,background:color,border:color.toLowerCase()===(sel1.color||"").toLowerCase()?"2px solid #2563EB":"1px solid rgba(15,23,42,0.14)",cursor:"pointer",boxShadow:color==="#ffffff"?"inset 0 0 0 1px #CBD5E1":"none"}}/>
+                    ))}
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <input type="color" value={sel1.color||"#3B82F6"} onChange={e=>updateSelectedShapeColor(e.target.value)} style={{width:40,height:32,border:"none",cursor:"pointer",borderRadius:8,padding:0,background:"transparent"}}/>
+                    <input value={sel1.color||"#3B82F6"} onChange={e=>updateSelectedShapeColor(e.target.value)} placeholder="#3B82F6"
+                      style={{flex:1,height:32,border:"1px solid #E2E8F0",borderRadius:9,padding:"0 9px",fontSize:12,fontFamily:"monospace",outline:"none"}}/>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Item-specific controls */}
-          {sel1&&sel1.type!=="shape"&&sel1.type!=="image"&&sel1.type!=="link"&&<>
+          {sel1&&["sticky","text","shape"].includes(sel1.type)&&<>
+            <select value={sel1.fontFamily||"Montserrat"} onChange={e=>updItems(items.map(it=>it.id===sel1.id?{...it,fontFamily:e.target.value}:it))}
+              style={{height:34,border:"1px solid #E2E8F0",borderRadius:10,background:"#fff",fontSize:13,fontWeight:500,color:C.t1,outline:"none",minWidth:132,maxWidth:160,padding:"0 8px",flexShrink:0}}>
+              {BOARD_FONTS.map(f=><option key={f.id} value={f.id}>{f.label}</option>)}
+            </select>
             <button onClick={()=>updItems(items.map(it=>it.id===sel1.id?{...it,fontSize:Math.max(8,(it.fontSize||14)-2)}:it))}
-              style={{width:26,height:26,border:"1px solid #E2E8F0",borderRadius:7,background:"transparent",cursor:"pointer",fontSize:11,fontWeight:700}}>A−</button>
-            <span style={{fontSize:11,color:C.t2,minWidth:18,textAlign:"center"}}>{sel1.fontSize||14}</span>
+              style={{width:32,height:34,border:"1px solid #E2E8F0",borderRadius:10,background:"#fff",cursor:"pointer",fontSize:12,fontWeight:700,flexShrink:0}}>A−</button>
+            <span style={{height:34,minWidth:36,padding:"0 8px",border:"1px solid #E2E8F0",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,color:C.t1,fontWeight:600,background:"#fff",flexShrink:0}}>{sel1.fontSize||14}</span>
             <button onClick={()=>updItems(items.map(it=>it.id===sel1.id?{...it,fontSize:Math.min(72,(it.fontSize||14)+2)}:it))}
-              style={{width:26,height:26,border:"1px solid #E2E8F0",borderRadius:7,background:"transparent",cursor:"pointer",fontSize:11,fontWeight:700}}>A+</button>
+              style={{width:32,height:34,border:"1px solid #E2E8F0",borderRadius:10,background:"#fff",cursor:"pointer",fontSize:12,fontWeight:700,flexShrink:0}}>A+</button>
             <button onClick={()=>updItems(items.map(it=>it.id===sel1.id?{...it,fontBold:!it.fontBold}:it))}
-              style={{width:26,height:26,border:"1px solid #E2E8F0",borderRadius:7,background:sel1.fontBold?"#EFF6FF":"transparent",cursor:"pointer",fontSize:12,fontWeight:800,color:sel1.fontBold?"#2563EB":C.t1}}>B</button>
+              style={{width:34,height:34,border:"1px solid #E2E8F0",borderRadius:10,background:sel1.fontBold?"#EFF6FF":"#fff",cursor:"pointer",fontSize:16,fontWeight:900,color:sel1.fontBold?"#2563EB":C.t1,flexShrink:0}}>B</button>
             <button onClick={()=>updItems(items.map(it=>it.id===sel1.id?{...it,fontItalic:!it.fontItalic}:it))}
-              style={{width:26,height:26,border:"1px solid #E2E8F0",borderRadius:7,background:sel1.fontItalic?"#EFF6FF":"transparent",cursor:"pointer",fontSize:12,fontStyle:"italic",color:sel1.fontItalic?"#2563EB":C.t1}}>I</button>
+              style={{width:34,height:34,border:"1px solid #E2E8F0",borderRadius:10,background:sel1.fontItalic?"#EFF6FF":"#fff",cursor:"pointer",fontSize:16,fontStyle:"italic",fontWeight:700,color:sel1.fontItalic?"#2563EB":C.t1,flexShrink:0}}>I</button>
           </>}
 
           {/* Line controls */}
@@ -9077,14 +9908,18 @@ function BoardPage({userId}:{userId:string}){
                 <div style={{height:th,width:20,background:selLine.thickness===th?"#2563EB":"#64748B",borderRadius:1}}/>
               </button>
             ))}
-            <button onClick={()=>updLines(lines.map(l=>l.id===selLine.id?{...l,style:l.style==="solid"?"dashed":"solid"}:l))}
-              style={{padding:"4px 10px",border:"1px solid #E2E8F0",borderRadius:7,background:selLine.style==="dashed"?"#EFF6FF":"transparent",cursor:"pointer",fontSize:11,fontWeight:600,color:selLine.style==="dashed"?"#2563EB":C.t1}}>
-              {selLine.style==="solid"?"— сплошная":"-- пунктир"}
-            </button>
-            <button onClick={()=>updLines(lines.map(l=>l.id===selLine.id?{...l,arrow:l.arrow==="arrow"?"none":"arrow"}:l))}
-              style={{padding:"4px 10px",border:"1px solid #E2E8F0",borderRadius:7,background:selLine.arrow==="arrow"?"#EFF6FF":"transparent",cursor:"pointer",fontSize:13}}>
-              {selLine.arrow==="arrow"?"→":"—"}
-            </button>
+            {(["solid","dashed","dotted"] as LineStyle[]).map(st=>(
+              <button key={st} onClick={()=>updLines(lines.map(l=>l.id===selLine.id?{...l,style:st}:l))}
+                style={{padding:"4px 8px",border:"1px solid #E2E8F0",borderRadius:7,background:selLine.style===st?"#EFF6FF":"transparent",cursor:"pointer",fontSize:11,fontWeight:600,color:selLine.style===st?"#2563EB":C.t1}}>
+                {st==="solid"?"—":st==="dashed"?"--":"··"}
+              </button>
+            ))}
+            {(["none","arrow","double"] as ArrowTip[]).map(ar=>(
+              <button key={ar} onClick={()=>updLines(lines.map(l=>l.id===selLine.id?{...l,arrow:ar}:l))}
+                style={{padding:"4px 8px",border:"1px solid #E2E8F0",borderRadius:7,background:selLine.arrow===ar?"#EFF6FF":"transparent",cursor:"pointer",fontSize:13,color:selLine.arrow===ar?"#2563EB":C.t1}}>
+                {ar==="none"?"—":ar==="arrow"?"→":"↔"}
+              </button>
+            ))}
           </>}
 
           {/* Layer controls (items only) */}
@@ -9095,9 +9930,9 @@ function BoardPage({userId}:{userId:string}){
           </>}
 
           {/* Edit text */}
-          {sel1&&sel1.type!=="shape"&&sel1.type!=="image"&&sel1.type!=="link"&&(
-            <button onClick={()=>{setEditingId(sel1.id);setEditText(sel1.text||"");}}
-              style={{padding:"4px 10px",border:"1px solid #E2E8F0",borderRadius:7,background:"transparent",cursor:"pointer",fontSize:11,color:C.t1}}>✏️ Текст</button>
+          {sel1&&!["image","link","draw"].includes(sel1.type)&&(
+            <button onClick={()=>{if(editingId===sel1.id){setEditingId(null);return;}setEditingId(sel1.id);setEditText(sel1.type==="shape"?(sel1.shapeText||sel1.text||""):(sel1.text||""));}}
+              style={{height:34,padding:"0 12px",border:"1px solid #E2E8F0",borderRadius:10,background:editingId===sel1.id?"#EFF6FF":"#fff",cursor:"pointer",fontSize:12,fontWeight:700,color:editingId===sel1.id?"#2563EB":C.t1,whiteSpace:"nowrap",flexShrink:0}}>{editingId===sel1.id?"✓ Готово":"✏️ Текст"}</button>
           )}
 
           {/* Duplicate */}
@@ -9149,17 +9984,24 @@ function BoardPage({userId}:{userId:string}){
                 </g>;
               })()}
 
+              {/* Pointer trail */}
+              {pointerTrail&&(
+                <g transform={`translate(${pointerTrail.startX},${pointerTrail.startY})`} style={{opacity:0.7,transition:"opacity 0.8s"}}>
+                  <path d={pointerTrail.path} fill="none" stroke={pointerTrail.color} strokeWidth={pointerTrail.thickness} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="10 6"/>
+                </g>
+              )}
+
               {/* Draw preview */}
               {isDrawing&&drawPreview&&drawingRef.current&&(
                 <g transform={`translate(${drawingRef.current.startX},${drawingRef.current.startY})`}>
-                  <path d={drawPreview} fill="none" stroke={drawColor} strokeWidth={drawThickness} strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d={drawPreview} fill="none" stroke={drawMode==="pencil"?"rgba(30,41,59,0.75)":drawColor} strokeWidth={drawMode==="pointer"?Math.max(4,drawThickness+2):drawMode==="pencil"?Math.max(1,drawThickness-1):drawThickness} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={drawMode==="pointer"?"10 6":"none"}/>
                 </g>
               )}
             </g>
           </svg>
 
           {/* Items */}
-          {[...items].sort((a,b)=>(a.zIndex||0)-(b.zIndex||0)).map(it=>{
+          {normalizeBoardItems(items as any[]).sort((a,b)=>(a.zIndex||0)-(b.zIndex||0)).map(it=>{
             const isSel=selectedIds.has(it.id);
             const isEdit=editingId===it.id;
             const isLineSrc=lineFrom===it.id;
@@ -9170,7 +10012,7 @@ function BoardPage({userId}:{userId:string}){
                 onDoubleClick={e=>{e.stopPropagation();if(it.type!=="image"){setEditingId(it.id);setEditText(it.type==="shape"?(it.shapeText||it.text||""):(it.text||""));setSelectedIds(new Set([it.id]));}}}
                 style={{
                   position:"absolute",left:it.x,top:it.y,width:it.w,height:it.h,
-                  cursor:tool==="line"?"crosshair":dragState.current?.ids.includes(it.id)?"grabbing":"grab",
+                  cursor:tool==="line"?"crosshair":(dragState.current&&Array.isArray(dragState.current.ids)&&dragState.current.ids.includes(it.id))?"grabbing":"grab",
                   zIndex:(it.zIndex||0)+5,
                   outline:isSel?"2px solid #2563EB":isLineSrc?"2px solid #F59E0B":"none",
                   outlineOffset:isSel||isLineSrc?3:0,
@@ -9186,8 +10028,8 @@ function BoardPage({userId}:{userId:string}){
                       ?<textarea autoFocus value={editText} onChange={e=>setEditText(e.target.value)}
                           onKeyDown={e=>{if(e.key==="Escape"||(e.key==="Enter"&&e.ctrlKey)){const next=items.map(i=>i.id===it.id?{...i,text:editText}:i);updItems(next);setEditingId(null);}}}
                           onBlur={()=>{const next=items.map(i=>i.id===it.id?{...i,text:editText}:i);updItems(next);setEditingId(null);}}
-                          style={{flex:1,border:"none",background:"transparent",resize:"none",outline:"none",fontFamily:"'Montserrat',sans-serif",fontSize:it.fontSize||14,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:"rgba(0,0,0,0.8)",lineHeight:1.55}}/>
-                      :<div style={{flex:1,fontSize:it.fontSize||14,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:"rgba(0,0,0,0.8)",lineHeight:1.55,wordBreak:"break-word",whiteSpace:"pre-wrap",overflow:"hidden"}}>{it.text||<span style={{opacity:0.35,fontStyle:"italic"}}>Двойной клик для ввода...</span>}</div>
+                          style={{flex:1,border:"none",background:"transparent",resize:"none",outline:"none",fontFamily:it.fontFamily||"Montserrat",fontSize:it.fontSize||14,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:"rgba(0,0,0,0.8)",lineHeight:1.55}}/>
+                      :<div style={{flex:1,fontFamily:it.fontFamily||"Montserrat",fontSize:it.fontSize||14,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:"rgba(0,0,0,0.8)",lineHeight:1.55,wordBreak:"break-word",whiteSpace:"pre-wrap",overflow:"hidden"}}>{it.text||<span style={{opacity:0.35,fontStyle:"italic"}}>Двойной клик для ввода...</span>}</div>
                     }
                   </div>
                 )}
@@ -9199,9 +10041,32 @@ function BoardPage({userId}:{userId:string}){
                       ?<textarea autoFocus value={editText} onChange={e=>setEditText(e.target.value)}
                           onBlur={()=>{const next=items.map(i=>i.id===it.id?{...i,text:editText}:i);updItems(next);setEditingId(null);}}
                           onKeyDown={e=>{if(e.key==="Escape"){const next=items.map(i=>i.id===it.id?{...i,text:editText}:i);updItems(next);setEditingId(null);}}}
-                          style={{flex:1,border:"none",background:"transparent",resize:"none",outline:"none",fontFamily:"'Montserrat',sans-serif",fontSize:it.fontSize||16,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:it.color||"#1E293B",lineHeight:1.4,width:"100%",minHeight:"100%"}}/>
-                      :<div style={{fontSize:it.fontSize||16,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:it.color||"#1E293B",lineHeight:1.4,wordBreak:"break-word",whiteSpace:"pre-wrap",width:"100%"}}>{it.text||"Текст"}</div>
+                          style={{flex:1,border:"none",background:"transparent",resize:"none",outline:"none",fontFamily:it.fontFamily||"Montserrat",fontSize:it.fontSize||16,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:it.color||"#1E293B",lineHeight:1.4,width:"100%",minHeight:"100%"}}/>
+                      :<div style={{fontFamily:it.fontFamily||"Montserrat",fontSize:it.fontSize||16,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:it.color||"#1E293B",lineHeight:1.4,wordBreak:"break-word",whiteSpace:"pre-wrap",width:"100%"}}>{it.text||"Текст"}</div>
                     }
+                  </div>
+                )}
+
+                {/* ── DOCUMENT / TABLE QUICK CARDS ── */}
+                {(it.type==="doc"||it.type==="table")&&(
+                  <div style={{width:"100%",height:"100%",borderRadius:16,background:it.type==="doc"?"linear-gradient(135deg,#EEF2FF,#FFFFFF)":"linear-gradient(135deg,#ECFDF5,#FFFFFF)",border:"1px solid "+(it.type==="doc"?"#C7D2FE":"#A7F3D0"),boxShadow:"0 10px 26px rgba(15,23,42,.10)",padding:16,display:"flex",alignItems:"center",gap:12,boxSizing:"border-box" as const}}>
+                    <div style={{width:44,height:44,borderRadius:14,background:it.type==="doc"?"#4F46E5":"#10B981",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:23,flexShrink:0}}>{it.type==="doc"?"📄":"▦"}</div>
+                    <div style={{minWidth:0}}>
+                      <div style={{fontSize:15,fontWeight:900,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.text|| (it.type==="doc"?"Документ":"Таблица")}</div>
+                      <div style={{fontSize:11,color:C.t2,marginTop:4}}>{it.type==="doc"?"Vizzy Text document":"Vizzy Tables sheet"}</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── ICON ── */}
+                {it.type==="icon"&&(
+                  <div style={{width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,padding:6,boxSizing:"border-box"}}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"center",width:"100%",height:it.iconCategory==="emoji"?"100%":"auto",flex:it.iconCategory==="emoji"?1:undefined}}>
+                      {renderBoardLibraryIcon({glyph:it.iconGlyph,label:it.iconLabel,category:it.iconCategory,style:it.iconStyle,defaultColor:it.color||"#111827"},it.color||undefined,Math.max(24,Math.round(Math.min(it.w,it.h)*(it.iconCategory==="emoji"?0.62:0.48))))}
+                    </div>
+                    {it.iconCategory!=="emoji"&&it.iconLabel&&it.h>82&&(
+                      <div style={{fontSize:Math.max(9,Math.min(13,Math.round(it.w/8))),fontWeight:800,color:"#334155",textAlign:"center",lineHeight:1.15,maxWidth:"100%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.iconLabel}</div>
+                    )}
                   </div>
                 )}
 
@@ -9232,6 +10097,37 @@ function BoardPage({userId}:{userId:string}){
                   </a>
                 )}
 
+                {/* ── EXTERNAL CARD ── */}
+                {it.type==="external_card"&&(
+                  <div style={{width:"100%",height:"100%",borderRadius:18,background:"#fff",border:"1px solid #E2E8F0",boxShadow:"0 12px 32px rgba(15,23,42,0.12)",overflow:"hidden",display:"flex",flexDirection:"column"}}>
+                    <div style={{height:6,background:`linear-gradient(90deg, ${it.color||"#7C3AED"}, #60A5FA)`}}/>
+                    {it.imageUrl&&<div style={{height:54,position:"relative",background:"#F8FAFC",overflow:"hidden",flexShrink:0}}>
+                      <img src={it.imageUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+                      <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg, rgba(15,23,42,0.02), rgba(15,23,42,0.18))"}}/>
+                      <div style={{position:"absolute",right:8,bottom:8,width:28,height:28,borderRadius:10,background:"rgba(255,255,255,0.92)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 6px 18px rgba(15,23,42,0.18)",overflow:"hidden"}}>
+                        {it.externalSource==="content"?<PlatformIcon pid={it.externalPlatform||"other"} size={18}/>:<span style={{fontSize:15}}>👤</span>}
+                      </div>
+                    </div>}
+                    <div style={{padding:"12px 14px",display:"flex",gap:10,alignItems:"flex-start",flex:1,minHeight:0}}>
+                      <div style={{width:38,height:38,borderRadius:13,background:(it.color||"#7C3AED")+"18",border:"1px solid "+(it.color||"#7C3AED")+"30",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0,overflow:"hidden"}}>
+                        {it.imageUrl&&it.externalSource==="crm"?<img src={it.imageUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:it.externalSource==="content"?<PlatformIcon pid={it.externalPlatform||"other"} size={22}/>:<span>👤</span>}
+                      </div>
+                      <div style={{minWidth:0,flex:1}}>
+                        <div style={{fontSize:12,fontWeight:900,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.externalTitle||it.text||"Карточка"}</div>
+                        <div style={{fontSize:10,color:C.t2,marginTop:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.externalSubtitle||"Связанная карточка"}</div>
+                        {it.externalMeta&&<div style={{fontSize:10,color:C.t2,marginTop:8,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.externalMeta}</div>}
+                      </div>
+                    </div>
+                    <div style={{padding:"8px 12px",borderTop:"1px solid #F1F5F9",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+                      <span style={{fontSize:9,fontWeight:900,textTransform:"uppercase",letterSpacing:.7,color:it.color||"#7C3AED",display:"flex",alignItems:"center",gap:5}}>
+                        {it.externalSource==="content"&&<PlatformIcon pid={it.externalPlatform||"other"} size={13}/>}
+                        {it.externalSource==="crm"?"CRM":"Контент"}
+                      </span>
+                      {it.externalStatus&&<span style={{fontSize:9,fontWeight:800,padding:"3px 7px",borderRadius:999,background:(it.color||"#7C3AED")+"12",color:it.color||"#7C3AED",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.externalStatus}</span>}
+                    </div>
+                  </div>
+                )}
+
                 {/* ── SHAPE ── */}
                 {it.type==="shape"&&!isEdit&&renderShapeFill(it)}
                 {it.type==="shape"&&isEdit&&(
@@ -9240,7 +10136,7 @@ function BoardPage({userId}:{userId:string}){
                       onBlur={()=>{const next=items.map(i=>i.id===it.id?{...i,text:editText,shapeText:editText}:i);updItems(next);setEditingId(null);}}
                       onKeyDown={e=>{if(e.key==="Escape"){const next=items.map(i=>i.id===it.id?{...i,text:editText,shapeText:editText}:i);updItems(next);setEditingId(null);}e.stopPropagation();}}
                       placeholder="Текст..."
-                      style={{width:"80%",maxHeight:"70%",border:"none",background:"rgba(0,0,0,0.5)",backdropFilter:"blur(4px)",borderRadius:8,resize:"none",outline:"none",fontFamily:"'Montserrat',sans-serif",fontSize:it.fontSize||13,fontWeight:600,color:"#fff",textAlign:"center",padding:"8px",lineHeight:1.4}}/>
+                      style={{width:"80%",maxHeight:"70%",border:"none",background:"rgba(0,0,0,0.5)",backdropFilter:"blur(4px)",borderRadius:8,resize:"none",outline:"none",fontFamily:it.fontFamily||"Montserrat",fontSize:it.fontSize||13,fontWeight:it.fontBold?800:600,fontStyle:it.fontItalic?"italic":"normal",color:"#fff",textAlign:"center",padding:"8px",lineHeight:1.4}}/>
                   </div>
                 )}
 
@@ -9284,7 +10180,7 @@ function BoardPage({userId}:{userId:string}){
         </div>
 
         {/* Empty hint */}
-        {items.length===0&&!loadingCanvas&&(
+        {normalizeBoardItems(items as any[]).length===0&&!loadingCanvas&&(
           <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
             <div style={{fontSize:48,marginBottom:12}}>🎨</div>
             <div style={{fontSize:16,fontWeight:700,color:"#94A3B8",marginBottom:6}}>Доска пуста</div>
@@ -9297,6 +10193,68 @@ function BoardPage({userId}:{userId:string}){
           </div>
         )}
       </div>
+
+      {externalDropHint&&(
+        <div style={{position:"absolute",inset:0,top:48,zIndex:55,pointerEvents:"none",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <div style={{padding:"18px 26px",borderRadius:18,background:"rgba(124,58,237,0.92)",color:"#fff",fontSize:15,fontWeight:900,boxShadow:"0 18px 50px rgba(124,58,237,0.35)"}}>Отпусти карточку на доску</div>
+        </div>
+      )}
+
+      {externalPanel&&(
+        <div style={{position:"absolute",top:48,right:0,bottom:0,width:360,zIndex:90,background:"rgba(255,255,255,0.97)",backdropFilter:"blur(14px)",borderLeft:"1px solid #E2E8F0",boxShadow:"-16px 0 40px rgba(15,23,42,0.10)",display:"flex",flexDirection:"column"}}>
+          <div style={{padding:18,borderBottom:"1px solid #E2E8F0"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:14}}>
+              <div>
+                <div style={{fontSize:18,fontWeight:900,color:C.t1}}>Добавить карточку</div>
+                <div style={{fontSize:12,color:C.t2,marginTop:3}}>Перетащи или нажми «Добавить»</div>
+              </div>
+              <button onClick={()=>setExternalPanel(false)} style={{width:32,height:32,borderRadius:10,border:"1px solid #E2E8F0",background:"#fff",cursor:"pointer",fontSize:16,color:C.t2}}>×</button>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+              {([{"id":"crm","label":"CRM"},{"id":"content","label":"Контент"}] as const).map(s=>(
+                <button key={s.id} onClick={()=>{setExternalSource(s.id);setExternalSearch("");}}
+                  style={{padding:"10px 12px",borderRadius:12,border:"1px solid "+(externalSource===s.id?"#7C3AED":"#E2E8F0"),background:externalSource===s.id?"linear-gradient(135deg,#F5F3FF,#EEF2FF)":"#fff",color:externalSource===s.id?"#6D28D9":C.t2,fontSize:12,fontWeight:900,cursor:"pointer"}}>{s.label}</button>
+              ))}
+            </div>
+            {externalSource==="crm"&&(
+              <select value={externalFunnelId} onChange={e=>setExternalFunnelId(e.target.value)} style={{width:"100%",padding:"10px 12px",border:"1px solid #E2E8F0",borderRadius:12,background:"#fff",fontSize:12,fontWeight:700,color:C.t1,outline:"none",marginBottom:10}}>
+                <option value="all">Все воронки</option>
+                {crmFunnels.data.map((f:any)=><option key={f.id} value={f.id}>{f.name||"Воронка"}</option>)}
+              </select>
+            )}
+            <input value={externalSearch} onChange={e=>setExternalSearch(e.target.value)} placeholder={externalSource==="crm"?"Поиск лида...":"Поиск контента..."}
+              style={{width:"100%",boxSizing:"border-box",padding:"11px 13px",border:"1px solid #E2E8F0",borderRadius:12,outline:"none",fontSize:13,background:"#F8FAFC",color:C.t1}}/>
+          </div>
+          <div style={{padding:14,overflowY:"auto",flex:1,display:"grid",gap:10,alignContent:"start"}}>
+            {(externalSource==="crm"?crmLeads.loading:contentRows.loading)
+              ?<div style={{padding:30,textAlign:"center",fontSize:13,color:C.t2}}>Загрузка карточек...</div>
+              :externalCards.length===0
+              ?<div style={{padding:30,textAlign:"center",fontSize:13,color:C.t2}}>Ничего не найдено</div>
+              :externalCards.slice(0,80).map((card:any)=>(
+                <div key={`${card.source}_${card.id}`} draggable
+                  onDragStart={e=>{e.dataTransfer.setData("application/x-vizzy-card",JSON.stringify(card));e.dataTransfer.effectAllowed="copy";}}
+                  style={{background:"#fff",border:"1px solid #E2E8F0",borderLeft:"4px solid "+card.color,borderRadius:14,padding:12,cursor:"grab",boxShadow:"0 4px 16px rgba(15,23,42,0.05)"}}>
+                  <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
+                    <div style={{width:42,height:42,borderRadius:13,background:card.color+"18",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0,overflow:"hidden",border:"1px solid "+card.color+"22",position:"relative"}}>
+                      {card.imageUrl?<img src={card.imageUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:card.source==="content"?<PlatformIcon pid={card.platform||"other"} size={24}/>:<span>👤</span>}
+                      {card.source==="content"&&card.imageUrl&&<div style={{position:"absolute",right:-1,bottom:-1,width:18,height:18,borderRadius:7,background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(15,23,42,0.16)"}}><PlatformIcon pid={card.platform||"other"} size={13}/></div>}
+                    </div>
+                    <div style={{minWidth:0,flex:1}}>
+                      <div style={{fontSize:13,fontWeight:900,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{card.title}</div>
+                      <div style={{fontSize:11,color:C.t2,marginTop:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{card.subtitle}</div>
+                      {card.meta&&<div style={{fontSize:10,color:C.t2,marginTop:7,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{card.meta}</div>}
+                    </div>
+                  </div>
+                  <div style={{display:"flex",gap:8,marginTop:12}}>
+                    <button onClick={()=>addExternalCardToBoard(card)} style={{flex:1,padding:"8px 10px",border:"none",borderRadius:10,background:"linear-gradient(135deg,#7C3AED,#2563EB)",color:"#fff",fontSize:11,fontWeight:900,cursor:"pointer",boxShadow:"0 0 14px rgba(124,58,237,0.22)"}}>Добавить</button>
+                    <button onClick={()=>alert(card.source==="crm"?"Открой раздел CRM для полной карточки лида":"Открой раздел Контент для полной карточки")} style={{padding:"8px 10px",border:"1px solid #E2E8F0",borderRadius:10,background:"#fff",color:C.t2,fontSize:11,fontWeight:800,cursor:"pointer"}}>Источник</button>
+                  </div>
+                </div>
+              ))}
+          </div>
+          <div style={{padding:"12px 16px",borderTop:"1px solid #E2E8F0",fontSize:11,color:C.t2,lineHeight:1.5}}>Карточка на доске хранит связь с оригиналом: источник, ID, тип и отображаемые поля. Кнопка «Обновить» подтягивает свежие данные.</div>
+        </div>
+      )}
 
       {/* ── Link modal ── */}
       {linkModal&&(
@@ -9319,7 +10277,7 @@ function BoardPage({userId}:{userId:string}){
 
       {/* Status bar */}
       <div style={{position:"absolute",bottom:10,left:16,zIndex:50,background:"rgba(255,255,255,0.88)",backdropFilter:"blur(6px)",borderRadius:10,padding:"5px 12px",fontSize:10,color:C.t2,border:"1px solid rgba(0,0,0,0.06)",boxShadow:"0 2px 8px rgba(0,0,0,0.05)"}}>
-        V-выбор · H-пан · S-стикер · T-текст · I-фото · L-ссылка · F-фигура · C-линия · M-маркер · Del-удалить · Ctrl+D-дублировать
+        V-выбор · H-пан · S-стикер · T-текст · I-фото · L-ссылка · F-фигура · C-линия · M-рисование · Иконки — в левой панели · Del-удалить · Ctrl+D-дублировать
       </div>
     </div>
   );
