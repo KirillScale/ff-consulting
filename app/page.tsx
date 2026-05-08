@@ -73,6 +73,7 @@ const NAV_GROUPS=[
     label:"Программы",
     items:[
       {id:"board",label:"Vizzy Map",accent:"#FBBF24",ic:"M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"},
+      {id:"visitext",label:"VisiText",accent:"#93C5FD",ic:"M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z M14 3v5h5 M9 13h6 M9 17h6 M9 9h2"},
       {id:"sheets",label:"Vizzy Tables",accent:"#4ADE80",ic:"M3 10h18M3 6h18M3 14h18M3 18h18M10 3v18M6 3v18"},
     ]
   },
@@ -285,8 +286,9 @@ function useIsMobile(){
 }
 
 /* ============ SIDEBAR — Deep Dark Glass ============ */
-function Side({active,onNav,onLogout,collapsed,onCollapsedChange}:{active:string,onNav:(id:string)=>void,onLogout:()=>void,collapsed:boolean,onCollapsedChange:(v:boolean)=>void}){
+function Side({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onLogout:()=>void}){
   const{dark,toggle}=useTheme();
+  const[collapsed,setCollapsed]=useState(false);
   const activeGroupIdx=NAV_GROUPS.findIndex(g=>g.items.some(i=>i.id===active));
   const[openGroups,setOpenGroups]=useState<number[]>(()=>[activeGroupIdx>=0?activeGroupIdx:0]);
 
@@ -583,7 +585,7 @@ function Side({active,onNav,onLogout,collapsed,onCollapsedChange}:{active:string
         </div>
 
         {/* Collapse */}
-        <button onClick={()=>onCollapsedChange(!collapsed)}
+        <button onClick={()=>setCollapsed(!collapsed)}
           style={{
             width:"100%",display:"flex",alignItems:"center",gap:8,
             padding:collapsed?"10px 0":"7px 10px",
@@ -834,7 +836,7 @@ function SafePage({name,children}:{name:string,children:React.ReactNode}){
 function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,nav,dark}:any){
   const isMobile=useIsMobile();
   const[sideCollapsed,setSideCollapsed]=useState(false);
-  const sideW=sideCollapsed?64:248;
+  const sideW=sideCollapsed?60:240;
 
   const pageContent=<>
     {page==="dashboard"&&<SafePage name="Dashboard"><DashPage userId={user.id} name={userName} avatar={userAvatar} onNav={setPage} onAvatarChange={async(url:string)=>{setUserAvatar(url);await supabase.from("profiles").upsert({id:user.id,avatar_url:url},{onConflict:"id"});}}/></SafePage>}
@@ -845,6 +847,7 @@ function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,n
     {page==="content"&&<SafePage name="Контент"><ContentPage userId={user.id}/></SafePage>}
     {page==="pnl"&&<SafePage name="P&L"><PnlPage userId={user.id}/></SafePage>}
     {page==="sheets"&&<SafePage name="Таблицы"><SheetsPage userId={user.id}/></SafePage>}
+    {page==="visitext"&&<SafePage name="VisiText"><VisiTextPage userId={user.id}/></SafePage>}
     {page==="media"&&<SafePage name="Медийность"><MediaPage userId={user.id}/></SafePage>}
     {page==="ads"&&<SafePage name="Реклама"><AdsPage userId={user.id}/></SafePage>}
     {page==="calc"&&<SafePage name="Калькулятор"><CalcPage/></SafePage>}
@@ -856,7 +859,7 @@ function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,n
     {page==="script"&&<SafePage name="Copy AI"><ScriptAIPage/></SafePage>}
     {page==="product"&&<SafePage name="Product AI"><ProductAIPage/></SafePage>}
     {page==="stories"&&<SafePage name="Stories AI"><StoriesAIPage/></SafePage>}
-    {!["dashboard","strategy","crm","calls","mailings","content","pnl","sheets","media","ads","calc","tools","links","board","files","ai","script","product","stories"].includes(page)&&nav&&<Placeholder title={nav.label} ic={nav.ic}/>}
+    {!["dashboard","strategy","crm","calls","mailings","content","pnl","sheets","visitext","media","ads","calc","tools","links","board","files","ai","script","product","stories"].includes(page)&&nav&&<Placeholder title={nav.label} ic={nav.ic}/>}
   </>;
 
   return (
@@ -1024,8 +1027,8 @@ function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,n
           <div style={{padding:"16px 16px 0"}}>{pageContent}</div>
         </div>
       </> : <>
-        <Side active={page} onNav={setPage} onLogout={logout} collapsed={sideCollapsed} onCollapsedChange={setSideCollapsed}/>
-        <div style={{marginLeft:sideW,width:`calc(100vw - ${sideW}px)`,minHeight:"100vh",transition:"margin-left 0.25s cubic-bezier(0.4,0,0.2,1), width 0.25s cubic-bezier(0.4,0,0.2,1)"}}>
+        <Side active={page} onNav={setPage} onLogout={logout}/>
+        <div style={{marginLeft:sideW,minHeight:"100vh",transition:"margin-left 0.25s cubic-bezier(0.4,0,0.2,1)"}}>
           <Head name={userName}/>
           <div style={{padding:"28px 32px"}}>{pageContent}</div>
         </div>
@@ -7121,6 +7124,248 @@ function shShift(formula:string,dr:number,dc:number):string{
   });
 }
 
+
+/* ============ VISITEXT — LIGHT WORD-LIKE EDITOR ============ */
+type VisiTextDoc={id:string;title:string;html:string;fontSize:number;lineHeight:string;createdAt:number;updatedAt:number};
+const VISITEXT_MAX_DOCS=30;
+const VISITEXT_MAX_PAGES=500;
+const VISITEXT_A4_HEIGHT=1123;
+const VISITEXT_HIGHLIGHTS=[
+  {name:"Лимон",color:"#FEF3C7"},
+  {name:"Мята",color:"#D1FAE5"},
+  {name:"Небо",color:"#DBEAFE"},
+  {name:"Роза",color:"#FCE7F3"},
+  {name:"Лаванда",color:"#EDE9FE"},
+];
+
+function VisiTextPage({userId}:{userId:string}){
+  const {dark}=useTheme();
+  const isMobile=useIsMobile();
+  const storageKey="ff_visitext_docs_"+userId;
+  const editorRef=useRef<HTMLDivElement|null>(null);
+  const fileRef=useRef<HTMLInputElement|null>(null);
+  const saveTimer=useRef<any>(null);
+  const [docs,setDocs]=useState<VisiTextDoc[]>([]);
+  const [activeId,setActiveId]=useState<string|null>(null);
+  const [pages,setPages]=useState(1);
+  const [notice,setNotice]=useState("");
+
+  const activeDoc=docs.find(d=>d.id===activeId)||docs[0]||null;
+
+  const safeSave=(next:VisiTextDoc[])=>{
+    try{localStorage.setItem(storageKey,JSON.stringify(next));}
+    catch{setNotice("Документ слишком большой для локального хранилища. Уменьши размер изображений или текста.");}
+  };
+
+  const makeDoc=(title="Новый документ"):VisiTextDoc=>({
+    id:String(Date.now())+Math.random().toString(16).slice(2),
+    title,
+    html:"<p>Начни писать здесь...</p>",
+    fontSize:16,
+    lineHeight:"1.5",
+    createdAt:Date.now(),
+    updatedAt:Date.now(),
+  });
+
+  useEffect(()=>{
+    try{
+      const raw=localStorage.getItem(storageKey);
+      if(raw){
+        const parsed=JSON.parse(raw);
+        if(Array.isArray(parsed)&&parsed.length){setDocs(parsed);setActiveId(parsed[0].id);return;}
+      }
+    }catch{}
+    const first=makeDoc("Мой первый документ");
+    setDocs([first]);setActiveId(first.id);safeSave([first]);
+  },[storageKey]);
+
+  useEffect(()=>{
+    if(!activeDoc||!editorRef.current)return;
+    editorRef.current.innerHTML=activeDoc.html||"";
+    requestAnimationFrame(()=>calcPages());
+  },[activeDoc?.id]);
+
+  const calcPages=()=>{
+    const el=editorRef.current;
+    if(!el)return 1;
+    const next=Math.max(1,Math.ceil(el.scrollHeight/VISITEXT_A4_HEIGHT));
+    setPages(next);
+    if(next>VISITEXT_MAX_PAGES)setNotice("Лимит одного документа — 500 страниц. Сократи текст или изображения, чтобы сохранить изменения.");
+    return next;
+  };
+
+  const patchActive=(patch:Partial<VisiTextDoc>)=>{
+    if(!activeDoc)return;
+    setDocs(prev=>{
+      const next=prev.map(d=>d.id===activeDoc.id?{...d,...patch,updatedAt:Date.now()}:d);
+      safeSave(next);
+      return next;
+    });
+  };
+
+  const persistContent=(immediate=false)=>{
+    const el=editorRef.current;
+    if(!el||!activeDoc)return;
+    const p=calcPages();
+    if(p>VISITEXT_MAX_PAGES)return;
+    const html=el.innerHTML;
+    if(immediate){patchActive({html});return;}
+    clearTimeout(saveTimer.current);
+    saveTimer.current=setTimeout(()=>patchActive({html}),350);
+  };
+
+  const runCmd=(cmd:string,value?:string)=>{
+    editorRef.current?.focus();
+    try{document.execCommand(cmd,false,value);}catch{}
+    persistContent(true);
+  };
+
+  const changeFontSize=(size:number)=>{
+    patchActive({fontSize:size});
+    setTimeout(()=>persistContent(true),0);
+  };
+
+  const changeLineHeight=(lh:string)=>{
+    patchActive({lineHeight:lh});
+    setTimeout(()=>persistContent(true),0);
+  };
+
+  const createDoc=()=>{
+    if(docs.length>=VISITEXT_MAX_DOCS){setNotice("Можно создать максимум 30 документов в VisiText.");return;}
+    const doc=makeDoc("Документ "+(docs.length+1));
+    const next=[doc,...docs];
+    setDocs(next);setActiveId(doc.id);safeSave(next);setNotice("Создан новый документ.");
+  };
+
+  const duplicateDoc=()=>{
+    if(!activeDoc)return;
+    if(docs.length>=VISITEXT_MAX_DOCS){setNotice("Можно создать максимум 30 документов в VisiText.");return;}
+    const doc={...activeDoc,id:String(Date.now())+Math.random().toString(16).slice(2),title:activeDoc.title+" — копия",createdAt:Date.now(),updatedAt:Date.now()};
+    const next=[doc,...docs];
+    setDocs(next);setActiveId(doc.id);safeSave(next);
+  };
+
+  const deleteDoc=()=>{
+    if(!activeDoc)return;
+    if(docs.length<=1){setNotice("Нельзя удалить последний документ.");return;}
+    if(!confirm("Удалить документ «"+activeDoc.title+"»?"))return;
+    const next=docs.filter(d=>d.id!==activeDoc.id);
+    setDocs(next);setActiveId(next[0]?.id||null);safeSave(next);
+  };
+
+  const renameDoc=(title:string)=>patchActive({title:title||"Без названия"});
+
+  const insertImage=(file:File)=>{
+    if(!file.type.startsWith("image/"))return;
+    const reader=new FileReader();
+    reader.onload=()=>{
+      const src=String(reader.result||"");
+      const html=`<p><img src="${src}" style="max-width:100%;height:auto;border-radius:10px;display:block;margin:18px auto;box-shadow:0 8px 24px rgba(15,23,42,0.12);" /></p><p><br></p>`;
+      runCmd("insertHTML",html);
+      requestAnimationFrame(()=>persistContent(true));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const exportHtml=()=>{
+    if(!activeDoc)return;
+    persistContent(true);
+    const blob=new Blob([`<!doctype html><html><head><meta charset="utf-8"><title>${activeDoc.title}</title><style>body{font-family:Montserrat,Arial,sans-serif;background:#f3f4f6;padding:32px}.page{width:794px;min-height:1123px;background:#fff;margin:0 auto;padding:72px;box-shadow:0 10px 40px rgba(0,0,0,.12);font-size:${activeDoc.fontSize}px;line-height:${activeDoc.lineHeight}}</style></head><body><div class="page">${editorRef.current?.innerHTML||activeDoc.html}</div></body></html>`],{type:"text/html;charset=utf-8"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);a.download=(activeDoc.title||"visitext")+".html";a.click();URL.revokeObjectURL(a.href);
+  };
+
+  const toolBtn=(label:string,onClick:()=>void,active=false,style?:React.CSSProperties)=><button onClick={onClick} style={{height:34,minWidth:34,padding:"0 10px",borderRadius:9,border:"1px solid "+(active?C.a:C.bd),background:active?C.a:(dark?"rgba(255,255,255,0.04)":"#fff"),color:active?"#fff":C.t1,fontSize:13,fontWeight:700,cursor:"pointer",...style}}>{label}</button>;
+
+  return <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"280px 1fr",gap:20,alignItems:"start"}}>
+    <Card style={{padding:0,overflow:"hidden",position:isMobile?"relative":"sticky",top:20}}>
+      <div style={{padding:18,borderBottom:"1px solid "+C.bd,background:dark?"rgba(255,255,255,0.02)":"#F8FAFC"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:12}}>
+          <div>
+            <div style={{fontSize:18,fontWeight:800,color:C.t1}}>VisiText</div>
+            <div style={{fontSize:12,color:C.t2,marginTop:2}}>Лёгкий аналог Word · A4</div>
+          </div>
+          <div style={{fontSize:11,fontWeight:800,color:docs.length>=VISITEXT_MAX_DOCS?C.r:C.a,background:(docs.length>=VISITEXT_MAX_DOCS?C.r:C.a)+"12",borderRadius:999,padding:"5px 9px"}}>{docs.length}/{VISITEXT_MAX_DOCS}</div>
+        </div>
+        <Btn onClick={createDoc} disabled={docs.length>=VISITEXT_MAX_DOCS} style={{width:"100%",padding:"10px 12px"}}>+ Новый документ</Btn>
+      </div>
+      <div style={{maxHeight:isMobile?220:"calc(100vh - 260px)",overflowY:"auto",padding:10}}>
+        {docs.map(d=>{
+          const isAct=d.id===activeDoc?.id;
+          return <button key={d.id} onClick={()=>setActiveId(d.id)} style={{width:"100%",textAlign:"left",border:"1px solid "+(isAct?C.a:C.bd),background:isAct?(dark?"rgba(79,142,247,0.16)":"#EFF6FF"):(dark?"rgba(255,255,255,0.025)":"#fff"),borderRadius:12,padding:12,marginBottom:8,cursor:"pointer"}}>
+            <div style={{display:"flex",gap:10,alignItems:"center"}}>
+              <div style={{width:34,height:44,borderRadius:5,background:"#fff",border:"1px solid #E5E7EB",boxShadow:"0 2px 6px rgba(0,0,0,0.08)",flexShrink:0}}/>
+              <div style={{minWidth:0,flex:1}}>
+                <div style={{fontSize:13,fontWeight:800,color:isAct?C.a:C.t1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{d.title||"Без названия"}</div>
+                <div style={{fontSize:11,color:C.t2,marginTop:4}}>изменён {new Date(d.updatedAt).toLocaleDateString("ru-RU")}</div>
+              </div>
+            </div>
+          </button>;
+        })}
+      </div>
+    </Card>
+
+    <div style={{minWidth:0}}>
+      <Card style={{padding:16,marginBottom:16,position:"sticky",top:14,zIndex:20,backdropFilter:"blur(18px)",background:dark?"rgba(15,20,32,0.92)":"rgba(255,255,255,0.92)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+          <input value={activeDoc?.title||""} onChange={e=>renameDoc(e.target.value)} placeholder="Название документа" style={{...iS(),width:260,fontWeight:700}}/>
+          <select value={activeDoc?.fontSize||16} onChange={e=>changeFontSize(+e.target.value)} style={{...iS(),width:112}}>
+            {[12,14,16,18,20,24,28,32,36,48].map(s=><option key={s} value={s}>{s}px</option>)}
+          </select>
+          <select value={activeDoc?.lineHeight||"1.5"} onChange={e=>changeLineHeight(e.target.value)} style={{...iS(),width:142}}>
+            <option value="1">Интервал 1.0</option><option value="1.15">Интервал 1.15</option><option value="1.5">Интервал 1.5</option><option value="2">Интервал 2.0</option><option value="2.5">Интервал 2.5</option>
+          </select>
+          <div style={{width:1,height:28,background:C.bd}}/>
+          {toolBtn("B",()=>runCmd("bold"),false,{fontWeight:900})}
+          {toolBtn("I",()=>runCmd("italic"),false,{fontStyle:"italic"})}
+          {toolBtn("U",()=>runCmd("underline"),false,{textDecoration:"underline"})}
+          <div style={{display:"flex",alignItems:"center",gap:5,padding:"0 4px"}}>
+            {VISITEXT_HIGHLIGHTS.map(h=><button key={h.color} title={h.name} onClick={()=>runCmd("backColor",h.color)} style={{width:26,height:26,borderRadius:8,border:"1px solid rgba(0,0,0,0.08)",background:h.color,cursor:"pointer",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.8)"}}/>)}
+          </div>
+          {toolBtn("✕ маркер",()=>runCmd("removeFormat"),false,{fontWeight:600,minWidth:78})}
+          <div style={{width:1,height:28,background:C.bd}}/>
+          {toolBtn("Фото",()=>fileRef.current?.click(),false,{minWidth:62})}
+          {toolBtn("Копия",duplicateDoc,false,{minWidth:64})}
+          {toolBtn("HTML",exportHtml,false,{minWidth:58})}
+          {toolBtn("Удалить",deleteDoc,false,{minWidth:72,color:C.r})}
+        </div>
+      </Card>
+
+      {notice&&<div style={{marginBottom:14,padding:"11px 14px",borderRadius:12,background:(notice.includes("Лимит")||notice.includes("максимум")||notice.includes("большой")?C.r:C.a)+"12",color:notice.includes("Лимит")||notice.includes("максимум")||notice.includes("большой")?C.r:C.a,fontSize:13,fontWeight:700,display:"flex",justifyContent:"space-between",gap:12}}><span>{notice}</span><button onClick={()=>setNotice("")} style={{border:"none",background:"transparent",color:"inherit",cursor:"pointer",fontWeight:900}}>×</button></div>}
+
+      <div style={{display:"flex",justifyContent:"center",padding:"10px 0 28px",overflowX:"auto"}}>
+        <div style={{position:"relative"}}>
+          <div style={{position:"absolute",right:-78,top:10,display:"flex",flexDirection:"column",gap:8,alignItems:"center"}}>
+            <div style={{padding:"8px 10px",borderRadius:10,background:dark?"#0F1420":"#fff",border:"1px solid "+C.bd,boxShadow:C.sh,fontSize:11,fontWeight:800,color:pages>VISITEXT_MAX_PAGES?C.r:C.t2,whiteSpace:"nowrap"}}>{pages} / {VISITEXT_MAX_PAGES} стр.</div>
+            <div style={{fontSize:10,color:C.t2,writingMode:"vertical-rl",textTransform:"uppercase",letterSpacing:1}}>A4 лист</div>
+          </div>
+          <div
+            ref={editorRef}
+            contentEditable
+            suppressContentEditableWarning
+            onInput={()=>persistContent(false)}
+            onBlur={()=>persistContent(true)}
+            onPaste={e=>{
+              const files=Array.from(e.clipboardData.files||[]);
+              const img=files.find(f=>f.type.startsWith("image/"));
+              if(img){e.preventDefault();insertImage(img);return;}
+            }}
+            style={{
+              width:isMobile?"min(794px, calc(100vw - 48px))":794,minHeight:isMobile?Math.round(VISITEXT_A4_HEIGHT*0.72):VISITEXT_A4_HEIGHT,background:"#fff",color:"#111827",
+              padding:isMobile?"36px":"72px",outline:"none",borderRadius:2,
+              boxShadow:dark?"0 24px 80px rgba(0,0,0,0.55)":"0 20px 70px rgba(15,23,42,0.18)",
+              border:"1px solid #E5E7EB",fontFamily:"'Montserrat',Arial,sans-serif",
+              fontSize:activeDoc?.fontSize||16,lineHeight:activeDoc?.lineHeight||"1.5",
+              overflowWrap:"break-word",wordBreak:"break-word",caretColor:C.a,
+            }}
+          />
+        </div>
+      </div>
+      <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const f=e.target.files?.[0];if(f)insertImage(f);e.currentTarget.value="";}}/>
+    </div>
+  </div>;
+}
+
 function SheetsPage({userId}:{userId:string}){
   const{dark}=useTheme();
 
@@ -8776,22 +9021,18 @@ function BoardPage({userId}:{userId:string}){
 
       {/* ── CONTEXT TOOLBAR (selected item) ── */}
       {(sel1||selLine)&&!editingId&&(
-        <div style={{position:"absolute",top:60,left:"50%",transform:"translateX(-50%)",zIndex:1000,display:"flex",gap:5,background:"rgba(255,255,255,0.97)",backdropFilter:"blur(8px)",borderRadius:12,padding:"6px 10px",boxShadow:"0 4px 20px rgba(0,0,0,0.1)",border:"1px solid rgba(0,0,0,0.06)",alignItems:"center",flexWrap:"wrap"}}>
+        <div style={{position:"absolute",top:60,left:"50%",transform:"translateX(-50%)",zIndex:60,display:"flex",gap:5,background:"rgba(255,255,255,0.97)",backdropFilter:"blur(8px)",borderRadius:12,padding:"6px 10px",boxShadow:"0 4px 20px rgba(0,0,0,0.1)",border:"1px solid rgba(0,0,0,0.06)",alignItems:"center",flexWrap:"wrap"}}>
 
           {/* Color */}
           <div style={{position:"relative"}}>
-            <button onClick={(e)=>{
-                e.stopPropagation();
-                setColorTarget(colorTarget?null:sel1?"item":"line");
-              }}
-              title={sel1?.type==="shape"?"Цвет фигуры":"Цвет"}
+            <button onClick={()=>setColorTarget(colorTarget?null:sel1?"item":"line")}
               style={{width:26,height:26,borderRadius:8,background:sel1?sel1.color||"#FEF08A":selLine?.color||"#64748B",border:"2px solid rgba(0,0,0,0.15)",cursor:"pointer"}}/>
             {colorTarget&&(
-              <div onMouseDown={e=>e.stopPropagation()} onClick={e=>e.stopPropagation()} style={{position:"absolute",top:"calc(100% + 6px)",left:0,background:"#fff",borderRadius:12,padding:10,boxShadow:"0 8px 24px rgba(0,0,0,0.14)",width:172,zIndex:9999,border:"1px solid #E2E8F0"}}>
+              <div style={{position:"absolute",top:"calc(100% + 6px)",left:0,background:"#fff",borderRadius:12,padding:10,boxShadow:"0 8px 24px rgba(0,0,0,0.14)",width:172,zIndex:200,border:"1px solid #E2E8F0"}}>
                 <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:8}}>
                   {BOARD_PALETTE.map(c=>(
                     <button key={c} onClick={()=>{
-                      if(sel1)updItems(itemsRef.current.map(it=>it.id===sel1.id?{...it,color:c}:it));
+                      if(sel1)updItems(items.map(it=>it.id===sel1.id?{...it,color:c}:it));
                       else if(selLine)updLines(lines.map(l=>l.id===selLine.id?{...l,color:c}:l));
                       setColorTarget(null);
                     }} style={{width:24,height:24,borderRadius:6,background:c,border:"1px solid rgba(0,0,0,0.1)",cursor:"pointer"}}/>
@@ -8801,13 +9042,13 @@ function BoardPage({userId}:{userId:string}){
                 <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:6}}>
                   <span style={{fontSize:10,color:"#64748B",fontWeight:500}}>HEX</span>
                   <input value={customColorInput} onChange={e=>setCustomColorInput(e.target.value)}
-                    onKeyDown={e=>{if(e.key==="Enter"){if(sel1)updItems(itemsRef.current.map(it=>it.id===sel1.id?{...it,color:customColorInput}:it));else if(selLine)updLines(lines.map(l=>l.id===selLine.id?{...l,color:customColorInput}:l));setColorTarget(null);}}}
+                    onKeyDown={e=>{if(e.key==="Enter"){if(sel1)updItems(items.map(it=>it.id===sel1.id?{...it,color:customColorInput}:it));else if(selLine)updLines(lines.map(l=>l.id===selLine.id?{...l,color:customColorInput}:l));setColorTarget(null);}}}
                     style={{flex:1,padding:"4px 7px",border:"1px solid #E2E8F0",borderRadius:7,fontSize:12,outline:"none",fontFamily:"monospace"}} placeholder="#000000"/>
                 </div>
                 {/* Native color picker */}
                 <input type="color" value={customColorInput} onChange={e=>{
                   setCustomColorInput(e.target.value);
-                  if(sel1)updItems(itemsRef.current.map(it=>it.id===sel1.id?{...it,color:e.target.value}:it));
+                  if(sel1)updItems(items.map(it=>it.id===sel1.id?{...it,color:e.target.value}:it));
                   else if(selLine)updLines(lines.map(l=>l.id===selLine.id?{...l,color:e.target.value}:l));
                 }} style={{width:"100%",height:28,border:"none",cursor:"pointer",borderRadius:7}}/>
               </div>
