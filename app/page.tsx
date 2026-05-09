@@ -8790,6 +8790,7 @@ function BoardPage({userId}:{userId:string}){
   const[externalSearch,setExternalSearch]=useState("");
   const[externalFunnelId,setExternalFunnelId]=useState<string>("all");
   const[externalDropHint,setExternalDropHint]=useState(false);
+  const[expandedExternalItemId,setExpandedExternalItemId]=useState<string|null>(null);
 
   const[iconTab,setIconTab]=useState<"emoji"|"social"|"business">("emoji");
   const[iconSearch,setIconSearch]=useState("");
@@ -9520,6 +9521,48 @@ function BoardPage({userId}:{userId:string}){
   // ── If no board selected → show board list ──
   const activeBoard=boards.find(b=>b.id===activeBoardId);
 
+  const expandedExternalItem=expandedExternalItemId
+    ?safeItemsForSelection.find(i=>i.id===expandedExternalItemId&&i.type==="external_card")||null
+    :null;
+  const expandedExternalRecord=expandedExternalItem?.externalSource==="crm"
+    ?crmLeads.data.find((lead:any)=>lead.id===expandedExternalItem.externalId)||null
+    :expandedExternalItem?.externalSource==="content"
+      ?contentRows.data.find((row:any)=>row.id===expandedExternalItem.externalId)||null
+      :null;
+  const normalizeDetailValue=(value:any)=>{
+    if(value===null||value===undefined||value==="")return "—";
+    if(typeof value==="number")return Number.isFinite(value)?String(value):"—";
+    if(typeof value==="boolean")return value?"Да":"Нет";
+    return String(value);
+  };
+  const externalDetailRows=expandedExternalItem
+    ?expandedExternalItem.externalSource==="crm"
+      ?[
+        {label:"Имя",value:expandedExternalRecord?.name||expandedExternalItem.externalTitle||expandedExternalItem.text},
+        {label:"Контакт",value:expandedExternalRecord?.contact||expandedExternalItem.externalSubtitle},
+        {label:"Телефон",value:expandedExternalRecord?.phone},
+        {label:"Email",value:expandedExternalRecord?.email},
+        {label:"Источник",value:expandedExternalRecord?.source},
+        {label:"Статус",value:expandedExternalRecord?.status||expandedExternalItem.externalStatus},
+        {label:"Сделка",value:expandedExternalRecord?.deal?`${expandedExternalRecord.deal} ₽`:""},
+        {label:"Заметка",value:expandedExternalRecord?.note},
+        {label:"Создан",value:expandedExternalRecord?.created_at},
+      ]
+      :[
+        {label:"Тема",value:expandedExternalRecord?.topic||expandedExternalItem.externalTitle||expandedExternalItem.text},
+        {label:"Платформа",value:expandedExternalRecord?.platform||expandedExternalItem.externalPlatform},
+        {label:"Тип",value:expandedExternalRecord?.type},
+        {label:"Статус",value:expandedExternalRecord?.status||expandedExternalItem.externalStatus},
+        {label:"Дата публикации",value:expandedExternalRecord?.publish_date||expandedExternalRecord?.date},
+        {label:"Ссылка",value:expandedExternalRecord?.content_url||expandedExternalRecord?.link},
+        {label:"Сценарий / текст",value:expandedExternalRecord?.scenario},
+        {label:"Создан",value:expandedExternalRecord?.created_at},
+      ]
+    :[];
+  const expandedExternalImage=expandedExternalItem?.externalSource==="content"
+    ?getContentImage(expandedExternalRecord||{})||expandedExternalItem?.imageUrl||""
+    :expandedExternalRecord?.avatar_url||expandedExternalRecord?.photo_url||expandedExternalRecord?.image_url||expandedExternalItem?.imageUrl||"";
+
   if(!activeBoardId||!activeBoard){
     return(
       <div style={{padding:32}}>
@@ -10149,7 +10192,13 @@ function BoardPage({userId}:{userId:string}){
                         {it.externalSource==="content"&&<PlatformIcon pid={it.externalPlatform||"other"} size={13}/>}
                         {it.externalSource==="crm"?"CRM":"Контент"}
                       </span>
-                      {it.externalStatus&&<span style={{fontSize:9,fontWeight:800,padding:"3px 7px",borderRadius:999,background:(it.color||"#7C3AED")+"12",color:it.color||"#7C3AED",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.externalStatus}</span>}
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:6,minWidth:0}}>
+                        {it.externalStatus&&<span style={{fontSize:9,fontWeight:800,padding:"3px 7px",borderRadius:999,background:(it.color||"#7C3AED")+"12",color:it.color||"#7C3AED",maxWidth:92,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.externalStatus}</span>}
+                        <button
+                          onMouseDown={e=>e.stopPropagation()}
+                          onClick={e=>{e.stopPropagation();setExpandedExternalItemId(it.id);}}
+                          style={{padding:"4px 8px",border:"1px solid #E2E8F0",borderRadius:999,background:"#fff",color:it.color||"#7C3AED",fontSize:9,fontWeight:900,cursor:"pointer",whiteSpace:"nowrap",boxShadow:"0 2px 8px rgba(15,23,42,0.06)"}}>Раскрыть</button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -10281,6 +10330,41 @@ function BoardPage({userId}:{userId:string}){
           <div style={{padding:"12px 16px",borderTop:"1px solid #E2E8F0",fontSize:11,color:C.t2,lineHeight:1.5}}>Карточка на доске хранит связь с оригиналом: источник, ID, тип и отображаемые поля. Кнопка «Обновить» подтягивает свежие данные.</div>
         </div>
       )}
+
+      {expandedExternalItem&&(<div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.58)",zIndex:320,display:"flex",alignItems:"center",justifyContent:"center",padding:20,backdropFilter:"blur(8px)"}} onClick={()=>setExpandedExternalItemId(null)}>
+        <div style={{width:"min(620px,100%)",maxHeight:"86vh",overflow:"hidden",background:"#fff",borderRadius:24,boxShadow:"0 28px 80px rgba(15,23,42,0.34)",border:"1px solid rgba(226,232,240,0.9)",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+          <div style={{height:8,background:`linear-gradient(90deg, ${expandedExternalItem.color||"#7C3AED"}, #60A5FA)`}}/>
+          <div style={{padding:22,borderBottom:"1px solid #E2E8F0",display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16}}>
+            <div style={{display:"flex",gap:14,minWidth:0,alignItems:"center"}}>
+              <div style={{width:58,height:58,borderRadius:18,background:(expandedExternalItem.color||"#7C3AED")+"16",border:"1px solid "+(expandedExternalItem.color||"#7C3AED")+"30",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",flexShrink:0}}>
+                {expandedExternalImage?<img src={expandedExternalImage} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:expandedExternalItem.externalSource==="content"?<PlatformIcon pid={expandedExternalItem.externalPlatform||"other"} size={30}/>:<span style={{fontSize:24}}>👤</span>}
+              </div>
+              <div style={{minWidth:0}}>
+                <div style={{fontSize:11,fontWeight:900,textTransform:"uppercase",letterSpacing:.8,color:expandedExternalItem.color||"#7C3AED",marginBottom:5}}>{expandedExternalItem.externalSource==="crm"?"CRM-лид":"Контент-карточка"}</div>
+                <div style={{fontSize:22,fontWeight:950,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{expandedExternalItem.externalTitle||expandedExternalItem.text||"Карточка"}</div>
+                <div style={{fontSize:13,color:C.t2,marginTop:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{expandedExternalItem.externalSubtitle||"Связанная карточка"}</div>
+              </div>
+            </div>
+            <button onClick={()=>setExpandedExternalItemId(null)} style={{width:34,height:34,borderRadius:12,border:"1px solid #E2E8F0",background:"#F8FAFC",cursor:"pointer",fontSize:18,color:C.t2,flexShrink:0}}>×</button>
+          </div>
+          <div style={{padding:22,overflowY:"auto",display:"grid",gap:12}}>
+            {!expandedExternalRecord&&<div style={{padding:"12px 14px",borderRadius:14,background:"#FFFBEB",border:"1px solid #FDE68A",color:"#92400E",fontSize:12,lineHeight:1.5}}>Оригинальная запись не найдена или ещё не загружена. Ниже показаны данные, сохранённые в карточке на доске.</div>}
+            {externalDetailRows.map(row=>{
+              const value=normalizeDetailValue(row.value);
+              const isLong=value.length>90;
+              const isLink=/^https?:\/\//i.test(value)||value.startsWith("mailto:");
+              return <div key={row.label} style={{display:"grid",gridTemplateColumns:"150px 1fr",gap:14,padding:"12px 14px",borderRadius:14,background:"#F8FAFC",border:"1px solid #E2E8F0"}}>
+                <div style={{fontSize:11,fontWeight:900,color:C.t2,textTransform:"uppercase",letterSpacing:.5}}>{row.label}</div>
+                {isLink?<a href={value} target="_blank" rel="noreferrer" style={{fontSize:13,fontWeight:700,color:expandedExternalItem.color||"#2563EB",wordBreak:"break-all"}}>{value}</a>:<div style={{fontSize:13,fontWeight:600,color:C.t1,lineHeight:1.55,whiteSpace:isLong?"pre-wrap":"normal",wordBreak:"break-word"}}>{value}</div>}
+              </div>;
+            })}
+          </div>
+          <div style={{padding:"14px 22px",borderTop:"1px solid #E2E8F0",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,background:"#F8FAFC"}}>
+            <div style={{fontSize:11,color:C.t2}}>Данные подтягиваются из текущей CRM/Контент-таблицы по сохранённому ID.</div>
+            <button onClick={()=>setExpandedExternalItemId(null)} style={{padding:"10px 16px",border:"none",borderRadius:12,background:"linear-gradient(135deg,#7C3AED,#2563EB)",color:"#fff",fontSize:12,fontWeight:900,cursor:"pointer"}}>Закрыть</button>
+          </div>
+        </div>
+      </div>)}
 
       {/* ── Link modal ── */}
       {linkModal&&(
