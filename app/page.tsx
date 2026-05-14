@@ -8767,6 +8767,14 @@ function BoardPage({userId}:{userId:string}){
   const resizeState=useRef<{id:string;startMx:number;startMy:number;startW:number;startH:number}|null>(null);
   const panState=useRef<{startMx:number;startMy:number;startPx:number;startPy:number}|null>(null);
 
+  // Marquee (lasso) selection — left drag on empty canvas
+  const marqueeState=useRef<{startX:number;startY:number;startMx:number;startMy:number}|null>(null);
+  const[marqueeRect,setMarqueeRect]=useState<{x:number;y:number;w:number;h:number}|null>(null);
+
+  // Doc/Table side panel editor
+  const[docPanelId,setDocPanelId]=useState<string|null>(null);
+  const docPanelItem=useMemo(()=>items.find(i=>i.id===docPanelId)||null,[items,docPanelId]);
+
   // Line drawing
   const[lineFrom,setLineFrom]=useState<string|null>(null);
 
@@ -9160,14 +9168,36 @@ function BoardPage({userId}:{userId:string}){
   const onCanvasDown=(e:React.MouseEvent)=>{
     const tgt=e.target as HTMLElement;
     const onBg=tgt===canvasRef.current||tgt.classList.contains("board-bg-dot");
+
+    // RIGHT mouse button = pan (always, regardless of tool)
+    if(e.button===2){
+      e.preventDefault();
+      panState.current={startMx:e.clientX,startMy:e.clientY,startPx:pan.x,startPy:pan.y};
+      return;
+    }
+
+    if(e.button!==0)return;
+
     if(tool==="draw"&&onBg){
       const{x,y}=toCanvas(e.clientX,e.clientY);
       drawingRef.current={path:`M0,0`,startX:x,startY:y,pointCount:0};
       setIsDrawing(true);setDrawPreview("M0,0");
       return;
     }
-    if((tool==="select"||tool==="pan")&&onBg){
+
+    // Pan tool — left click pans
+    if(tool==="pan"&&onBg){
       panState.current={startMx:e.clientX,startMy:e.clientY,startPx:pan.x,startPy:pan.y};
+      return;
+    }
+
+    // Select tool + left drag on background = marquee selection
+    if(tool==="select"&&onBg){
+      const{x,y}=toCanvas(e.clientX,e.clientY);
+      marqueeState.current={startX:x,startY:y,startMx:e.clientX,startMy:e.clientY};
+      setMarqueeRect({x,y,w:0,h:0});
+      setSelectedIds(new Set());
+      return;
     }
   };
 
@@ -9183,13 +9213,28 @@ function BoardPage({userId}:{userId:string}){
       const dx=(e.clientX-resizeState.current.startMx)/zoom;
       const dy=(e.clientY-resizeState.current.startMy)/zoom;
       const it0=items.find(i=>i.id===resizeState.current!.id);
-      // Preserve aspect ratio for images
       if(it0?.type==="image"&&it0.imageW&&it0.imageH){
         const ratio=it0.imageW/it0.imageH;
         const newW=Math.max(60,resizeState.current.startW+dx);
         setItems(prev=>normalizeBoardItems(prev as any[]).map(it=>it.id===resizeState.current!.id?{...it,w:newW,h:Math.max(40,newW/ratio)}:it));
       } else {
         setItems(prev=>normalizeBoardItems(prev as any[]).map(it=>it.id===resizeState.current!.id?{...it,w:Math.max(60,resizeState.current!.startW+dx),h:Math.max(40,resizeState.current!.startH+dy)}:it));
+      }
+    } else if(marqueeState.current){
+      // Marquee selection rect
+      const{x:sx,y:sy}=toCanvas(e.clientX,e.clientY);
+      const mx=marqueeState.current.startX;
+      const my=marqueeState.current.startY;
+      const rx=Math.min(sx,mx),ry=Math.min(sy,my);
+      const rw=Math.abs(sx-mx),rh=Math.abs(sy-my);
+      setMarqueeRect({x:rx,y:ry,w:rw,h:rh});
+      // Select items that intersect the marquee rect
+      if(rw>4||rh>4){
+        const sel=new Set(items.filter(it=>
+          it.x<rx+rw&&it.x+it.w>rx&&it.y<ry+rh&&it.y+it.h>ry
+        ).map(it=>it.id));
+        setSelectedIds(sel);
+        selRef.current=sel;
       }
     } else if(panState.current){
       setPan({x:panState.current.startPx+(e.clientX-panState.current.startMx),y:panState.current.startPy+(e.clientY-panState.current.startMy)});
@@ -9206,7 +9251,6 @@ function BoardPage({userId}:{userId:string}){
         if(drawingRef.current.pointCount%stateStep===0){setDrawPreview(newPath);}
       }
     } else if(connectorDrag){
-      // Update live connector preview via state
       const{x,y}=toCanvas(e.clientX,e.clientY);
       setConnectorDrag(d=>d?{...d,mx:x,my:y}:null);
     }
@@ -9217,6 +9261,9 @@ function BoardPage({userId}:{userId:string}){
     const hadResize=!!resizeState.current;
     if(hadDrag||hadResize)triggerSave(normalizeBoardItems(items as any[]),lines);
     dragState.current=null;resizeState.current=null;panState.current=null;
+    // Clear marquee
+    marqueeState.current=null;
+    setMarqueeRect(null);
 
     // Finish drawing
     if(isDrawing&&drawingRef.current&&drawPreview.length>4){
@@ -10022,7 +10069,8 @@ function BoardPage({userId}:{userId:string}){
         onMouseLeave={onMouseUp}
         onWheel={onWheel}
         onDragOver={onCanvasDragOver}
-        onDrop={onCanvasDrop}>
+        onDrop={onCanvasDrop}
+        onContextMenu={e=>e.preventDefault()}>
 
         {/* Dot grid */}
         <svg className="board-bg-dot" style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none"}} xmlns="http://www.w3.org/2000/svg">
@@ -10118,12 +10166,16 @@ function BoardPage({userId}:{userId:string}){
 
                 {/* ── DOCUMENT / TABLE QUICK CARDS ── */}
                 {(it.type==="doc"||it.type==="table")&&(
-                  <div style={{width:"100%",height:"100%",borderRadius:16,background:it.type==="doc"?"linear-gradient(135deg,#EEF2FF,#FFFFFF)":"linear-gradient(135deg,#ECFDF5,#FFFFFF)",border:"1px solid "+(it.type==="doc"?"#C7D2FE":"#A7F3D0"),boxShadow:"0 10px 26px rgba(15,23,42,.10)",padding:16,display:"flex",alignItems:"center",gap:12,boxSizing:"border-box" as const}}>
+                  <div style={{width:"100%",height:"100%",borderRadius:16,background:it.type==="doc"?"linear-gradient(135deg,#EEF2FF,#FFFFFF)":"linear-gradient(135deg,#ECFDF5,#FFFFFF)",border:"1px solid "+(it.type==="doc"?"#C7D2FE":"#A7F3D0"),boxShadow:"0 10px 26px rgba(15,23,42,.10)",padding:16,display:"flex",alignItems:"center",gap:12,boxSizing:"border-box" as const,cursor:"pointer",transition:"box-shadow 0.15s"}}
+                    onClick={e=>{e.stopPropagation();setDocPanelId(it.id);}}
+                    onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 12px 32px rgba(15,23,42,0.18)";}}
+                    onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 10px 26px rgba(15,23,42,0.10)";}}>
                     <div style={{width:44,height:44,borderRadius:14,background:it.type==="doc"?"#4F46E5":"#10B981",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:23,flexShrink:0}}>{it.type==="doc"?"📄":"▦"}</div>
-                    <div style={{minWidth:0}}>
-                      <div style={{fontSize:15,fontWeight:900,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.text|| (it.type==="doc"?"Документ":"Таблица")}</div>
-                      <div style={{fontSize:11,color:C.t2,marginTop:4}}>{it.type==="doc"?"Vizzy Text document":"Vizzy Tables sheet"}</div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:15,fontWeight:900,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.text||(it.type==="doc"?"Документ":"Таблица")}</div>
+                      <div style={{fontSize:11,color:C.t2,marginTop:4}}>{it.type==="doc"?"Нажми чтобы открыть документ":"Нажми чтобы открыть таблицу"}</div>
                     </div>
+                    <div style={{fontSize:18,color:it.type==="doc"?"#4F46E5":"#10B981",opacity:0.6}}>→</div>
                   </div>
                 )}
 
@@ -10254,6 +10306,22 @@ function BoardPage({userId}:{userId:string}){
           })}
         </div>
 
+        {/* Marquee selection rect */}
+        {marqueeRect&&marqueeRect.w>4&&(
+          <div style={{
+            position:"absolute",
+            left:marqueeRect.x*zoom+pan.x,
+            top:marqueeRect.y*zoom+pan.y,
+            width:marqueeRect.w*zoom,
+            height:marqueeRect.h*zoom,
+            border:"1.5px dashed #2563EB",
+            background:"rgba(37,99,235,0.06)",
+            borderRadius:4,
+            pointerEvents:"none",
+            zIndex:9999,
+          }}/>
+        )}
+
         {/* Empty hint */}
         {normalizeBoardItems(items as any[]).length===0&&!loadingCanvas&&(
           <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
@@ -10268,6 +10336,134 @@ function BoardPage({userId}:{userId:string}){
           </div>
         )}
       </div>
+
+      {/* Doc / Table side panel editor */}
+      {docPanelItem&&(
+        <div style={{
+          position:"absolute",top:48,right:0,bottom:0,
+          width:Math.min(520,window.innerWidth*0.45),
+          zIndex:95,
+          background:"#fff",
+          borderLeft:"1px solid #E2E8F0",
+          boxShadow:"-20px 0 50px rgba(15,23,42,0.12)",
+          display:"flex",flexDirection:"column",
+          animation:"slideInRight 0.22s ease",
+        }}>
+          <style>{`@keyframes slideInRight{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}`}</style>
+          {/* Panel header */}
+          <div style={{padding:"14px 18px",borderBottom:"1px solid #E2E8F0",display:"flex",alignItems:"center",gap:12,background:"#FAFAFA",flexShrink:0}}>
+            <div style={{width:34,height:34,borderRadius:10,background:docPanelItem.type==="doc"?"#4F46E5":"#10B981",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>
+              {docPanelItem.type==="doc"?"📄":"▦"}
+            </div>
+            <input value={docPanelItem.text||""} onChange={e=>{
+              const next=items.map(i=>i.id===docPanelItem.id?{...i,text:e.target.value}:i);
+              updItems(next);
+            }} style={{flex:1,border:"none",background:"transparent",fontSize:16,fontWeight:700,color:"#1E293B",outline:"none",fontFamily:"'Montserrat',sans-serif"}} placeholder={docPanelItem.type==="doc"?"Название документа":"Название таблицы"}/>
+            <button onClick={()=>setDocPanelId(null)} style={{width:30,height:30,border:"1px solid #E2E8F0",borderRadius:8,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#64748B",fontSize:16,flexShrink:0}}>✕</button>
+          </div>
+
+          {/* Doc editor */}
+          {docPanelItem.type==="doc"&&(
+            <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+              {/* Toolbar */}
+              <div style={{padding:"8px 14px",borderBottom:"1px solid #F1F5F9",display:"flex",gap:4,alignItems:"center",flexWrap:"wrap",background:"#FAFAFA",flexShrink:0}}>
+                {[
+                  {cmd:"bold",label:"B",style:{fontWeight:900}},
+                  {cmd:"italic",label:"I",style:{fontStyle:"italic"}},
+                  {cmd:"underline",label:"U",style:{textDecoration:"underline"}},
+                ].map(btn=>(
+                  <button key={btn.cmd} onMouseDown={e=>{e.preventDefault();document.execCommand(btn.cmd);}}
+                    style={{width:28,height:28,borderRadius:6,border:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",fontSize:13,...btn.style,color:"#1E293B"}}>
+                    {btn.label}
+                  </button>
+                ))}
+                <div style={{width:1,height:20,background:"#E2E8F0",margin:"0 4px"}}/>
+                {["h1","h2","p"].map(tag=>(
+                  <button key={tag} onMouseDown={e=>{e.preventDefault();document.execCommand("formatBlock",false,tag);}}
+                    style={{padding:"3px 8px",borderRadius:6,border:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",fontSize:11,fontWeight:600,color:"#64748B"}}>
+                    {tag.toUpperCase()}
+                  </button>
+                ))}
+                <div style={{width:1,height:20,background:"#E2E8F0",margin:"0 4px"}}/>
+                <button onMouseDown={e=>{e.preventDefault();document.execCommand("insertUnorderedList");}}
+                  style={{padding:"3px 8px",borderRadius:6,border:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",fontSize:11,color:"#64748B"}}>• Список</button>
+                <button onMouseDown={e=>{e.preventDefault();document.execCommand("insertOrderedList");}}
+                  style={{padding:"3px 8px",borderRadius:6,border:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",fontSize:11,color:"#64748B"}}>1. Список</button>
+              </div>
+              {/* Editable area */}
+              <div
+                contentEditable suppressContentEditableWarning
+                onInput={e=>{
+                  const html=(e.currentTarget as HTMLElement).innerHTML;
+                  const next=items.map(i=>i.id===docPanelItem.id?{...i,docContent:html}:i);
+                  // Debounce save
+                  setItems(next);
+                  clearTimeout((window as any)._docSaveTimer);
+                  (window as any)._docSaveTimer=setTimeout(()=>triggerSave(next,lines),1500);
+                }}
+                dangerouslySetInnerHTML={{__html:(docPanelItem as any).docContent||"<p>Начни писать здесь...</p>"}}
+                style={{flex:1,padding:"20px 24px",outline:"none",fontSize:15,lineHeight:1.8,color:"#1E293B",overflowY:"auto",fontFamily:"'Montserrat',sans-serif"}}
+              />
+            </div>
+          )}
+
+          {/* Table editor */}
+          {docPanelItem.type==="table"&&(()=>{
+            const raw=(docPanelItem as any).tableData;
+            const rows:string[][]=raw?JSON.parse(raw):Array.from({length:5},()=>Array(4).fill(""));
+            const saveTable=(newRows:string[][])=>{
+              const next=items.map(i=>i.id===docPanelItem.id?{...i,tableData:JSON.stringify(newRows)}:i);
+              setItems(next);
+              clearTimeout((window as any)._tblSaveTimer);
+              (window as any)._tblSaveTimer=setTimeout(()=>triggerSave(next,lines),1500);
+            };
+            return<div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+              {/* Table toolbar */}
+              <div style={{padding:"8px 14px",borderBottom:"1px solid #F1F5F9",display:"flex",gap:8,background:"#FAFAFA",flexShrink:0}}>
+                <button onClick={()=>saveTable([...rows,Array(rows[0]?.length||4).fill("")])}
+                  style={{padding:"4px 12px",borderRadius:7,border:"1px solid #E2E8F0",background:"#fff",cursor:"pointer",fontSize:12,fontWeight:600,color:"#10B981"}}>
+                  + Строка
+                </button>
+                <button onClick={()=>saveTable(rows.map(r=>[...r,""]))}
+                  style={{padding:"4px 12px",borderRadius:7,border:"1px solid #E2E8F0",background:"#fff",cursor:"pointer",fontSize:12,fontWeight:600,color:"#10B981"}}>
+                  + Столбец
+                </button>
+                {rows.length>1&&<button onClick={()=>saveTable(rows.slice(0,-1))}
+                  style={{padding:"4px 12px",borderRadius:7,border:"1px solid #E2E8F0",background:"#fff",cursor:"pointer",fontSize:12,color:"#EF4444"}}>
+                  − Строку
+                </button>}
+                {(rows[0]?.length||0)>1&&<button onClick={()=>saveTable(rows.map(r=>r.slice(0,-1)))}
+                  style={{padding:"4px 12px",borderRadius:7,border:"1px solid #E2E8F0",background:"#fff",cursor:"pointer",fontSize:12,color:"#EF4444"}}>
+                  − Столбец
+                </button>}
+              </div>
+              <div style={{flex:1,overflow:"auto",padding:16}}>
+                <table style={{borderCollapse:"collapse",width:"100%",fontSize:13}}>
+                  <tbody>
+                    {rows.map((row,ri)=>(
+                      <tr key={ri}>
+                        {row.map((cell,ci)=>(
+                          <td key={ci} style={{border:"1px solid #E2E8F0",padding:0,background:ri===0?"#F0FDF4":"#fff",minWidth:80}}>
+                            <input value={cell} onChange={e=>{
+                              const nr=rows.map((r,r2)=>r2===ri?r.map((c,c2)=>c2===ci?e.target.value:c):r);
+                              saveTable(nr);
+                            }} style={{
+                              width:"100%",padding:"7px 10px",border:"none",background:"transparent",
+                              fontSize:13,fontFamily:"'Montserrat',sans-serif",
+                              fontWeight:ri===0?700:400,color:"#1E293B",outline:"none",
+                              boxSizing:"border-box" as const,
+                            }}/>
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>;
+          })()}
+        </div>
+      )}
 
       {externalDropHint&&(
         <div style={{position:"absolute",inset:0,top:48,zIndex:55,pointerEvents:"none",display:"flex",alignItems:"center",justifyContent:"center"}}>
