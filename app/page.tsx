@@ -8767,13 +8767,12 @@ function BoardPage({userId}:{userId:string}){
   const resizeState=useRef<{id:string;startMx:number;startMy:number;startW:number;startH:number}|null>(null);
   const panState=useRef<{startMx:number;startMy:number;startPx:number;startPy:number}|null>(null);
 
-  // Marquee (lasso) selection — left drag on empty canvas
-  const marqueeState=useRef<{startX:number;startY:number;startMx:number;startMy:number}|null>(null);
+  // Marquee (rubber-band) selection
+  const marqueeRef=useRef<{startX:number;startY:number}|null>(null);
   const[marqueeRect,setMarqueeRect]=useState<{x:number;y:number;w:number;h:number}|null>(null);
 
-  // Doc/Table side panel editor
+  // Doc/Table side panel
   const[docPanelId,setDocPanelId]=useState<string|null>(null);
-  const docPanelItem=useMemo(()=>items.find(i=>i.id===docPanelId)||null,[items,docPanelId]);
 
   // Line drawing
   const[lineFrom,setLineFrom]=useState<string|null>(null);
@@ -9115,9 +9114,16 @@ function BoardPage({userId}:{userId:string}){
 
   // ── Canvas click ──
   const onCanvasClick=(e:React.MouseEvent)=>{
+    if(e.button!==0)return;
     const tgt=e.target as HTMLElement;
     const onCanvas=tgt===canvasRef.current||tgt.classList.contains("board-bg-dot");
-    if(tool==="select"){if(onCanvas){setSelectedIds(new Set());setSelectedLineId(null);}return;}
+    if(tool==="select"){
+      // Only clear selection if click (not after marquee drag)
+      if(onCanvas&&selRef.current.size===0){setSelectedIds(new Set());setSelectedLineId(null);}
+      // If there's a selection and user clicks empty space, clear it
+      if(onCanvas&&selRef.current.size>0&&marqueeRect===null){setSelectedIds(new Set());setSelectedLineId(null);selRef.current=new Set();}
+      return;
+    }
     if(tool==="pan")return;
     if(!onCanvas)return;
     const{x,y}=toCanvas(e.clientX,e.clientY);
@@ -9169,13 +9175,12 @@ function BoardPage({userId}:{userId:string}){
     const tgt=e.target as HTMLElement;
     const onBg=tgt===canvasRef.current||tgt.classList.contains("board-bg-dot");
 
-    // RIGHT mouse button = pan (always, regardless of tool)
+    // RIGHT button always pans
     if(e.button===2){
       e.preventDefault();
       panState.current={startMx:e.clientX,startMy:e.clientY,startPx:pan.x,startPy:pan.y};
       return;
     }
-
     if(e.button!==0)return;
 
     if(tool==="draw"&&onBg){
@@ -9184,19 +9189,17 @@ function BoardPage({userId}:{userId:string}){
       setIsDrawing(true);setDrawPreview("M0,0");
       return;
     }
-
-    // Pan tool — left click pans
+    // Pan tool - left pans
     if(tool==="pan"&&onBg){
       panState.current={startMx:e.clientX,startMy:e.clientY,startPx:pan.x,startPy:pan.y};
       return;
     }
-
-    // Select tool + left drag on background = marquee selection
+    // Select tool + left on background = start marquee
     if(tool==="select"&&onBg){
       const{x,y}=toCanvas(e.clientX,e.clientY);
-      marqueeState.current={startX:x,startY:y,startMx:e.clientX,startMy:e.clientY};
+      marqueeRef.current={startX:x,startY:y};
       setMarqueeRect({x,y,w:0,h:0});
-      setSelectedIds(new Set());
+      // DON'T clear selection here - clear only when marquee actually moves
       return;
     }
   };
@@ -9213,6 +9216,7 @@ function BoardPage({userId}:{userId:string}){
       const dx=(e.clientX-resizeState.current.startMx)/zoom;
       const dy=(e.clientY-resizeState.current.startMy)/zoom;
       const it0=items.find(i=>i.id===resizeState.current!.id);
+      // Preserve aspect ratio for images
       if(it0?.type==="image"&&it0.imageW&&it0.imageH){
         const ratio=it0.imageW/it0.imageH;
         const newW=Math.max(60,resizeState.current.startW+dx);
@@ -9220,24 +9224,24 @@ function BoardPage({userId}:{userId:string}){
       } else {
         setItems(prev=>normalizeBoardItems(prev as any[]).map(it=>it.id===resizeState.current!.id?{...it,w:Math.max(60,resizeState.current!.startW+dx),h:Math.max(40,resizeState.current!.startH+dy)}:it));
       }
-    } else if(marqueeState.current){
-      // Marquee selection rect
-      const{x:sx,y:sy}=toCanvas(e.clientX,e.clientY);
-      const mx=marqueeState.current.startX;
-      const my=marqueeState.current.startY;
-      const rx=Math.min(sx,mx),ry=Math.min(sy,my);
-      const rw=Math.abs(sx-mx),rh=Math.abs(sy-my);
+    } else if(panState.current){
+      setPan({x:panState.current.startPx+(e.clientX-panState.current.startMx),y:panState.current.startPy+(e.clientY-panState.current.startMy)});
+    } else if(marqueeRef.current){
+      const{x:cx,y:cy}=toCanvas(e.clientX,e.clientY);
+      const{startX:sx,startY:sy}=marqueeRef.current;
+      const rx=Math.min(cx,sx),ry=Math.min(cy,sy);
+      const rw=Math.abs(cx-sx),rh=Math.abs(cy-sy);
       setMarqueeRect({x:rx,y:ry,w:rw,h:rh});
-      // Select items that intersect the marquee rect
-      if(rw>4||rh>4){
-        const sel=new Set(items.filter(it=>
-          it.x<rx+rw&&it.x+it.w>rx&&it.y<ry+rh&&it.y+it.h>ry
-        ).map(it=>it.id));
+      // Select all items intersecting the rect
+      if(rw>6||rh>6){
+        const sel=new Set(
+          normalizeBoardItems(itemsRef.current as any[])
+            .filter(it=>it.x<rx+rw&&it.x+it.w>rx&&it.y<ry+rh&&it.y+it.h>ry)
+            .map(it=>it.id)
+        );
         setSelectedIds(sel);
         selRef.current=sel;
       }
-    } else if(panState.current){
-      setPan({x:panState.current.startPx+(e.clientX-panState.current.startMx),y:panState.current.startPy+(e.clientY-panState.current.startMy)});
     } else if(isDrawing&&drawingRef.current){
       const{x,y}=toCanvas(e.clientX,e.clientY);
       const dx=x-drawingRef.current.startX;
@@ -9251,6 +9255,7 @@ function BoardPage({userId}:{userId:string}){
         if(drawingRef.current.pointCount%stateStep===0){setDrawPreview(newPath);}
       }
     } else if(connectorDrag){
+      // Update live connector preview via state
       const{x,y}=toCanvas(e.clientX,e.clientY);
       setConnectorDrag(d=>d?{...d,mx:x,my:y}:null);
     }
@@ -9261,8 +9266,8 @@ function BoardPage({userId}:{userId:string}){
     const hadResize=!!resizeState.current;
     if(hadDrag||hadResize)triggerSave(normalizeBoardItems(items as any[]),lines);
     dragState.current=null;resizeState.current=null;panState.current=null;
-    // Clear marquee
-    marqueeState.current=null;
+    // Finish marquee — keep selection, just hide the rect
+    marqueeRef.current=null;
     setMarqueeRect(null);
 
     // Finish drawing
@@ -9892,6 +9897,41 @@ function BoardPage({userId}:{userId:string}){
         {BOARD_DRAW_COLORS.map(c=><button key={c} onClick={()=>setDrawColor(c)} style={{width:36,height:36,borderRadius:"50%",background:c,border:drawColor===c?"3px solid #3155E7":"2px solid #E5E7EB",boxShadow:"inset 0 0 0 3px #fff",cursor:"pointer"}}/>)}
       </div>}
 
+      {/* ── MULTI-SELECTION TOOLBAR — shown when 2+ items selected ── */}
+      {selectedIds.size>1&&!selLine&&(
+        <div style={{
+          position:"absolute",top:56,left:"50%",transform:"translateX(-50%)",
+          zIndex:120,display:"flex",gap:6,alignItems:"center",
+          background:"rgba(255,255,255,0.98)",backdropFilter:"blur(12px)",
+          borderRadius:12,padding:"8px 14px",
+          boxShadow:"0 4px 24px rgba(0,0,0,0.13)",border:"1px solid rgba(0,0,0,0.07)",
+        }}>
+          <span style={{fontSize:12,fontWeight:700,color:"#2563EB",marginRight:4}}>
+            {selectedIds.size} объектов
+          </span>
+          <div style={{width:1,height:18,background:"#E2E8F0"}}/>
+          <button onClick={duplicateSelected} title="Дублировать выбранное"
+            style={{padding:"4px 10px",border:"1px solid #E2E8F0",borderRadius:7,background:"transparent",cursor:"pointer",fontSize:11,fontWeight:600,color:"#1E293B",display:"flex",alignItems:"center",gap:4}}>
+            ⧉ Дублировать
+          </button>
+          <button onClick={()=>{
+            // Group move - move all together
+            const ids=[...selectedIds];
+            const startPos:Record<string,{x:number;y:number}>={};
+            items.filter(i=>ids.includes(i.id)).forEach(i=>{startPos[i.id]={x:i.x,y:i.y};});
+            // Already selectable, just show hint
+          }} style={{display:"none"}}>_</button>
+          <button onClick={deleteSelected}
+            style={{padding:"4px 10px",border:"1px solid #FCA5A5",borderRadius:7,background:"#FFF1F1",cursor:"pointer",fontSize:11,fontWeight:600,color:"#EF4444",display:"flex",alignItems:"center",gap:4}}>
+            🗑 Удалить все
+          </button>
+          <button onClick={()=>{setSelectedIds(new Set());selRef.current=new Set();}}
+            style={{width:24,height:24,border:"1px solid #E2E8F0",borderRadius:6,background:"transparent",cursor:"pointer",fontSize:11,color:"#64748B",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* ── FLOATING CONTEXT TOOLBAR — stays visible while editing text ── */}
       {(sel1||selLine)&&(
         <div style={{
@@ -10166,16 +10206,22 @@ function BoardPage({userId}:{userId:string}){
 
                 {/* ── DOCUMENT / TABLE QUICK CARDS ── */}
                 {(it.type==="doc"||it.type==="table")&&(
-                  <div style={{width:"100%",height:"100%",borderRadius:16,background:it.type==="doc"?"linear-gradient(135deg,#EEF2FF,#FFFFFF)":"linear-gradient(135deg,#ECFDF5,#FFFFFF)",border:"1px solid "+(it.type==="doc"?"#C7D2FE":"#A7F3D0"),boxShadow:"0 10px 26px rgba(15,23,42,.10)",padding:16,display:"flex",alignItems:"center",gap:12,boxSizing:"border-box" as const,cursor:"pointer",transition:"box-shadow 0.15s"}}
+                  <div
                     onClick={e=>{e.stopPropagation();setDocPanelId(it.id);}}
-                    onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 12px 32px rgba(15,23,42,0.18)";}}
-                    onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 10px 26px rgba(15,23,42,0.10)";}}>
+                    style={{width:"100%",height:"100%",borderRadius:16,
+                      background:it.type==="doc"?"linear-gradient(135deg,#EEF2FF,#FFFFFF)":"linear-gradient(135deg,#ECFDF5,#FFFFFF)",
+                      border:"1px solid "+(it.type==="doc"?"#C7D2FE":"#A7F3D0"),
+                      boxShadow:docPanelId===it.id?"0 0 0 2.5px #2563EB, 0 10px 26px rgba(15,23,42,.12)":"0 10px 26px rgba(15,23,42,.10)",
+                      padding:16,display:"flex",alignItems:"center",gap:12,
+                      boxSizing:"border-box" as const,cursor:"pointer",transition:"box-shadow 0.15s"}}
+                    onMouseEnter={e=>{if(docPanelId!==it.id)(e.currentTarget as HTMLElement).style.boxShadow="0 14px 32px rgba(15,23,42,0.18)";}}
+                    onMouseLeave={e=>{if(docPanelId!==it.id)(e.currentTarget as HTMLElement).style.boxShadow="0 10px 26px rgba(15,23,42,0.10)";}}>
                     <div style={{width:44,height:44,borderRadius:14,background:it.type==="doc"?"#4F46E5":"#10B981",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:23,flexShrink:0}}>{it.type==="doc"?"📄":"▦"}</div>
-                    <div style={{flex:1,minWidth:0}}>
+                    <div style={{minWidth:0,flex:1}}>
                       <div style={{fontSize:15,fontWeight:900,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.text||(it.type==="doc"?"Документ":"Таблица")}</div>
-                      <div style={{fontSize:11,color:C.t2,marginTop:4}}>{it.type==="doc"?"Нажми чтобы открыть документ":"Нажми чтобы открыть таблицу"}</div>
+                      <div style={{fontSize:11,color:C.t2,marginTop:4}}>{it.type==="doc"?"Нажми чтобы редактировать":"Нажми чтобы открыть таблицу"}</div>
                     </div>
-                    <div style={{fontSize:18,color:it.type==="doc"?"#4F46E5":"#10B981",opacity:0.6}}>→</div>
+                    <div style={{fontSize:16,color:it.type==="doc"?"#4F46E5":"#10B981",opacity:0.5,flexShrink:0}}>→</div>
                   </div>
                 )}
 
@@ -10307,7 +10353,7 @@ function BoardPage({userId}:{userId:string}){
         </div>
 
         {/* Marquee selection rect */}
-        {marqueeRect&&marqueeRect.w>4&&(
+        {marqueeRect&&(marqueeRect.w>4||marqueeRect.h>4)&&(
           <div style={{
             position:"absolute",
             left:marqueeRect.x*zoom+pan.x,
@@ -10316,9 +10362,9 @@ function BoardPage({userId}:{userId:string}){
             height:marqueeRect.h*zoom,
             border:"1.5px dashed #2563EB",
             background:"rgba(37,99,235,0.06)",
-            borderRadius:4,
+            borderRadius:3,
             pointerEvents:"none",
-            zIndex:9999,
+            zIndex:9998,
           }}/>
         )}
 
@@ -10337,133 +10383,138 @@ function BoardPage({userId}:{userId:string}){
         )}
       </div>
 
-      {/* Doc / Table side panel editor */}
-      {docPanelItem&&(
-        <div style={{
+      {/* Doc/Table side panel */}
+      {(()=>{
+        const docItem=docPanelId?normalizeBoardItems(items as any[]).find(i=>i.id===docPanelId):null;
+        if(!docItem)return null;
+        const isDoc=docItem.type==="doc";
+
+        const exportPDF=()=>{
+          const win=window.open("","_blank");
+          if(!win)return;
+          if(isDoc){
+            const html=(docItem as any).docContent||"<p>Пустой документ</p>";
+            win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${docItem.text||"Документ"}</title>
+            <style>body{font-family:Arial,sans-serif;max-width:800px;margin:40px auto;padding:0 24px;color:#1a1a2e;line-height:1.7;font-size:15px;}
+            h1{font-size:24px;font-weight:800;}h2{font-size:18px;font-weight:700;}
+            @media print{body{margin:0;}}</style></head><body>
+            <h1>${docItem.text||"Документ"}</h1>${html}
+            <script>window.onload=function(){window.print()}<\/script></body></html>`);
+          } else {
+            const raw=(docItem as any).tableData;
+            const rows:string[][]=raw?JSON.parse(raw):[];
+            const tblHtml=rows.map((row,ri)=>`<tr>${row.map(c=>`<${ri===0?"th":"td"} style="border:1px solid #ddd;padding:8px 12px;${ri===0?"background:#f0fdf4;font-weight:700;":""}">${c||""}</${ri===0?"th":"td"}>`).join("")}</tr>`).join("");
+            win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${docItem.text||"Таблица"}</title>
+            <style>body{font-family:Arial,sans-serif;margin:32px;color:#1a1a2e;}
+            table{border-collapse:collapse;width:100%;font-size:13px;}
+            @media print{body{margin:0;}}</style></head><body>
+            <h1 style="font-size:20px;font-weight:800;margin-bottom:16px">${docItem.text||"Таблица"}</h1>
+            <table>${tblHtml}</table>
+            <script>window.onload=function(){window.print()}<\/script></body></html>`);
+          }
+          win.document.close();
+        };
+
+        const raw=(docItem as any).tableData;
+        const tableRows:string[][]=raw?JSON.parse(raw):Array.from({length:5},()=>Array(4).fill(""));
+        const saveTable=(nr:string[][])=>{
+          const next=normalizeBoardItems(items as any[]).map(i=>i.id===docItem.id?{...i,tableData:JSON.stringify(nr)}:i);
+          setItems(next);clearTimeout((window as any)._tblTimer);
+          (window as any)._tblTimer=setTimeout(()=>triggerSave(next,lines),1500);
+        };
+
+        return <div style={{
           position:"absolute",top:48,right:0,bottom:0,
-          width:Math.min(520,window.innerWidth*0.45),
-          zIndex:95,
-          background:"#fff",
+          width:Math.min(520,Math.round(window.innerWidth*0.42)),
+          zIndex:95,background:"#fff",
           borderLeft:"1px solid #E2E8F0",
           boxShadow:"-20px 0 50px rgba(15,23,42,0.12)",
           display:"flex",flexDirection:"column",
-          animation:"slideInRight 0.22s ease",
         }}>
-          <style>{`@keyframes slideInRight{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}`}</style>
-          {/* Panel header */}
-          <div style={{padding:"14px 18px",borderBottom:"1px solid #E2E8F0",display:"flex",alignItems:"center",gap:12,background:"#FAFAFA",flexShrink:0}}>
-            <div style={{width:34,height:34,borderRadius:10,background:docPanelItem.type==="doc"?"#4F46E5":"#10B981",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>
-              {docPanelItem.type==="doc"?"📄":"▦"}
+          {/* Header */}
+          <div style={{padding:"12px 16px",borderBottom:"1px solid #E2E8F0",display:"flex",alignItems:"center",gap:10,background:"#FAFAFA",flexShrink:0}}>
+            <div style={{width:32,height:32,borderRadius:9,background:isDoc?"#4F46E5":"#10B981",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>
+              {isDoc?"📄":"▦"}
             </div>
-            <input value={docPanelItem.text||""} onChange={e=>{
-              const next=items.map(i=>i.id===docPanelItem.id?{...i,text:e.target.value}:i);
-              updItems(next);
-            }} style={{flex:1,border:"none",background:"transparent",fontSize:16,fontWeight:700,color:"#1E293B",outline:"none",fontFamily:"'Montserrat',sans-serif"}} placeholder={docPanelItem.type==="doc"?"Название документа":"Название таблицы"}/>
-            <button onClick={()=>setDocPanelId(null)} style={{width:30,height:30,border:"1px solid #E2E8F0",borderRadius:8,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#64748B",fontSize:16,flexShrink:0}}>✕</button>
+            <input value={docItem.text||""} onChange={e=>{
+              const next=normalizeBoardItems(items as any[]).map(i=>i.id===docItem.id?{...i,text:e.target.value}:i);
+              setItems(next);clearTimeout((window as any)._titleTimer);
+              (window as any)._titleTimer=setTimeout(()=>triggerSave(next,lines),1500);
+            }} style={{flex:1,border:"none",background:"transparent",fontSize:15,fontWeight:700,color:"#1E293B",outline:"none",fontFamily:"'Montserrat',sans-serif"}}
+            placeholder={isDoc?"Название документа":"Название таблицы"}/>
+            <button onClick={exportPDF} title="Скачать PDF"
+              style={{padding:"5px 12px",background:"linear-gradient(135deg,#16A34A,#15803D)",color:"#fff",border:"none",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
+              📄 PDF
+            </button>
+            <button onClick={()=>setDocPanelId(null)}
+              style={{width:28,height:28,border:"1px solid #E2E8F0",borderRadius:7,background:"transparent",cursor:"pointer",color:"#64748B",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✕</button>
           </div>
 
           {/* Doc editor */}
-          {docPanelItem.type==="doc"&&(
-            <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-              {/* Toolbar */}
-              <div style={{padding:"8px 14px",borderBottom:"1px solid #F1F5F9",display:"flex",gap:4,alignItems:"center",flexWrap:"wrap",background:"#FAFAFA",flexShrink:0}}>
-                {[
-                  {cmd:"bold",label:"B",style:{fontWeight:900}},
-                  {cmd:"italic",label:"I",style:{fontStyle:"italic"}},
-                  {cmd:"underline",label:"U",style:{textDecoration:"underline"}},
-                ].map(btn=>(
-                  <button key={btn.cmd} onMouseDown={e=>{e.preventDefault();document.execCommand(btn.cmd);}}
-                    style={{width:28,height:28,borderRadius:6,border:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",fontSize:13,...btn.style,color:"#1E293B"}}>
-                    {btn.label}
-                  </button>
-                ))}
-                <div style={{width:1,height:20,background:"#E2E8F0",margin:"0 4px"}}/>
-                {["h1","h2","p"].map(tag=>(
-                  <button key={tag} onMouseDown={e=>{e.preventDefault();document.execCommand("formatBlock",false,tag);}}
-                    style={{padding:"3px 8px",borderRadius:6,border:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",fontSize:11,fontWeight:600,color:"#64748B"}}>
-                    {tag.toUpperCase()}
-                  </button>
-                ))}
-                <div style={{width:1,height:20,background:"#E2E8F0",margin:"0 4px"}}/>
-                <button onMouseDown={e=>{e.preventDefault();document.execCommand("insertUnorderedList");}}
-                  style={{padding:"3px 8px",borderRadius:6,border:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",fontSize:11,color:"#64748B"}}>• Список</button>
-                <button onMouseDown={e=>{e.preventDefault();document.execCommand("insertOrderedList");}}
-                  style={{padding:"3px 8px",borderRadius:6,border:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",fontSize:11,color:"#64748B"}}>1. Список</button>
-              </div>
-              {/* Editable area */}
-              <div
-                contentEditable suppressContentEditableWarning
-                onInput={e=>{
-                  const html=(e.currentTarget as HTMLElement).innerHTML;
-                  const next=items.map(i=>i.id===docPanelItem.id?{...i,docContent:html}:i);
-                  // Debounce save
-                  setItems(next);
-                  clearTimeout((window as any)._docSaveTimer);
-                  (window as any)._docSaveTimer=setTimeout(()=>triggerSave(next,lines),1500);
-                }}
-                dangerouslySetInnerHTML={{__html:(docPanelItem as any).docContent||"<p>Начни писать здесь...</p>"}}
-                style={{flex:1,padding:"20px 24px",outline:"none",fontSize:15,lineHeight:1.8,color:"#1E293B",overflowY:"auto",fontFamily:"'Montserrat',sans-serif"}}
-              />
+          {isDoc&&<div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+            <div style={{padding:"6px 12px",borderBottom:"1px solid #F1F5F9",display:"flex",gap:3,flexWrap:"wrap",background:"#FAFAFA",flexShrink:0}}>
+              {([{c:"bold",l:"B",s:{fontWeight:900}},{c:"italic",l:"I",s:{fontStyle:"italic"}},{c:"underline",l:"U",s:{textDecoration:"underline"}}] as {c:string;l:string;s:any}[]).map(b=>(
+                <button key={b.c} onMouseDown={e=>{e.preventDefault();document.execCommand(b.c);}}
+                  style={{width:26,height:26,borderRadius:5,border:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",fontSize:12,...b.s,color:"#1E293B"}}>{b.l}</button>
+              ))}
+              <div style={{width:1,height:20,background:"#E2E8F0",margin:"0 3px",alignSelf:"center"}}/>
+              {["h1","h2","p"].map(t=>(
+                <button key={t} onMouseDown={e=>{e.preventDefault();document.execCommand("formatBlock",false,t);}}
+                  style={{padding:"3px 7px",borderRadius:5,border:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",fontSize:10,fontWeight:600,color:"#64748B"}}>{t.toUpperCase()}</button>
+              ))}
+              <div style={{width:1,height:20,background:"#E2E8F0",margin:"0 3px",alignSelf:"center"}}/>
+              <button onMouseDown={e=>{e.preventDefault();document.execCommand("insertUnorderedList");}}
+                style={{padding:"3px 7px",borderRadius:5,border:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",fontSize:10,color:"#64748B"}}>• Список</button>
+              <button onMouseDown={e=>{e.preventDefault();document.execCommand("insertOrderedList");}}
+                style={{padding:"3px 7px",borderRadius:5,border:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",fontSize:10,color:"#64748B"}}>1. Нум.</button>
             </div>
-          )}
+            <div contentEditable suppressContentEditableWarning
+              onInput={e=>{
+                const h=(e.currentTarget as HTMLElement).innerHTML;
+                const next=normalizeBoardItems(items as any[]).map(i=>i.id===docItem.id?{...i,docContent:h}:i);
+                setItems(next);clearTimeout((window as any)._docTimer);
+                (window as any)._docTimer=setTimeout(()=>triggerSave(next,lines),1500);
+              }}
+              dangerouslySetInnerHTML={{__html:(docItem as any).docContent||"<p>Начни писать здесь...</p>"}}
+              style={{flex:1,padding:"20px 22px",outline:"none",fontSize:14,lineHeight:1.8,color:"#1E293B",overflowY:"auto",fontFamily:"'Montserrat',sans-serif"}}/>
+          </div>}
 
           {/* Table editor */}
-          {docPanelItem.type==="table"&&(()=>{
-            const raw=(docPanelItem as any).tableData;
-            const rows:string[][]=raw?JSON.parse(raw):Array.from({length:5},()=>Array(4).fill(""));
-            const saveTable=(newRows:string[][])=>{
-              const next=items.map(i=>i.id===docPanelItem.id?{...i,tableData:JSON.stringify(newRows)}:i);
-              setItems(next);
-              clearTimeout((window as any)._tblSaveTimer);
-              (window as any)._tblSaveTimer=setTimeout(()=>triggerSave(next,lines),1500);
-            };
-            return<div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-              {/* Table toolbar */}
-              <div style={{padding:"8px 14px",borderBottom:"1px solid #F1F5F9",display:"flex",gap:8,background:"#FAFAFA",flexShrink:0}}>
-                <button onClick={()=>saveTable([...rows,Array(rows[0]?.length||4).fill("")])}
-                  style={{padding:"4px 12px",borderRadius:7,border:"1px solid #E2E8F0",background:"#fff",cursor:"pointer",fontSize:12,fontWeight:600,color:"#10B981"}}>
-                  + Строка
+          {!isDoc&&<div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+            <div style={{padding:"7px 14px",borderBottom:"1px solid #F1F5F9",display:"flex",gap:6,flexWrap:"wrap",background:"#FAFAFA",flexShrink:0}}>
+              {[
+                {l:"+ Строка",fn:()=>saveTable([...tableRows,Array(tableRows[0]?.length||4).fill("")]),color:"#10B981"},
+                {l:"+ Столбец",fn:()=>saveTable(tableRows.map(r=>[...r,""])),color:"#10B981"},
+                ...(tableRows.length>1?[{l:"− Строку",fn:()=>saveTable(tableRows.slice(0,-1)),color:"#EF4444"}]:[]),
+                ...((tableRows[0]?.length||0)>1?[{l:"− Столбец",fn:()=>saveTable(tableRows.map(r=>r.slice(0,-1))),color:"#EF4444"}]:[]),
+              ].map((btn,i)=>(
+                <button key={i} onClick={btn.fn}
+                  style={{padding:"4px 10px",borderRadius:6,border:"1px solid #E2E8F0",background:"#fff",cursor:"pointer",fontSize:11,fontWeight:600,color:btn.color}}>
+                  {btn.l}
                 </button>
-                <button onClick={()=>saveTable(rows.map(r=>[...r,""]))}
-                  style={{padding:"4px 12px",borderRadius:7,border:"1px solid #E2E8F0",background:"#fff",cursor:"pointer",fontSize:12,fontWeight:600,color:"#10B981"}}>
-                  + Столбец
-                </button>
-                {rows.length>1&&<button onClick={()=>saveTable(rows.slice(0,-1))}
-                  style={{padding:"4px 12px",borderRadius:7,border:"1px solid #E2E8F0",background:"#fff",cursor:"pointer",fontSize:12,color:"#EF4444"}}>
-                  − Строку
-                </button>}
-                {(rows[0]?.length||0)>1&&<button onClick={()=>saveTable(rows.map(r=>r.slice(0,-1)))}
-                  style={{padding:"4px 12px",borderRadius:7,border:"1px solid #E2E8F0",background:"#fff",cursor:"pointer",fontSize:12,color:"#EF4444"}}>
-                  − Столбец
-                </button>}
-              </div>
-              <div style={{flex:1,overflow:"auto",padding:16}}>
-                <table style={{borderCollapse:"collapse",width:"100%",fontSize:13}}>
-                  <tbody>
-                    {rows.map((row,ri)=>(
-                      <tr key={ri}>
-                        {row.map((cell,ci)=>(
-                          <td key={ci} style={{border:"1px solid #E2E8F0",padding:0,background:ri===0?"#F0FDF4":"#fff",minWidth:80}}>
-                            <input value={cell} onChange={e=>{
-                              const nr=rows.map((r,r2)=>r2===ri?r.map((c,c2)=>c2===ci?e.target.value:c):r);
-                              saveTable(nr);
-                            }} style={{
-                              width:"100%",padding:"7px 10px",border:"none",background:"transparent",
-                              fontSize:13,fontFamily:"'Montserrat',sans-serif",
-                              fontWeight:ri===0?700:400,color:"#1E293B",outline:"none",
-                              boxSizing:"border-box" as const,
-                            }}/>
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>;
-          })()}
-        </div>
-      )}
+              ))}
+            </div>
+            <div style={{flex:1,overflow:"auto",padding:12}}>
+              <table style={{borderCollapse:"collapse",width:"100%",fontSize:13}}>
+                <tbody>
+                  {tableRows.map((row,ri)=>(
+                    <tr key={ri}>
+                      {row.map((cell,ci)=>(
+                        <td key={ci} style={{border:"1px solid #E2E8F0",padding:0,background:ri===0?"#F0FDF4":"#fff",minWidth:80}}>
+                          <input value={cell} onChange={e=>{
+                            const nr=tableRows.map((r,r2)=>r2===ri?r.map((c,c2)=>c2===ci?e.target.value:c):r);
+                            saveTable(nr);
+                          }} style={{width:"100%",padding:"7px 9px",border:"none",background:"transparent",fontSize:12,fontFamily:"'Montserrat',sans-serif",fontWeight:ri===0?700:400,color:"#1E293B",outline:"none",boxSizing:"border-box" as const}}/>
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>}
+        </div>;
+      })()}
 
       {externalDropHint&&(
         <div style={{position:"absolute",inset:0,top:48,zIndex:55,pointerEvents:"none",display:"flex",alignItems:"center",justifyContent:"center"}}>
