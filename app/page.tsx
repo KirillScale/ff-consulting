@@ -70,14 +70,6 @@ const NAV_GROUPS=[
     ]
   },
   {
-    label:"Программы",
-    items:[
-      {id:"board",label:"Vizzy Map",accent:"#FBBF24",ic:"M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"},
-      {id:"visitext",label:"Vizzy Text",accent:"#93C5FD",ic:"M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z M14 3v5h5 M9 13h6 M9 17h6 M9 9h2"},
-      {id:"sheets",label:"Vizzy Tables",accent:"#4ADE80",ic:"M3 10h18M3 6h18M3 14h18M3 18h18M10 3v18M6 3v18"},
-    ]
-  },
-  {
     label:"VIZZY AI",
     items:[
       {id:"ai",label:"Kirill Scales AI",ic:"M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z",accent:"#A78BFA"},
@@ -90,6 +82,7 @@ const NAV_GROUPS=[
     label:"Прочее",
     items:[
       {id:"links",label:"База ссылок",accent:"#94A3B8",ic:"M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"},
+      {id:"profile",label:"Настройки профиля",accent:"#A78BFA",ic:"M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2 M12 11a4 4 0 100-8 4 4 0 000 8z"},
     ]
   },
 ];
@@ -734,8 +727,8 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 /* ============ MAIN APP ============ */
 export default function App() {
   const [user, setUser] = useState<any>(null);
-  const APP_VERSION="v2.1"; // bump this to force-clear stale localStorage
-  const VALID_PAGES=["dashboard","strategy","crm","calls","content","pnl","sheets","visitext","media","ads","links","board","files","ai","script","product","stories","calc","tools","mailings"];
+  const APP_VERSION="v2.2"; // bump this to force-clear stale localStorage
+  const VALID_PAGES=["dashboard","strategy","crm","calls","content","pnl","media","ads","links","profile","files","ai","script","product","stories","calc","tools","mailings"];
 
   // Clear stale localStorage on version change
   useEffect(()=>{
@@ -812,7 +805,7 @@ export default function App() {
 
   return(
     <ThemeCtx.Provider value={{dark,toggle:toggleTheme}}>
-      <AppLayout user={user} page={page} setPage={setPage} userName={userName} userAvatar={userAvatar} setUserAvatar={setUserAvatar} logout={logout} nav={nav} dark={dark}/>
+      <AppLayout user={user} page={page} setPage={setPage} userName={userName} setUserName={setUserName} userAvatar={userAvatar} setUserAvatar={setUserAvatar} logout={logout} nav={nav} dark={dark}/>
     </ThemeCtx.Provider>
   );
 }
@@ -838,7 +831,7 @@ function SafePage({name,children}:{name:string,children:React.ReactNode}){
   return<PageErrorBoundary name={name}>{children}</PageErrorBoundary>;
 }
 
-function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,nav,dark}:any){
+function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAvatar,logout,nav,dark}:any){
   const isMobile=useIsMobile();
   const[sideCollapsed,setSideCollapsed]=useState(false);
   const sideW=sideCollapsed?64:248;
@@ -851,20 +844,18 @@ function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,n
     {page==="mailings"&&<SafePage name="Рассылки"><MailingsPage userId={user.id}/></SafePage>}
     {page==="content"&&<SafePage name="Контент"><ContentPage userId={user.id}/></SafePage>}
     {page==="pnl"&&<SafePage name="P&L"><PnlPage userId={user.id}/></SafePage>}
-    {page==="visitext"&&<SafePage name="Vizzy Text"><VisiTextPage userId={user.id}/></SafePage>}
-    {page==="sheets"&&<SafePage name="Таблицы"><SheetsPage userId={user.id}/></SafePage>}
     {page==="media"&&<SafePage name="Медийность"><MediaPage userId={user.id}/></SafePage>}
     {page==="ads"&&<SafePage name="Реклама"><AdsPage userId={user.id}/></SafePage>}
     {page==="calc"&&<SafePage name="Калькулятор"><CalcPage/></SafePage>}
     {page==="tools"&&<SafePage name="Инструменты"><ToolsPage/></SafePage>}
     {page==="links"&&<SafePage name="База ссылок"><LinksPage userId={user.id}/></SafePage>}
-    {page==="board"&&<SafePage name="Доска"><BoardPage userId={user.id}/></SafePage>}
+    {page==="profile"&&<SafePage name="Настройки профиля"><ProfilePage user={user} name={userName} avatar={userAvatar} setName={setUserName} setAvatar={setUserAvatar}/></SafePage>}
     {page==="files"&&<SafePage name="Файлы"><FilesPage userId={user.id}/></SafePage>}
     {page==="ai"&&<SafePage name="AI"><AIPage/></SafePage>}
     {page==="script"&&<SafePage name="Copy AI"><ScriptAIPage/></SafePage>}
     {page==="product"&&<SafePage name="Product AI"><ProductAIPage/></SafePage>}
     {page==="stories"&&<SafePage name="Stories AI"><StoriesAIPage/></SafePage>}
-    {!["dashboard","strategy","crm","calls","mailings","content","pnl","sheets","visitext","media","ads","calc","tools","links","board","files","ai","script","product","stories"].includes(page)&&nav&&<Placeholder title={nav.label} ic={nav.ic}/>}
+    {!["dashboard","strategy","crm","calls","mailings","content","pnl","media","ads","calc","tools","links","profile","files","ai","script","product","stories"].includes(page)&&nav&&<Placeholder title={nav.label} ic={nav.ic}/>}
   </>;
 
   return (
@@ -1042,6 +1033,58 @@ function AppLayout({user,page,setPage,userName,userAvatar,setUserAvatar,logout,n
   );
 }
 
+
+/* ============ PROFILE SETTINGS ============ */
+function ProfilePage({user,name,avatar,setName,setAvatar}:{user:any,name:string,avatar:string,setName:(v:string)=>void,setAvatar:(v:string)=>void}){
+  const isMobile=useIsMobile();
+  const[localName,setLocalName]=useState(name||"");
+  const[localAvatar,setLocalAvatar]=useState(avatar||"");
+  const[saving,setSaving]=useState(false);
+  const[msg,setMsg]=useState("");
+
+  useEffect(()=>{setLocalName(name||"");},[name]);
+  useEffect(()=>{setLocalAvatar(avatar||"");},[avatar]);
+
+  const save=async()=>{
+    const cleanName=localName.trim();
+    if(cleanName.length<2){setMsg("Имя должно быть минимум 2 символа");return;}
+    if(cleanName.length>60){setMsg("Имя слишком длинное. Максимум 60 символов");return;}
+    setSaving(true);setMsg("");
+    const payload={id:user.id,name:cleanName,avatar_url:localAvatar.trim()||null,updated_at:new Date().toISOString()};
+    const{error}=await supabase.from("profiles").upsert(payload,{onConflict:"id"});
+    setSaving(false);
+    if(error){setMsg("Не удалось сохранить профиль: "+error.message);return;}
+    setName(cleanName);setAvatar(localAvatar.trim());setMsg("Профиль сохранён");
+  };
+
+  return <div style={{maxWidth:760}}>
+    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:isMobile?18:28,marginBottom:20,display:"flex",alignItems:"center",gap:16}}>
+      <div style={{width:64,height:64,borderRadius:18,background:"rgba(255,255,255,0.10)",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",border:"1px solid rgba(255,255,255,0.12)"}}>
+        {localAvatar?<img src={localAvatar} alt="Аватар" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<span style={{color:"#fff",fontSize:24,fontWeight:800}}>{(localName||user.email||"U").slice(0,1).toUpperCase()}</span>}
+      </div>
+      <div>
+        <div style={{fontSize:isMobile?20:24,fontWeight:800,color:"#fff",marginBottom:4}}>Настройки профиля</div>
+        <div style={{fontSize:13,color:"rgba(255,255,255,0.55)"}}>Здесь можно поменять имя, которое отображается в платформе</div>
+      </div>
+    </div>
+
+    <Card style={{display:"flex",flexDirection:"column",gap:16}}>
+      <div>
+        <label style={{display:"block",fontSize:12,color:C.t2,fontWeight:700,marginBottom:7}}>Имя</label>
+        <input value={localName} onChange={e=>setLocalName(e.target.value)} placeholder="Например: Кирилл" maxLength={60} style={iS()}/>
+      </div>
+      <div>
+        <label style={{display:"block",fontSize:12,color:C.t2,fontWeight:700,marginBottom:7}}>Ссылка на аватар, необязательно</label>
+        <input value={localAvatar} onChange={e=>setLocalAvatar(e.target.value)} placeholder="https://..." style={iS()}/>
+      </div>
+      {msg&&<div style={{fontSize:13,color:msg.includes("сохран")?C.g:C.r,fontWeight:600}}>{msg}</div>}
+      <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+        <Btn onClick={save} disabled={saving}>{saving?"Сохраняю...":"Сохранить профиль"}</Btn>
+        <Btn primary={false} onClick={()=>{setLocalName(name||"");setLocalAvatar(avatar||"");setMsg("");}}>Сбросить</Btn>
+      </div>
+    </Card>
+  </div>;
+}
 
 /* ============ DASHBOARD ============ */
 function DonutChart({done,total,size=140}:{done:number,total:number,size?:number}){
@@ -6345,6 +6388,12 @@ const AI_CONFIG:{[k:string]:{name:string,avatar:string,storageKey:string,welcome
     suggestions:["📱 Reels / TikTok","🎥 YouTube","📸 Instagram Stories","📢 Telegram"]},
 };
 
+const AI_BETA_WARNING="AI-функции работают только при открытом окне. Они всё ещё в beta-версии, поэтому ответы могут глючить, теряться или работать нестабильно.";
+
+function AiBetaNotice({theme}:{theme:AIChatTheme}){return <div style={{margin:"10px 16px 0",padding:"10px 12px",borderRadius:10,background:"rgba(245,158,11,0.10)",border:"1px solid rgba(245,158,11,0.25)",color:"#FBBF24",fontSize:11,lineHeight:1.45,fontWeight:500}}>
+  ⚠️ {AI_BETA_WARNING}
+</div>;}
+
 function AIChatBase({pageId,system}:{pageId:string,system?:string}){
   const isMobile=useIsMobile();
   const theme=AI_THEMES[pageId]||AI_THEMES.ai;
@@ -6508,6 +6557,7 @@ function AIChatBase({pageId,system}:{pageId:string,system?:string}){
           Очистить
         </button>}
       </div>
+      <AiBetaNotice theme={theme}/>
 
       {/* Messages */}
       <div style={{flex:1,overflowY:"auto",padding:"16px",display:"flex",flexDirection:"column",gap:12}}>
@@ -6882,6 +6932,7 @@ function StoriesAIPage(){
           {!isMobile&&<button onClick={download} style={{padding:"5px 10px",background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.5)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:7,fontSize:10,cursor:"pointer"}}>Скачать</button>}
         </div>}
       </div>
+      <AiBetaNotice theme={theme}/>
 
       {/* Form or Chat */}
       {step==="form"
