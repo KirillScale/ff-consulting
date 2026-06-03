@@ -2636,6 +2636,10 @@ function StrategyPage({userId}:{userId:string}){
   const[showTF,setShowTF]=useState<string|null>(null);
   const[tf,sTf]=useState({text:"",mins:30,type:"biz"});
   const[tfErr,setTfErr]=useState("");
+  const[recurModal,setRecurModal]=useState<{dayStr:string}|null>(null);
+  const[recurForm,setRecurForm]=useState({text:"",mins:30,type:"biz",from:"",to:"",freq:"daily"});
+  const[recurErr,setRecurErr]=useState("");
+  const[recurLoading,setRecurLoading]=useState(false);
   const[showGF,setShowGF]=useState(false);
   const[gf,sGf]=useState({name:"",deadline:"",color:C.a});
   const[openGoal,setOpenGoal]=useState<string|null>(null);
@@ -2697,6 +2701,29 @@ function StrategyPage({userId}:{userId:string}){
     const order=kanban.data.filter((t:any)=>t.date===d).length;
     await kanban.add({text:tf.text,mins:tf.mins,type:tf.type,date:d,done:false,status:"todo",sort_order:order});
     sTf({text:"",mins:30,type:"biz"});setShowTF(null);
+  };
+
+  const addRecurringTask=async()=>{
+    setRecurErr("");
+    if(!recurForm.text.trim()){setRecurErr("Введи название задачи");return;}
+    if(!recurForm.from||!recurForm.to){setRecurErr("Укажи период");return;}
+    if(recurForm.from>recurForm.to){setRecurErr("Дата начала позже конца");return;}
+    setRecurLoading(true);
+    const from=new Date(recurForm.from+"T00:00:00");
+    const to=new Date(recurForm.to+"T00:00:00");
+    const dates:string[]=[];
+    const cur=new Date(from);
+    while(cur<=to){
+      const d=cur.getFullYear()+"-"+String(cur.getMonth()+1).padStart(2,"0")+"-"+String(cur.getDate()).padStart(2,"0");
+      dates.push(d);
+      if(recurForm.freq==="daily")cur.setDate(cur.getDate()+1);
+      else if(recurForm.freq==="weekdays"){cur.setDate(cur.getDate()+1);while(cur.getDay()===0||cur.getDay()===6)cur.setDate(cur.getDate()+1);}
+      else if(recurForm.freq==="weekly")cur.setDate(cur.getDate()+7);
+    }
+    await Promise.all(dates.map((d,i)=>kanban.add({text:recurForm.text,mins:recurForm.mins,type:recurForm.type,date:d,done:false,status:"todo",sort_order:kanban.data.filter((t:any)=>t.date===d).length+i,recurring:true})));
+    setRecurLoading(false);
+    setRecurModal(null);
+    setRecurForm({text:"",mins:30,type:"biz",from:"",to:"",freq:"daily"});
   };
 
   const dayStats=(d:string)=>{
@@ -3398,8 +3425,17 @@ function StrategyPage({userId}:{userId:string}){
                     <select value={tf.type} onChange={e=>sTf({...tf,type:e.target.value})} style={{...iS(),flex:1,padding:"6px 8px",fontSize:12}}>{TYPES.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}</select>
                   </div>
                   {tfErr&&<div style={{fontSize:11,color:C.r,marginBottom:4}}>{tfErr}</div>}
-                  <div style={{display:"flex",gap:6}}><button onClick={()=>addTask(d)} style={{flex:1,padding:"6px",background:C.a,color:"#fff",border:"none",borderRadius:6,fontSize:12,cursor:"pointer"}}>+</button><button onClick={()=>setShowTF(null)} style={{padding:"6px 10px",background:C.bg,border:"1px solid "+C.bd,borderRadius:6,fontSize:12,cursor:"pointer"}}>×</button></div>
-                </div>:<button onClick={()=>setShowTF(d)} style={{marginTop:6,width:"100%",padding:"6px",background:C.bg,border:"1px dashed "+C.bd,borderRadius:8,fontSize:12,color:C.t2,cursor:"pointer"}}>+ Задача</button>}
+                  <div style={{display:"flex",gap:6}}>
+                    <button onClick={()=>addTask(d)} style={{flex:1,padding:"6px",background:C.a,color:"#fff",border:"none",borderRadius:6,fontSize:12,cursor:"pointer"}}>+</button>
+                    <button onClick={()=>{setShowTF(null);setRecurModal({dayStr:d});setRecurForm(f=>({...f,from:d,to:d}));}} title="Повторять задачу"
+                      style={{padding:"6px 10px",background:"#7C3AED10",border:"1px solid #7C3AED30",borderRadius:6,fontSize:12,cursor:"pointer",color:"#7C3AED",fontWeight:600}}>🔁</button>
+                    <button onClick={()=>setShowTF(null)} style={{padding:"6px 10px",background:C.bg,border:"1px solid "+C.bd,borderRadius:6,fontSize:12,cursor:"pointer"}}>×</button>
+                  </div>
+                </div>:<div style={{display:"flex",gap:6,marginTop:6}}>
+                  <button onClick={()=>setShowTF(d)} style={{flex:1,padding:"6px",background:C.bg,border:"1px dashed "+C.bd,borderRadius:8,fontSize:12,color:C.t2,cursor:"pointer"}}>+ Задача</button>
+                  <button onClick={()=>{setRecurModal({dayStr:d});setRecurForm(f=>({...f,from:d,to:d}));}} title="Повторять задачу"
+                    style={{padding:"6px 10px",background:"#7C3AED10",border:"1px dashed #7C3AED40",borderRadius:8,fontSize:12,color:"#7C3AED",cursor:"pointer"}}>🔁</button>
+                </div>}
               </div>
               {st.overload&&<div style={{padding:"8px 12px",background:"#FEF2F2",fontSize:11,color:C.r}}>{st.totalMins} мин запланировано</div>}
               <div style={{padding:"10px 12px",borderTop:"1px solid "+C.bd,display:"flex",gap:8}}>
@@ -3420,6 +3456,88 @@ function StrategyPage({userId}:{userId:string}){
 
     {/* Task modal */}
     {activeModal&&<TaskModal task={activeModal.task} taskType={activeModal.type} userId={userId} onClose={()=>setActiveModal(null)}/>}
+
+    {/* Recurring task modal */}
+    {recurModal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:20,backdropFilter:"blur(6px)"}} onClick={()=>setRecurModal(null)}>
+      <div style={{width:"min(480px,100%)",background:C.w,borderRadius:20,overflow:"hidden",boxShadow:"0 24px 60px rgba(0,0,0,0.25)",border:"1px solid "+C.bd}} onClick={e=>e.stopPropagation()}>
+        {/* Header */}
+        <div style={{padding:"18px 22px",background:"linear-gradient(135deg,#7C3AED,#4F8EF7)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div>
+            <div style={{fontSize:16,fontWeight:700,color:"#fff"}}>🔁 Повторяющаяся задача</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.7)",marginTop:2}}>Создаст задачу на каждый день периода</div>
+          </div>
+          <button onClick={()=>setRecurModal(null)} style={{width:30,height:30,borderRadius:10,border:"1px solid rgba(255,255,255,0.2)",background:"rgba(255,255,255,0.1)",cursor:"pointer",color:"#fff",fontSize:18}}>×</button>
+        </div>
+        {/* Body */}
+        <div style={{padding:"20px 22px",display:"flex",flexDirection:"column",gap:14}}>
+          <div>
+            <label style={{fontSize:11,color:C.t2,fontWeight:600,display:"block",marginBottom:5}}>Название задачи *</label>
+            <input value={recurForm.text} onChange={e=>setRecurForm({...recurForm,text:e.target.value})}
+              placeholder="Публиковать видео в Instagram"
+              style={{...iS(),padding:"10px 12px",fontSize:14}}/>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <div>
+              <label style={{fontSize:11,color:C.t2,fontWeight:600,display:"block",marginBottom:5}}>Начало *</label>
+              <input type="date" value={recurForm.from} onChange={e=>setRecurForm({...recurForm,from:e.target.value})} style={{...iS(),padding:"9px 10px",fontSize:13}}/>
+            </div>
+            <div>
+              <label style={{fontSize:11,color:C.t2,fontWeight:600,display:"block",marginBottom:5}}>Конец *</label>
+              <input type="date" value={recurForm.to} onChange={e=>setRecurForm({...recurForm,to:e.target.value})} style={{...iS(),padding:"9px 10px",fontSize:13}}/>
+            </div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <div>
+              <label style={{fontSize:11,color:C.t2,fontWeight:600,display:"block",marginBottom:5}}>Длительность (мин)</label>
+              <input type="number" value={recurForm.mins} onChange={e=>setRecurForm({...recurForm,mins:+e.target.value})} min={15} max={480} step={15} style={{...iS(),padding:"9px 10px",fontSize:13}}/>
+            </div>
+            <div>
+              <label style={{fontSize:11,color:C.t2,fontWeight:600,display:"block",marginBottom:5}}>Тип</label>
+              <select value={recurForm.type} onChange={e=>setRecurForm({...recurForm,type:e.target.value})} style={{...iS(),padding:"9px 10px",fontSize:13}}>
+                {TYPES.map((t:any)=><option key={t.id} value={t.id}>{t.label}</option>)}
+              </select>
+            </div>
+          </div>
+          {/* Frequency selector */}
+          <div>
+            <label style={{fontSize:11,color:C.t2,fontWeight:600,display:"block",marginBottom:8}}>Частота повтора</label>
+            <div style={{display:"flex",gap:8}}>
+              {([["daily","Каждый день"],["weekdays","Будни"],["weekly","Раз в неделю"]] as [string,string][]).map(([val,lbl])=>(
+                <button key={val} onClick={()=>setRecurForm({...recurForm,freq:val})}
+                  style={{flex:1,padding:"8px 4px",borderRadius:10,border:"1px solid "+(recurForm.freq===val?"#7C3AED":""+C.bd),background:recurForm.freq===val?"#7C3AED10":"transparent",color:recurForm.freq===val?"#7C3AED":C.t2,fontSize:12,fontWeight:recurForm.freq===val?700:400,cursor:"pointer",transition:"all 0.15s"}}>
+                  {lbl}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* Preview */}
+          {recurForm.from&&recurForm.to&&recurForm.from<=recurForm.to&&(()=>{
+            const from=new Date(recurForm.from+"T00:00:00");
+            const to=new Date(recurForm.to+"T00:00:00");
+            let count=0;const cur=new Date(from);
+            while(cur<=to&&count<200){
+              if(recurForm.freq==="weekdays"&&(cur.getDay()===0||cur.getDay()===6)){cur.setDate(cur.getDate()+1);continue;}
+              count++;
+              if(recurForm.freq==="daily"||recurForm.freq==="weekdays")cur.setDate(cur.getDate()+1);
+              else cur.setDate(cur.getDate()+7);
+            }
+            return <div style={{padding:"10px 14px",background:"#7C3AED10",borderRadius:10,border:"1px solid #7C3AED20",fontSize:12,color:"#7C3AED",fontWeight:500}}>
+              Будет создано <b>{count}</b> {count===1?"задача":count<5?"задачи":"задач"} · {recurForm.mins} мин каждая
+            </div>;
+          })()}
+          {recurErr&&<div style={{fontSize:12,color:C.r,background:C.r+"10",padding:"8px 12px",borderRadius:8}}>{recurErr}</div>}
+        </div>
+        {/* Footer */}
+        <div style={{padding:"14px 22px",borderTop:"1px solid "+C.bd,display:"flex",gap:10,justifyContent:"flex-end"}}>
+          <button onClick={()=>setRecurModal(null)} style={{padding:"10px 18px",background:C.bg,border:"1px solid "+C.bd,borderRadius:10,fontSize:13,cursor:"pointer",color:C.t2}}>Отмена</button>
+          <button onClick={addRecurringTask} disabled={recurLoading}
+            style={{padding:"10px 20px",background:recurLoading?"#9CA3AF":"linear-gradient(135deg,#7C3AED,#4F8EF7)",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:700,cursor:recurLoading?"default":"pointer",display:"flex",alignItems:"center",gap:8}}>
+            {recurLoading?<><div style={{width:14,height:14,border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/> Создаю...</>:"🔁 Запустить повтор"}
+          </button>
+        </div>
+      </div>
+    </div>}
+
     </div>
   </>;
 }
