@@ -2010,7 +2010,7 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
   const saveGoalEdit=async()=>{
     if(!editGoalId||!editGoalData.name?.trim())return;
     const{p}=calcAutoPriority(editGoalData.end_date||null);
-    await goals.update(editGoalId,{name:editGoalData.name,description:editGoalData.description,color:editGoalData.color,start_date:editGoalData.start_date||null,end_date:editGoalData.end_date||null,deadline:editGoalData.end_date||null,...(!editGoalData.priority_manual?{priority:p}:{})});
+    await goals.update(editGoalId,{name:editGoalData.name,description:editGoalData.description||null,color:editGoalData.color||C.a,start_date:editGoalData.start_date||null,end_date:editGoalData.end_date||null,deadline:editGoalData.end_date||null,...(!editGoalData.priority_manual?{priority:p}:{})});
     setEditGoalId(null);
   };
 
@@ -2197,6 +2197,7 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
 
       {/* Tasks */}
       {isOpen&&<div style={{padding:"10px 18px 14px"}}>
+        {g.description&&<div style={{fontSize:12,color:C.t2,lineHeight:1.6,marginBottom:10,padding:"8px 12px",background:C.ib,borderRadius:8,borderLeft:"3px solid "+borderColor}}>{g.description}</div>}
         {gTasks.map((t:any,ti:number)=>{
           const isDone=t.status==="done"||t.done;
           const isEditing=editingTaskId===t.id;
@@ -2344,26 +2345,14 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
       <div style={{display:"flex",gap:8}}><Btn onClick={addChildGoal}>Создать</Btn><Btn primary={false} onClick={()=>setShowNewGoal(false)}>Отмена</Btn></div>
     </div>}
 
-    {/* Goals grouped by priority (active only) */}
+    {/* Goals list (active only) */}
     <div style={{padding:"16px 24px",display:"flex",flexDirection:"column",gap:16}}>
       {childGoals.filter((g:any)=>goalProgress(g.id)<100).length===0&&
         <div style={{padding:"32px 0",textAlign:"center",color:C.t2,fontSize:14}}>Создай первую цель</div>}
 
-      {Object.entries(PRIORITIES).map(([pKey,pInfo])=>{
-        const group=(groupedGoals[pKey]||[]).filter((g:any)=>goalProgress(g.id)<100);
-        if(group.length===0)return null;
-        return <div key={pKey}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-            <span style={{fontSize:14,animation:pKey==="urgent"?"pulse 1.5s ease-in-out infinite":"none"}}>{pInfo.icon}</span>
-            <span style={{fontSize:12,fontWeight:700,color:pInfo.color,textTransform:"uppercase",letterSpacing:0.5}}>{pInfo.label}</span>
-            <span style={{fontSize:11,background:pInfo.color+"15",color:pInfo.color,borderRadius:20,padding:"1px 8px",fontWeight:600}}>{group.length}</span>
-            <div style={{flex:1,height:1,background:pInfo.color+"20"}}/>
-          </div>
-          <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            {group.map((g:any)=><GoalCard key={g.id} g={g} isAchieved={false}/>)}
-          </div>
-        </div>;
-      })}
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        {sortedGoals.filter((g:any)=>goalProgress(g.id)<100).map((g:any)=><GoalCard key={g.id} g={g} isAchieved={false}/>)}
+      </div>
 
       {/* ── Achieved section ── */}
       {childGoals.filter((g:any)=>goalProgress(g.id)===100).length>0&&(
@@ -2403,18 +2392,20 @@ function StrategyPage({userId}:{userId:string}){
   // Merged tasks for calendar: calTasks + kanban (with date) + goalTasks (with date)
   const allCalTasks=useMemo(()=>{
     const cal=calTasks.data;
-    // Kanban tasks with date → show in calendar (auto-place time if missing)
+    // Helper: compute end_time from start_time + mins
+    const minsToEnd=(start:string,mins:number)=>{const b=timeToMin(start);const e=b+(mins||60);return String(Math.floor(e/60)%24).padStart(2,"0")+":"+String(e%60).padStart(2,"0");};
+    // Kanban tasks with date → show in calendar (height = duration in mins)
     const kb=kanban.data.filter((t:any)=>t.date).map((t:any)=>({
       ...t,_src:"kanban",
       start_time:t.start_time||"10:00",
-      end_time:t.end_time||(t.start_time?`${String(parseInt(t.start_time)+1).padStart(2,"0")}:00`:"11:00"),
+      end_time:t.end_time||minsToEnd(t.start_time||"10:00",t.mins||60),
       auto_placed:!t.start_time,
     }));
-    // Goal tasks with date
+    // Goal tasks with date (height = duration in mins)
     const gt=goalTasks.data.filter((t:any)=>t.date).map((t:any)=>({
       ...t,_src:"goal",
       start_time:t.start_time||"10:00",
-      end_time:t.end_time||(t.start_time?`${String(parseInt(t.start_time)+1).padStart(2,"0")}:00`:"11:00"),
+      end_time:t.end_time||minsToEnd(t.start_time||"10:00",t.mins||60),
       auto_placed:!t.start_time,
     }));
     return[...cal,...kb,...gt];
@@ -3065,17 +3056,12 @@ function StrategyPage({userId}:{userId:string}){
       onDrop={canDrag&&dayStr?()=>onKanbanDrop(t.id,dayStr):undefined}
       onDragEnd={canDrag?()=>{setKanbanDrag(null);setKanbanOver(null);}:undefined}
       style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:8,
-        background:isDone?"#F0FDF4":
-          (()=>{const u=taskUrgency(t);return u.kind==="burning"?"#FFF1F1":u.kind==="deferrable"?"#FFFBEB":C.bg;})(),
-        borderLeft:"3px solid "+(
-          (()=>{const u=taskUrgency(t);return u.kind==="burning"?"#EF4444":u.kind==="deferrable"?"#F59E0B":typeColor(t.type);})()),
-        border:(()=>{const u=taskUrgency(t);return u.kind==="burning"?"1px solid #FCA5A5":u.kind==="deferrable"?"1px solid #FDE68A":"none";})(),
+        background:isDone?"#F0FDF4":C.bg,
+        borderLeft:"3px solid "+typeColor(t.type),
         opacity:isKanbanDragging?0.4:1,
-        boxShadow:isKanbanOver?"0 0 0 2px "+C.a:isKanbanDragging?"0 4px 16px rgba(0,0,0,0.15)":
-          (()=>{const u=taskUrgency(t);return u.kind==="burning"?"0 0 10px rgba(239,68,68,0.15)":u.kind==="deferrable"?"0 0 8px rgba(245,158,11,0.1)":"none";})(),
+        boxShadow:isKanbanOver?"0 0 0 2px "+C.a:isKanbanDragging?"0 4px 16px rgba(0,0,0,0.15)":"none",
         cursor:canDrag?"grab":"default",
         transition:"opacity 0.15s,box-shadow 0.15s",
-        animation:(()=>{const u=taskUrgency(t);return u.kind==="burning"&&!isDone?"burningGlow 2s ease-in-out infinite":"none";})(),
       }}>
       {canDrag&&<span style={{fontSize:13,color:C.t2,cursor:"grab",userSelect:"none",flexShrink:0,opacity:0.5}}>⠿</span>}
       <button onClick={()=>cycleTaskStatus(t)} title={tsLbl(status)} style={{width:20,height:20,minWidth:20,borderRadius:6,border:"2px solid "+statusColor,background:isDone?C.g:status==="inprogress"?C.y+"33":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
@@ -3085,8 +3071,6 @@ function StrategyPage({userId}:{userId:string}){
       <div style={{flex:1,minWidth:0,cursor:"pointer"}} onClick={()=>setActiveModal({task:t,type:t.fromGoal?"goal":"kanban"})}>
         <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap"}}>
           <span style={{fontSize:12,fontWeight:500,textDecoration:isDone?"line-through":"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.text}</span>
-          {taskUrgency(t).kind==="burning"&&!isDone&&<span style={{fontSize:9,fontWeight:800,color:"#EF4444",background:"#FEE2E2",borderRadius:4,padding:"1px 5px",whiteSpace:"nowrap",border:"1px solid #FCA5A5"}}>🔥 ГОРИТ</span>}
-          {taskUrgency(t).kind==="deferrable"&&!isDone&&<span style={{fontSize:9,fontWeight:700,color:"#D97706",background:"#FEF3C7",borderRadius:4,padding:"1px 5px",whiteSpace:"nowrap",border:"1px solid #FDE68A"}}>⏸ ОТЛОЖИ</span>}
         </div>
         <div style={{display:"flex",gap:6,marginTop:2}}><span style={{fontSize:10,color:C.t2}}>{t.mins}м</span>{t.fromGoal&&<span style={{fontSize:10,color:t.goalColor}}>★</span>}{showDate&&t.date&&<span style={{fontSize:10,color:taskUrgency(t).kind==="burning"?"#EF4444":C.t2,fontWeight:taskUrgency(t).kind==="burning"?700:400}}>{t.date.substring(5)}</span>}</div>
       </div>
