@@ -1916,12 +1916,7 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
           <input type="number" value={mins} onChange={e=>setMins(+e.target.value)} min={30} max={480} step={5}
             style={{...iS(),padding:"6px 8px",fontSize:12}}/>
         </div>
-        <div style={{display:"flex",flexDirection:"column",gap:2,flex:1}}>
-          <label style={{fontSize:10,color:C.t2,fontWeight:600}}>Тип</label>
-          <select value={type} onChange={e=>setType(e.target.value)} style={{...iS(),padding:"6px 8px",fontSize:12}}>
-            {TYPES.map((t:any)=><option key={t.id} value={t.id}>{t.label}</option>)}
-          </select>
-        </div>
+
         <div style={{display:"flex",flexDirection:"column",gap:2,flex:"0 0 130px"}}>
           <label style={{fontSize:10,color:C.t2,fontWeight:600}}>Дата</label>
           <input type="date" value={date} onChange={e=>setDate(e.target.value)}
@@ -1959,9 +1954,7 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
         style={{...iS(),padding:"8px 10px",fontSize:12,marginBottom:8}}/>
       <div style={{display:"flex",gap:6,marginBottom:6}}>
         <input type="number" value={localMins} onChange={e=>setLocalMins(+e.target.value)} min={30} max={480} step={5} style={{...iS(),width:75,padding:"6px 8px",fontSize:12}}/>
-        <select value={localType} onChange={e=>setLocalType(e.target.value)} style={{...iS(),flex:1,padding:"6px 8px",fontSize:12}}>
-          {TYPES.map((t:any)=><option key={t.id} value={t.id}>{t.label}</option>)}
-        </select>
+
         <input type="date" value={localDate} onChange={e=>setLocalDate(e.target.value)} style={{...iS(),width:130,padding:"6px 8px",fontSize:12}}/>
       </div>
       {localErr&&<div style={{fontSize:11,color:C.r,marginBottom:6}}>{localErr}</div>}
@@ -3421,8 +3414,7 @@ function StrategyPage({userId}:{userId:string}){
                 {showTF===d?<div style={{marginTop:6}}>
                   <input placeholder="Задача" value={tf.text} onChange={e=>sTf({...tf,text:e.target.value})} style={{...iS(),padding:"8px 10px",fontSize:12,marginBottom:6}}/>
                   <div style={{display:"flex",gap:6,marginBottom:6}}>
-                    <input type="number" value={tf.mins} onChange={e=>sTf({...tf,mins:+e.target.value})} min={30} max={480} step={5} style={{...iS(),width:70,padding:"6px 8px",fontSize:12}}/>
-                    <select value={tf.type} onChange={e=>sTf({...tf,type:e.target.value})} style={{...iS(),flex:1,padding:"6px 8px",fontSize:12}}>{TYPES.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}</select>
+                    <input type="number" value={tf.mins} onChange={e=>sTf({...tf,mins:+e.target.value})} min={15} max={480} step={15} style={{...iS(),padding:"6px 8px",fontSize:12,flex:1}} placeholder="Минут"/>
                   </div>
                   {tfErr&&<div style={{fontSize:11,color:C.r,marginBottom:4}}>{tfErr}</div>}
                   <div style={{display:"flex",gap:6}}>
@@ -3437,10 +3429,27 @@ function StrategyPage({userId}:{userId:string}){
                     style={{padding:"6px 10px",background:"#7C3AED10",border:"1px dashed #7C3AED40",borderRadius:8,fontSize:12,color:"#7C3AED",cursor:"pointer"}}>🔁</button>
                 </div>}
               </div>
-              {st.overload&&<div style={{padding:"8px 12px",background:"#FEF2F2",fontSize:11,color:C.r}}>{st.totalMins} мин запланировано</div>}
-              <div style={{padding:"10px 12px",borderTop:"1px solid "+C.bd,display:"flex",gap:8}}>
-                {[{l:"Б",d:st.bizDone,t:st.bizTotal,c:C.a},{l:"Д",d:st.othDone,t:st.othTotal,c:C.y},{l:"Дл",d:st.delDone,t:st.delTotal,c:C.t2}].map((b,i)=><div key={i} style={{flex:1}}><div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:C.t2,marginBottom:3}}><span>{b.l}</span><span>{b.d}/{b.t}</span></div><div style={{height:4,background:C.bg,borderRadius:2,overflow:"hidden"}}><div style={{width:b.t?b.d/b.t*100+"%":"0%",height:"100%",background:b.c,borderRadius:2}}/></div></div>)}
-              </div>
+              {(()=>{
+                const nonDel=st.tasks.filter((t:any)=>t.type!=="delegate");
+                const done=nonDel.filter((t:any)=>t.status==="done"||t.done).length;
+                const total=nonDel.length;
+                const pct=total>0?Math.round(done/total*100):0;
+                const allDone=total>0&&done===total;
+                const barColor=pct===100?"#16A34A":pct>=60?"#22C55E":pct>=30?"#F59E0B":"#EF4444";
+                const gradient=pct===100?"linear-gradient(90deg,#4ADE80,#16A34A)":pct>=60?"linear-gradient(90deg,#86EFAC,#22C55E)":pct>=30?"linear-gradient(90deg,#FDE68A,#F59E0B)":"linear-gradient(90deg,#FCA5A5,#EF4444)";
+                if(total===0)return null;
+                return <div style={{padding:"10px 14px",borderTop:"1px solid "+C.bd,background:allDone?"#F0FDF4":C.w,transition:"background 0.4s"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <span style={{fontSize:18,flexShrink:0,transition:"all 0.4s"}} title={allDone?"Всё выполнено!":pct>0?"В процессе":"Не начато"}>
+                      {allDone?"🏆":pct>=60?"💪":pct>=30?"😐":"😔"}
+                    </span>
+                    <div style={{flex:1,position:"relative",height:8,background:"rgba(0,0,0,0.06)",borderRadius:99,overflow:"hidden"}}>
+                      <div style={{position:"absolute",top:0,left:0,height:"100%",width:pct+"%",background:gradient,borderRadius:99,transition:"width 0.5s cubic-bezier(0.34,1.56,0.64,1)",boxShadow:"0 0 6px "+barColor+"66"}}/>
+                    </div>
+                    <span style={{fontSize:11,fontWeight:700,color:barColor,flexShrink:0,minWidth:32,textAlign:"right",transition:"color 0.4s"}}>{done}/{total}</span>
+                  </div>
+                </div>;
+              })()}
             </div>})}
         </div>
       </div>
@@ -3486,17 +3495,9 @@ function StrategyPage({userId}:{userId:string}){
               <input type="date" value={recurForm.to} onChange={e=>setRecurForm({...recurForm,to:e.target.value})} style={{...iS(),padding:"9px 10px",fontSize:13}}/>
             </div>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-            <div>
-              <label style={{fontSize:11,color:C.t2,fontWeight:600,display:"block",marginBottom:5}}>Длительность (мин)</label>
-              <input type="number" value={recurForm.mins} onChange={e=>setRecurForm({...recurForm,mins:+e.target.value})} min={15} max={480} step={15} style={{...iS(),padding:"9px 10px",fontSize:13}}/>
-            </div>
-            <div>
-              <label style={{fontSize:11,color:C.t2,fontWeight:600,display:"block",marginBottom:5}}>Тип</label>
-              <select value={recurForm.type} onChange={e=>setRecurForm({...recurForm,type:e.target.value})} style={{...iS(),padding:"9px 10px",fontSize:13}}>
-                {TYPES.map((t:any)=><option key={t.id} value={t.id}>{t.label}</option>)}
-              </select>
-            </div>
+          <div>
+            <label style={{fontSize:11,color:C.t2,fontWeight:600,display:"block",marginBottom:5}}>Длительность (мин)</label>
+            <input type="number" value={recurForm.mins} onChange={e=>setRecurForm({...recurForm,mins:+e.target.value})} min={15} max={480} step={15} style={{...iS(),padding:"9px 10px",fontSize:13}}/>
           </div>
           {/* Frequency selector */}
           <div>
