@@ -1850,6 +1850,7 @@ const calcAutoPriority=(endDate:string|null):{p:"urgent"|"medium"|"low",days:num
 
 function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOver,onGtDragStart,onGtDragOver,onGtDrop,setActiveModal,TYPES}:any){
   const isMobile=useIsMobile();
+  const goalSubtasks=useTable("goal_subtasks",userId);
   const[openGoal,setOpenGoal]=useState<string|null>(null);
   const[showGTF,setShowGTF]=useState<string|null>(null);
   const[gtf,sGtf]=useState({text:"",mins:30,type:"biz",date:""});
@@ -1861,6 +1862,34 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
   const[priorityMenu,setPriorityMenu]=useState<string|null>(null);
   const[toast,setToast]=useState<string|null>(null);
   const[editingTaskId,setEditingTaskId]=useState<string|null>(null);
+  // Subtask state
+  const[openSubtasks,setOpenSubtasks]=useState<string|null>(null); // task id
+  const[showSTF,setShowSTF]=useState<string|null>(null); // task id
+  const[stfText,setStfText]=useState("");
+  // Goal drag-n-drop reorder
+  const[goalDragId,setGoalDragId]=useState<string|null>(null);
+  const[goalDragOver,setGoalDragOver]=useState<string|null>(null);
+  const[goalOrder,setGoalOrder]=useState<string[]>([]);
+  useEffect(()=>{
+    const ids=goals.data.filter((g:any)=>!g.is_system_pinned).map((g:any)=>g.id);
+    setGoalOrder(prev=>{
+      if(prev.length===0||ids.some((id:string)=>!prev.includes(id))||prev.some((id:string)=>!ids.includes(id)))return ids;
+      return prev;
+    });
+  },[goals.data]);
+  const onGoalDragStart=(id:string)=>setGoalDragId(id);
+  const onGoalDragOver=(id:string,e:React.DragEvent)=>{e.preventDefault();setGoalDragOver(id);};
+  const onGoalDrop=(targetId:string)=>{
+    if(!goalDragId||goalDragId===targetId){setGoalDragId(null);setGoalDragOver(null);return;}
+    setGoalOrder(prev=>{
+      const arr=[...prev];
+      const fi=arr.indexOf(goalDragId),ti=arr.indexOf(targetId);
+      if(fi<0||ti<0)return prev;
+      arr.splice(fi,1);arr.splice(ti,0,goalDragId);
+      return arr;
+    });
+    setGoalDragId(null);setGoalDragOver(null);
+  };
 
   // Stable ref for gtf to avoid stale closures in AddTaskForm
   const gtfRef=useRef(gtf);
@@ -2088,7 +2117,7 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
     const sticker=prgSticker(p);
     const doneTasks=gTasks.filter((t:any)=>t.status==="done"||t.done).length;
 
-    const borderColor=isAchieved?"#4ADE80":pr.color;
+    const borderColor=isAchieved?"#4ADE80":(g.color||C.a);
     const cardBg=isAchieved?"linear-gradient(135deg,#F0FDF4,#DCFCE7)":C.w;
 
     return <div style={{background:isAchieved?"#F0FDF4":C.bg,borderRadius:14,overflow:"hidden",border:"1px solid "+(isAchieved?"#BBF7D0":C.bd),
@@ -2206,32 +2235,21 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
             return <EditTaskForm key={t.id} task={t} goalId={g.id} onClose={()=>setEditingTaskId(null)} goalTasks={goalTasks} TYPES={TYPES}/>;
           }
 
-          return <div key={t.id}
-            style={{display:"flex",alignItems:"center",gap:8,padding:"9px 12px",borderRadius:10,
-              background:isDone?"#F0FDF4":
-                taskUrgency(t).kind==="burning"?"#FFF1F1":
-                taskUrgency(t).kind==="deferrable"?"#FFFBEB":C.w,
-              marginBottom:6,
-              border:"1px solid "+(
-                taskUrgency(t).kind==="burning"?"#FCA5A5":
-                taskUrgency(t).kind==="deferrable"?"#FDE68A":C.bd),
-              borderLeft:"3px solid "+(
-                taskUrgency(t).kind==="burning"?"#EF4444":
-                taskUrgency(t).kind==="deferrable"?"#F59E0B":
-                t.type==="biz"?C.a:t.type==="delegate"?C.t2:C.y),
+          const tSubtasks=goalSubtasks.data.filter((s:any)=>s.task_id===t.id).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));
+          const doneSubtasks=tSubtasks.filter((s:any)=>s.done).length;
+          const isStOpen=openSubtasks===t.id;
+          const taskColor=t.type==="biz"?C.a:t.type==="delegate"?C.t2:C.y;
+          return <div key={t.id} style={{marginBottom:6}}>
+            {/* Task row */}
+            <div
+            style={{display:"flex",alignItems:"center",gap:8,padding:"9px 12px",borderRadius:isStOpen?"10px 10px 0 0":10,
+              background:isDone?"#F0FDF4":C.w,
+              border:"1px solid "+C.bd,
+              borderLeft:"3px solid "+taskColor,
               transition:"box-shadow 0.15s",
-              boxShadow:
-                taskUrgency(t).kind==="burning"?"0 0 12px rgba(239,68,68,0.18), 0 0 0 1px rgba(239,68,68,0.12)":
-                taskUrgency(t).kind==="deferrable"?"0 0 8px rgba(245,158,11,0.12)":"none",
-              animation:taskUrgency(t).kind==="burning"?"burningGlow 2s ease-in-out infinite":"none",
             }}
             onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 2px 8px rgba(0,0,0,0.08)";}}
-            onMouseLeave={e=>{
-              const u=taskUrgency(t);
-              (e.currentTarget as HTMLElement).style.boxShadow=
-                u.kind==="burning"?"0 0 12px rgba(239,68,68,0.18)":
-                u.kind==="deferrable"?"0 0 8px rgba(245,158,11,0.12)":"none";
-            }}>
+            onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
             {/* Move up/down buttons */}
             <div style={{display:"flex",flexDirection:"column",gap:1,flexShrink:0}}>
               <button onClick={async()=>{
@@ -2267,23 +2285,20 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
             <div style={{flex:1,minWidth:0}}>
               <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:2}}>
                 <span style={{fontSize:13,fontWeight:500,textDecoration:isDone?"line-through":"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:isDone?C.t2:C.t1}}>{t.text}</span>
-                {taskUrgency(t).kind==="burning"&&!isDone&&(
-                  <span style={{fontSize:10,fontWeight:800,color:"#EF4444",background:"#FEE2E2",borderRadius:6,padding:"1px 7px",whiteSpace:"nowrap",letterSpacing:0.3,border:"1px solid #FCA5A5"}}>
-                    🔥 ГОРИТ{taskUrgency(t).daysLeft!==null&&taskUrgency(t).daysLeft!<0?` (${Math.abs(taskUrgency(t).daysLeft!)} дн. назад)`:taskUrgency(t).daysLeft===0?" (сегодня)":""}
-                  </span>
-                )}
-                {taskUrgency(t).kind==="deferrable"&&!isDone&&(
-                  <span style={{fontSize:10,fontWeight:700,color:"#D97706",background:"#FEF3C7",borderRadius:6,padding:"1px 7px",whiteSpace:"nowrap",letterSpacing:0.3,border:"1px solid #FDE68A"}}>
-                    ⏸ МОЖНО ОТЛОЖИТЬ
-                  </span>
-                )}
               </div>
               <div style={{display:"flex",gap:8,alignItems:"center"}}>
                 <span style={{fontSize:10,color:C.t2}}>{t.mins}м</span>
-                {t.date&&<span style={{fontSize:10,color:taskUrgency(t).kind==="burning"?"#EF4444":taskUrgency(t).kind==="deferrable"?"#D97706":C.t2,fontWeight:taskUrgency(t).kind!=="normal"?600:400}}>📅 {t.date.substring(5)}</span>}
+                {t.date&&<span style={{fontSize:10,color:C.t2}}>📅 {t.date.substring(5)}</span>}
                 <Tag label={tsLbl(t.status||"todo")} color={tsCol(t.status||"todo")}/>
+                {tSubtasks.length>0&&<span style={{fontSize:10,color:C.t2,background:C.ib,borderRadius:10,padding:"1px 7px",border:"1px solid "+C.bd}}>{doneSubtasks}/{tSubtasks.length} подзадач</span>}
               </div>
             </div>
+
+            {/* Subtasks toggle */}
+            <button onClick={()=>setOpenSubtasks(isStOpen?null:t.id)} title="Подзадачи"
+              style={{width:26,height:26,borderRadius:7,border:"1px solid "+(isStOpen?taskColor+"44":C.bd),background:isStOpen?taskColor+"10":C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.15s"}}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={isStOpen?taskColor:C.t2} strokeWidth="2.5"><polyline points={isStOpen?"18 15 12 9 6 15":"6 9 12 15 18 9"}/></svg>
+            </button>
 
             {/* Edit button */}
             <button onClick={()=>setEditingTaskId(t.id)} title="Редактировать"
@@ -2300,6 +2315,43 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
               onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.opacity="0.5";(e.currentTarget as HTMLElement).style.borderColor=C.bd;}}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.r} strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
             </button>
+          </div>
+            {/* Subtasks panel */}
+            {isStOpen&&<div style={{borderLeft:"3px solid "+taskColor,borderRight:"1px solid "+C.bd,borderBottom:"1px solid "+C.bd,borderRadius:"0 0 10px 10px",padding:"8px 12px",background:C.ib}}>
+              {tSubtasks.map((s:any)=>(
+                <div key={s.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 8px",borderRadius:8,marginBottom:4,background:C.w,border:"1px solid "+C.bd}}>
+                  <button onClick={()=>goalSubtasks.update(s.id,{done:!s.done})}
+                    style={{width:15,height:15,minWidth:15,borderRadius:4,border:"2px solid "+(s.done?C.g:C.bd),background:s.done?C.g:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                    {s.done&&<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
+                  </button>
+                  <span style={{flex:1,fontSize:12,color:s.done?C.t2:C.t1,textDecoration:s.done?"line-through":"none"}}>{s.text}</span>
+                  <button onClick={()=>goalSubtasks.remove(s.id)}
+                    style={{width:20,height:20,border:"none",background:"transparent",cursor:"pointer",color:C.r,fontSize:13,opacity:0.5,flexShrink:0}}
+                    onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.opacity="1";}}
+                    onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.opacity="0.5";}}>×</button>
+                </div>
+              ))}
+              {showSTF===t.id
+                ?<div style={{display:"flex",gap:6,marginTop:4}}>
+                  <input autoFocus placeholder="Название подзадачи" value={stfText} onChange={e=>setStfText(e.target.value)}
+                    onKeyDown={async e=>{
+                      if(e.key==="Enter"&&stfText.trim()){
+                        await goalSubtasks.add({task_id:t.id,goal_id:g.id,text:stfText.trim(),done:false,sort_order:tSubtasks.length});
+                        setStfText("");setShowSTF(null);
+                      }
+                      if(e.key==="Escape"){setStfText("");setShowSTF(null);}
+                    }}
+                    style={{...iS(),flex:1,padding:"6px 10px",fontSize:12}}/>
+                  <button onClick={async()=>{
+                    if(!stfText.trim())return;
+                    await goalSubtasks.add({task_id:t.id,goal_id:g.id,text:stfText.trim(),done:false,sort_order:tSubtasks.length});
+                    setStfText("");setShowSTF(null);
+                  }} style={{padding:"6px 14px",background:C.a,color:"#fff",border:"none",borderRadius:8,fontSize:12,cursor:"pointer",fontWeight:600}}>+</button>
+                  <button onClick={()=>{setStfText("");setShowSTF(null);}} style={{padding:"6px 10px",background:C.bg,border:"1px solid "+C.bd,borderRadius:8,fontSize:12,cursor:"pointer",color:C.t2}}>✕</button>
+                </div>
+                :<button onClick={()=>{setShowSTF(t.id);setStfText("");}} style={{width:"100%",padding:"5px",background:"transparent",border:"1px dashed "+C.bd,borderRadius:8,fontSize:11,color:C.t2,cursor:"pointer",marginTop:4}}>+ Подзадача</button>
+              }
+            </div>}
           </div>;
         })}
         {showGTF===g.id
@@ -2351,7 +2403,17 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
         <div style={{padding:"32px 0",textAlign:"center",color:C.t2,fontSize:14}}>Создай первую цель</div>}
 
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
-        {sortedGoals.filter((g:any)=>goalProgress(g.id)<100).map((g:any)=><GoalCard key={g.id} g={g} isAchieved={false}/>)}
+        {goalOrder.map(id=>{const g=goals.data.find((gg:any)=>gg.id===id);if(!g||goalProgress(g.id)>=100)return null;
+          return <div key={g.id}
+            draggable
+            onDragStart={()=>onGoalDragStart(g.id)}
+            onDragOver={e=>onGoalDragOver(g.id,e)}
+            onDrop={()=>onGoalDrop(g.id)}
+            onDragEnd={()=>{setGoalDragId(null);setGoalDragOver(null);}}
+            style={{opacity:goalDragId===g.id?0.45:1,outline:goalDragOver===g.id&&goalDragId!==g.id?"2px dashed "+C.a:"none",borderRadius:14,transition:"opacity 0.15s"}}>
+            <GoalCard g={g} isAchieved={false}/>
+          </div>;
+        })}
       </div>
 
       {/* ── Achieved section ── */}
