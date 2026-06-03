@@ -2392,8 +2392,8 @@ function StrategyPage({userId}:{userId:string}){
   // Merged tasks for calendar: calTasks + kanban (with date) + goalTasks (with date)
   const allCalTasks=useMemo(()=>{
     const cal=calTasks.data;
-    // Helper: compute end_time from start_time + mins
-    const minsToEnd=(start:string,mins:number)=>{const b=timeToMin(start);const e=b+(mins||60);return String(Math.floor(e/60)%24).padStart(2,"0")+":"+String(e%60).padStart(2,"0");};
+    // Helper: compute end_time from start_time + mins (inline parse, no dependency on timeToMin)
+    const minsToEnd=(start:string,mins:number)=>{const[sh,sm]=(start||"10:00").split(":").map(Number);const e=sh*60+sm+(mins||60);return String(Math.floor(e/60)%24).padStart(2,"0")+":"+String(e%60).padStart(2,"0");};
     // Kanban tasks with date → show in calendar (height = duration in mins)
     const kb=kanban.data.filter((t:any)=>t.date).map((t:any)=>({
       ...t,_src:"kanban",
