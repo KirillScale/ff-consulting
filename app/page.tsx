@@ -2538,8 +2538,10 @@ function StrategyPage({userId}:{userId:string}){
 
   // Calendar helpers
   const SLOT_H=56; // px per hour
-  const CAL_START=7; // 07:00
-  const CAL_HOURS=16; // 07:00–23:00
+  const CAL_START=7; // 07:00 (main visible start)
+  const CAL_HOURS=17; // 07:00–24:00
+  const CAL_EARLY=7;  // 00:00–07:00 (collapsible)
+  const[calShowEarly,setCalShowEarly]=useState(false);
   const timeToMin=(t:string)=>{const[h,m]=(t||"00:00").split(":").map(Number);return h*60+m;};
   const minToTime=(m:number)=>`${String(Math.floor(m/60)).padStart(2,"0")}:${String(m%60).padStart(2,"0")}`;
   const fmtDur=(mins:number)=>mins>=60?`${Math.floor(mins/60)}ч${mins%60?` ${mins%60}м`:""}`:` ${mins}м`;
@@ -2638,7 +2640,7 @@ function StrategyPage({userId}:{userId:string}){
   const[openGoal,setOpenGoal]=useState<string|null>(null);
   const[showGTF,setShowGTF]=useState<string|null>(null);
   const[gtf,sGtf]=useState({text:"",mins:30,type:"biz",date:""});
-  const[scroll,setScroll]=useState(0);
+  const[scroll,setScroll]=useState(7);
   const[quote]=useState(()=>QUOTES[Math.floor(Math.random()*QUOTES.length)]);
   const[editingTask,setEditingTask]=useState<string|null>(null);
   const[editText,setEditText]=useState("");
@@ -2675,8 +2677,9 @@ function StrategyPage({userId}:{userId:string}){
     }
   };
 
-  const days=useMemo(()=>{const d=[];for(let i=0;i<7;i++){const dt=new Date();dt.setDate(dt.getDate()+i);d.push(ds(dt));}return d;},[]);
+  const days=useMemo(()=>{const d=[];for(let i=-7;i<14;i++){const dt=new Date();dt.setDate(dt.getDate()+i);d.push(ds(dt));}return d;},[]);
   const td=today();
+  // scroll=7 puts today first
   const WDS=["Вс","Пн","Вт","Ср","Чт","Пт","Сб"];
   const TYPES=[{id:"biz",label:"Бизнес",c:C.a},{id:"other",label:"Другое",c:C.y},{id:"delegate",label:"Делегировано",c:C.t2}];
   const typeColor=(t:string)=>(TYPES.find(x=>x.id===t)||{c:C.t2}).c;
@@ -2759,12 +2762,53 @@ function StrategyPage({userId}:{userId:string}){
     const nowTop=((nowMin-CAL_START*60)/60)*SLOT_H;
     const tasksOnDay=(d:string)=>allCalTasks.filter((t:any)=>(t.date||t.start_date)===d);
 
-    return<div id="cal-grid-inner" style={{display:"flex",background:C.w,borderRadius:16,border:"1px solid "+C.bd,overflow:"hidden",userSelect:"none"}}>
+    return<div id="cal-grid-outer" style={{display:"flex",flexDirection:"column",background:C.w,borderRadius:16,border:"1px solid "+C.bd,overflow:"hidden",userSelect:"none"}}>
+      {/* Early hours toggle */}
+      <button onClick={()=>setCalShowEarly(v=>!v)}
+        style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"6px 0",background:calShowEarly?"rgba(37,99,235,0.04)":C.bg,border:"none",borderBottom:"1px solid "+C.bd,cursor:"pointer",fontSize:11,color:C.t2,fontWeight:600,transition:"background 0.2s"}}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points={calShowEarly?"18 15 12 9 6 15":"6 9 12 15 18 9"}/></svg>
+        {calShowEarly?"Скрыть 00:00 – 07:00":"Показать 00:00 – 07:00"}
+      </button>
+      {/* Early hours (00–07) */}
+      {calShowEarly&&<div id="cal-grid-early" style={{display:"flex",borderBottom:"2px solid "+C.bd,background:"rgba(0,0,0,0.015)"}}>
+        <div style={{width:52,flexShrink:0,borderRight:"1px solid "+C.bd}}>
+          {Array.from({length:CAL_EARLY},(_,i)=>i).map(h=>(
+            <div key={h} style={{height:SLOT_H,display:"flex",alignItems:"flex-start",justifyContent:"flex-end",paddingRight:8,paddingTop:2}}>
+              <span style={{fontSize:10,color:C.t2}}>{String(h).padStart(2,"0")}:00</span>
+            </div>
+          ))}
+        </div>
+        <div style={{flex:1,display:"grid",gridTemplateColumns:`repeat(${days.length},1fr)`}}>
+          {days.map((dateStr)=>{
+            const earlyTasks=allCalTasks.filter((t:any)=>(t.date||t.start_date)===dateStr&&timeToMin(t.start_time||"10:00")<CAL_EARLY*60);
+            return<div key={dateStr} style={{borderRight:"1px solid "+C.bd,position:"relative",height:CAL_EARLY*SLOT_H}}>
+              {Array.from({length:CAL_EARLY},(_,i)=>(
+                <div key={i} onClick={()=>!dragTaskId&&!resizing&&openCalNew(dateStr,i)}
+                  style={{height:SLOT_H,borderBottom:"1px solid rgba(0,0,0,0.04)",cursor:"pointer"}}
+                  onMouseEnter={e=>{if(!dragTaskId&&!resizing)(e.currentTarget as HTMLElement).style.background="rgba(37,99,235,0.03)";}}
+                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}/>
+              ))}
+              {earlyTasks.map((t:any,ti:number)=>{
+                const st=timeToMin(t.start_time||"00:00");
+                const et=timeToMin(t.end_time||"01:00");
+                const topPx=Math.max(0,st/60*SLOT_H);
+                const heightPx=Math.max(20,(et-st)/60*SLOT_H-2);
+                const isDone=t.status==="done"||t.done;
+                const color=isDone?"#22C55E":(t._src==="goal"?(goals.data.find((g:any)=>g.id===t.goal_id)?.color||C.a):typeColor(t.type||"biz"));
+                return<div key={t.id} style={{position:"absolute",top:topPx,left:"2px",width:"94%",height:heightPx,background:color+"14",border:"1.5px solid "+color+"40",borderLeft:"3px solid "+color,borderRadius:7,padding:"3px 6px 3px 8px",overflow:"hidden",zIndex:ti+2,fontSize:10,color:color}}>
+                  {t.text||t.title}
+                </div>;
+              })}
+            </div>;
+          })}
+        </div>
+      </div>}
+      <div id="cal-grid-inner" style={{display:"flex"}}>
       {/* Time gutter */}
       <div style={{width:52,flexShrink:0,borderRight:"1px solid "+C.bd,paddingTop:48}}>
         {Array.from({length:CAL_HOURS},(_,i)=>i+CAL_START).map(h=>(
           <div key={h} style={{height:SLOT_H,display:"flex",alignItems:"flex-start",justifyContent:"flex-end",paddingRight:8,paddingTop:2}}>
-            <span style={{fontSize:10,color:C.t2}}>{String(h).padStart(2,"0")}:00</span>
+            <span style={{fontSize:10,color:C.t2}}>{h===24||h%24===0?"00":String(h).padStart(2,"0")}:00</span>
           </div>
         ))}
       </div>
@@ -2871,7 +2915,7 @@ function StrategyPage({userId}:{userId:string}){
           </div>;
         })}
       </div>
-    </div>;
+    </div></div>;
   };
 
   // ── CalendarView ──────────────────────────────────────────
@@ -3109,6 +3153,7 @@ function StrategyPage({userId}:{userId:string}){
   };
 
   const visibleDays=isMobile?days.slice(scroll,scroll+1):days.slice(scroll,scroll+4);
+  const maxScroll=isMobile?days.length-1:days.length-4;
 
   const TaskItem=({t,showDate=false,dayStr}:{t:any,showDate?:boolean,dayStr?:string})=>{
     const status=t.status||"todo";
@@ -3365,11 +3410,7 @@ function StrategyPage({userId}:{userId:string}){
         </div>
       </div>
       {/* Auto-placed banner */}
-      {(()=>{const u=allCalTasks.filter((t:any)=>t.auto_placed&&!t.manually_placed);if(!u.length)return null;
-        return<div style={{background:C.y+"10",border:"1px solid "+C.y+"30",borderRadius:12,padding:"10px 14px",marginBottom:14,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-          <span style={{fontSize:12,fontWeight:600,color:C.y}}>⚡ {u.length} незапланированных задач</span>
-          <span style={{fontSize:11,color:C.t2}}>Перетащи их на удобное время</span>
-        </div>;})()}
+
       <div style={{overflowY:"auto",maxHeight:"calc(100vh - 280px)"}}>
         <CalendarView/>
       </div>
@@ -3384,7 +3425,8 @@ function StrategyPage({userId}:{userId:string}){
           <div style={{display:"flex",gap:8,alignItems:"center"}}>
             {isMobile&&<span style={{fontSize:12,color:C.t2,marginRight:4}}>{scroll+1} / 7</span>}
             <button onClick={()=>setScroll(Math.max(0,scroll-1))} disabled={scroll===0} style={{width:36,height:36,borderRadius:10,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:scroll===0?0.3:1}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg></button>
-            <button onClick={()=>setScroll(Math.min(isMobile?6:3,scroll+1))} disabled={scroll>=(isMobile?6:3)} style={{width:36,height:36,borderRadius:10,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:scroll>=(isMobile?6:3)?0.3:1}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg></button>
+            <button onClick={()=>setScroll(7)} title="Сегодня" style={{height:36,padding:"0 10px",borderRadius:10,border:"1px solid "+C.bd,background:scroll===7?C.a+"15":C.w,cursor:"pointer",fontSize:11,color:scroll===7?C.a:C.t2,fontWeight:600}}>Сегодня</button>
+            <button onClick={()=>setScroll(Math.min(maxScroll,scroll+1))} disabled={scroll>=maxScroll} style={{width:36,height:36,borderRadius:10,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:scroll>=maxScroll?0.3:1}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg></button>
           </div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(4,1fr)",gap:isMobile?12:14}}>
