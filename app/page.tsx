@@ -3617,6 +3617,7 @@ function CrmPage({userId}:{userId:string}){
   const[dragId,setDragId]=useState<string|null>(null);
   const[dragOver,setDragOver]=useState<string|null>(null);
   const[openLead,setOpenLead]=useState<string|null>(null);
+  const[expandedNote,setExpandedNote]=useState<string|null>(null);
   const[editStageId,setEditStageId]=useState<string|null>(null);
 
   // Funnel modals
@@ -3916,8 +3917,9 @@ function CrmPage({userId}:{userId:string}){
               ))}
             </div>
             <div style={{marginBottom:16}}>
-              <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4,fontWeight:500}}>Заметка</label>
-              <textarea value={editLeadData.note||""} onChange={e=>setEditLeadData({...editLeadData,note:e.target.value})} rows={3}
+              <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4,fontWeight:500}}>Описание лида</label>
+              <textarea value={editLeadData.note||""} onChange={e=>setEditLeadData({...editLeadData,note:e.target.value})} rows={5}
+                placeholder="Подробный конспект по лиду: боль, ситуация, договорённости, следующий шаг..."
                 style={{width:"100%",padding:"9px 11px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,outline:"none",background:C.ib,color:C.t1,resize:"vertical",fontFamily:"'Montserrat',sans-serif",boxSizing:"border-box" as const}}/>
             </div>
             <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
@@ -3992,7 +3994,29 @@ function CrmPage({userId}:{userId:string}){
 
         {isOpen&&<div style={{marginTop:10,paddingTop:10,borderTop:"1px solid "+C.bd,position:"relative"}}>
           {l.source&&<div style={{fontSize:10,color:C.t2,marginBottom:5}}>Источник: {l.source}</div>}
-          {l.note&&<div style={{fontSize:11,color:C.t1,marginBottom:8,lineHeight:1.5,wordBreak:"break-word"}}>{l.note}</div>}
+          {l.note&&(()=>{
+            const isExp=expandedNote===l.id;
+            const long=l.note.length>200||l.note.split("\n").length>3;
+            return<div style={{marginBottom:10}}>
+              <div style={{fontSize:10,fontWeight:700,color:C.t2,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Описание лида</div>
+              <div style={{
+                fontSize:12,color:C.t1,lineHeight:1.65,wordBreak:"break-word",whiteSpace:"pre-wrap",
+                background:C.ib,borderRadius:9,padding:"9px 11px",
+                borderLeft:"3px solid "+stageColor,
+                position:"relative",
+                maxHeight:isExp?"none":"72px",
+                overflow:"hidden",
+                transition:"max-height 0.3s ease",
+              }}>
+                {l.note}
+                {!isExp&&long&&<div style={{position:"absolute",bottom:0,left:0,right:0,height:32,background:"linear-gradient(to bottom,transparent,"+C.w+")",pointerEvents:"none",borderRadius:"0 0 9px 9px"}}/>}
+              </div>
+              {long&&<button onClick={e=>{e.stopPropagation();setExpandedNote(isExp?null:l.id);}}
+                style={{marginTop:4,fontSize:11,color:stageColor,background:"transparent",border:"none",cursor:"pointer",fontWeight:600,padding:"2px 0"}}>
+                {isExp?"▲ Свернуть":"▼ Читать полностью"}
+              </button>}
+            </div>;
+          })()}
 
           {/* Status change buttons */}
           <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:8}}>
@@ -4392,9 +4416,10 @@ function CrmPage({userId}:{userId:string}){
             ))}
           </div>
           <div style={{marginBottom:18}}>
-            <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>Заметка</label>
-            <textarea value={editLeadData.note||""} onChange={e=>setEditLeadData({...editLeadData,note:e.target.value})} rows={4}
-              style={{width:"100%",padding:"10px 12px",border:"1px solid "+C.bd,borderRadius:11,fontSize:12,outline:"none",background:C.ib,color:C.t1,resize:"vertical",fontFamily:"Montserrat, sans-serif",boxSizing:"border-box" as const,lineHeight:1.5}}/>
+            <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>📋 Описание лида</label>
+            <textarea value={editLeadData.note||""} onChange={e=>setEditLeadData({...editLeadData,note:e.target.value})} rows={6}
+              placeholder="Подробный конспект по лиду: откуда пришёл, в чём боль, что обсуждали, договорённости, следующий шаг..."
+              style={{width:"100%",padding:"10px 12px",border:"1px solid "+C.bd,borderRadius:11,fontSize:12,outline:"none",background:C.ib,color:C.t1,resize:"vertical",fontFamily:"Montserrat, sans-serif",boxSizing:"border-box" as const,lineHeight:1.6}}/>
           </div>
           <div style={{display:"flex",gap:10,justifyContent:"flex-end",flexWrap:"wrap"}}>
             <button onClick={()=>setEditLeadId(null)} style={{padding:"10px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:11,fontSize:13,cursor:"pointer",fontWeight:600}}>Отмена</button>
@@ -4528,7 +4553,7 @@ function CrmPage({userId}:{userId:string}){
           <div style={{fontSize:10,color:C.t2,paddingTop:20,lineHeight:1.5}}>Аватар лида<br/><span style={{opacity:0.6}}>Нажми чтобы загрузить</span></div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:10}}>
-          {([["name","Имя *"],["contact","Контакт"],["phone","Телефон"],["email","Email"],["note","Заметка"],["deal","Сделка, ₽"]] as const).map(([k,l])=>(
+          {([["name","Имя *"],["contact","Контакт"],["phone","Телефон"],["email","Email"],["note","Описание лида"],["deal","Сделка, ₽"]] as const).map(([k,l])=>(
             <div key={k}>
               <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4,fontWeight:500}}>{l}</label>
               <input type={k==="deal"?"number":"text"} value={(f as any)[k]} onChange={e=>sF({...f,[k]:e.target.value})}
@@ -4603,7 +4628,7 @@ function CrmPage({userId}:{userId:string}){
       {show&&<div style={{background:C.w,borderRadius:14,padding:18,marginBottom:16,border:"1px solid "+C.bd}} className="form-panel">
         <div style={{fontSize:14,fontWeight:600,marginBottom:14,color:C.t1}}>Новый лид</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
-          {([["name","Имя *"],["contact","Контакт"],["phone","Телефон"],["email","Email"],["note","Заметка"],["deal","Сделка, ₽"]] as const).map(([k,l])=>(
+          {([["name","Имя *"],["contact","Контакт"],["phone","Телефон"],["email","Email"],["note","Описание лида"],["deal","Сделка, ₽"]] as const).map(([k,l])=>(
             <div key={k}>
               <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4,fontWeight:500}}>{l}</label>
               <input type={k==="deal"?"number":"text"} value={(f as any)[k]} onChange={e=>sF({...f,[k]:e.target.value})}
