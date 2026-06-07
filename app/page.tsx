@@ -3850,9 +3850,9 @@ function CrmPage({userId}:{userId:string}){
     setAiReportLoading(l.id);
     try{
       const prompt="Ты опытный sales-менеджер. Составь чёткий структурированный отчёт по лиду для менеджера по продажам. Используй только предоставленные данные, не придумывай лишнего.\n\nДанные лида:\nИмя: "+(l.name||"—")+"\nКонтакт: "+(l.contact||"—")+"\nИсточник: "+(l.source||"—")+"\nСумма сделки: "+(l.deal?""+l.deal+" ₽":"—")+"\n\nБоли: "+(l.pains||"не заполнено")+"\nЖелания: "+(l.desires||"не заполнено")+"\nВозражения: "+(l.objections||"не заполнено")+"\nРычаги давления: "+(l.leverage||"не заполнено")+"\nСледующий шаг: "+(l.next_step||"не заполнено")+"\nОписание лида: "+(l.note||"не заполнено")+"\n\nСоставь короткий отчёт (5-7 предложений): резюме ситуации, ключевая боль, главное возражение, как закрыть, конкретный следующий шаг. Пиши по-русски, деловой стиль, без воды.";
-      const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:prompt}]})});
+      const resp=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:[{role:"user",content:prompt}]})});
       const data=await resp.json();
-      const text=(data.content||[]).filter((b:any)=>b.type==="text").map((b:any)=>b.text).join("");
+      const text=data.choices?.[0]?.message?.content||data.content?.[0]?.text||"";
       if(text){
         await allLeads.update(l.id,{ai_report:text});
       }
