@@ -3618,6 +3618,11 @@ function CrmPage({userId}:{userId:string}){
   const[dragOver,setDragOver]=useState<string|null>(null);
   const[openLead,setOpenLead]=useState<string|null>(null);
   const[expandedNote,setExpandedNote]=useState<string|null>(null);
+  const[workPanelLead,setWorkPanelLead]=useState<any|null>(null);
+  const[workPanelTab,setWorkPanelTab]=useState<"profile"|"touches">("profile");
+  const[touchGenLoading,setTouchGenLoading]=useState(false);
+  const[touchGenResult,setTouchGenResult]=useState<string>("");
+  const[touchGenGoal,setTouchGenGoal]=useState("");
   const[editStageId,setEditStageId]=useState<string|null>(null);
 
   // Funnel modals
@@ -3849,7 +3854,7 @@ function CrmPage({userId}:{userId:string}){
   const generateAiReport=async(l:any)=>{
     setAiReportLoading(l.id);
     try{
-      const prompt="Ты опытный sales-менеджер. Составь чёткий структурированный отчёт по лиду для менеджера по продажам. Используй только предоставленные данные, не придумывай лишнего.\n\nДанные лида:\nИмя: "+(l.name||"—")+"\nКонтакт: "+(l.contact||"—")+"\nИсточник: "+(l.source||"—")+"\nСумма сделки: "+(l.deal?""+l.deal+" ₽":"—")+"\n\nБоли: "+(l.pains||"не заполнено")+"\nЖелания: "+(l.desires||"не заполнено")+"\nВозражения: "+(l.objections||"не заполнено")+"\nРычаги давления: "+(l.leverage||"не заполнено")+"\nСледующий шаг: "+(l.next_step||"не заполнено")+"\nОписание лида: "+(l.note||"не заполнено")+"\n\nСоставь короткий отчёт (5-7 предложений): резюме ситуации, ключевая боль, главное возражение, как закрыть, конкретный следующий шаг. Пиши по-русски, деловой стиль, без воды.";
+      const prompt="Ты — опытный эксперт по продажам. На основе данных по лиду составь структурированный отчёт СТРОГО в следующем формате (не отступай от него):\n\n**Портрет лида:** [2-3 предложения — кто этот человек, откуда пришёл, что из себя представляет, какой у него контекст]\n\n**Моё мнение:** [твоя честная оценка — хороший ли это лид, стоит ли тратить время, насколько он горячий, есть ли красные флаги]\n\n**Следующий шаг — варианты действий:**\nВариант 1: [конкретное действие с деталями — что сказать, как написать, что предложить]\nВариант 2: [другой подход — например мягче или жёстче]\nВариант 3: [запасной вариант если первые два не сработают]\n\nДанные лида:\nИмя: "+(l.name||"—")+"\nКонтакт: "+(l.contact||"—")+"\nИсточник: "+(l.source||"—")+"\nСумма сделки: "+(l.deal?""+l.deal+" ₽":"—")+"\nОписание: "+(l.note||"—")+"\nБоли: "+(l.pains||"—")+"\nЖелания: "+(l.desires||"—")+"\nВозражения: "+(l.objections||"—")+"\nРычаги давления: "+(l.leverage||"—")+"\nСледующий шаг (от менеджера): "+(l.next_step||"—")+"\n\nПиши по-русски, коротко и по делу. Без вступлений и заключений. Только сам отчёт.";
       const resp=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:[{role:"user",content:prompt}]})});
       const data=await resp.json();
       const text=data.choices?.[0]?.message?.content||data.content?.[0]?.text||"";
@@ -3858,6 +3863,19 @@ function CrmPage({userId}:{userId:string}){
       }
     }catch(e){console.error(e);}
     setAiReportLoading(null);
+  };
+
+  const generateTouchpoint=async(l:any)=>{
+    if(!l.ai_report){setTouchGenResult("__no_report__");return;}
+    setTouchGenLoading(true);setTouchGenResult("");
+    try{
+      const prompt="Ты — эксперт по продажам. На основе отчёта по лиду и цели касания составь конкретный план касания.\n\nОтчёт по лиду:\n"+l.ai_report+"\n\nЦель касания: "+(touchGenGoal||"прогреть и продвинуть вперёд по воронке")+"\n\nСоставь план касания СТРОГО в этом формате:\n\n**Маршрут касания:**\n[3-4 конкретных шага — что делать по порядку]\n\n**Вариант 1 — Мягкий подход:**\n[конкретный текст сообщения или скрипт звонка]\n\n**Вариант 2 — Прямой подход:**\n[другой конкретный текст — более прямой и жёсткий]\n\n**Вариант 3 — Через ценность:**\n[сначала дать что-то полезное, потом предложение]\n\nПиши по-русски, конкретно, без воды. Только план.";
+      const resp=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:[{role:"user",content:prompt}]})});
+      const data=await resp.json();
+      const text=data.choices?.[0]?.message?.content||data.content?.[0]?.text||"";
+      setTouchGenResult(text);
+    }catch(e){setTouchGenResult("Ошибка генерации. Попробуй ещё раз.");}
+    setTouchGenLoading(false);
   };
 
   const saveEditLead=async()=>{
@@ -4067,10 +4085,33 @@ function CrmPage({userId}:{userId:string}){
                 ?<><div style={{width:13,height:13,border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/> Формирую отчёт...</>
                 :"✦ Сформировать отчёт через ИИ"}
             </button>
-            {l.ai_report&&<div style={{marginTop:8,padding:"10px 12px",background:"linear-gradient(135deg,#7C3AED08,#4F8EF708)",border:"1px solid #7C3AED25",borderRadius:10,fontSize:11,color:C.t1,lineHeight:1.7,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>
-              <div style={{fontSize:10,fontWeight:700,color:"#7C3AED",marginBottom:6,textTransform:"uppercase",letterSpacing:0.4}}>✦ Отчёт ИИ</div>
-              {l.ai_report}
-            </div>}
+            {l.ai_report&&(()=>{
+              const raw=l.ai_report||"";
+              const portrait=raw.match(/\*\*Портрет лида:\*\*\s*([\s\S]*?)(?=\*\*Моё мнение:|$)/)?.[1]?.trim()||"";
+              const opinion=raw.match(/\*\*Моё мнение:\*\*\s*([\s\S]*?)(?=\*\*Следующий шаг|$)/)?.[1]?.trim()||"";
+              const steps=raw.match(/\*\*Следующий шаг[^*]*\*\*\s*([\s\S]*?)$/)?.[1]?.trim()||"";
+              return<div style={{marginTop:8,display:"flex",flexDirection:"column",gap:8}}>
+                {portrait&&<div style={{padding:"10px 12px",background:"#EFF6FF",border:"1px solid #BFDBFE",borderRadius:10,borderLeft:"3px solid #3B82F6"}}>
+                  <div style={{fontSize:10,fontWeight:800,color:"#1D4ED8",marginBottom:5,textTransform:"uppercase",letterSpacing:0.5}}>👤 Портрет лида</div>
+                  <div style={{fontSize:11,color:"#1E3A5F",lineHeight:1.7}}>{portrait}</div>
+                </div>}
+                {opinion&&<div style={{padding:"10px 12px",background:(opinion.toLowerCase().includes("красн")||opinion.toLowerCase().includes("слаб")||opinion.toLowerCase().includes("холод"))?"#FFF1F2":"#F0FDF4",border:"1px solid "+((opinion.toLowerCase().includes("красн")||opinion.toLowerCase().includes("слаб")||opinion.toLowerCase().includes("холод"))?"#FECDD3":"#BBF7D0"),borderRadius:10,borderLeft:"3px solid "+((opinion.toLowerCase().includes("красн")||opinion.toLowerCase().includes("слаб")||opinion.toLowerCase().includes("холод"))?"#F43F5E":"#22C55E")}}>
+                  <div style={{fontSize:10,fontWeight:800,color:(opinion.toLowerCase().includes("красн")||opinion.toLowerCase().includes("слаб")||opinion.toLowerCase().includes("холод"))?"#BE123C":"#15803D",marginBottom:5,textTransform:"uppercase",letterSpacing:0.5}}>🧠 Моё мнение</div>
+                  <div style={{fontSize:11,color:"#1C1C1C",lineHeight:1.7}}>{opinion}</div>
+                </div>}
+                {steps&&<div style={{padding:"10px 12px",background:"linear-gradient(135deg,#7C3AED08,#4F8EF708)",border:"1px solid #7C3AED25",borderRadius:10,borderLeft:"3px solid #7C3AED"}}>
+                  <div style={{fontSize:10,fontWeight:800,color:"#7C3AED",marginBottom:6,textTransform:"uppercase",letterSpacing:0.5}}>👉 Варианты следующего шага</div>
+                  {steps.split("\nВариант ").filter(Boolean).map((v:string,i:number)=>{
+                    const chunk=i===0?v:"Вариант "+v;
+                    const[title,...rest]=chunk.split(":");
+                    return<div key={i} style={{marginBottom:i<2?8:0,padding:"7px 10px",background:"rgba(124,58,237,0.06)",borderRadius:8,fontSize:11,color:C.t1,lineHeight:1.65}}>
+                      <span style={{fontWeight:700,color:"#7C3AED"}}>{title.trim()}:</span>{rest.join(":")}
+                    </div>;
+                  })}
+                </div>}
+                {!portrait&&!opinion&&!steps&&<div style={{padding:"10px 12px",background:C.ib,borderRadius:10,fontSize:11,color:C.t1,lineHeight:1.7,whiteSpace:"pre-wrap"}}>{raw}</div>}
+              </div>;
+            })()}
           </div>
 
           {/* Status change buttons */}
@@ -4086,37 +4127,180 @@ function CrmPage({userId}:{userId:string}){
           </div>
 
           {/* Action row */}
-          <div style={{display:"flex",gap:6,alignItems:"stretch",flexWrap:"wrap"}}>
-            <button onClick={e=>{e.stopPropagation();openTouchModal(l.id);}}
-              style={{flex:"1 1 140px",padding:"8px 10px",background:"linear-gradient(135deg,#4F46E514,#7C3AED12)",color:"#6D48F7",border:"1px solid rgba(124,58,237,0.26)",borderRadius:10,fontSize:11,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,transition:"all 0.15s",boxShadow:touchModalLeadId===l.id?"0 0 16px rgba(124,58,237,0.22)":"0 0 12px rgba(124,58,237,0.08)",minHeight:34,boxSizing:"border-box" as const}}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#4F46E5,#7C3AED)";(e.currentTarget as HTMLElement).style.color="#fff";(e.currentTarget as HTMLElement).style.boxShadow="0 0 20px rgba(124,58,237,0.30)";}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#4F46E514,#7C3AED12)";(e.currentTarget as HTMLElement).style.color="#6D48F7";(e.currentTarget as HTMLElement).style.boxShadow=touchModalLeadId===l.id?"0 0 16px rgba(124,58,237,0.22)":"0 0 12px rgba(124,58,237,0.08)";}}>
-              ✨ Касания
+          <div style={{display:"flex",gap:6,alignItems:"stretch"}}>
+            <button onClick={e=>{e.stopPropagation();setWorkPanelLead(l);setWorkPanelTab("profile");setTouchGenResult("");setTouchGenGoal("");}}
+              style={{flex:1,padding:"9px 10px",background:"linear-gradient(135deg,#7C3AED,#4F8EF7)",color:"#fff",border:"none",borderRadius:10,fontSize:11,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,boxShadow:"0 0 14px rgba(124,58,237,0.25)"}}>
+              🚀 Работать с лидом
             </button>
-            {/* Написать button */}
-            {getWriteUrl(l)&&<a href={getWriteUrl(l)!} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}
-              style={{flex:"1 1 92px",padding:"8px 10px",background:"linear-gradient(135deg,#22C55E14,#16A34A10)",color:"#16A34A",border:"1px solid #22C55E30",borderRadius:10,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,textDecoration:"none",transition:"all 0.15s",minHeight:34,boxSizing:"border-box" as const}}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#22C55E,#16A34A)";(e.currentTarget as HTMLElement).style.color="#fff";(e.currentTarget as HTMLElement).style.boxShadow="0 0 12px #22C55E40";}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#22C55E14,#16A34A10)";(e.currentTarget as HTMLElement).style.color="#16A34A";(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
-              ✉️ Написать
-            </a>}
-            {/* Edit button */}
             <button onClick={e=>{e.stopPropagation();openEditLead(l);}}
-              style={{flex:"1 1 92px",padding:"8px 10px",background:C.a+"12",color:C.a,border:"1px solid "+C.a+"30",borderRadius:10,fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,transition:"all 0.15s",minHeight:34,boxSizing:"border-box" as const}}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.a+"20";(e.currentTarget as HTMLElement).style.boxShadow="0 0 12px "+C.a+"20";}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=C.a+"12";(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
-              ✏️ Изменить
+              style={{padding:"9px 12px",background:C.a+"12",color:C.a,border:"1px solid "+C.a+"30",borderRadius:10,fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              ✏️
             </button>
-            {/* Delete button */}
             <button onClick={e=>{e.stopPropagation();setDeleteConfirmId(l.id);}}
-              style={{padding:"8px 10px",background:"#E91E8C10",color:"#E91E8C",border:"1px solid #E91E8C30",borderRadius:10,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.15s",minHeight:34,minWidth:36,boxSizing:"border-box" as const}}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#FF6B9D,#E91E8C)";(e.currentTarget as HTMLElement).style.color="#fff";(e.currentTarget as HTMLElement).style.boxShadow="0 0 16px rgba(233,30,140,0.4)";}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="#E91E8C10";(e.currentTarget as HTMLElement).style.color="#E91E8C";(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
+              style={{padding:"9px 12px",background:"#E91E8C10",color:"#E91E8C",border:"1px solid #E91E8C30",borderRadius:10,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
               🗑
             </button>
           </div>
 
         </div>}
+      </div>
+    </div>;
+  };
+
+  // ── WORK PANEL (side drawer) ──────────────────────────────────────
+  const WorkPanel=()=>{
+    const l=workPanelLead;
+    if(!l)return null;
+    const stageColor=stages.find((s:any)=>s.id===l.status)?.color||C.a;
+    const writeUrl=getWriteUrl(l);
+    const hasReport=!!l.ai_report;
+
+    const AiReportBlocks=()=>{
+      if(!l.ai_report)return null;
+      const raw=l.ai_report||"";
+      const portrait=raw.match(/\*\*Портрет лида:\*\*\s*([\s\S]*?)(?=\*\*Моё мнение:|$)/)?.[1]?.trim()||"";
+      const opinion=raw.match(/\*\*Моё мнение:\*\*\s*([\s\S]*?)(?=\*\*Следующий шаг|$)/)?.[1]?.trim()||"";
+      const steps=raw.match(/\*\*Следующий шаг[^*]*\*\*\s*([\s\S]*?)$/)?.[1]?.trim()||"";
+      return<div style={{display:"flex",flexDirection:"column",gap:8}}>
+        {portrait&&<div style={{padding:"10px 12px",background:"#EFF6FF",border:"1px solid #BFDBFE",borderRadius:10,borderLeft:"3px solid #3B82F6"}}>
+          <div style={{fontSize:10,fontWeight:800,color:"#1D4ED8",marginBottom:4,textTransform:"uppercase",letterSpacing:0.5}}>👤 Портрет лида</div>
+          <div style={{fontSize:11,color:"#1E3A5F",lineHeight:1.7}}>{portrait}</div>
+        </div>}
+        {opinion&&<div style={{padding:"10px 12px",background:"#F0FDF4",border:"1px solid #BBF7D0",borderRadius:10,borderLeft:"3px solid #22C55E"}}>
+          <div style={{fontSize:10,fontWeight:800,color:"#15803D",marginBottom:4,textTransform:"uppercase",letterSpacing:0.5}}>🧠 Моё мнение</div>
+          <div style={{fontSize:11,color:"#1C1C1C",lineHeight:1.7}}>{opinion}</div>
+        </div>}
+        {steps&&<div style={{padding:"10px 12px",background:"#7C3AED08",border:"1px solid #7C3AED25",borderRadius:10,borderLeft:"3px solid #7C3AED"}}>
+          <div style={{fontSize:10,fontWeight:800,color:"#7C3AED",marginBottom:6,textTransform:"uppercase",letterSpacing:0.5}}>👉 Следующий шаг</div>
+          {steps.split("\nВариант ").filter(Boolean).map((v:string,i:number)=>{
+            const chunk=i===0?v:"Вариант "+v;
+            const[title,...rest]=chunk.split(":");
+            return<div key={i} style={{marginBottom:i<2?6:0,padding:"7px 10px",background:"rgba(124,58,237,0.06)",borderRadius:8,fontSize:11,color:C.t1,lineHeight:1.65}}>
+              <span style={{fontWeight:700,color:"#7C3AED"}}>{title.trim()}:</span>{rest.join(":")}
+            </div>;
+          })}
+        </div>}
+      </div>;
+    };
+
+    const TouchResult=()=>{
+      if(!touchGenResult)return null;
+      if(touchGenResult==="__no_report__")return<div style={{padding:"12px 14px",background:"#FFF7ED",border:"1px solid #FED7AA",borderRadius:10,fontSize:12,color:"#C2410C",lineHeight:1.6}}>
+        ⚠️ Сначала сформируй <b>Отчёт ИИ</b> во вкладке «Профиль» — касание строится на основе портрета лида.
+      </div>;
+      const route=touchGenResult.match(/\*\*Маршрут касания:\*\*\s*([\s\S]*?)(?=\*\*Вариант|$)/)?.[1]?.trim()||"";
+      const variants=touchGenResult.match(/\*\*Вариант \d+[^*]*\*\*\s*[\s\S]*?(?=\*\*Вариант \d+|$)/g)||[];
+      return<div style={{display:"flex",flexDirection:"column",gap:8,marginTop:12}}>
+        {route&&<div style={{padding:"10px 12px",background:"#EFF6FF",border:"1px solid #BFDBFE",borderRadius:10,borderLeft:"3px solid #3B82F6"}}>
+          <div style={{fontSize:10,fontWeight:800,color:"#1D4ED8",marginBottom:6,textTransform:"uppercase",letterSpacing:0.5}}>🗺 Маршрут касания</div>
+          <div style={{fontSize:11,color:"#1E3A5F",lineHeight:1.75,whiteSpace:"pre-line"}}>{route}</div>
+        </div>}
+        {variants.map((v:string,i:number)=>{
+          const title=v.match(/\*\*([^*]+)\*\*/)?.[1]||("Вариант "+(i+1));
+          const body=v.replace(/\*\*[^*]+\*\*\s*/,"").trim();
+          const colors=[["#7C3AED08","#7C3AED25","#7C3AED"],["#22C55E08","#BBF7D0","#15803D"],["#F59E0B08","#FDE68A","#B45309"]];
+          const[bg,border,accent]=colors[i]||colors[0];
+          return<div key={i} style={{padding:"10px 12px",background:bg,border:"1px solid "+border,borderRadius:10,borderLeft:"3px solid "+accent}}>
+            <div style={{fontSize:10,fontWeight:800,color:accent,marginBottom:6,textTransform:"uppercase",letterSpacing:0.5}}>{title}</div>
+            <div style={{fontSize:11,color:C.t1,lineHeight:1.75,whiteSpace:"pre-line"}}>{body}</div>
+          </div>;
+        })}
+      </div>;
+    };
+
+    return<div style={{position:"fixed",inset:0,zIndex:500,display:"flex"}} onClick={()=>setWorkPanelLead(null)}>
+      <div style={{flex:1,background:"rgba(0,0,0,0.4)",backdropFilter:"blur(4px)"}}/>
+      <div style={{width:"min(480px,100%)",background:C.w,boxShadow:"-8px 0 40px rgba(0,0,0,0.2)",display:"flex",flexDirection:"column",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+
+        {/* Header */}
+        <div style={{padding:"20px 20px 16px",background:"linear-gradient(135deg,"+stageColor+"18,"+stageColor+"08)",borderBottom:"1px solid "+C.bd,flexShrink:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:14}}>
+            <div style={{width:52,height:52,borderRadius:"50%",flexShrink:0,overflow:"hidden",background:stageColor+"20",border:"2px solid "+stageColor+"40",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              {l.avatar_url
+                ?<img src={l.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt={l.name}/>
+                :<span style={{fontSize:20,fontWeight:800,color:stageColor}}>{(l.name||"?")[0].toUpperCase()}</span>}
+            </div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:17,fontWeight:800,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.name}</div>
+              {(l.contact||l.phone||l.email)&&<div style={{fontSize:12,color:C.t2,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.contact||l.phone||l.email}</div>}
+              {l.deal&&<div style={{fontSize:12,fontWeight:700,color:C.g,marginTop:1}}>{fmt$(l.deal)} ₽</div>}
+            </div>
+            <button onClick={()=>setWorkPanelLead(null)} style={{width:32,height:32,borderRadius:10,border:"1px solid "+C.bd,background:C.bg,cursor:"pointer",fontSize:18,color:C.t2,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>×</button>
+          </div>
+          {/* 2 action buttons */}
+          <div style={{display:"flex",gap:8}}>
+            {writeUrl&&<a href={writeUrl} target="_blank" rel="noreferrer"
+              style={{flex:1,padding:"9px 12px",background:"linear-gradient(135deg,#22C55E,#16A34A)",color:"#fff",border:"none",borderRadius:10,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,textDecoration:"none",boxShadow:"0 0 12px #22C55E30"}}>
+              ✉️ Написать лиду
+            </a>}
+            <button onClick={()=>{openTouchModal(l.id);}}
+              style={{flex:1,padding:"9px 12px",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",border:"none",borderRadius:10,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,boxShadow:"0 0 12px rgba(124,58,237,0.25)"}}>
+              ✨ Касание (лог)
+            </button>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div style={{display:"flex",borderBottom:"1px solid "+C.bd,flexShrink:0}}>
+          {([["profile","👤 Профиль"],["touches","✨ Касание"]] as const).map(([tab,lbl])=>(
+            <button key={tab} onClick={()=>setWorkPanelTab(tab)}
+              style={{flex:1,padding:"12px 0",border:"none",background:"transparent",borderBottom:"2px solid "+(workPanelTab===tab?stageColor:"transparent"),color:workPanelTab===tab?stageColor:C.t2,fontSize:12,fontWeight:workPanelTab===tab?700:400,cursor:"pointer",transition:"all 0.15s"}}>
+              {lbl}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab content */}
+        <div style={{flex:1,overflowY:"auto",padding:"16px 20px",display:"flex",flexDirection:"column",gap:12}}>
+
+          {workPanelTab==="profile"&&<>
+            {/* Описание */}
+            {l.note&&<div>
+              <div style={{fontSize:10,fontWeight:700,color:C.t2,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>📋 Описание лида</div>
+              <div style={{fontSize:12,color:C.t1,lineHeight:1.65,background:C.ib,borderRadius:9,padding:"9px 11px",borderLeft:"3px solid "+stageColor,whiteSpace:"pre-wrap"}}>{l.note}</div>
+            </div>}
+            {/* 5 fields read-only */}
+            {([
+              {key:"pains",label:"😣 Боли"},
+              {key:"desires",label:"✨ Желания"},
+              {key:"objections",label:"🚧 Возражения"},
+              {key:"leverage",label:"🎯 На что давить"},
+              {key:"next_step",label:"👉 Следующий шаг"},
+            ] as const).map(({key,label})=>l[key]?<div key={key}>
+              <div style={{fontSize:10,fontWeight:700,color:C.t2,textTransform:"uppercase",letterSpacing:0.4,marginBottom:3}}>{label}</div>
+              <div style={{fontSize:12,color:C.t1,lineHeight:1.6,background:C.ib,borderRadius:8,padding:"7px 10px",whiteSpace:"pre-wrap"}}>{l[key]}</div>
+            </div>:null)}
+            {/* AI report */}
+            <div style={{borderTop:"1px solid "+C.bd,paddingTop:12}}>
+              <button
+                disabled={aiReportLoading===l.id}
+                onClick={async()=>{await generateAiReport(l);setWorkPanelLead({...l});}}
+                style={{width:"100%",padding:"10px 14px",background:aiReportLoading===l.id?"#6D28D9":"linear-gradient(135deg,#7C3AED,#4F8EF7)",color:"#fff",border:"none",borderRadius:10,fontSize:12,fontWeight:700,cursor:aiReportLoading===l.id?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                {aiReportLoading===l.id?<><div style={{width:13,height:13,border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/> Формирую...</>:"✦ Сформировать отчёт через ИИ"}
+              </button>
+              {l.ai_report&&<div style={{marginTop:10}}><AiReportBlocks/></div>}
+            </div>
+          </>}
+
+          {workPanelTab==="touches"&&<>
+            {!hasReport&&<div style={{padding:"12px 14px",background:"#FFF7ED",border:"1px solid #FED7AA",borderRadius:10,fontSize:12,color:"#C2410C",lineHeight:1.6}}>
+              ⚠️ Для генерации касания нужен <b>Отчёт ИИ</b>. Перейди во вкладку «Профиль» и сформируй его сначала.
+            </div>}
+            <div>
+              <div style={{fontSize:10,fontWeight:700,color:C.t2,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>🎯 Цель касания</div>
+              <input value={touchGenGoal} onChange={e=>setTouchGenGoal(e.target.value)}
+                placeholder="Например: закрыть на звонок, дожать до оплаты, отработать возражение..."
+                style={{...iS(),padding:"9px 12px",fontSize:12,width:"100%",boxSizing:"border-box" as const}}/>
+            </div>
+            <button
+              disabled={touchGenLoading||!hasReport}
+              onClick={()=>generateTouchpoint(workPanelLead)}
+              style={{width:"100%",padding:"10px 14px",background:!hasReport?"#9CA3AF":touchGenLoading?"#6D28D9":"linear-gradient(135deg,#7C3AED,#4F8EF7)",color:"#fff",border:"none",borderRadius:10,fontSize:12,fontWeight:700,cursor:(!hasReport||touchGenLoading)?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+              {touchGenLoading?<><div style={{width:13,height:13,border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/> Формирую касание...</>:"✦ Сформировать касание через ИИ"}
+            </button>
+            <TouchResult/>
+          </>}
+        </div>
       </div>
     </div>;
   };
@@ -4344,6 +4528,7 @@ function CrmPage({userId}:{userId:string}){
 
   // ── SCREEN: FUNNEL INNER ─────────────────────────────────────────
   return <>
+    <WorkPanel/>
     {touchModalLead&&touchModalLeadId&&(
       <div style={{position:"fixed",inset:0,background:"rgba(5,8,15,0.62)",zIndex:320,display:"flex",alignItems:"center",justifyContent:"center",padding:isMobile?12:24,backdropFilter:"blur(8px)"}} onClick={closeTouchModal}>
         <div style={{width:"100%",maxWidth:860,maxHeight:"88dvh",background:C.w,border:"1px solid "+C.bd,borderRadius:24,boxShadow:"0 28px 80px rgba(0,0,0,0.36)",overflow:"hidden",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
