@@ -3630,7 +3630,7 @@ function CrmPage({userId}:{userId:string}){
   const[editFunnelName,setEditFunnelName]=useState("");
 
   // Lead form
-  const emptyLead={name:"",contact:"",phone:"",email:"",source:"Instagram",status:"new",note:"",deal:"",avatar_url:""};
+  const emptyLead={name:"",contact:"",phone:"",email:"",source:"Instagram",status:"new",note:"",deal:"",avatar_url:"",pains:"",desires:"",objections:"",leverage:"",next_step:"",ai_report:""};
   const[f,sF]=useState<any>(emptyLead);
   const[avatarUpl,setAvatarUpl]=useState<string|null>(null); // uploading lead id or "new"
 
@@ -3841,7 +3841,23 @@ function CrmPage({userId}:{userId:string}){
 
   const openEditLead=(l:any)=>{
     setEditLeadId(l.id);
-    setEditLeadData({name:l.name||"",contact:l.contact||"",phone:l.phone||"",email:l.email||"",note:l.note||"",deal:l.deal||"",source:l.source||"Instagram",avatar_url:l.avatar_url||""});
+    setEditLeadData({name:l.name||"",contact:l.contact||"",phone:l.phone||"",email:l.email||"",note:l.note||"",deal:l.deal||"",source:l.source||"Instagram",avatar_url:l.avatar_url||"",pains:l.pains||"",desires:l.desires||"",objections:l.objections||"",leverage:l.leverage||"",next_step:l.next_step||"",ai_report:l.ai_report||""});
+  };
+
+  const[aiReportLoading,setAiReportLoading]=useState<string|null>(null);
+
+  const generateAiReport=async(l:any)=>{
+    setAiReportLoading(l.id);
+    try{
+      const prompt="Ты опытный sales-менеджер. Составь чёткий структурированный отчёт по лиду для менеджера по продажам. Используй только предоставленные данные, не придумывай лишнего.\n\nДанные лида:\nИмя: "+(l.name||"—")+"\nКонтакт: "+(l.contact||"—")+"\nИсточник: "+(l.source||"—")+"\nСумма сделки: "+(l.deal?""+l.deal+" ₽":"—")+"\n\nБоли: "+(l.pains||"не заполнено")+"\nЖелания: "+(l.desires||"не заполнено")+"\nВозражения: "+(l.objections||"не заполнено")+"\nРычаги давления: "+(l.leverage||"не заполнено")+"\nСледующий шаг: "+(l.next_step||"не заполнено")+"\nОписание лида: "+(l.note||"не заполнено")+"\n\nСоставь короткий отчёт (5-7 предложений): резюме ситуации, ключевая боль, главное возражение, как закрыть, конкретный следующий шаг. Пиши по-русски, деловой стиль, без воды.";
+      const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:prompt}]})});
+      const data=await resp.json();
+      const text=(data.content||[]).filter((b:any)=>b.type==="text").map((b:any)=>b.text).join("");
+      if(text){
+        await allLeads.update(l.id,{ai_report:text});
+      }
+    }catch(e){console.error(e);}
+    setAiReportLoading(null);
   };
 
   const saveEditLead=async()=>{
@@ -4017,6 +4033,45 @@ function CrmPage({userId}:{userId:string}){
               </button>}
             </div>;
           })()}
+
+          {/* 5-field CRM profile */}
+          {([
+            {key:"pains",label:"😣 Боли",ph:"Что болит, что мешает, что не устраивает сейчас"},
+            {key:"desires",label:"✨ Желания",ph:"Чего хочет достичь, какой результат ожидает"},
+            {key:"objections",label:"🚧 Возражения",ph:"Сомнения, страхи, причины не покупать"},
+            {key:"leverage",label:"🎯 На что давить",ph:"Триггеры, ценности, что важно для решения"},
+            {key:"next_step",label:"👉 Следующий шаг",ph:"Конкретное действие: созвон, оффер, дожим..."},
+          ] as const).map(({key,label,ph})=>{
+            const val=l[key]||"";
+            return<div key={key} onClick={e=>e.stopPropagation()} style={{marginBottom:8}}>
+              <div style={{fontSize:10,fontWeight:700,color:C.t2,textTransform:"uppercase",letterSpacing:0.4,marginBottom:3}}>{label}</div>
+              <textarea
+                defaultValue={val}
+                placeholder={ph}
+                rows={2}
+                onBlur={async e=>{const v=e.target.value;if(v!==val)await allLeads.update(l.id,{[key]:v});}}
+                style={{width:"100%",padding:"7px 10px",border:"1px solid "+C.bd,borderRadius:8,fontSize:11,background:C.ib,color:C.t1,resize:"none",fontFamily:"Montserrat,sans-serif",lineHeight:1.55,outline:"none",boxSizing:"border-box" as const,transition:"border-color 0.15s"}}
+                onFocus={e=>{e.target.style.borderColor=stageColor;}}
+                onBlurCapture={e=>{e.target.style.borderColor=C.bd;}}
+              />
+            </div>;
+          })}
+
+          {/* AI Report button + output */}
+          <div onClick={e=>e.stopPropagation()} style={{marginBottom:10}}>
+            <button
+              disabled={aiReportLoading===l.id}
+              onClick={async e=>{e.stopPropagation();await generateAiReport(l);}}
+              style={{width:"100%",padding:"9px 14px",background:aiReportLoading===l.id?"#6D28D9":"linear-gradient(135deg,#7C3AED,#4F8EF7)",color:"#fff",border:"none",borderRadius:10,fontSize:12,fontWeight:700,cursor:aiReportLoading===l.id?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,transition:"opacity 0.2s",opacity:aiReportLoading===l.id?0.8:1}}>
+              {aiReportLoading===l.id
+                ?<><div style={{width:13,height:13,border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/> Формирую отчёт...</>
+                :"✦ Сформировать отчёт через ИИ"}
+            </button>
+            {l.ai_report&&<div style={{marginTop:8,padding:"10px 12px",background:"linear-gradient(135deg,#7C3AED08,#4F8EF708)",border:"1px solid #7C3AED25",borderRadius:10,fontSize:11,color:C.t1,lineHeight:1.7,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#7C3AED",marginBottom:6,textTransform:"uppercase",letterSpacing:0.4}}>✦ Отчёт ИИ</div>
+              {l.ai_report}
+            </div>}
+          </div>
 
           {/* Status change buttons */}
           <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:8}}>
@@ -4417,9 +4472,29 @@ function CrmPage({userId}:{userId:string}){
           </div>
           <div style={{marginBottom:18}}>
             <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>📋 Описание лида</label>
-            <textarea value={editLeadData.note||""} onChange={e=>setEditLeadData({...editLeadData,note:e.target.value})} rows={6}
+            <textarea value={editLeadData.note||""} onChange={e=>setEditLeadData({...editLeadData,note:e.target.value})} rows={4}
               placeholder="Подробный конспект по лиду: откуда пришёл, в чём боль, что обсуждали, договорённости, следующий шаг..."
               style={{width:"100%",padding:"10px 12px",border:"1px solid "+C.bd,borderRadius:11,fontSize:12,outline:"none",background:C.ib,color:C.t1,resize:"vertical",fontFamily:"Montserrat, sans-serif",boxSizing:"border-box" as const,lineHeight:1.6}}/>
+          </div>
+          {/* 5 CRM fields */}
+          <div style={{marginBottom:18}}>
+            <div style={{fontSize:11,fontWeight:700,color:C.t1,marginBottom:10,paddingBottom:6,borderBottom:"1px solid "+C.bd}}>🧠 Профиль лида</div>
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {([
+                {k:"pains",l:"😣 Боли",ph:"Что болит, что мешает"},
+                {k:"desires",l:"✨ Желания",ph:"Чего хочет достичь"},
+                {k:"objections",l:"🚧 Возражения",ph:"Сомнения, страхи, причины не купить"},
+                {k:"leverage",l:"🎯 На что давить",ph:"Триггеры, ценности, что важно"},
+                {k:"next_step",l:"👉 Следующий шаг",ph:"Конкретное следующее действие"},
+              ] as const).map(({k,l,ph})=>(
+                <div key={k}>
+                  <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4,fontWeight:600}}>{l}</label>
+                  <textarea value={editLeadData[k]||""} onChange={e=>setEditLeadData({...editLeadData,[k]:e.target.value})} rows={2}
+                    placeholder={ph}
+                    style={{width:"100%",padding:"8px 11px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,outline:"none",background:C.ib,color:C.t1,resize:"none",fontFamily:"Montserrat, sans-serif",boxSizing:"border-box" as const,lineHeight:1.55}}/>
+                </div>
+              ))}
+            </div>
           </div>
           <div style={{display:"flex",gap:10,justifyContent:"flex-end",flexWrap:"wrap"}}>
             <button onClick={()=>setEditLeadId(null)} style={{padding:"10px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:11,fontSize:13,cursor:"pointer",fontWeight:600}}>Отмена</button>
