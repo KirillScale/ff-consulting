@@ -3854,7 +3854,7 @@ function CrmPage({userId}:{userId:string}){
   const generateAiReport=async(l:any)=>{
     setAiReportLoading(l.id);
     try{
-      const prompt="Ты — опытный эксперт по продажам. На основе данных по лиду составь структурированный отчёт СТРОГО в следующем формате (не отступай от него):\n\n**Портрет лида:** [2-3 предложения — кто этот человек, откуда пришёл, что из себя представляет, какой у него контекст]\n\n**Моё мнение:** [твоя честная оценка — хороший ли это лид, стоит ли тратить время, насколько он горячий, есть ли красные флаги]\n\n**Следующий шаг — варианты действий:**\nВариант 1: [конкретное действие с деталями — что сказать, как написать, что предложить]\nВариант 2: [другой подход — например мягче или жёстче]\nВариант 3: [запасной вариант если первые два не сработают]\n\nДанные лида:\nИмя: "+(l.name||"—")+"\nКонтакт: "+(l.contact||"—")+"\nИсточник: "+(l.source||"—")+"\nСумма сделки: "+(l.deal?""+l.deal+" ₽":"—")+"\nОписание: "+(l.note||"—")+"\nБоли: "+(l.pains||"—")+"\nЖелания: "+(l.desires||"—")+"\nВозражения: "+(l.objections||"—")+"\nРычаги давления: "+(l.leverage||"—")+"\nСледующий шаг (от менеджера): "+(l.next_step||"—")+"\n\nПиши по-русски, коротко и по делу. Без вступлений и заключений. Только сам отчёт.";
+      const prompt="Ты — аналитик продаж, поведенческий психолог и стратег по работе с клиентами.\nНа основе всей информации о лиде составь краткий, но глубокий отчёт для CRM. Не пересказывай информацию. Анализируй её.\n\nДанные лида:\nИмя: "+(l.name||"—")+"\nКонтакт: "+(l.contact||"—")+"\nИсточник: "+(l.source||"—")+"\nСумма сделки: "+(l.deal?""+l.deal+" ₽":"—")+"\nОписание: "+(l.note||"—")+"\nБоли: "+(l.pains||"—")+"\nЖелания: "+(l.desires||"—")+"\nВозражения: "+(l.objections||"—")+"\nРычаги давления: "+(l.leverage||"—")+"\nСледующий шаг: "+(l.next_step||"—")+"\n\nСтруктура отчёта (строго придерживайся):\n\n##ПОРТРЕТ##\nКто этот человек. Чем занимается. На каком этапе находится. Что им движет на самом деле.\n\n##ЭМОЦИИ##\nЧто он думает о себе. Что он думает о своём бизнесе. Что он думает о нас.\n\n##ВЕРОЯТНОСТЬ##\nВероятность покупки: X%\nПочему купит: ...\nПочему не купит: ...\nКлючевые факторы: ...\n\n##РИСКИ##\n1. ...\n2. ...\n3. ...\n\n##ШАГИ##\nШаг 1: [название] — [объяснение почему]\nШаг 2: [название] — [объяснение почему]\nШаг 3: [название] — [объяснение почему]\n\nПиши по-русски, коротко и аналитично. Только сам отчёт, без вступлений.";
       const resp=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:[{role:"user",content:prompt}]})});
       const data=await resp.json();
       const text=data.choices?.[0]?.message?.content||data.content?.[0]?.text||"";
@@ -3869,7 +3869,7 @@ function CrmPage({userId}:{userId:string}){
     if(!l.ai_report){setTouchGenResult("__no_report__");return;}
     setTouchGenLoading(true);setTouchGenResult("");
     try{
-      const prompt="Ты — эксперт по продажам. На основе отчёта по лиду и цели касания составь конкретный план касания.\n\nОтчёт по лиду:\n"+l.ai_report+"\n\nЦель касания: "+(touchGenGoal||"прогреть и продвинуть вперёд по воронке")+"\n\nСоставь план касания СТРОГО в этом формате:\n\n**Маршрут касания:**\n[3-4 конкретных шага — что делать по порядку]\n\n**Вариант 1 — Мягкий подход:**\n[конкретный текст сообщения или скрипт звонка]\n\n**Вариант 2 — Прямой подход:**\n[другой конкретный текст — более прямой и жёсткий]\n\n**Вариант 3 — Через ценность:**\n[сначала дать что-то полезное, потом предложение]\n\nПиши по-русски, конкретно, без воды. Только план.";
+      const prompt="Ты — эксперт по работе с клиентами. На основе данных о лиде и поставленной цели сгенерируй 3 варианта касания.\n\nДанные о лиде:\n"+l.ai_report+"\n\nЦель касания: "+(touchGenGoal||"продвинуть лида вперёд по воронке")+"\n\nГлавная задача — не написать красивый текст, а повысить вероятность достижения указанной цели.\n\nТребования к стилю:\n- писать как живой человек\n- никаких ИИ-конструкций\n- никаких клише и шаблонов\n- никаких фраз вроде надеюсь, у вас всё хорошо\n- никаких чрезмерных продаж\n- уважительный тон\n- деловой стиль\n- короткие и понятные предложения\n- естественный русский язык\n- не использовать длинные тире\n- не использовать эмодзи\n- избегать канцелярита\n- клиент не должен чувствовать, что ему продают\n\nФормат ответа (строго):\n\n##В1##\nНазвание: Рациональный\nЦель: [цель этого касания]\nТекст:\n[сам текст касания]\n\n##В2##\nНазвание: Экспертный\nЦель: [цель этого касания]\nТекст:\n[сам текст касания]\n\n##В3##\nНазвание: Человеческий\nЦель: [цель этого касания]\nТекст:\n[сам текст касания]\n\nТолько сами касания. Никаких комментариев до или после.";
       const resp=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:[{role:"user",content:prompt}]})});
       const data=await resp.json();
       const text=data.choices?.[0]?.message?.content||data.content?.[0]?.text||"";
@@ -4027,121 +4027,21 @@ function CrmPage({userId}:{userId:string}){
         </div>
 
         {isOpen&&<div style={{marginTop:10,paddingTop:10,borderTop:"1px solid "+C.bd,position:"relative"}}>
-          {l.source&&<div style={{fontSize:10,color:C.t2,marginBottom:5}}>Источник: {l.source}</div>}
-          {l.note&&(()=>{
-            const isExp=expandedNote===l.id;
-            const long=l.note.length>200||l.note.split("\n").length>3;
-            return<div style={{marginBottom:10}}>
-              <div style={{fontSize:10,fontWeight:700,color:C.t2,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Описание лида</div>
-              <div style={{
-                fontSize:12,color:C.t1,lineHeight:1.65,wordBreak:"break-word",whiteSpace:"pre-wrap",
-                background:C.ib,borderRadius:9,padding:"9px 11px",
-                borderLeft:"3px solid "+stageColor,
-                position:"relative",
-                maxHeight:isExp?"none":"72px",
-                overflow:"hidden",
-                transition:"max-height 0.3s ease",
-              }}>
-                {l.note}
-                {!isExp&&long&&<div style={{position:"absolute",bottom:0,left:0,right:0,height:32,background:"linear-gradient(to bottom,transparent,"+C.w+")",pointerEvents:"none",borderRadius:"0 0 9px 9px"}}/>}
-              </div>
-              {long&&<button onClick={e=>{e.stopPropagation();setExpandedNote(isExp?null:l.id);}}
-                style={{marginTop:4,fontSize:11,color:stageColor,background:"transparent",border:"none",cursor:"pointer",fontWeight:600,padding:"2px 0"}}>
-                {isExp?"▲ Свернуть":"▼ Читать полностью"}
-              </button>}
-            </div>;
-          })()}
-
-          {/* 5-field CRM profile */}
-          {([
-            {key:"pains",label:"😣 Боли",ph:"Что болит, что мешает, что не устраивает сейчас"},
-            {key:"desires",label:"✨ Желания",ph:"Чего хочет достичь, какой результат ожидает"},
-            {key:"objections",label:"🚧 Возражения",ph:"Сомнения, страхи, причины не покупать"},
-            {key:"leverage",label:"🎯 На что давить",ph:"Триггеры, ценности, что важно для решения"},
-            {key:"next_step",label:"👉 Следующий шаг",ph:"Конкретное действие: созвон, оффер, дожим..."},
-          ] as const).map(({key,label,ph})=>{
-            const val=l[key]||"";
-            return<div key={key} onClick={e=>e.stopPropagation()} style={{marginBottom:8}}>
-              <div style={{fontSize:10,fontWeight:700,color:C.t2,textTransform:"uppercase",letterSpacing:0.4,marginBottom:3}}>{label}</div>
-              <textarea
-                defaultValue={val}
-                placeholder={ph}
-                rows={2}
-                onBlur={async e=>{const v=e.target.value;if(v!==val)await allLeads.update(l.id,{[key]:v});}}
-                style={{width:"100%",padding:"7px 10px",border:"1px solid "+C.bd,borderRadius:8,fontSize:11,background:C.ib,color:C.t1,resize:"none",fontFamily:"Montserrat,sans-serif",lineHeight:1.55,outline:"none",boxSizing:"border-box" as const,transition:"border-color 0.15s"}}
-                onFocus={e=>{e.target.style.borderColor=stageColor;}}
-                onBlurCapture={e=>{e.target.style.borderColor=C.bd;}}
-              />
-            </div>;
-          })}
-
-          {/* AI Report button + output */}
-          <div onClick={e=>e.stopPropagation()} style={{marginBottom:10}}>
-            <button
-              disabled={aiReportLoading===l.id}
-              onClick={async e=>{e.stopPropagation();await generateAiReport(l);}}
-              style={{width:"100%",padding:"9px 14px",background:aiReportLoading===l.id?"#6D28D9":"linear-gradient(135deg,#7C3AED,#4F8EF7)",color:"#fff",border:"none",borderRadius:10,fontSize:12,fontWeight:700,cursor:aiReportLoading===l.id?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,transition:"opacity 0.2s",opacity:aiReportLoading===l.id?0.8:1}}>
-              {aiReportLoading===l.id
-                ?<><div style={{width:13,height:13,border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/> Формирую отчёт...</>
-                :"✦ Сформировать отчёт через ИИ"}
+          {/* Clean: only 3 action buttons */}
+          <div style={{display:"flex",gap:6,alignItems:"stretch"}} onClick={e=>e.stopPropagation()}>
+            <button onClick={()=>{setWorkPanelLead(l);setWorkPanelTab("profile");setTouchGenResult("");setTouchGenGoal("");}}
+              style={{flex:1,padding:"9px 10px",background:"linear-gradient(135deg,#7C3AED,#4F8EF7)",color:"#fff",border:"none",borderRadius:10,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 0 14px rgba(124,58,237,0.25)"}}>
+              Работать с лидом
             </button>
-            {l.ai_report&&(()=>{
-              const raw=l.ai_report||"";
-              const portrait=raw.match(/\*\*Портрет лида:\*\*\s*([\s\S]*?)(?=\*\*Моё мнение:|$)/)?.[1]?.trim()||"";
-              const opinion=raw.match(/\*\*Моё мнение:\*\*\s*([\s\S]*?)(?=\*\*Следующий шаг|$)/)?.[1]?.trim()||"";
-              const steps=raw.match(/\*\*Следующий шаг[^*]*\*\*\s*([\s\S]*?)$/)?.[1]?.trim()||"";
-              return<div style={{marginTop:8,display:"flex",flexDirection:"column",gap:8}}>
-                {portrait&&<div style={{padding:"10px 12px",background:"#EFF6FF",border:"1px solid #BFDBFE",borderRadius:10,borderLeft:"3px solid #3B82F6"}}>
-                  <div style={{fontSize:10,fontWeight:800,color:"#1D4ED8",marginBottom:5,textTransform:"uppercase",letterSpacing:0.5}}>👤 Портрет лида</div>
-                  <div style={{fontSize:11,color:"#1E3A5F",lineHeight:1.7}}>{portrait}</div>
-                </div>}
-                {opinion&&<div style={{padding:"10px 12px",background:(opinion.toLowerCase().includes("красн")||opinion.toLowerCase().includes("слаб")||opinion.toLowerCase().includes("холод"))?"#FFF1F2":"#F0FDF4",border:"1px solid "+((opinion.toLowerCase().includes("красн")||opinion.toLowerCase().includes("слаб")||opinion.toLowerCase().includes("холод"))?"#FECDD3":"#BBF7D0"),borderRadius:10,borderLeft:"3px solid "+((opinion.toLowerCase().includes("красн")||opinion.toLowerCase().includes("слаб")||opinion.toLowerCase().includes("холод"))?"#F43F5E":"#22C55E")}}>
-                  <div style={{fontSize:10,fontWeight:800,color:(opinion.toLowerCase().includes("красн")||opinion.toLowerCase().includes("слаб")||opinion.toLowerCase().includes("холод"))?"#BE123C":"#15803D",marginBottom:5,textTransform:"uppercase",letterSpacing:0.5}}>🧠 Моё мнение</div>
-                  <div style={{fontSize:11,color:"#1C1C1C",lineHeight:1.7}}>{opinion}</div>
-                </div>}
-                {steps&&<div style={{padding:"10px 12px",background:"linear-gradient(135deg,#7C3AED08,#4F8EF708)",border:"1px solid #7C3AED25",borderRadius:10,borderLeft:"3px solid #7C3AED"}}>
-                  <div style={{fontSize:10,fontWeight:800,color:"#7C3AED",marginBottom:6,textTransform:"uppercase",letterSpacing:0.5}}>👉 Варианты следующего шага</div>
-                  {steps.split("\nВариант ").filter(Boolean).map((v:string,i:number)=>{
-                    const chunk=i===0?v:"Вариант "+v;
-                    const[title,...rest]=chunk.split(":");
-                    return<div key={i} style={{marginBottom:i<2?8:0,padding:"7px 10px",background:"rgba(124,58,237,0.06)",borderRadius:8,fontSize:11,color:C.t1,lineHeight:1.65}}>
-                      <span style={{fontWeight:700,color:"#7C3AED"}}>{title.trim()}:</span>{rest.join(":")}
-                    </div>;
-                  })}
-                </div>}
-                {!portrait&&!opinion&&!steps&&<div style={{padding:"10px 12px",background:C.ib,borderRadius:10,fontSize:11,color:C.t1,lineHeight:1.7,whiteSpace:"pre-wrap"}}>{raw}</div>}
-              </div>;
-            })()}
-          </div>
-
-          {/* Status change buttons */}
-          <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:8}}>
-            {stages.filter(s=>s.id!==l.status).map(s=>(
-              <button key={s.id} onClick={e=>{e.stopPropagation();allLeads.update(l.id,{status:s.id});}}
-                style={{fontSize:10,padding:"3px 9px",borderRadius:20,border:"1px solid "+s.color+"30",background:s.color+"10",color:s.color,fontWeight:600,cursor:"pointer",transition:"all 0.15s"}}
-                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=s.color+"25";}}
-                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=s.color+"10";}}>
-                {s.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Action row */}
-          <div style={{display:"flex",gap:6,alignItems:"stretch"}}>
-            <button onClick={e=>{e.stopPropagation();setWorkPanelLead(l);setWorkPanelTab("profile");setTouchGenResult("");setTouchGenGoal("");}}
-              style={{flex:1,padding:"9px 10px",background:"linear-gradient(135deg,#7C3AED,#4F8EF7)",color:"#fff",border:"none",borderRadius:10,fontSize:11,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,boxShadow:"0 0 14px rgba(124,58,237,0.25)"}}>
-              🚀 Работать с лидом
-            </button>
-            <button onClick={e=>{e.stopPropagation();openEditLead(l);}}
-              style={{padding:"9px 12px",background:C.a+"12",color:C.a,border:"1px solid "+C.a+"30",borderRadius:10,fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <button onClick={()=>openEditLead(l)}
+              style={{padding:"9px 14px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:10,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
               ✏️
             </button>
-            <button onClick={e=>{e.stopPropagation();setDeleteConfirmId(l.id);}}
-              style={{padding:"9px 12px",background:"#E91E8C10",color:"#E91E8C",border:"1px solid #E91E8C30",borderRadius:10,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <button onClick={()=>setDeleteConfirmId(l.id)}
+              style={{padding:"9px 14px",background:"#FFF1F2",color:"#E91E8C",border:"1px solid #FECDD3",borderRadius:10,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
               🗑
             </button>
           </div>
-
         </div>}
       </div>
     </div>;
@@ -4155,156 +4055,191 @@ function CrmPage({userId}:{userId:string}){
     const writeUrl=getWriteUrl(l);
     const hasReport=!!l.ai_report;
 
-    const AiReportBlocks=()=>{
-      if(!l.ai_report)return null;
-      const raw=l.ai_report||"";
-      const portrait=raw.match(/\*\*Портрет лида:\*\*\s*([\s\S]*?)(?=\*\*Моё мнение:|$)/)?.[1]?.trim()||"";
-      const opinion=raw.match(/\*\*Моё мнение:\*\*\s*([\s\S]*?)(?=\*\*Следующий шаг|$)/)?.[1]?.trim()||"";
-      const steps=raw.match(/\*\*Следующий шаг[^*]*\*\*\s*([\s\S]*?)$/)?.[1]?.trim()||"";
-      return<div style={{display:"flex",flexDirection:"column",gap:8}}>
-        {portrait&&<div style={{padding:"10px 12px",background:"#EFF6FF",border:"1px solid #BFDBFE",borderRadius:10,borderLeft:"3px solid #3B82F6"}}>
-          <div style={{fontSize:10,fontWeight:800,color:"#1D4ED8",marginBottom:4,textTransform:"uppercase",letterSpacing:0.5}}>👤 Портрет лида</div>
-          <div style={{fontSize:11,color:"#1E3A5F",lineHeight:1.7}}>{portrait}</div>
-        </div>}
-        {opinion&&<div style={{padding:"10px 12px",background:"#F0FDF4",border:"1px solid #BBF7D0",borderRadius:10,borderLeft:"3px solid #22C55E"}}>
-          <div style={{fontSize:10,fontWeight:800,color:"#15803D",marginBottom:4,textTransform:"uppercase",letterSpacing:0.5}}>🧠 Моё мнение</div>
-          <div style={{fontSize:11,color:"#1C1C1C",lineHeight:1.7}}>{opinion}</div>
-        </div>}
-        {steps&&<div style={{padding:"10px 12px",background:"#7C3AED08",border:"1px solid #7C3AED25",borderRadius:10,borderLeft:"3px solid #7C3AED"}}>
-          <div style={{fontSize:10,fontWeight:800,color:"#7C3AED",marginBottom:6,textTransform:"uppercase",letterSpacing:0.5}}>👉 Следующий шаг</div>
-          {steps.split("\nВариант ").filter(Boolean).map((v:string,i:number)=>{
-            const chunk=i===0?v:"Вариант "+v;
-            const[title,...rest]=chunk.split(":");
-            return<div key={i} style={{marginBottom:i<2?6:0,padding:"7px 10px",background:"rgba(124,58,237,0.06)",borderRadius:8,fontSize:11,color:C.t1,lineHeight:1.65}}>
-              <span style={{fontWeight:700,color:"#7C3AED"}}>{title.trim()}:</span>{rest.join(":")}
-            </div>;
-          })}
-        </div>}
-      </div>;
+    // ── Parse AI report into sections ──
+    const parseReport=(raw:string)=>{
+      const get=(tag:string)=>raw.split("##"+tag+"##")[1]?.split("##")[0]?.trim()||"";
+      return{portrait:get("ПОРТРЕТ"),emotions:get("ЭМОЦИИ"),probability:get("ВЕРОЯТНОСТЬ"),risks:get("РИСКИ"),steps:get("ШАГИ")};
     };
 
-    const TouchResult=()=>{
-      if(!touchGenResult)return null;
-      if(touchGenResult==="__no_report__")return<div style={{padding:"12px 14px",background:"#FFF7ED",border:"1px solid #FED7AA",borderRadius:10,fontSize:12,color:"#C2410C",lineHeight:1.6}}>
-        ⚠️ Сначала сформируй <b>Отчёт ИИ</b> во вкладке «Профиль» — касание строится на основе портрета лида.
-      </div>;
-      const route=touchGenResult.match(/\*\*Маршрут касания:\*\*\s*([\s\S]*?)(?=\*\*Вариант|$)/)?.[1]?.trim()||"";
-      const variants=touchGenResult.match(/\*\*Вариант \d+[^*]*\*\*\s*[\s\S]*?(?=\*\*Вариант \d+|$)/g)||[];
-      return<div style={{display:"flex",flexDirection:"column",gap:8,marginTop:12}}>
-        {route&&<div style={{padding:"10px 12px",background:"#EFF6FF",border:"1px solid #BFDBFE",borderRadius:10,borderLeft:"3px solid #3B82F6"}}>
-          <div style={{fontSize:10,fontWeight:800,color:"#1D4ED8",marginBottom:6,textTransform:"uppercase",letterSpacing:0.5}}>🗺 Маршрут касания</div>
-          <div style={{fontSize:11,color:"#1E3A5F",lineHeight:1.75,whiteSpace:"pre-line"}}>{route}</div>
-        </div>}
-        {variants.map((v:string,i:number)=>{
-          const title=v.match(/\*\*([^*]+)\*\*/)?.[1]||("Вариант "+(i+1));
-          const body=v.replace(/\*\*[^*]+\*\*\s*/,"").trim();
-          const colors=[["#7C3AED08","#7C3AED25","#7C3AED"],["#22C55E08","#BBF7D0","#15803D"],["#F59E0B08","#FDE68A","#B45309"]];
-          const[bg,border,accent]=colors[i]||colors[0];
-          return<div key={i} style={{padding:"10px 12px",background:bg,border:"1px solid "+border,borderRadius:10,borderLeft:"3px solid "+accent}}>
-            <div style={{fontSize:10,fontWeight:800,color:accent,marginBottom:6,textTransform:"uppercase",letterSpacing:0.5}}>{title}</div>
-            <div style={{fontSize:11,color:C.t1,lineHeight:1.75,whiteSpace:"pre-line"}}>{body}</div>
-          </div>;
-        })}
-      </div>;
+    // ── Parse touch variants ──
+    const parseTouches=(raw:string)=>{
+      return["В1","В2","В3"].map(tag=>{
+        const block=raw.split("##"+tag+"##")[1]?.split("##")[0]?.trim()||"";
+        if(!block)return null;
+        const name=block.match(/Название:\s*(.+)/)?.[1]?.trim()||"";
+        const goal=block.match(/Цель:\s*(.+)/)?.[1]?.trim()||"";
+        const text=block.split("Текст:")[1]?.trim()||"";
+        return{name,goal,text};
+      }).filter(Boolean);
     };
+
+    const ReportBlock=({color,border,title,children}:{color:string,border:string,title:string,children:React.ReactNode})=>(
+      <div style={{padding:"12px 14px",background:color,border:"1px solid "+border,borderRadius:12,borderLeft:"3px solid "+border.replace("40","").replace("50","").replace("30","")}}>
+        <div style={{fontSize:10,fontWeight:800,color:border.replace("40","").replace("50","").replace("30",""),marginBottom:7,textTransform:"uppercase",letterSpacing:0.6}}>{title}</div>
+        <div style={{fontSize:12,color:C.t1,lineHeight:1.75,whiteSpace:"pre-wrap"}}>{children}</div>
+      </div>
+    );
 
     return<div style={{position:"fixed",inset:0,zIndex:500,display:"flex"}} onClick={()=>setWorkPanelLead(null)}>
-      <div style={{flex:1,background:"rgba(0,0,0,0.4)",backdropFilter:"blur(4px)"}}/>
-      <div style={{width:"min(480px,100%)",background:C.w,boxShadow:"-8px 0 40px rgba(0,0,0,0.2)",display:"flex",flexDirection:"column",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+      <div style={{flex:1,background:"rgba(0,0,0,0.45)",backdropFilter:"blur(4px)"}}/>
+      <div style={{width:"min(520px,100vw)",background:C.w,boxShadow:"-8px 0 48px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
 
         {/* Header */}
-        <div style={{padding:"20px 20px 16px",background:"linear-gradient(135deg,"+stageColor+"18,"+stageColor+"08)",borderBottom:"1px solid "+C.bd,flexShrink:0}}>
+        <div style={{padding:"20px 22px 16px",background:"linear-gradient(135deg,"+stageColor+"15,"+stageColor+"05)",borderBottom:"1px solid "+C.bd,flexShrink:0}}>
           <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:14}}>
-            <div style={{width:52,height:52,borderRadius:"50%",flexShrink:0,overflow:"hidden",background:stageColor+"20",border:"2px solid "+stageColor+"40",display:"flex",alignItems:"center",justifyContent:"center"}}>
-              {l.avatar_url
-                ?<img src={l.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt={l.name}/>
+            <div style={{width:50,height:50,borderRadius:"50%",flexShrink:0,overflow:"hidden",background:stageColor+"20",border:"2px solid "+stageColor+"40",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              {l.avatar_url?<img src={l.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt={l.name}/>
                 :<span style={{fontSize:20,fontWeight:800,color:stageColor}}>{(l.name||"?")[0].toUpperCase()}</span>}
             </div>
             <div style={{flex:1,minWidth:0}}>
               <div style={{fontSize:17,fontWeight:800,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.name}</div>
-              {(l.contact||l.phone||l.email)&&<div style={{fontSize:12,color:C.t2,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.contact||l.phone||l.email}</div>}
-              {l.deal&&<div style={{fontSize:12,fontWeight:700,color:C.g,marginTop:1}}>{fmt$(l.deal)} ₽</div>}
+              {(l.contact||l.phone||l.email)&&<div style={{fontSize:12,color:C.t2,marginTop:2}}>{l.contact||l.phone||l.email}</div>}
+              {l.deal&&<div style={{fontSize:12,fontWeight:700,color:"#16A34A",marginTop:2}}>{fmt$(l.deal)} ₽</div>}
             </div>
             <button onClick={()=>setWorkPanelLead(null)} style={{width:32,height:32,borderRadius:10,border:"1px solid "+C.bd,background:C.bg,cursor:"pointer",fontSize:18,color:C.t2,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>×</button>
           </div>
-          {/* 2 action buttons */}
           <div style={{display:"flex",gap:8}}>
             {writeUrl&&<a href={writeUrl} target="_blank" rel="noreferrer"
-              style={{flex:1,padding:"9px 12px",background:"linear-gradient(135deg,#22C55E,#16A34A)",color:"#fff",border:"none",borderRadius:10,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,textDecoration:"none",boxShadow:"0 0 12px #22C55E30"}}>
-              ✉️ Написать лиду
+              style={{flex:1,padding:"9px 12px",background:"linear-gradient(135deg,#22C55E,#16A34A)",color:"#fff",border:"none",borderRadius:10,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,textDecoration:"none"}}>
+              ✉ Написать лиду
             </a>}
             <button onClick={()=>{openTouchModal(l.id);}}
-              style={{flex:1,padding:"9px 12px",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",border:"none",borderRadius:10,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,boxShadow:"0 0 12px rgba(124,58,237,0.25)"}}>
-              ✨ Касание (лог)
+              style={{flex:1,padding:"9px 12px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:10,fontSize:12,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+              📋 История касаний
             </button>
           </div>
         </div>
 
         {/* Tabs */}
-        <div style={{display:"flex",borderBottom:"1px solid "+C.bd,flexShrink:0}}>
-          {([["profile","👤 Профиль"],["touches","✨ Касание"]] as const).map(([tab,lbl])=>(
+        <div style={{display:"flex",borderBottom:"1px solid "+C.bd,flexShrink:0,background:C.w}}>
+          {([["profile","Профиль"],["touches","Сгенерировать касание"]] as const).map(([tab,lbl])=>(
             <button key={tab} onClick={()=>setWorkPanelTab(tab)}
-              style={{flex:1,padding:"12px 0",border:"none",background:"transparent",borderBottom:"2px solid "+(workPanelTab===tab?stageColor:"transparent"),color:workPanelTab===tab?stageColor:C.t2,fontSize:12,fontWeight:workPanelTab===tab?700:400,cursor:"pointer",transition:"all 0.15s"}}>
+              style={{flex:1,padding:"13px 0",border:"none",background:"transparent",borderBottom:"2px solid "+(workPanelTab===tab?stageColor:"transparent"),color:workPanelTab===tab?stageColor:C.t2,fontSize:12,fontWeight:workPanelTab===tab?700:400,cursor:"pointer",transition:"all 0.15s"}}>
               {lbl}
             </button>
           ))}
         </div>
 
-        {/* Tab content */}
-        <div style={{flex:1,overflowY:"auto",padding:"16px 20px",display:"flex",flexDirection:"column",gap:12}}>
+        {/* Content */}
+        <div style={{flex:1,overflowY:"auto",padding:"18px 22px",display:"flex",flexDirection:"column",gap:14}}>
 
+          {/* ── PROFILE TAB ── */}
           {workPanelTab==="profile"&&<>
-            {/* Описание */}
+            {/* Description */}
             {l.note&&<div>
-              <div style={{fontSize:10,fontWeight:700,color:C.t2,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>📋 Описание лида</div>
-              <div style={{fontSize:12,color:C.t1,lineHeight:1.65,background:C.ib,borderRadius:9,padding:"9px 11px",borderLeft:"3px solid "+stageColor,whiteSpace:"pre-wrap"}}>{l.note}</div>
+              <div style={{fontSize:10,fontWeight:700,color:C.t2,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Описание</div>
+              <div style={{fontSize:12,color:C.t1,lineHeight:1.65,background:C.ib,borderRadius:9,padding:"10px 12px",borderLeft:"3px solid "+stageColor,whiteSpace:"pre-wrap"}}>{l.note}</div>
             </div>}
-            {/* 5 fields read-only */}
+
+            {/* 5 editable fields */}
             {([
-              {key:"pains",label:"😣 Боли"},
-              {key:"desires",label:"✨ Желания"},
-              {key:"objections",label:"🚧 Возражения"},
-              {key:"leverage",label:"🎯 На что давить"},
-              {key:"next_step",label:"👉 Следующий шаг"},
-            ] as const).map(({key,label})=>l[key]?<div key={key}>
-              <div style={{fontSize:10,fontWeight:700,color:C.t2,textTransform:"uppercase",letterSpacing:0.4,marginBottom:3}}>{label}</div>
-              <div style={{fontSize:12,color:C.t1,lineHeight:1.6,background:C.ib,borderRadius:8,padding:"7px 10px",whiteSpace:"pre-wrap"}}>{l[key]}</div>
-            </div>:null)}
-            {/* AI report */}
-            <div style={{borderTop:"1px solid "+C.bd,paddingTop:12}}>
-              <button
-                disabled={aiReportLoading===l.id}
-                onClick={async()=>{await generateAiReport(l);setWorkPanelLead({...l});}}
-                style={{width:"100%",padding:"10px 14px",background:aiReportLoading===l.id?"#6D28D9":"linear-gradient(135deg,#7C3AED,#4F8EF7)",color:"#fff",border:"none",borderRadius:10,fontSize:12,fontWeight:700,cursor:aiReportLoading===l.id?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-                {aiReportLoading===l.id?<><div style={{width:13,height:13,border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/> Формирую...</>:"✦ Сформировать отчёт через ИИ"}
+              {key:"pains",label:"Боли",ph:"Что болит, что мешает, что не устраивает"},
+              {key:"desires",label:"Желания",ph:"Чего хочет достичь, какой результат ожидает"},
+              {key:"objections",label:"Возражения",ph:"Сомнения, страхи, причины не покупать"},
+              {key:"leverage",label:"На что давить",ph:"Триггеры, ценности, что важно для решения"},
+              {key:"next_step",label:"Следующий шаг",ph:"Конкретное действие: созвон, оффер, дожим..."},
+            ] as const).map(({key,label,ph})=>{
+              const val=l[key]||"";
+              return<div key={key}>
+                <div style={{fontSize:10,fontWeight:700,color:C.t2,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>{label}</div>
+                <textarea defaultValue={val} placeholder={ph} rows={2}
+                  onBlur={async e=>{const v=e.target.value;if(v!==val)await allLeads.update(l.id,{[key]:v});}}
+                  style={{width:"100%",padding:"9px 12px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,background:C.ib,color:C.t1,resize:"none",fontFamily:"Montserrat,sans-serif",lineHeight:1.6,outline:"none",boxSizing:"border-box" as const,transition:"border-color 0.15s"}}
+                  onFocus={e=>{e.target.style.borderColor=stageColor;}}
+                  onBlurCapture={e=>{e.target.style.borderColor=C.bd;}}/>
+              </div>;
+            })}
+
+            {/* AI Report */}
+            <div style={{borderTop:"1px solid "+C.bd,paddingTop:14}}>
+              <button disabled={aiReportLoading===l.id}
+                onClick={async()=>{await generateAiReport(l);setWorkPanelLead((prev:any)=>prev?{...prev,...allLeads.data.find((x:any)=>x.id===l.id)}:prev);}}
+                style={{width:"100%",padding:"11px 14px",background:aiReportLoading===l.id?"#6D28D9":"linear-gradient(135deg,#7C3AED,#4F8EF7)",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:700,cursor:aiReportLoading===l.id?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:"0 0 16px rgba(124,58,237,0.2)"}}>
+                {aiReportLoading===l.id?<><div style={{width:14,height:14,border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/> Формирую отчёт...</>:"Сформировать отчёт через ИИ"}
               </button>
-              {l.ai_report&&<div style={{marginTop:10}}><AiReportBlocks/></div>}
+
+              {l.ai_report&&(()=>{
+                const r=parseReport(l.ai_report);
+                return<div style={{marginTop:12,display:"flex",flexDirection:"column",gap:10}}>
+                  {r.portrait&&<div style={{padding:"12px 14px",background:"#EFF6FF",border:"1px solid #93C5FD",borderRadius:12,borderLeft:"3px solid #3B82F6"}}>
+                    <div style={{fontSize:10,fontWeight:800,color:"#1D4ED8",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Портрет лида</div>
+                    <div style={{fontSize:12,color:"#1E3A5F",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.portrait}</div>
+                  </div>}
+                  {r.emotions&&<div style={{padding:"12px 14px",background:"#FFF7ED",border:"1px solid #FED7AA",borderRadius:12,borderLeft:"3px solid #F97316"}}>
+                    <div style={{fontSize:10,fontWeight:800,color:"#C2410C",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Эмоциональное состояние</div>
+                    <div style={{fontSize:12,color:"#7C2D12",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.emotions}</div>
+                  </div>}
+                  {r.probability&&<div style={{padding:"12px 14px",background:"#F0F9FF",border:"1px solid #7DD3FC",borderRadius:12,borderLeft:"3px solid #0EA5E9"}}>
+                    <div style={{fontSize:10,fontWeight:800,color:"#0369A1",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Вероятность покупки</div>
+                    <div style={{fontSize:12,color:"#0C4A6E",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.probability}</div>
+                  </div>}
+                  {r.risks&&<div style={{padding:"12px 14px",background:"#FFF1F2",border:"1px solid #FECDD3",borderRadius:12,borderLeft:"3px solid #F43F5E"}}>
+                    <div style={{fontSize:10,fontWeight:800,color:"#BE123C",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Риски потери лида</div>
+                    <div style={{fontSize:12,color:"#881337",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.risks}</div>
+                  </div>}
+                  {r.steps&&<div style={{padding:"12px 14px",background:"#FAF5FF",border:"1px solid #D8B4FE",borderRadius:12,borderLeft:"3px solid #7C3AED"}}>
+                    <div style={{fontSize:10,fontWeight:800,color:"#6D28D9",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Оптимальный следующий шаг</div>
+                    <div style={{fontSize:12,color:"#4C1D95",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.steps}</div>
+                  </div>}
+                </div>;
+              })()}
             </div>
           </>}
 
+          {/* ── TOUCHES TAB ── */}
           {workPanelTab==="touches"&&<>
-            {!hasReport&&<div style={{padding:"12px 14px",background:"#FFF7ED",border:"1px solid #FED7AA",borderRadius:10,fontSize:12,color:"#C2410C",lineHeight:1.6}}>
-              ⚠️ Для генерации касания нужен <b>Отчёт ИИ</b>. Перейди во вкладку «Профиль» и сформируй его сначала.
+            {!hasReport&&<div style={{padding:"14px 16px",background:"#FFF7ED",border:"1px solid #FED7AA",borderRadius:12,fontSize:12,color:"#C2410C",lineHeight:1.7}}>
+              Для генерации касания нужен отчёт ИИ. Перейди во вкладку Профиль и сначала сформируй его.
             </div>}
             <div>
-              <div style={{fontSize:10,fontWeight:700,color:C.t2,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>🎯 Цель касания</div>
-              <input value={touchGenGoal} onChange={e=>setTouchGenGoal(e.target.value)}
-                placeholder="Например: закрыть на звонок, дожать до оплаты, отработать возражение..."
-                style={{...iS(),padding:"9px 12px",fontSize:12,width:"100%",boxSizing:"border-box" as const}}/>
+              <div style={{fontSize:10,fontWeight:700,color:C.t2,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Цель касания</div>
+              <textarea value={touchGenGoal} onChange={e=>setTouchGenGoal(e.target.value)} rows={2}
+                placeholder="Например: закрыть на звонок, дожать до оплаты, отработать возражение, напомнить о себе..."
+                style={{width:"100%",padding:"10px 12px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,background:C.ib,color:C.t1,resize:"none",fontFamily:"Montserrat,sans-serif",outline:"none",boxSizing:"border-box" as const,lineHeight:1.6}}/>
             </div>
-            <button
-              disabled={touchGenLoading||!hasReport}
+            <button disabled={touchGenLoading||!hasReport}
               onClick={()=>generateTouchpoint(workPanelLead)}
-              style={{width:"100%",padding:"10px 14px",background:!hasReport?"#9CA3AF":touchGenLoading?"#6D28D9":"linear-gradient(135deg,#7C3AED,#4F8EF7)",color:"#fff",border:"none",borderRadius:10,fontSize:12,fontWeight:700,cursor:(!hasReport||touchGenLoading)?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-              {touchGenLoading?<><div style={{width:13,height:13,border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/> Формирую касание...</>:"✦ Сформировать касание через ИИ"}
+              style={{width:"100%",padding:"11px 14px",background:!hasReport?"#9CA3AF":touchGenLoading?"#6D28D9":"linear-gradient(135deg,#7C3AED,#4F8EF7)",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:700,cursor:(!hasReport||touchGenLoading)?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+              {touchGenLoading?<><div style={{width:14,height:14,border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/> Генерирую касания...</>:"Сгенерировать касание"}
             </button>
-            <TouchResult/>
+
+            {touchGenResult&&touchGenResult!=="__no_report__"&&(()=>{
+              const touches=parseTouches(touchGenResult);
+              const colors=[
+                {bg:"#EFF6FF",border:"#93C5FD",accent:"#1D4ED8"},
+                {bg:"#FAF5FF",border:"#D8B4FE",accent:"#6D28D9"},
+                {bg:"#F0FDF4",border:"#86EFAC",accent:"#15803D"},
+              ];
+              return<div style={{display:"flex",flexDirection:"column",gap:12}}>
+                {touches.map((t:any,i:number)=>{
+                  const c=colors[i]||colors[0];
+                  return<div key={i} style={{padding:"14px 16px",background:c.bg,border:"1px solid "+c.border,borderRadius:12,borderLeft:"3px solid "+c.accent}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
+                      <div>
+                        <div style={{fontSize:11,fontWeight:800,color:c.accent,textTransform:"uppercase",letterSpacing:0.5}}>{t.name}</div>
+                        {t.goal&&<div style={{fontSize:11,color:c.accent,opacity:0.7,marginTop:2}}>Цель: {t.goal}</div>}
+                      </div>
+                    </div>
+                    <div style={{fontSize:12,color:C.t1,lineHeight:1.8,whiteSpace:"pre-wrap",marginBottom:10}}>{t.text}</div>
+                    <button
+                      onClick={()=>{navigator.clipboard.writeText(t.text).catch(()=>{});}}
+                      title="Скопировать текст"
+                      style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",background:"rgba(255,255,255,0.7)",border:"1px solid "+c.border,borderRadius:7,cursor:"pointer",fontSize:11,color:c.accent,fontWeight:600}}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                      Скопировать
+                    </button>
+                  </div>;
+                })}
+              </div>;
+            })()}
+            {touchGenResult==="__no_report__"&&<div style={{padding:"14px 16px",background:"#FFF7ED",border:"1px solid #FED7AA",borderRadius:12,fontSize:12,color:"#C2410C"}}>
+              Сначала сформируй отчёт ИИ во вкладке Профиль.
+            </div>}
           </>}
         </div>
       </div>
     </div>;
   };
-
   // ── SCREEN: FUNNEL LIST ──────────────────────────────────────────
   if(screen==="list"){
     return <>
