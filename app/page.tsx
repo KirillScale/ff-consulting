@@ -3684,17 +3684,79 @@ function CrmPage({userId}:{userId:string}){
     finally{setAvatarUpl(null);}
   };
 
-  // Stage labels per funnel (in-memory; could be persisted)
-  const[stageLabels,setStageLabels]=useState<Record<string,Record<string,string>>>({});
-
-  const activeFunnel=funnels.data.find((fu:any)=>fu.id===activeFunnelId)||null;
-
-  // Get stages for the active funnel
-  const getStages=(funnelId:string)=>{
-    const labels=stageLabels[funnelId]||{};
-    return CRM_DEFAULT_STAGES.map(s=>({...s,label:labels[s.id]||s.label}));
+  // Dynamic stages per funnel — stored in localStorage
+  const stagesKey=(fid:string)=>"ff_crm_stages_"+userId+"_"+fid;
+  const[funnelStages,setFunnelStages]=useState<Record<string,any[]>>(()=>{
+    try{
+      const obj:Record<string,any[]>={};
+      // we'll load per-funnel lazily
+      return obj;
+    }catch{return {};}
+  });
+  const getStages=(funnelId:string):any[]=>{
+    if(funnelStages[funnelId])return funnelStages[funnelId];
+    try{
+      const stored=localStorage.getItem(stagesKey(funnelId));
+      if(stored)return JSON.parse(stored);
+    }catch{}
+    return CRM_DEFAULT_STAGES.map(s=>({...s}));
+  };
+  const saveStages=(funnelId:string,stages:any[])=>{
+    setFunnelStages(p=>({...p,[funnelId]:stages}));
+    try{localStorage.setItem(stagesKey(funnelId),JSON.stringify(stages));}catch{}
   };
   const stages=activeFunnelId?getStages(activeFunnelId):CRM_DEFAULT_STAGES;
+
+  // Stage drag-n-drop
+  const[stageDragId,setStageDragId]=useState<string|null>(null);
+  const[stageDragOver,setStageDragOver]=useState<string|null>(null);
+  const onStageDragStart=(id:string)=>setStageDragId(id);
+  const onStageDragOver=(id:string,e:React.DragEvent)=>{e.preventDefault();setStageDragOver(id);};
+  const onStageDrop=(targetId:string)=>{
+    if(!stageDragId||!activeFunnelId||stageDragId===targetId){setStageDragId(null);setStageDragOver(null);return;}
+    const arr=[...stages];
+    const fi=arr.findIndex(s=>s.id===stageDragId);
+    const ti=arr.findIndex(s=>s.id===targetId);
+    if(fi<0||ti<0)return;
+    const[moved]=arr.splice(fi,1);arr.splice(ti,0,moved);
+    saveStages(activeFunnelId,arr);
+    setStageDragId(null);setStageDragOver(null);
+  };
+
+  // Add new stage
+  const addStage=()=>{
+    if(!activeFunnelId)return;
+    const id="stage_"+Date.now();
+    const color=FUNNEL_COLORS[stages.length%FUNNEL_COLORS.length];
+    const newStages=[...stages,{id,label:"Новый этап",color}];
+    saveStages(activeFunnelId,newStages);
+    setEditStageId(id);
+  };
+
+  // Delete stage
+  const deleteStage=(stageId:string)=>{
+    if(!activeFunnelId)return;
+    const newStages=stages.filter(s=>s.id!==stageId);
+    saveStages(activeFunnelId,newStages);
+  };
+
+  // Edit stage label
+  const updateStageLabel=(stageId:string,label:string)=>{
+    if(!activeFunnelId)return;
+    const newStages=stages.map(s=>s.id===stageId?{...s,label}:s);
+    saveStages(activeFunnelId,newStages);
+  };
+
+  // Edit stage color
+  const updateStageColor=(stageId:string,color:string)=>{
+    if(!activeFunnelId)return;
+    const newStages=stages.map(s=>s.id===stageId?{...s,color}:s);
+    saveStages(activeFunnelId,newStages);
+  };
+
+  const activeFunnel=funnels.data.find((fu:any)=>fu.id===activeFunnelId)||null;
+  // Stage labels per funnel (legacy — keep for compat)
+  const[stageLabels,setStageLabels]=useState<Record<string,Record<string,string>>>({});
 
   // Leads for the active funnel
   const leads=useMemo(()=>allLeads.data.filter((l:any)=>l.funnel_id===activeFunnelId),[allLeads.data,activeFunnelId]);
@@ -3850,6 +3912,8 @@ function CrmPage({userId}:{userId:string}){
   };
 
   const[aiReportLoading,setAiReportLoading]=useState<string|null>(null);
+  const[crmToast,setCrmToast]=useState<string|null>(null);
+  const showCrmToast=(msg:string,ms=5000)=>{setCrmToast(msg);setTimeout(()=>setCrmToast(null),ms);};
 
   const generateAiReport=async(l:any)=>{
     setAiReportLoading(l.id);
@@ -3860,8 +3924,9 @@ function CrmPage({userId}:{userId:string}){
       const text=data.choices?.[0]?.message?.content||data.content?.[0]?.text||"";
       if(text){
         await allLeads.update(l.id,{ai_report:text});
+        showCrmToast("Отчёт сформирован. Если не появился — перезагрузите страницу.");
       }
-    }catch(e){console.error(e);}
+    }catch(e){console.error(e);showCrmToast("Ошибка при формировании отчёта.");}
     setAiReportLoading(null);
   };
 
@@ -4464,6 +4529,7 @@ function CrmPage({userId}:{userId:string}){
   // ── SCREEN: FUNNEL INNER ─────────────────────────────────────────
   return <>
     <WorkPanel/>
+    {crmToast&&<div style={{position:"fixed",bottom:28,right:28,background:"#16A34A",color:"#fff",padding:"13px 20px",borderRadius:14,fontSize:13,fontWeight:600,zIndex:600,boxShadow:"0 8px 28px rgba(22,163,74,0.35)",display:"flex",alignItems:"center",gap:10,maxWidth:340,lineHeight:1.5}}>✓ {crmToast}</div>}
     {touchModalLead&&touchModalLeadId&&(
       <div style={{position:"fixed",inset:0,background:"rgba(5,8,15,0.62)",zIndex:320,display:"flex",alignItems:"center",justifyContent:"center",padding:isMobile?12:24,backdropFilter:"blur(8px)"}} onClick={closeTouchModal}>
         <div style={{width:"100%",maxWidth:860,maxHeight:"88dvh",background:C.w,border:"1px solid "+C.bd,borderRadius:24,boxShadow:"0 28px 80px rgba(0,0,0,0.36)",overflow:"hidden",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
@@ -4778,14 +4844,36 @@ function CrmPage({userId}:{userId:string}){
         {stages.map(stage=>{
           const stageLeads=leads.filter((l:any)=>l.status===stage.id);
           const isOver=dragOver===stage.id;
-          return <div key={stage.id} onDragOver={e=>onDragOver(stage.id,e)} onDrop={()=>onDrop(stage.id)} onDragLeave={()=>setDragOver(null)}
-            style={{minWidth:228,width:228,flexShrink:0,background:isOver?C.a+"06":C.ib,borderRadius:14,padding:"0 0 10px",border:"1px solid "+(isOver?C.a+"40":C.bd),boxShadow:isOver?"0 0 20px "+C.a+"15":"none",transition:"all 0.2s"}}>
+          const isStageDragOver=stageDragOver===stage.id&&stageDragId!==stage.id;
+          const isDefaultStage=CRM_DEFAULT_STAGES.some(s=>s.id===stage.id);
+          return <div key={stage.id}
+            draggable
+            onDragStart={e=>{e.stopPropagation();onStageDragStart(stage.id);}}
+            onDragOver={e=>{onStageDragOver(stage.id,e);onDragOver(stage.id,e);}}
+            onDrop={e=>{e.stopPropagation();onStageDrop(stage.id);onDrop(stage.id);}}
+            onDragLeave={()=>{setDragOver(null);setStageDragOver(null);}}
+            onDragEnd={()=>{setStageDragId(null);setStageDragOver(null);}}
+            style={{minWidth:228,width:228,flexShrink:0,background:isOver?C.a+"06":C.ib,borderRadius:14,padding:"0 0 10px",
+              border:"1px solid "+(isStageDragOver?stage.color+"80":isOver?C.a+"40":C.bd),
+              boxShadow:isStageDragOver?"0 0 16px "+stage.color+"30":isOver?"0 0 20px "+C.a+"15":"none",
+              opacity:stageDragId===stage.id?0.45:1,
+              transition:"all 0.2s",cursor:"grab"}}>
             <div style={{padding:"11px 11px 8px",borderBottom:"1px solid "+C.bd}}>
               {editStageId===stage.id
-                ?<input autoFocus defaultValue={stage.label}
-                    onBlur={e=>{setStageLabels((p:any)=>({...p,[activeFunnelId!]:{...(p[activeFunnelId!]||{}),[stage.id]:e.target.value||stage.label}}));setEditStageId(null);}}
-                    onKeyDown={e=>{if(e.key==="Enter"){setStageLabels((p:any)=>({...p,[activeFunnelId!]:{...(p[activeFunnelId!]||{}),[stage.id]:(e.target as HTMLInputElement).value||stage.label}}));setEditStageId(null);}if(e.key==="Escape")setEditStageId(null);}}
-                    style={{width:"100%",fontSize:12,fontWeight:600,padding:"3px 7px",border:"1px solid "+stage.color,borderRadius:7,outline:"none",background:C.ib,color:C.t1}}/>
+                ?<div style={{display:"flex",flexDirection:"column",gap:6}}>
+                    <input autoFocus defaultValue={stage.label}
+                      onBlur={e=>{updateStageLabel(stage.id,e.target.value||stage.label);setEditStageId(null);}}
+                      onKeyDown={e=>{if(e.key==="Enter"){updateStageLabel(stage.id,(e.target as HTMLInputElement).value||stage.label);setEditStageId(null);}if(e.key==="Escape")setEditStageId(null);}}
+                      style={{width:"100%",fontSize:12,fontWeight:600,padding:"4px 8px",border:"1px solid "+stage.color,borderRadius:7,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const}}/>
+                    <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                      {FUNNEL_COLORS.map(c=><button key={c} onClick={()=>updateStageColor(stage.id,c)}
+                        style={{width:16,height:16,borderRadius:"50%",background:c,border:stage.color===c?"2px solid "+C.t1:"1px solid transparent",cursor:"pointer",padding:0}}/>)}
+                    </div>
+                    {!isDefaultStage&&<button onClick={()=>{deleteStage(stage.id);setEditStageId(null);}}
+                      style={{fontSize:10,color:C.r,background:"transparent",border:"none",cursor:"pointer",textAlign:"left",padding:0}}>
+                      Удалить этот этап
+                    </button>}
+                  </div>
                 :<div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                     <div style={{display:"flex",alignItems:"center",gap:6}}>
                       <div style={{width:7,height:7,borderRadius:"50%",background:stage.color,boxShadow:"0 0 6px "+stage.color+"80",flexShrink:0}}/>
@@ -4793,7 +4881,8 @@ function CrmPage({userId}:{userId:string}){
                     </div>
                     <div style={{display:"flex",alignItems:"center",gap:4}}>
                       <span style={{fontSize:10,fontWeight:700,color:stage.color,background:stage.color+"18",borderRadius:20,padding:"1px 6px"}}>{stageLeads.length}</span>
-                      <button onClick={()=>setEditStageId(stage.id)} style={{width:20,height:20,border:"none",background:"transparent",cursor:"pointer",borderRadius:5,display:"flex",alignItems:"center",justifyContent:"center",color:C.t2,fontSize:11,opacity:0.5}}>✎</button>
+                      <button onClick={()=>setEditStageId(stage.id)} title="Настроить этап"
+                        style={{width:20,height:20,border:"none",background:"transparent",cursor:"pointer",borderRadius:5,display:"flex",alignItems:"center",justifyContent:"center",color:C.t2,fontSize:11,opacity:0.5}}>✎</button>
                     </div>
                   </div>
               }
@@ -4805,6 +4894,15 @@ function CrmPage({userId}:{userId:string}){
             </div>
           </div>;
         })}
+        {/* Add stage button */}
+        <div style={{minWidth:180,flexShrink:0,display:"flex",alignItems:"flex-start",paddingTop:4}}>
+          <button onClick={addStage}
+            style={{width:"100%",padding:"10px 14px",background:"transparent",border:"1px dashed "+C.bd,borderRadius:14,fontSize:12,color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,transition:"all 0.15s"}}
+            onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.a;(e.currentTarget as HTMLElement).style.color=C.a;(e.currentTarget as HTMLElement).style.background=C.a+"08";}}
+            onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.color=C.t2;(e.currentTarget as HTMLElement).style.background="transparent";}}>
+            + Добавить этап
+          </button>
+        </div>
       </div>
     </>}
 
