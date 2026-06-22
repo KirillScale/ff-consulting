@@ -1,4 +1,5 @@
 "use client";
+// v2.3 — offer page
 import React, { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } from "react";
 import { supabase } from "@/lib/supabase";
 
