@@ -48,41 +48,45 @@ const CALL_GOALS=["Созвон с командой","Созвон с лидом
 // NAV grouped structure
 const NAV_GROUPS=[
   {
-    // Pinned — no label
+    // Block 1 — MAIN (always open, no toggle)
+    label:"MAIN",
+    alwaysOpen:true,
     items:[
       {id:"dashboard",label:"Dashboard",accent:"#4F8EF7",ic:"M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"},
       {id:"strategy",label:"War Room",accent:"#4F8EF7",ic:"M13 10V3L4 14h7v7l9-11h-7z"},
-      {id:"pnl",label:"P&L",accent:"#4F8EF7",ic:"M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"},
-    ]
-  },
-  {
-    label:"Привлечение",
-    items:[
-      {id:"content",label:"Контент",accent:"#A855F7",ic:"M7 4v16M17 4v16M3 8h4m10 0h4M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"},
-      {id:"ads",label:"Реклама",accent:"#6EE7B7",ic:"M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"},
-    ]
-  },
-  {
-    label:"Работа с лидами",
-    items:[
       {id:"crm",label:"CRM",accent:"#38BDF8",ic:"M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"},
-      {id:"calls",label:"Созвоны",accent:"#38BDF8",ic:"M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"},
+      {id:"content",label:"Content",accent:"#A855F7",ic:"M7 4v16M17 4v16M3 8h4m10 0h4M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"},
+      {id:"calls",label:"Calls",accent:"#38BDF8",ic:"M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"},
     ]
   },
   {
-    label:"VIZZY AI",
+    // Block 2 — AI
+    label:"AI",
     items:[
-      {id:"ai",label:"Kirill Scales AI",ic:"M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z",accent:"#A78BFA"},
+      {id:"ai",label:"Kirill Skills AI",ic:"M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z",accent:"#A78BFA"},
       {id:"script",label:"Vizzy Copy AI",ic:"M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z",accent:"#FB923C"},
       {id:"product",label:"Vizzy Product AI",ic:"M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4",accent:"#34D399"},
+      {id:"design",label:"Vizzy Design AI",ic:"M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z",accent:"#60A5FA"},
       {id:"stories",label:"Vizzy Stories AI",ic:"M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z",accent:"gradient"},
     ]
   },
   {
-    label:"Прочее",
+    // Block 3 — My Business
+    label:"MY BUSINESS",
     items:[
-      {id:"links",label:"База ссылок",accent:"#94A3B8",ic:"M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"},
-      {id:"profile",label:"Настройки профиля",accent:"#A78BFA",ic:"M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2 M12 11a4 4 0 100-8 4 4 0 000 8z"},
+      {id:"offer",label:"Offer Position",accent:"#F59E0B",ic:"M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"},
+      {id:"prices",label:"Prices & Product",accent:"#F59E0B",ic:"M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"},
+      {id:"icp",label:"ICP & IVP",accent:"#F59E0B",ic:"M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"},
+      {id:"bizstrategy",label:"Strategy",accent:"#F59E0B",ic:"M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"},
+      {id:"team",label:"Team",accent:"#F59E0B",ic:"M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"},
+    ]
+  },
+  {
+    // Block 4 — Other
+    label:"OTHER",
+    items:[
+      {id:"links",label:"Links",accent:"#94A3B8",ic:"M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"},
+      {id:"profile",label:"Settings",accent:"#94A3B8",ic:"M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2 M12 11a4 4 0 100-8 4 4 0 000 8z"},
     ]
   },
 ];
@@ -297,6 +301,7 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
   const AI_ICONS:Record<string,string>={
     ai:"/icon-ai.png",script:"/icon-copy.png",
     product:"/icon-product.png",stories:"/icon-stories.png",
+    design:"/icon-design.png",
   };
 
   const getAccent=(n:any)=>(n.accent==="gradient"?null:n.accent||null);
@@ -493,36 +498,48 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
       {/* Nav */}
       <div className="sb-scroll" style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"10px 8px 0"}}>
         {NAV_GROUPS.map((group,gi)=>{
-          const isOpen=collapsed||!group.label||openGroups.includes(gi);
+          const isOpen=collapsed||(group as any).alwaysOpen||!group.label||openGroups.includes(gi);
           const hasActiveItem=group.items.some(i=>i.id===active);
+          const isAlwaysOpen=(group as any).alwaysOpen;
 
           return(
             <div key={gi} style={{marginBottom:6}}>
               {group.label&&!collapsed&&(
-                <button onClick={()=>toggleGroup(gi)}
-                  style={{
-                    width:"100%",display:"flex",alignItems:"center",
-                    justifyContent:"space-between",
-                    padding:"8px 10px 4px",border:"none",
-                    background:"transparent",cursor:"pointer",borderRadius:8,
-                    transition:"background 0.15s",
-                  }}
-                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.03)";}}
-                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}>
-                  <span style={{
-                    fontSize:9,fontWeight:700,
-                    color:hasActiveItem
-                      ?((group.items.find(i=>i.id===active)?.accent||"rgba(79,142,247,0.7)")+"bb")
-                      :"rgba(255,255,255,0.18)",
-                    letterSpacing:1.8,textTransform:"uppercase",
-                  }}>{group.label}</span>
-                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none"
-                    stroke={hasActiveItem?"rgba(255,255,255,0.25)":"rgba(255,255,255,0.15)"}
-                    strokeWidth="2.5"
-                    style={{transform:isOpen?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.25s ease"}}>
-                    <polyline points="6 9 12 15 18 9"/>
-                  </svg>
-                </button>
+                isAlwaysOpen
+                  // MAIN block — non-clickable label, no chevron
+                  ?<div style={{padding:"8px 10px 4px"}}>
+                    <span style={{
+                      fontSize:9,fontWeight:700,
+                      color:hasActiveItem
+                        ?((group.items.find(i=>i.id===active)?.accent||"rgba(79,142,247,0.7)")+"bb")
+                        :"rgba(255,255,255,0.18)",
+                      letterSpacing:1.8,textTransform:"uppercase",
+                    }}>{group.label}</span>
+                  </div>
+                  :<button onClick={()=>toggleGroup(gi)}
+                    style={{
+                      width:"100%",display:"flex",alignItems:"center",
+                      justifyContent:"space-between",
+                      padding:"8px 10px 4px",border:"none",
+                      background:"transparent",cursor:"pointer",borderRadius:8,
+                      transition:"background 0.15s",
+                    }}
+                    onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.03)";}}
+                    onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}>
+                    <span style={{
+                      fontSize:9,fontWeight:700,
+                      color:hasActiveItem
+                        ?((group.items.find(i=>i.id===active)?.accent||"rgba(79,142,247,0.7)")+"bb")
+                        :"rgba(255,255,255,0.18)",
+                      letterSpacing:1.8,textTransform:"uppercase",
+                    }}>{group.label}</span>
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none"
+                      stroke={hasActiveItem?"rgba(255,255,255,0.25)":"rgba(255,255,255,0.15)"}
+                      strokeWidth="2.5"
+                      style={{transform:isOpen?"rotate(0deg)":"rotate(-90deg)",transition:"transform 0.25s ease"}}>
+                      <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                  </button>
               )}
 
               {group.label&&collapsed&&gi>0&&(
@@ -626,7 +643,7 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
 
 /* ============ MOBILE NAV ============ */
 // Shows top 5 most important nav items + "More" drawer
-const MOB_NAV_PRIMARY=["dashboard","strategy","crm","calls","ai"];
+const MOB_NAV_PRIMARY=["dashboard","strategy","crm","content","calls"];
 function MobileNav({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onLogout:()=>void}){
   const[drawerOpen,setDrawerOpen]=useState(false);
   const primary=NAV.filter(n=>MOB_NAV_PRIMARY.includes(n.id));
@@ -728,7 +745,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const APP_VERSION="v2.2"; // bump this to force-clear stale localStorage
-  const VALID_PAGES=["dashboard","strategy","crm","calls","content","pnl","media","ads","links","profile","files","ai","script","product","stories","calc","tools","mailings"];
+  const VALID_PAGES=["dashboard","strategy","crm","calls","content","pnl","media","ads","links","profile","files","ai","script","product","stories","design","offer","prices","icp","bizstrategy","team","calc","tools","mailings"];
 
   // Clear stale localStorage on version change
   useEffect(()=>{
@@ -855,7 +872,13 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
     {page==="script"&&<SafePage name="Copy AI"><ScriptAIPage/></SafePage>}
     {page==="product"&&<SafePage name="Product AI"><ProductAIPage/></SafePage>}
     {page==="stories"&&<SafePage name="Stories AI"><StoriesAIPage/></SafePage>}
-    {!["dashboard","strategy","crm","calls","mailings","content","pnl","media","ads","calc","tools","links","profile","files","ai","script","product","stories"].includes(page)&&nav&&<Placeholder title={nav.label} ic={nav.ic}/>}
+    {page==="design"&&<SafePage name="Design AI"><Placeholder title="Vizzy Design AI" ic="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></SafePage>}
+    {page==="offer"&&<SafePage name="Offer Position"><Placeholder title="Offer Position" ic="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></SafePage>}
+    {page==="prices"&&<SafePage name="Prices & Product"><Placeholder title="Prices & Product" ic="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></SafePage>}
+    {page==="icp"&&<SafePage name="ICP & IVP"><Placeholder title="ICP & IVP" ic="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></SafePage>}
+    {page==="bizstrategy"&&<SafePage name="Strategy"><Placeholder title="Strategy" ic="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></SafePage>}
+    {page==="team"&&<SafePage name="Team"><Placeholder title="Team" ic="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></SafePage>}
+    {!["dashboard","strategy","crm","calls","mailings","content","pnl","media","ads","calc","tools","links","profile","files","ai","script","product","stories","design","offer","prices","icp","bizstrategy","team"].includes(page)&&nav&&<Placeholder title={nav.label} ic={nav.ic}/>}
   </>;
 
   return (
