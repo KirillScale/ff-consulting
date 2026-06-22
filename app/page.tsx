@@ -873,7 +873,7 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
     {page==="product"&&<SafePage name="Product AI"><ProductAIPage/></SafePage>}
     {page==="stories"&&<SafePage name="Stories AI"><StoriesAIPage/></SafePage>}
     {page==="design"&&<SafePage name="Design AI"><Placeholder title="Vizzy Design AI" ic="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></SafePage>}
-    {page==="offer"&&<SafePage name="Offer Position"><Placeholder title="Offer Position" ic="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></SafePage>}
+    {page==="offer"&&<SafePage name="Offer Position"><OfferPage userId={user.id}/></SafePage>}
     {page==="prices"&&<SafePage name="Prices & Product"><Placeholder title="Prices & Product" ic="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></SafePage>}
     {page==="icp"&&<SafePage name="ICP & IVP"><Placeholder title="ICP & IVP" ic="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></SafePage>}
     {page==="bizstrategy"&&<SafePage name="Strategy"><Placeholder title="Strategy" ic="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></SafePage>}
@@ -11237,4 +11237,330 @@ function BoardPage({userId}:{userId:string}){
       </div>
     </div>
   );
+}
+
+/* ============ OFFER POSITION PAGE ============ */
+function OfferPage({userId}:{userId:string}){
+  const{dark}=useTheme();
+  const[activeOffer,setActiveOffer]=useState<any>(null);
+  const[history,setHistory]=useState<any[]>([]);
+  const[loading,setLoading]=useState(true);
+  const[mode,setMode]=useState<"view"|"choose"|"manual"|"paste"|"quiz"|"generating"|"result"|"history"|"editPos">("view");
+  const[manualText,setManualText]=useState("");
+  const[posText,setPosText]=useState("");
+  const[quizStep,setQuizStep]=useState(0);
+  const[quizAnswers,setQuizAnswers]=useState<string[]>(Array(8).fill(""));
+  const[generatedOffer,setGeneratedOffer]=useState("");
+  const[displayedOffer,setDisplayedOffer]=useState("");
+  const[copied,setCopied]=useState(false);
+  const[copiedPos,setCopiedPos]=useState(false);
+  const[saving,setSaving]=useState(false);
+  const[aiError,setAiError]=useState("");
+
+  useEffect(()=>{if(userId)loadData();},[userId]);
+
+  const loadData=async()=>{
+    setLoading(true);
+    const{data:curr}=await supabase.from("user_offers").select("*").eq("user_id",userId).eq("is_archived",false).order("created_at",{ascending:false}).limit(1).maybeSingle();
+    if(curr)setActiveOffer(curr);
+    const{data:hist}=await supabase.from("user_offers").select("*").eq("user_id",userId).eq("is_archived",true).order("created_at",{ascending:false}).limit(20);
+    if(hist)setHistory(hist);
+    setLoading(false);
+  };
+
+  const saveOffer=async(offerText:string,positioningText?:string)=>{
+    setSaving(true);
+    if(activeOffer)await supabase.from("user_offers").update({is_archived:true}).eq("id",activeOffer.id);
+    const{data:newOffer}=await supabase.from("user_offers").insert({
+      user_id:userId,offer_text:offerText,
+      positioning_text:positioningText??activeOffer?.positioning_text??"",
+      is_archived:false,
+    }).select().single();
+    if(newOffer){if(activeOffer)setHistory(prev=>[activeOffer,...prev]);setActiveOffer(newOffer);}
+    setSaving(false);setMode("view");
+  };
+
+  const savePositioning=async(pt:string)=>{
+    setSaving(true);
+    if(activeOffer){
+      await supabase.from("user_offers").update({positioning_text:pt}).eq("id",activeOffer.id);
+      setActiveOffer({...activeOffer,positioning_text:pt});
+    }else{
+      const{data:n}=await supabase.from("user_offers").insert({user_id:userId,offer_text:"",positioning_text:pt,is_archived:false}).select().single();
+      if(n)setActiveOffer(n);
+    }
+    setSaving(false);setMode("view");
+  };
+
+  const generateWithAI=async()=>{
+    setMode("generating");setAiError("");
+    const userPrompt=`Данные пользователя:\nЦелевой клиент: ${quizAnswers[0]}\nГлавная боль клиента: ${quizAnswers[1]}\nРезультат для клиента: ${quizAnswers[2]}\nСрок достижения результата: ${quizAnswers[3]}\nУникальный метод: ${quizAnswers[4]}\nГлавный страх клиента: ${quizAnswers[5]}\nГарантия: ${quizAnswers[6]}\nОграничение или дедлайн: ${quizAnswers[7]}\n\nСоставь сильный оффер на основе этих данных.`;
+    try{
+      const res=await fetch("https://api.deepseek.com/v1/chat/completions",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":`Bearer ${process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY}`},
+        body:JSON.stringify({
+          model:"deepseek-chat",max_tokens:800,temperature:0.7,
+          messages:[
+            {role:"system",content:"Ты эксперт по маркетингу и формированию сильных офферов. Твоя задача — на основе ответов пользователя составить мощный, конкретный, продающий оффер для его бизнеса.\n\nПравила:\n- Оффер от первого лица или в формате ценностного предложения.\n- Никаких общих слов — только конкретика, цифры, сроки.\n- Структура: кто клиент, результат, срок, механизм, закрытие страха, гарантия.\n- Длина: 2-4 предложения. Максимально емко.\n- Язык: живой, без канцелярщины.\n- В конце короткая версия одним предложением.\n\nФормат: сначала полный оффер, затем с новой строки «Короткая версия:» и слоган."},
+            {role:"user",content:userPrompt}
+          ],
+        }),
+      });
+      const data=await res.json();
+      const text=data.choices?.[0]?.message?.content||"";
+      if(!text){setAiError("ИИ не вернул ответ. Попробуй ещё раз.");setMode("quiz");return;}
+      setGeneratedOffer(text);setMode("result");
+      setDisplayedOffer("");
+      let i=0;
+      const iv=setInterval(()=>{
+        if(i<text.length){setDisplayedOffer(text.slice(0,i+1));i++;}
+        else clearInterval(iv);
+      },12);
+    }catch(e){setAiError("Ошибка генерации. Проверь API ключ или попробуй ещё раз.");setMode("quiz");}
+  };
+
+  const QUESTIONS=[
+    {q:"Кто твой клиент? Опиши максимально конкретно.",hint:"Не «предприниматели», а например «владельцы малого бизнеса с выручкой от 500к в месяц»",multi:true},
+    {q:"Какую главную проблему или боль ты решаешь для этого клиента?",hint:"Что его реально беспокоит прямо сейчас",multi:true},
+    {q:"Какой конкретный результат получает клиент после работы с тобой?",hint:"В цифрах, сроках, измеримых показателях",multi:true},
+    {q:"За какой срок достигается этот результат?",hint:"Например: за 30 дней, за 3 месяца",multi:false},
+    {q:"Через что именно ты достигаешь этого результата?",hint:"Твой уникальный метод, инструмент, система, подход",multi:true},
+    {q:"Какой главный страх или барьер есть у клиента перед покупкой?",hint:"Что он боится или в чём сомневается",multi:true},
+    {q:"Какие гарантии ты готов дать клиенту?",hint:"Если пока нет — напиши «нет»",multi:false},
+    {q:"Есть ли ограничение по количеству клиентов или срок действия предложения?",hint:"Если да — укажи его",multi:false},
+  ];
+
+  const copyText=(text:string,setter:(v:boolean)=>void)=>{
+    navigator.clipboard.writeText(text);setter(true);setTimeout(()=>setter(false),2000);
+  };
+
+  const BackBtn=({to}:{to:typeof mode})=>(
+    <button onClick={()=>setMode(to)} style={{background:"none",border:"none",cursor:"pointer",color:C.t2,fontSize:13,marginBottom:28,display:"flex",alignItems:"center",gap:6,padding:0}}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Назад
+    </button>
+  );
+
+  const CopyIcon=({done}:{done:boolean})=>done
+    ?<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+    :<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>;
+
+  const PrimaryBtn=({children,onClick,disabled,grad="blue"}:{children:React.ReactNode,onClick?:()=>void,disabled?:boolean,grad?:string})=>{
+    const bg=grad==="purple"?"linear-gradient(135deg,#7C3AED,#A855F7)":"linear-gradient(135deg,#2563EB,#4F46E5)";
+    return<button onClick={onClick} disabled={disabled} style={{width:"100%",padding:"16px",borderRadius:14,border:"none",background:disabled?"rgba(255,255,255,0.06)":bg,color:disabled?C.t2:"#fff",fontSize:15,fontWeight:700,cursor:disabled?"not-allowed":"pointer",boxShadow:disabled?"none":"0 4px 20px rgba(37,99,235,0.3)",transition:"all 0.2s",opacity:disabled?0.7:1}}>{children}</button>;
+  };
+
+  const SecondaryBtn=({children,onClick}:{children:React.ReactNode,onClick?:()=>void})=>(
+    <button onClick={onClick} style={{width:"100%",padding:"16px",borderRadius:14,border:`1.5px solid ${dark?"rgba(255,255,255,0.1)":C.bd}`,background:"transparent",color:C.t1,fontSize:15,fontWeight:600,cursor:"pointer"}}>{children}</button>
+  );
+
+  if(loading)return<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"60vh",color:C.t2,fontSize:14}}>Загрузка...</div>;
+
+  /* ── VIEW ── */
+  if(mode==="view")return(
+    <div style={{maxWidth:720,margin:"0 auto",padding:"32px 24px",display:"flex",flexDirection:"column",gap:20}}>
+      <div style={{marginBottom:4}}>
+        <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color:C.t2,textTransform:"uppercase",marginBottom:6}}>Vizzy App · Offer Position</div>
+        <div style={{fontSize:24,fontWeight:900,color:C.t1}}>Штаб твоего позиционирования</div>
+      </div>
+
+      {/* Offer card */}
+      <div style={{background:dark?"rgba(79,142,247,0.06)":"#fff",border:`1.5px solid ${dark?"rgba(79,142,247,0.22)":"#BFDBFE"}`,borderRadius:20,padding:28,boxShadow:dark?"0 0 40px rgba(79,142,247,0.08)":C.sh,position:"relative"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+          <span style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#4F8EF7",textTransform:"uppercase"}}>YOUR OFFER</span>
+          {activeOffer?.offer_text&&<button onClick={()=>copyText(activeOffer.offer_text,setCopied)} style={{background:"none",border:"none",cursor:"pointer",padding:6,borderRadius:8,color:copied?"#10B981":C.t2}}><CopyIcon done={copied}/></button>}
+        </div>
+        {activeOffer?.offer_text
+          ?<div style={{fontSize:20,fontWeight:700,color:C.t1,lineHeight:1.6}}>{activeOffer.offer_text}</div>
+          :<div style={{fontSize:16,color:C.t2,fontStyle:"italic",lineHeight:1.6}}>Твой оффер ещё не сформирован. Давай это исправим.</div>
+        }
+      </div>
+
+      {/* Positioning card */}
+      <div style={{background:dark?"rgba(168,85,247,0.05)":"#fff",border:`1.5px solid ${dark?"rgba(168,85,247,0.18)":"#EDE9FE"}`,borderRadius:20,padding:28,boxShadow:dark?"0 0 30px rgba(168,85,247,0.06)":C.sh,position:"relative"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+          <span style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#A855F7",textTransform:"uppercase"}}>YOUR POSITIONING</span>
+          {activeOffer?.positioning_text&&<button onClick={()=>copyText(activeOffer.positioning_text,setCopiedPos)} style={{background:"none",border:"none",cursor:"pointer",padding:6,borderRadius:8,color:copiedPos?"#10B981":C.t2}}><CopyIcon done={copiedPos}/></button>}
+        </div>
+        {activeOffer?.positioning_text
+          ?<div style={{fontSize:16,fontWeight:500,color:C.t1,lineHeight:1.65}}>{activeOffer.positioning_text}</div>
+          :<div style={{fontSize:15,color:C.t2,fontStyle:"italic",lineHeight:1.6}}>Позиционирование ещё не заполнено. Кто ты, для кого, чем отличаешься.</div>
+        }
+      </div>
+
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        <PrimaryBtn onClick={()=>setMode("choose")}>Редактировать оффер</PrimaryBtn>
+        <SecondaryBtn onClick={()=>{setPosText(activeOffer?.positioning_text||"");setMode("editPos");}}>Редактировать позиционирование</SecondaryBtn>
+      </div>
+
+      {history.length>0&&<button onClick={()=>setMode("history")} style={{alignSelf:"center",background:"none",border:"none",cursor:"pointer",fontSize:12,color:C.t2,textDecoration:"underline",padding:8}}>
+        История офферов ({history.length})
+      </button>}
+    </div>
+  );
+
+  /* ── CHOOSE ── */
+  if(mode==="choose")return(
+    <div style={{maxWidth:720,margin:"0 auto",padding:"32px 24px"}}>
+      <BackBtn to="view"/>
+      <div style={{fontSize:22,fontWeight:800,color:C.t1,marginBottom:6}}>Как хочешь заполнить оффер?</div>
+      <div style={{fontSize:14,color:C.t2,marginBottom:28}}>Выбери способ</div>
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        {[
+          {id:"manual",icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,bg:"#DBEAFE",title:"Написать самостоятельно",sub:"Я знаю свой оффер. Просто введу его.",accent:false},
+          {id:"paste",icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>,bg:"#F3F4F6",title:"Вставить готовый текст",sub:"У меня есть текст. Просто вставлю его.",accent:false},
+          {id:"quiz",icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>,bg:"linear-gradient(135deg,#2563EB,#4F46E5)",title:"Сформировать с ИИ",sub:"Составить оффер с помощью ИИ — ответь на 8 вопросов.",accent:true},
+        ].map(opt=>(
+          <button key={opt.id} onClick={()=>{
+            if(opt.id==="manual"){setManualText(activeOffer?.offer_text||"");setMode("manual");}
+            else if(opt.id==="paste"){setManualText("");setMode("paste");}
+            else{setQuizStep(0);setQuizAnswers(Array(8).fill(""));setMode("quiz");}
+          }} style={{
+            padding:24,borderRadius:18,cursor:"pointer",textAlign:"left",
+            display:"flex",gap:16,alignItems:"flex-start",
+            background:opt.accent?(dark?"rgba(79,142,247,0.1)":"#EFF6FF"):(dark?"#0F1420":"#fff"),
+            border:opt.accent?`1.5px solid rgba(79,142,247,0.3)`:`1px solid ${dark?"rgba(255,255,255,0.07)":C.bd}`,
+            boxShadow:opt.accent?"0 4px 24px rgba(79,142,247,0.12)":C.sh,
+          }}>
+            <div style={{width:44,height:44,borderRadius:12,background:opt.bg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{opt.icon}</div>
+            <div>
+              <div style={{fontSize:15,fontWeight:700,color:C.t1,marginBottom:4}}>{opt.title}</div>
+              <div style={{fontSize:13,color:C.t2}}>{opt.sub}</div>
+              {opt.id==="quiz"&&<div style={{fontSize:11,color:"#4F8EF7",fontWeight:700,marginTop:6}}>8 вопросов · ИИ составит оффер за тебя</div>}
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  /* ── MANUAL / PASTE ── */
+  if(mode==="manual"||mode==="paste")return(
+    <div style={{maxWidth:720,margin:"0 auto",padding:"32px 24px"}}>
+      <BackBtn to="choose"/>
+      <div style={{fontSize:22,fontWeight:800,color:C.t1,marginBottom:6}}>{mode==="manual"?"Введи свой оффер":"Вставь готовый текст"}</div>
+      <div style={{fontSize:14,color:C.t2,marginBottom:24}}>{mode==="manual"?"Напиши текст оффера в поле ниже":"Скопируй и вставь свой оффер"}</div>
+      <textarea value={manualText} onChange={e=>setManualText(e.target.value)} autoFocus
+        placeholder={mode==="manual"?"Мы помогаем [кому] достичь [результат] за [срок] через [метод]...":"Вставь текст оффера сюда..."}
+        style={{width:"100%",minHeight:180,padding:16,border:`1.5px solid ${dark?"rgba(79,142,247,0.25)":"#BFDBFE"}`,borderRadius:14,fontSize:16,background:dark?"#0F1420":C.ib,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.6,fontFamily:"'Montserrat',sans-serif",boxSizing:"border-box" as const}}/>
+      <div style={{marginTop:14}}><PrimaryBtn onClick={()=>saveOffer(manualText.trim())} disabled={!manualText.trim()||saving}>{saving?"Сохраняем...":"Сохранить оффер"}</PrimaryBtn></div>
+    </div>
+  );
+
+  /* ── EDIT POSITIONING ── */
+  if(mode==="editPos")return(
+    <div style={{maxWidth:720,margin:"0 auto",padding:"32px 24px"}}>
+      <BackBtn to="view"/>
+      <div style={{fontSize:22,fontWeight:800,color:C.t1,marginBottom:6}}>Твоё позиционирование</div>
+      <div style={{fontSize:14,color:C.t2,marginBottom:24}}>Кто ты, для кого, чем отличаешься от других</div>
+      <textarea value={posText} onChange={e=>setPosText(e.target.value)} autoFocus
+        placeholder="Например: Я бизнес-стратег для онлайн-предпринимателей с доходом от 500к. Помогаю выйти из операционки. В отличие от коучей — работаю с цифрами и процессами."
+        style={{width:"100%",minHeight:160,padding:16,border:`1.5px solid ${dark?"rgba(168,85,247,0.25)":"#DDD6FE"}`,borderRadius:14,fontSize:15,background:dark?"#0F1420":C.ib,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.6,fontFamily:"'Montserrat',sans-serif",boxSizing:"border-box" as const}}/>
+      <div style={{marginTop:14}}><PrimaryBtn onClick={()=>savePositioning(posText.trim())} disabled={!posText.trim()||saving} grad="purple">{saving?"Сохраняем...":"Сохранить позиционирование"}</PrimaryBtn></div>
+    </div>
+  );
+
+  /* ── QUIZ ── */
+  if(mode==="quiz"){
+    const q=QUESTIONS[quizStep];
+    const answer=quizAnswers[quizStep];
+    const canNext=answer.trim().length>0;
+    const isLast=quizStep===7;
+    const setAnswer=(v:string)=>{const a=[...quizAnswers];a[quizStep]=v;setQuizAnswers(a);};
+    return(
+      <div style={{maxWidth:640,margin:"0 auto",padding:"32px 24px"}}>
+        <button onClick={()=>quizStep===0?setMode("choose"):setQuizStep(s=>s-1)} style={{background:"none",border:"none",cursor:"pointer",color:C.t2,fontSize:13,marginBottom:28,display:"flex",alignItems:"center",gap:6,padding:0}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          {quizStep===0?"Назад к выбору":"Предыдущий вопрос"}
+        </button>
+
+        <div style={{marginBottom:32}}>
+          <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+            <span style={{fontSize:11,color:C.t2,fontWeight:600}}>Вопрос {quizStep+1} из 8</span>
+            <span style={{fontSize:11,color:"#4F8EF7",fontWeight:700}}>{Math.round(((quizStep+1)/8)*100)}%</span>
+          </div>
+          <div style={{height:4,background:dark?"rgba(255,255,255,0.06)":"#E5E7EB",borderRadius:4,overflow:"hidden"}}>
+            <div style={{height:"100%",width:`${((quizStep+1)/8)*100}%`,background:"linear-gradient(90deg,#2563EB,#4F46E5)",borderRadius:4,transition:"width 0.4s ease"}}/>
+          </div>
+          <div style={{display:"flex",gap:4,marginTop:10}}>
+            {QUESTIONS.map((_,i)=>(
+              <div key={i} style={{flex:1,height:3,borderRadius:3,background:i<quizStep?"#4F8EF7":i===quizStep?(dark?"rgba(79,142,247,0.4)":"#BFDBFE"):(dark?"rgba(255,255,255,0.05)":"#E5E7EB"),transition:"background 0.3s"}}/>
+            ))}
+          </div>
+        </div>
+
+        <div style={{fontSize:21,fontWeight:800,color:C.t1,lineHeight:1.45,marginBottom:8}}>{q.q}</div>
+        {q.hint&&<div style={{fontSize:13,color:C.t2,marginBottom:22,lineHeight:1.5,fontStyle:"italic"}}>{q.hint}</div>}
+
+        {q.multi
+          ?<textarea value={answer} onChange={e=>setAnswer(e.target.value)} autoFocus placeholder="Твой ответ..."
+              style={{width:"100%",minHeight:130,padding:16,border:`1.5px solid ${dark?"rgba(79,142,247,0.28)":"#BFDBFE"}`,borderRadius:14,fontSize:15,background:dark?"#0F1420":C.ib,color:C.t1,outline:"none",resize:"none" as const,lineHeight:1.6,fontFamily:"'Montserrat',sans-serif",boxSizing:"border-box" as const}}/>
+          :<input value={answer} onChange={e=>setAnswer(e.target.value)} autoFocus placeholder="Твой ответ..."
+              onKeyDown={e=>e.key==="Enter"&&canNext&&(isLast?generateWithAI():setQuizStep(s=>s+1))}
+              style={{width:"100%",padding:16,border:`1.5px solid ${dark?"rgba(79,142,247,0.28)":"#BFDBFE"}`,borderRadius:14,fontSize:15,background:dark?"#0F1420":C.ib,color:C.t1,outline:"none",fontFamily:"'Montserrat',sans-serif",boxSizing:"border-box" as const}}/>
+        }
+
+        {aiError&&<div style={{marginTop:12,padding:"10px 14px",borderRadius:10,background:"#FEF2F2",color:C.r,fontSize:13}}>{aiError}</div>}
+
+        <div style={{marginTop:20}}>
+          <PrimaryBtn disabled={!canNext} onClick={()=>isLast?generateWithAI():setQuizStep(s=>s+1)}>
+            {isLast?"✨ Сформировать оффер":"Далее →"}
+          </PrimaryBtn>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── GENERATING ── */
+  if(mode==="generating")return(
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"65vh",gap:24}}>
+      <div style={{width:88,height:88,borderRadius:24,background:"linear-gradient(135deg,#2563EB,#4F46E5)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 0 48px rgba(37,99,235,0.4)",animation:"pulse 1.5s ease-in-out infinite"}}>
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+      </div>
+      <div style={{textAlign:"center"}}>
+        <div style={{fontSize:20,fontWeight:800,color:C.t1,marginBottom:8}}>ИИ формирует твой оффер</div>
+        <div style={{fontSize:14,color:C.t2}}>Обычно занимает 10–15 секунд...</div>
+      </div>
+    </div>
+  );
+
+  /* ── RESULT ── */
+  if(mode==="result")return(
+    <div style={{maxWidth:720,margin:"0 auto",padding:"32px 24px"}}>
+      <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#4F8EF7",textTransform:"uppercase",marginBottom:8}}>Готово ✨</div>
+      <div style={{fontSize:22,fontWeight:900,color:C.t1,marginBottom:24}}>ИИ составил твой оффер</div>
+      <div style={{background:dark?"rgba(79,142,247,0.06)":"#F0F7FF",border:`1.5px solid ${dark?"rgba(79,142,247,0.22)":"#BFDBFE"}`,borderRadius:20,padding:28,marginBottom:24,minHeight:120,boxShadow:"0 0 40px rgba(79,142,247,0.08)"}}>
+        <div style={{fontSize:17,fontWeight:600,color:C.t1,lineHeight:1.7,whiteSpace:"pre-wrap"}}>{displayedOffer}<span style={{opacity:displayedOffer.length<generatedOffer.length?1:0,animation:"pulse 0.8s infinite"}}>▌</span></div>
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        <PrimaryBtn onClick={()=>saveOffer(generatedOffer)} disabled={saving}>{saving?"Сохраняем...":"Сохранить оффер"}</PrimaryBtn>
+        <SecondaryBtn onClick={()=>{setQuizStep(7);setMode("quiz");}}>Изменить ответы</SecondaryBtn>
+        <button onClick={generateWithAI} style={{width:"100%",padding:"14px",borderRadius:14,border:"none",background:"transparent",color:C.t2,fontSize:13,fontWeight:500,cursor:"pointer"}}>Переформулировать ещё раз</button>
+      </div>
+    </div>
+  );
+
+  /* ── HISTORY ── */
+  if(mode==="history")return(
+    <div style={{maxWidth:720,margin:"0 auto",padding:"32px 24px"}}>
+      <BackBtn to="view"/>
+      <div style={{fontSize:22,fontWeight:800,color:C.t1,marginBottom:20}}>История офферов</div>
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        {history.map((h:any)=>(
+          <div key={h.id} style={{background:dark?"#0F1420":"#fff",border:`1px solid ${dark?"rgba(255,255,255,0.07)":C.bd}`,borderRadius:16,padding:20}}>
+            <div style={{fontSize:11,color:C.t2,marginBottom:8,fontWeight:600}}>
+              {new Date(h.created_at).toLocaleDateString("ru-RU",{day:"numeric",month:"long",year:"numeric"})}
+            </div>
+            <div style={{fontSize:14,color:C.t1,lineHeight:1.6,marginBottom:12}}>{h.offer_text||"—"}</div>
+            <button onClick={()=>saveOffer(h.offer_text,h.positioning_text)} style={{fontSize:12,color:"#4F8EF7",background:"none",border:"none",cursor:"pointer",padding:0,fontWeight:700}}>
+              Восстановить этот оффер →
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  return null;
 }
