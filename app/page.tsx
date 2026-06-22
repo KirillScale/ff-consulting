@@ -875,7 +875,7 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
     {page==="stories"&&<SafePage name="Stories AI"><StoriesAIPage/></SafePage>}
     {page==="design"&&<SafePage name="Design AI"><Placeholder title="Vizzy Design AI" ic="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></SafePage>}
     {page==="offer"&&<SafePage name="Offer Position"><OfferPage userId={user.id}/></SafePage>}
-    {page==="prices"&&<SafePage name="Prices & Product"><Placeholder title="Prices & Product" ic="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></SafePage>}
+    {page==="prices"&&<SafePage name="Prices & Product"><PricesPage userId={user.id} onNav={setPage}/></SafePage>}
     {page==="icp"&&<SafePage name="ICP & IVP"><Placeholder title="ICP & IVP" ic="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></SafePage>}
     {page==="bizstrategy"&&<SafePage name="Strategy"><Placeholder title="Strategy" ic="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></SafePage>}
     {page==="team"&&<SafePage name="Team"><Placeholder title="Team" ic="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></SafePage>}
@@ -11562,6 +11562,423 @@ function OfferPage({userId}:{userId:string}){
       </div>
     </div>
   );
+
+  return null;
+}
+
+/* ============ PRICES & PRODUCTS PAGE ============ */
+function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
+  const{dark}=useTheme();
+  const[products,setProducts]=useState<any[]>([]);
+  const[loading,setLoading]=useState(true);
+  const[mode,setMode]=useState<"list"|"add"|"detail">("list");
+  const[selected,setSelected]=useState<any>(null);
+
+  // Form state
+  const[form,setForm]=useState({name:"",description:"",targetAudience:"",logoUrl:""});
+  const[prices,setPrices]=useState<{name:string,price:string}[]>([{name:"",price:""}]);
+  const[pains,setPains]=useState<string[]>([""]); 
+  const[offer,setOffer]=useState("");
+  const[marketing,setMarketing]=useState("");
+  const[funnel,setFunnel]=useState("");
+  const[genLoading,setGenLoading]=useState<{offer:boolean,marketing:boolean,funnel:boolean}>({offer:false,marketing:false,funnel:false});
+  const[displayOffer,setDisplayOffer]=useState("");
+  const[displayMkt,setDisplayMkt]=useState("");
+  const[displayFunnel,setDisplayFunnel]=useState("");
+  const[saving,setSaving]=useState(false);
+  const[formErr,setFormErr]=useState("");
+  const[logoLoading,setLogoLoading]=useState(false);
+  const logoRef=useRef<HTMLInputElement>(null);
+
+  // Detail inline edit
+  const[editField,setEditField]=useState<string|null>(null);
+  const[editVal,setEditVal]=useState("");
+  const[detailPrices,setDetailPrices]=useState<any[]>([]);
+  const[detailPains,setDetailPains]=useState<string[]>([]);
+
+  useEffect(()=>{if(userId)loadProducts();},[userId]);
+
+  const loadProducts=async()=>{
+    setLoading(true);
+    const{data}=await supabase.from("user_products").select("*").eq("user_id",userId).order("created_at",{ascending:false});
+    setProducts(data||[]);
+    setLoading(false);
+  };
+
+  const resetForm=()=>{
+    setForm({name:"",description:"",targetAudience:"",logoUrl:""});
+    setPrices([{name:"",price:""}]);
+    setPains([""]);
+    setOffer("");setMarketing("");setFunnel("");
+    setDisplayOffer("");setDisplayMkt("");setDisplayFunnel("");
+    setFormErr("");
+  };
+
+  const typewrite=(text:string,setter:(v:string)=>void,speed=12)=>{
+    setter("");let i=0;
+    const iv=setInterval(()=>{
+      if(i<text.length){setter(text.slice(0,i+1));i++;}
+      else clearInterval(iv);
+    },speed);
+  };
+
+  const callAI=async(type:"offer"|"marketing"|"funnel")=>{
+    if(!form.name.trim()||!form.description.trim()){setFormErr("Заполни название и описание продукта перед генерацией.");return;}
+    setFormErr("");
+    setGenLoading(p=>({...p,[type]:true}));
+    const systemPrompts={
+      offer:"Ты эксперт по маркетингу и продажам. Составь сильный продающий оффер для продукта. Конкретно, без общих слов, фокус на результат. 2-4 предложения + короткая версия одним предложением.",
+      marketing:"Ты эксперт по маркетингу. Разработай маркетинговую систему для продукта: каналы трафика, контентная стратегия, прогрев аудитории, механики конверсии. Структурировано и конкретно.",
+      funnel:"Ты эксперт по воронкам продаж. Разработай пошаговую воронку: от первого касания до повторной продажи. На каждом этапе: что происходит, инструмент, цель. Структурировано.",
+    };
+    const userPrompt=`Название продукта: ${form.name}\nОписание: ${form.description}\nЦелевая аудитория: ${form.targetAudience}\nГлавные боли: ${pains.filter(Boolean).join(", ")}\nЦена: ${prices.map(p=>p.name?`${p.name} — ${p.price}`:p.price).filter(Boolean).join(", ")}\n\n${type==="offer"?"Составь сильный оффер.":type==="marketing"?"Разработай маркетинговую систему.":"Разработай воронку продаж."}`;
+    try{
+      const res=await fetch("https://api.deepseek.com/v1/chat/completions",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":`Bearer ${process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY}`},
+        body:JSON.stringify({model:"deepseek-chat",max_tokens:1000,temperature:0.7,messages:[{role:"system",content:systemPrompts[type]},{role:"user",content:userPrompt}]}),
+      });
+      const data=await res.json();
+      const text=data.choices?.[0]?.message?.content||"";
+      if(type==="offer"){setOffer(text);typewrite(text,setDisplayOffer);}
+      else if(type==="marketing"){setMarketing(text);typewrite(text,setDisplayMkt);}
+      else{setFunnel(text);typewrite(text,setDisplayFunnel);}
+    }catch(e){setFormErr("Ошибка генерации. Попробуй ещё раз.");}
+    setGenLoading(p=>({...p,[type]:false}));
+  };
+
+  const uploadLogo=async(file:File)=>{
+    setLogoLoading(true);
+    const ext=file.name.split(".").pop();
+    const path=`products/${userId}/${Date.now()}.${ext}`;
+    const{error}=await supabase.storage.from("avatars").upload(path,file,{upsert:true});
+    if(!error){
+      const{data:urlData}=supabase.storage.from("avatars").getPublicUrl(path);
+      setForm(f=>({...f,logoUrl:urlData.publicUrl}));
+    }
+    setLogoLoading(false);
+  };
+
+  const saveProduct=async()=>{
+    if(!form.name.trim()){setFormErr("Введи название продукта.");return;}
+    setSaving(true);
+    const{data:p}=await supabase.from("user_products").insert({
+      user_id:userId,
+      name:form.name,description:form.description,
+      logo_url:form.logoUrl,
+      target_audience:form.targetAudience,
+      prices:prices.filter(p=>p.price),
+      pains:pains.filter(Boolean),
+      offer_text:offer,marketing_system:marketing,sales_funnel:funnel,
+      is_archived:false,
+    }).select().single();
+    if(p){setProducts(prev=>[p,...prev]);setSelected(p);setMode("detail");resetForm();}
+    setSaving(false);
+  };
+
+  const saveDetailField=async(field:string,value:any)=>{
+    await supabase.from("user_products").update({[field]:value}).eq("id",selected.id);
+    const updated={...selected,[field]:value};
+    setSelected(updated);
+    setProducts(prev=>prev.map(p=>p.id===selected.id?updated:p));
+    setEditField(null);
+  };
+
+  const archiveProduct=async(id:string)=>{
+    await supabase.from("user_products").update({is_archived:true}).eq("id",id);
+    setProducts(prev=>prev.map(p=>p.id===id?{...p,is_archived:true}:p));
+    if(selected?.id===id)setMode("list");
+  };
+
+  const C2=()=><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>;
+  const PencilI=()=><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
+
+  const SectionLabel=({children,color="#4F8EF7"}:{children:React.ReactNode,color?:string})=>(
+    <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color,textTransform:"uppercase" as const,marginBottom:10}}>{children}</div>
+  );
+
+  const GenBtn=({type,label,icon}:{type:"offer"|"marketing"|"funnel",label:string,icon:React.ReactNode})=>{
+    const loading=genLoading[type];
+    const done=type==="offer"?!!offer:type==="marketing"?!!marketing:!!funnel;
+    return(
+      <button onClick={()=>callAI(type)} disabled={loading}
+        style={{flex:1,padding:"13px 10px",borderRadius:12,border:`1.5px solid ${dark?"rgba(79,142,247,0.3)":"#BFDBFE"}`,
+          background:loading?(dark?"rgba(79,142,247,0.08)":"#EFF6FF"):(done?(dark?"rgba(16,185,129,0.08)":"#F0FDF4"):(dark?"rgba(79,142,247,0.06)":"#F8FAFF")),
+          color:done?"#10B981":C.a,cursor:loading?"not-allowed":"pointer",
+          display:"flex",flexDirection:"column" as const,alignItems:"center",gap:6,fontSize:12,fontWeight:700,transition:"all 0.2s"}}>
+        <div style={{fontSize:18}}>{loading?"⏳":done?"✅":icon}</div>
+        {loading?"Генерирую...":done?"Перегенерировать":label}
+      </button>
+    );
+  };
+
+  const GenField=({label,display,full,field}:{label:string,display:string,full:string,field:"offer"|"marketing"|"funnel"})=>{
+    const setter=field==="offer"?setOffer:field==="marketing"?setMarketing:setFunnel;
+    const[copied,setCopied]=useState(false);
+    if(!full&&!display)return(
+      <div style={{padding:16,borderRadius:12,border:`1px dashed ${dark?"rgba(255,255,255,0.08)":C.bd}`,color:C.t2,fontSize:13,textAlign:"center" as const}}>
+        Нажми кнопку выше чтобы сгенерировать
+      </div>
+    );
+    return(
+      <div style={{marginTop:4}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+          <span style={{fontSize:11,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:1}}>{label}</span>
+          <button onClick={()=>{navigator.clipboard.writeText(full);setCopied(true);setTimeout(()=>setCopied(false),2000);}}
+            style={{background:"none",border:"none",cursor:"pointer",color:copied?"#10B981":C.t2,fontSize:11,display:"flex",alignItems:"center",gap:4,fontWeight:600}}>
+            <C2/>{copied?"Скопировано":"Копировать"}
+          </button>
+        </div>
+        <textarea value={full} onChange={e=>setter(e.target.value)}
+          style={{width:"100%",minHeight:110,padding:14,border:`1.5px solid ${dark?"rgba(79,142,247,0.2)":"#DBEAFE"}`,borderRadius:12,fontSize:14,background:dark?"#0A0F1A":C.ib,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.65,fontFamily:"'Montserrat',sans-serif",boxSizing:"border-box" as const}}/>
+      </div>
+    );
+  };
+
+  if(loading)return<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"60vh",color:C.t2,fontSize:14}}>Загрузка...</div>;
+
+  /* ── EMPTY STATE ── */
+  const active=products.filter(p=>!p.is_archived);
+  if(mode==="list"&&active.length===0)return(
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"calc(100vh - 120px)",gap:20,padding:24}}>
+      <div style={{width:88,height:88,borderRadius:24,background:dark?"rgba(245,158,11,0.1)":"#FFFBEB",display:"flex",alignItems:"center",justifyContent:"center",border:`1.5px solid ${dark?"rgba(245,158,11,0.25)":"#FDE68A"}`}}>
+        <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="1.5"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+      </div>
+      <div style={{textAlign:"center"}}>
+        <div style={{fontSize:24,fontWeight:900,color:C.t1,marginBottom:8}}>Products & Prices</div>
+        <div style={{fontSize:15,color:C.t2,maxWidth:380,lineHeight:1.6}}>Добавь свои продукты и услуги. Храни офферы, цены и маркетинговые системы в одном месте.</div>
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:10,width:"100%",maxWidth:380}}>
+        <button onClick={()=>{resetForm();setMode("add");}}
+          style={{padding:"16px",borderRadius:14,border:"none",background:"linear-gradient(135deg,#D97706,#F59E0B)",color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10,boxShadow:"0 4px 20px rgba(245,158,11,0.3)"}}>
+          <PencilI/>Добавить продукт вручную
+        </button>
+        <button onClick={()=>onNav("product")}
+          style={{padding:"16px",borderRadius:14,border:`1.5px solid ${dark?"rgba(52,211,153,0.3)":"#A7F3D0"}`,background:dark?"rgba(52,211,153,0.06)":"#F0FDF4",color:"#34D399",fontSize:15,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          Создать продукт с ИИ
+        </button>
+      </div>
+    </div>
+  );
+
+  /* ── PRODUCT LIST ── */
+  if(mode==="list")return(
+    <div style={{maxWidth:900,margin:"0 auto",padding:"32px 24px"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:28}}>
+        <div>
+          <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color:C.t2,textTransform:"uppercase",marginBottom:4}}>Vizzy App</div>
+          <div style={{fontSize:24,fontWeight:900,color:C.t1}}>Products & Prices</div>
+        </div>
+        <button onClick={()=>{resetForm();setMode("add");}}
+          style={{padding:"11px 20px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#D97706,#F59E0B)",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:8,boxShadow:"0 4px 16px rgba(245,158,11,0.3)"}}>
+          <span style={{fontSize:18}}>+</span>Добавить продукт
+        </button>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:16}}>
+        {active.map((p:any)=>(
+          <button key={p.id} onClick={()=>{setSelected(p);setDetailPrices(p.prices||[]);setDetailPains(p.pains||[]);setMode("detail");}}
+            style={{background:dark?"#0F1420":"#fff",border:`1px solid ${dark?"rgba(255,255,255,0.07)":C.bd}`,borderRadius:18,padding:20,cursor:"pointer",textAlign:"left",boxShadow:C.sh,transition:"all 0.2s"}}
+            onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(-2px)";(e.currentTarget as HTMLElement).style.boxShadow="0 8px 32px rgba(0,0,0,0.12)";}}
+            onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(0)";(e.currentTarget as HTMLElement).style.boxShadow=C.sh;}}>
+            <div style={{width:52,height:52,borderRadius:14,background:dark?"rgba(245,158,11,0.1)":"#FFFBEB",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:14,overflow:"hidden",border:`1px solid ${dark?"rgba(245,158,11,0.2)":"#FDE68A"}`}}>
+              {p.logo_url?<img src={p.logo_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="1.5"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>}
+            </div>
+            <div style={{fontSize:16,fontWeight:800,color:C.t1,marginBottom:6,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</div>
+            <div style={{fontSize:13,color:C.t2,lineHeight:1.5,marginBottom:12,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical" as any}}>{p.description}</div>
+            {p.prices?.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+              {p.prices.slice(0,2).map((pr:any,i:number)=>(
+                <span key={i} style={{fontSize:12,fontWeight:700,color:"#F59E0B",background:dark?"rgba(245,158,11,0.1)":"#FFFBEB",padding:"4px 10px",borderRadius:8,border:"1px solid rgba(245,158,11,0.2)"}}>{pr.name?`${pr.name}: `:""}{pr.price}</span>
+              ))}
+              {p.prices.length>2&&<span style={{fontSize:12,color:C.t2}}>+{p.prices.length-2}</span>}
+            </div>}
+          </button>
+        ))}
+      </div>
+      {products.filter((p:any)=>p.is_archived).length>0&&(
+        <div style={{marginTop:32,paddingTop:24,borderTop:`1px solid ${dark?"rgba(255,255,255,0.06)":C.bd}`}}>
+          <div style={{fontSize:11,color:C.t2,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",marginBottom:14}}>Архив</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:12}}>
+            {products.filter((p:any)=>p.is_archived).map((p:any)=>(
+              <div key={p.id} style={{background:dark?"#080C14":"#F8FAFC",border:`1px solid ${dark?"rgba(255,255,255,0.04)":C.bd}`,borderRadius:16,padding:16,opacity:0.6,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <div style={{fontSize:14,fontWeight:600,color:C.t2}}>{p.name}</div>
+                <button onClick={async()=>{await supabase.from("user_products").update({is_archived:false}).eq("id",p.id);loadProducts();}}
+                  style={{fontSize:11,color:C.a,background:"none",border:"none",cursor:"pointer",fontWeight:700}}>Восстановить</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  /* ── ADD FORM ── */
+  if(mode==="add")return(
+    <div style={{maxWidth:760,margin:"0 auto",padding:"32px 24px"}}>
+      <button onClick={()=>setMode("list")} style={{background:"none",border:"none",cursor:"pointer",color:C.t2,fontSize:13,marginBottom:24,display:"flex",alignItems:"center",gap:6,padding:0}}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Назад
+      </button>
+      <div style={{fontSize:22,fontWeight:900,color:C.t1,marginBottom:28}}>Новый продукт</div>
+
+      {/* Section 1 */}
+      <div style={{background:dark?"#0F1420":"#fff",borderRadius:20,padding:24,marginBottom:16,border:`1px solid ${dark?"rgba(255,255,255,0.06)":C.bd}`,boxShadow:C.sh}}>
+        <SectionLabel color="#F59E0B">Основная информация</SectionLabel>
+
+        {/* Logo upload */}
+        <div style={{marginBottom:20}}>
+          <input ref={logoRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0])uploadLogo(e.target.files[0]);}}/>
+          <button onClick={()=>logoRef.current?.click()}
+            style={{width:80,height:80,borderRadius:16,border:`2px dashed ${dark?"rgba(245,158,11,0.3)":"#FDE68A"}`,background:dark?"rgba(245,158,11,0.06)":"#FFFBEB",cursor:"pointer",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            {form.logoUrl?<img src={form.logoUrl} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:logoLoading?<div style={{fontSize:11,color:C.t2}}>...</div>:<div style={{textAlign:"center"}}><div style={{fontSize:22}}>📦</div><div style={{fontSize:9,color:C.t2,marginTop:2}}>Логотип</div></div>}
+          </button>
+        </div>
+
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          <input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="Название продукта *" style={iS()}/>
+          <textarea value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))} placeholder="Описание продукта — что включает, как работает, что получает клиент *" rows={3} style={{...iS(),resize:"vertical" as const,minHeight:90}}/>
+        </div>
+
+        {/* Prices */}
+        <div style={{marginTop:16}}>
+          <div style={{fontSize:12,fontWeight:700,color:C.t2,marginBottom:8}}>Ценовые тарифы</div>
+          {prices.map((pr,i)=>(
+            <div key={i} style={{display:"flex",gap:8,marginBottom:8,alignItems:"center"}}>
+              <input value={pr.name} onChange={e=>{const p=[...prices];p[i]={...p[i],name:e.target.value};setPrices(p);}} placeholder="Название тарифа (необязательно)" style={{...iS(),flex:1,padding:"9px 12px"}}/>
+              <input value={pr.price} onChange={e=>{const p=[...prices];p[i]={...p[i],price:e.target.value};setPrices(p);}} placeholder="Цена" style={{...iS(),width:140,padding:"9px 12px"}}/>
+              {prices.length>1&&<button onClick={()=>setPrices(p=>p.filter((_,j)=>j!==i))} style={{background:"none",border:"none",cursor:"pointer",color:C.r,fontSize:18,padding:"0 4px"}}>×</button>}
+            </div>
+          ))}
+          {prices.length<6&&<button onClick={()=>setPrices(p=>[...p,{name:"",price:""}])} style={{fontSize:12,color:C.a,background:"none",border:"none",cursor:"pointer",fontWeight:700,padding:0}}>+ Добавить тариф</button>}
+        </div>
+      </div>
+
+      {/* Section 2 */}
+      <div style={{background:dark?"#0F1420":"#fff",borderRadius:20,padding:24,marginBottom:16,border:`1px solid ${dark?"rgba(255,255,255,0.06)":C.bd}`,boxShadow:C.sh}}>
+        <SectionLabel color="#A855F7">Целевая аудитория и боли</SectionLabel>
+        <textarea value={form.targetAudience} onChange={e=>setForm(f=>({...f,targetAudience:e.target.value}))} placeholder="Кто твой идеальный клиент для этого продукта? Опиши конкретно." rows={2} style={{...iS(),resize:"vertical" as const,minHeight:70,marginBottom:14}}/>
+        <div style={{fontSize:12,fontWeight:700,color:C.t2,marginBottom:8}}>Главные боли аудитории</div>
+        {pains.map((pain,i)=>(
+          <div key={i} style={{display:"flex",gap:8,marginBottom:8,alignItems:"center"}}>
+            <input value={pain} onChange={e=>{const p=[...pains];p[i]=e.target.value;setPains(p);}} placeholder={i===0?"Например: Нет стабильного потока клиентов":"Ещё одна боль..."} style={{...iS(),flex:1,padding:"9px 12px"}}/>
+            {pains.length>1&&<button onClick={()=>setPains(p=>p.filter((_,j)=>j!==i))} style={{background:"none",border:"none",cursor:"pointer",color:C.r,fontSize:18,padding:"0 4px"}}>×</button>}
+          </div>
+        ))}
+        {pains.length<10&&<button onClick={()=>setPains(p=>[...p,""])} style={{fontSize:12,color:C.a,background:"none",border:"none",cursor:"pointer",fontWeight:700,padding:0}}>+ Добавить боль</button>}
+      </div>
+
+      {/* Section 3 — AI Generation */}
+      <div style={{background:dark?"rgba(79,142,247,0.05)":"#F8FAFF",borderRadius:20,padding:24,marginBottom:16,border:`1.5px solid ${dark?"rgba(79,142,247,0.15)":"#DBEAFE"}`,boxShadow:"0 4px 24px rgba(79,142,247,0.06)"}}>
+        <SectionLabel color="#4F8EF7">Сгенерировать с ИИ</SectionLabel>
+        <div style={{fontSize:13,color:C.t2,marginBottom:16}}>Заполни поля выше и нажми нужную кнопку. ИИ сделает остальное.</div>
+        {formErr&&<div style={{padding:"10px 14px",borderRadius:10,background:"#FEF2F2",color:C.r,fontSize:13,marginBottom:14}}>{formErr}</div>}
+        <div style={{display:"flex",gap:10,marginBottom:20}}>
+          <GenBtn type="offer" label="Оффер" icon="⚡"/>
+          <GenBtn type="marketing" label="Маркетинг" icon="📊"/>
+          <GenBtn type="funnel" label="Воронка" icon="🔽"/>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:16}}>
+          <GenField label="Offer" display={displayOffer} full={offer} field="offer"/>
+          <GenField label="Marketing System" display={displayMkt} full={marketing} field="marketing"/>
+          <GenField label="Sales Funnel" display={displayFunnel} full={funnel} field="funnel"/>
+        </div>
+      </div>
+
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        <button onClick={saveProduct} disabled={saving||!form.name.trim()}
+          style={{width:"100%",padding:"16px",borderRadius:14,border:"none",background:form.name.trim()?"linear-gradient(135deg,#D97706,#F59E0B)":"rgba(255,255,255,0.06)",color:form.name.trim()?"#fff":C.t2,fontSize:15,fontWeight:700,cursor:form.name.trim()?"pointer":"not-allowed",boxShadow:form.name.trim()?"0 4px 20px rgba(245,158,11,0.3)":"none"}}>
+          {saving?"Сохраняем...":"Сохранить продукт"}
+        </button>
+        <button onClick={()=>setMode("list")} style={{width:"100%",padding:"14px",borderRadius:14,border:`1px solid ${dark?"rgba(255,255,255,0.08)":C.bd}`,background:"transparent",color:C.t2,fontSize:14,fontWeight:500,cursor:"pointer"}}>Отмена</button>
+      </div>
+    </div>
+  );
+
+  /* ── PRODUCT DETAIL ── */
+  if(mode==="detail"&&selected){
+    const s=selected;
+    const InlineEdit=({field,value,multiline,label,color="#4F8EF7"}:{field:string,value:string,multiline?:boolean,label:string,color?:string})=>{
+      const isEditing=editField===field;
+      return(
+        <div style={{marginBottom:24}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+            <span style={{fontSize:10,fontWeight:700,letterSpacing:2,color,textTransform:"uppercase" as const}}>{label}</span>
+            <button onClick={()=>{setEditField(isEditing?null:field);setEditVal(value||"");}}
+              style={{background:"none",border:"none",cursor:"pointer",color:isEditing?C.a:C.t2,padding:4}}>
+              <PencilI/>
+            </button>
+            {isEditing&&<button onClick={()=>saveDetailField(field,editVal)} style={{fontSize:11,color:"#10B981",background:"none",border:"none",cursor:"pointer",fontWeight:700}}>Сохранить</button>}
+          </div>
+          {isEditing
+            ?multiline
+              ?<textarea value={editVal} onChange={e=>setEditVal(e.target.value)} autoFocus rows={4} style={{...iS(),resize:"vertical" as const,minHeight:100}}/>
+              :<input value={editVal} onChange={e=>setEditVal(e.target.value)} autoFocus style={iS()}/>
+            :<div style={{fontSize:15,color:value?C.t1:C.t2,lineHeight:1.65,fontStyle:value?"normal":"italic"}}>{value||"Не заполнено"}</div>
+          }
+        </div>
+      );
+    };
+
+    return(
+      <div style={{maxWidth:760,margin:"0 auto",padding:"32px 24px"}}>
+        <button onClick={()=>setMode("list")} style={{background:"none",border:"none",cursor:"pointer",color:C.t2,fontSize:13,marginBottom:24,display:"flex",alignItems:"center",gap:6,padding:0}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Все продукты
+        </button>
+
+        {/* Header */}
+        <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:28}}>
+          <div style={{width:64,height:64,borderRadius:18,background:dark?"rgba(245,158,11,0.1)":"#FFFBEB",display:"flex",alignItems:"center",justifyContent:"center",border:`1.5px solid ${dark?"rgba(245,158,11,0.2)":"#FDE68A"}`,overflow:"hidden",flexShrink:0}}>
+            {s.logo_url?<img src={s.logo_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="1.5"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>}
+          </div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:24,fontWeight:900,color:C.t1,marginBottom:4}}>{s.name}</div>
+            <div style={{fontSize:13,color:C.t2}}>{new Date(s.created_at).toLocaleDateString("ru-RU",{day:"numeric",month:"long",year:"numeric"})}</div>
+          </div>
+          <button onClick={()=>archiveProduct(s.id)} style={{fontSize:11,color:C.t2,background:"none",border:`1px solid ${dark?"rgba(255,255,255,0.08)":C.bd}`,borderRadius:8,padding:"6px 12px",cursor:"pointer",fontWeight:600,flexShrink:0}}>Архивировать</button>
+        </div>
+
+        {/* Prices */}
+        {(s.prices?.length>0)&&(
+          <div style={{marginBottom:24}}>
+            <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#F59E0B",textTransform:"uppercase",marginBottom:10}}>Тарифы</div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
+              {s.prices.map((pr:any,i:number)=>(
+                <div key={i} style={{padding:"12px 18px",borderRadius:12,background:dark?"rgba(245,158,11,0.08)":"#FFFBEB",border:`1.5px solid ${dark?"rgba(245,158,11,0.2)":"#FDE68A"}`}}>
+                  {pr.name&&<div style={{fontSize:11,color:"#D97706",fontWeight:700,marginBottom:2}}>{pr.name}</div>}
+                  <div style={{fontSize:18,fontWeight:900,color:"#F59E0B"}}>{pr.price}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div style={{background:dark?"#0F1420":"#fff",borderRadius:20,padding:24,border:`1px solid ${dark?"rgba(255,255,255,0.06)":C.bd}`,boxShadow:C.sh,marginBottom:16}}>
+          <InlineEdit field="description" value={s.description} multiline label="Описание" color="#4F8EF7"/>
+          <InlineEdit field="target_audience" value={s.target_audience} multiline label="Целевая аудитория" color="#A855F7"/>
+          {s.pains?.length>0&&(
+            <div style={{marginBottom:24}}>
+              <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#EC4899",textTransform:"uppercase",marginBottom:10}}>Боли аудитории</div>
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                {s.pains.map((pain:string,i:number)=>(
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,background:dark?"rgba(236,72,153,0.06)":"#FFF1F8",border:`1px solid ${dark?"rgba(236,72,153,0.15)":"#FCE7F3"}`}}>
+                    <div style={{width:6,height:6,borderRadius:"50%",background:"#EC4899",flexShrink:0}}/>
+                    <span style={{fontSize:13,color:C.t1}}>{pain}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div style={{background:dark?"rgba(79,142,247,0.05)":"#F8FAFF",borderRadius:20,padding:24,border:`1.5px solid ${dark?"rgba(79,142,247,0.12)":"#DBEAFE"}`,boxShadow:"0 4px 24px rgba(79,142,247,0.05)"}}>
+          <InlineEdit field="offer_text" value={s.offer_text} multiline label="Offer" color="#4F8EF7"/>
+          <InlineEdit field="marketing_system" value={s.marketing_system} multiline label="Marketing System" color="#34D399"/>
+          <InlineEdit field="sales_funnel" value={s.sales_funnel} multiline label="Sales Funnel" color="#F59E0B"/>
+        </div>
+      </div>
+    );
+  }
 
   return null;
 }
