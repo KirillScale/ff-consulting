@@ -12126,321 +12126,351 @@ function FormsPage({userId}:{userId:string}){
     {id:"phone",label:"Телефон",ic:"📞"},
   ];
 
-  const Tab=({id,label}:{id:typeof tab,label:string})=>(
-    <button onClick={()=>setTab(id)} style={{padding:"8px 18px",borderRadius:10,border:"none",cursor:"pointer",fontSize:13,fontWeight:700,background:tab===id?(dark?"#1E293B":"#F1F5F9"):"transparent",color:tab===id?C.t1:C.t2,transition:"all 0.2s"}}>{label}</button>
+  // ── Design tokens ──
+  const gl={
+    card:dark?"rgba(255,255,255,0.04)":"rgba(255,255,255,0.82)",
+    cardBorder:dark?"rgba(255,255,255,0.07)":"rgba(0,0,0,0.06)",
+    input:dark?"rgba(255,255,255,0.05)":"rgba(255,255,255,0.9)",
+    inputBorder:dark?"rgba(255,255,255,0.10)":"rgba(0,0,0,0.10)",
+    sh:"0 1px 3px rgba(0,0,0,0.04),0 8px 24px rgba(0,0,0,0.06)",
+    pill:(active:boolean)=>active
+      ?(dark?"rgba(255,255,255,0.10)":"rgba(0,0,0,0.06)")
+      :"transparent",
+    blur:"blur(20px) saturate(160%)",
+  };
+  const gInput:React.CSSProperties={width:"100%",padding:"10px 13px",borderRadius:10,border:`1px solid ${gl.inputBorder}`,background:gl.input,backdropFilter:gl.blur,color:C.t1,fontSize:14,outline:"none",fontFamily:"'Montserrat',sans-serif",boxSizing:"border-box",transition:"border-color 0.15s"};
+
+  const Chip=({children,color}:{children:React.ReactNode,color?:string})=>(
+    <span style={{fontSize:11,fontWeight:600,color:color||C.t2,background:color?`${color}14`:(dark?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.04)"),padding:"3px 9px",borderRadius:20,letterSpacing:0.2}}>{children}</span>
   );
 
-  if(loading)return<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"60vh",color:C.t2}}>Загрузка...</div>;
+  const GhostBtn=({children,onClick,icon}:{children:React.ReactNode,onClick?:()=>void,icon?:React.ReactNode})=>(
+    <button onClick={onClick} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:9,border:`1px solid ${gl.cardBorder}`,background:gl.card,backdropFilter:gl.blur,color:C.t1,fontSize:12,fontWeight:600,cursor:"pointer",transition:"all 0.15s",whiteSpace:"nowrap" as const}}>
+      {icon}{children}
+    </button>
+  );
+
+  const PrimaryBtn=({children,onClick,disabled,small}:{children:React.ReactNode,onClick?:()=>void,disabled?:boolean,small?:boolean})=>(
+    <button onClick={onClick} disabled={disabled}
+      style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:small?"8px 16px":"11px 20px",borderRadius:10,border:"none",background:disabled?(dark?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)"):"#18181B",color:disabled?C.t2:"#fff",fontSize:small?12:14,fontWeight:600,cursor:disabled?"not-allowed":"pointer",transition:"opacity 0.15s",opacity:disabled?0.5:1,whiteSpace:"nowrap" as const}}>
+      {children}
+    </button>
+  );
+
+  const SectionCard=({children,style}:{children:React.ReactNode,style?:React.CSSProperties})=>(
+    <div style={{background:gl.card,backdropFilter:gl.blur,border:`1px solid ${gl.cardBorder}`,borderRadius:16,padding:22,boxShadow:gl.sh,...style}}>
+      {children}
+    </div>
+  );
+
+  const FieldLabel=({children}:{children:React.ReactNode})=>(
+    <div style={{fontSize:11,fontWeight:600,color:C.t2,marginBottom:6,letterSpacing:0.3}}>{children}</div>
+  );
+
+  if(loading)return<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"60vh",color:C.t2,fontSize:14}}>Загрузка...</div>;
 
   return(
-    <div style={{maxWidth:880,margin:"0 auto",padding:"32px 24px"}}>
-      {/* Header */}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24}}>
+    <div style={{maxWidth:840,margin:"0 auto",padding:"36px 24px",fontFamily:"'Montserrat',sans-serif"}}>
+
+      {/* ── Header ── */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:32}}>
         <div>
-          <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color:C.t2,textTransform:"uppercase",marginBottom:4}}>Vizzy App</div>
-          <div style={{fontSize:24,fontWeight:900,color:C.t1}}>Forms</div>
+          <div style={{fontSize:22,fontWeight:800,color:C.t1,letterSpacing:-0.3}}>Forms</div>
+          <div style={{fontSize:13,color:C.t2,marginTop:2}}>Создавай формы и собирай ответы</div>
         </div>
         {tab==="list"&&(
-          <button onClick={()=>openBuilder()} style={{padding:"11px 20px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#059669,#10B981)",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:8,boxShadow:"0 4px 16px rgba(16,185,129,0.3)"}}>
-            <span style={{fontSize:18}}>+</span>Создать форму
-          </button>
+          <PrimaryBtn onClick={()=>openBuilder()}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Новая форма
+          </PrimaryBtn>
         )}
       </div>
 
-      {/* Tabs */}
-      <div style={{display:"flex",gap:4,padding:4,background:dark?"rgba(255,255,255,0.04)":"#F8FAFC",borderRadius:12,marginBottom:28,width:"fit-content"}}>
-        <Tab id="list" label="Мои формы"/>
-        <Tab id="builder" label="Конструктор"/>
-        {selectedForm&&<Tab id="analytics" label="Аналитика"/>}
+      {/* ── Tabs ── */}
+      <div style={{display:"flex",gap:2,padding:"4px",background:dark?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.04)",backdropFilter:gl.blur,borderRadius:12,marginBottom:28,width:"fit-content",border:`1px solid ${gl.cardBorder}`}}>
+        {([["list","Формы"],["builder","Конструктор"],selectedForm&&["analytics","Аналитика"]] as any[]).filter(Boolean).map(([id,label]:string[])=>(
+          <button key={id} onClick={()=>setTab(id as typeof tab)}
+            style={{padding:"7px 16px",borderRadius:9,border:"none",cursor:"pointer",fontSize:13,fontWeight:tab===id?700:500,background:tab===id?(dark?"rgba(255,255,255,0.09)":"#fff"):"transparent",color:tab===id?C.t1:C.t2,transition:"all 0.15s",boxShadow:tab===id?(dark?"none":"0 1px 3px rgba(0,0,0,0.08)"):"none"}}>
+            {label}
+          </button>
+        ))}
       </div>
 
-      {/* ── LIST ── */}
+      {/* ══ LIST ══ */}
       {tab==="list"&&(
         forms.length===0
-          ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"50vh",gap:16}}>
-            <div style={{width:80,height:80,borderRadius:22,background:dark?"rgba(16,185,129,0.1)":"#ECFDF5",display:"flex",alignItems:"center",justifyContent:"center",border:`1.5px solid ${dark?"rgba(16,185,129,0.2)":"#A7F3D0"}`}}>
-              <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+          ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16,padding:"80px 24px",textAlign:"center"}}>
+            <div style={{width:56,height:56,borderRadius:16,background:dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.04)",border:`1px solid ${gl.cardBorder}`,display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
             </div>
-            <div style={{textAlign:"center"}}>
-              <div style={{fontSize:20,fontWeight:800,color:C.t1,marginBottom:8}}>Форм пока нет</div>
-              <div style={{fontSize:14,color:C.t2}}>Создай первую форму и получи ссылку для рассылки</div>
+            <div>
+              <div style={{fontSize:17,fontWeight:700,color:C.t1,marginBottom:6}}>Форм пока нет</div>
+              <div style={{fontSize:14,color:C.t2,maxWidth:320}}>Создай первую форму и получи ссылку для рассылки</div>
             </div>
-            <button onClick={()=>openBuilder()} style={{padding:"14px 28px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#059669,#10B981)",color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(16,185,129,0.3)"}}>
-              Создать форму
-            </button>
+            <PrimaryBtn onClick={()=>openBuilder()}>Создать форму</PrimaryBtn>
           </div>
-          :<div style={{display:"flex",flexDirection:"column",gap:12}}>
-            {forms.map(form=>{
-              const link=`${window.location.origin}/f/${form.slug}`;
-              return(
-                <div key={form.id} style={{background:dark?"#0F1420":"#fff",border:`1px solid ${dark?"rgba(255,255,255,0.07)":C.bd}`,borderRadius:18,padding:20,boxShadow:C.sh}}>
-                  <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12}}>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
-                        <div style={{width:10,height:10,borderRadius:"50%",background:form.is_active?"#10B981":"#6B7280",flexShrink:0}}/>
-                        <span style={{fontSize:17,fontWeight:800,color:C.t1}}>{form.title}</span>
-                        <span style={{fontSize:11,color:form.is_active?"#10B981":"#6B7280",fontWeight:600,background:form.is_active?(dark?"rgba(16,185,129,0.1)":"#ECFDF5"):(dark?"rgba(255,255,255,0.06)":"#F3F4F6"),padding:"2px 8px",borderRadius:6}}>
-                          {form.is_active?"Активна":"Выключена"}
-                        </span>
-                      </div>
-                      {form.description&&<div style={{fontSize:13,color:C.t2,marginBottom:10,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{form.description}</div>}
-                      <div style={{display:"flex",alignItems:"center",gap:8}}>
-                        <span style={{fontSize:12,color:C.t2,background:dark?"rgba(255,255,255,0.05)":"#F1F5F9",padding:"4px 10px",borderRadius:6}}>{form.questions?.length||0} вопросов</span>
-                        <span style={{fontSize:12,color:C.t2,fontFamily:"monospace",overflow:"hidden",textOverflow:"ellipsis",maxWidth:240}}>{link}</span>
-                      </div>
-                    </div>
-                    <div style={{display:"flex",gap:6,flexShrink:0}}>
-                      <button onClick={()=>copyLink(form.slug)} title="Скопировать ссылку"
-                        style={{padding:"8px 12px",borderRadius:10,border:`1px solid ${dark?"rgba(255,255,255,0.08)":C.bd}`,background:copied===form.slug?"rgba(16,185,129,0.1)":"transparent",color:copied===form.slug?"#10B981":C.t2,cursor:"pointer",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
-                        {copied===form.slug?"✓ Скопировано":"🔗 Ссылка"}
-                      </button>
-                      <button onClick={()=>loadAnalytics(form)} title="Аналитика"
-                        style={{padding:"8px 12px",borderRadius:10,border:`1px solid ${dark?"rgba(255,255,255,0.08)":C.bd}`,background:"transparent",color:C.t2,cursor:"pointer",fontSize:12,fontWeight:700}}>
-                        📊 Ответы
-                      </button>
-                      <button onClick={()=>openBuilder(form)} title="Редактировать"
-                        style={{padding:"8px 12px",borderRadius:10,border:`1px solid ${dark?"rgba(255,255,255,0.08)":C.bd}`,background:"transparent",color:C.t2,cursor:"pointer",fontSize:12,fontWeight:700}}>
-                        ✏️
-                      </button>
-                      <button onClick={()=>toggleActive(form)} title={form.is_active?"Выключить":"Включить"}
-                        style={{padding:"8px 12px",borderRadius:10,border:`1px solid ${dark?"rgba(255,255,255,0.08)":C.bd}`,background:"transparent",color:C.t2,cursor:"pointer",fontSize:12}}>
-                        {form.is_active?"⏸":"▶️"}
-                      </button>
-                      <button onClick={()=>deleteForm(form.id)} title="Удалить"
-                        style={{padding:"8px 12px",borderRadius:10,border:"1px solid rgba(239,68,68,0.2)",background:"transparent",color:C.r,cursor:"pointer",fontSize:12}}>
-                        🗑
-                      </button>
-                    </div>
-                  </div>
+          :<SectionCard style={{padding:0,overflow:"hidden"}}>
+            {/* Table header */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 80px 100px 80px 160px",padding:"10px 18px",borderBottom:`1px solid ${gl.cardBorder}`}}>
+              {["Название","Вопросы","Ответы","Статус",""].map(h=>(
+                <div key={h} style={{fontSize:11,fontWeight:600,color:C.t2,letterSpacing:0.4}}>{h}</div>
+              ))}
+            </div>
+            {forms.map((form,i)=>(
+              <div key={form.id} style={{display:"grid",gridTemplateColumns:"1fr 80px 100px 80px 160px",padding:"13px 18px",borderBottom:i<forms.length-1?`1px solid ${gl.cardBorder}`:"none",alignItems:"center",transition:"background 0.12s"}}
+                onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background=dark?"rgba(255,255,255,0.02)":"rgba(0,0,0,0.01)"}
+                onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background="transparent"}>
+                <div>
+                  <div style={{fontSize:14,fontWeight:600,color:C.t1,marginBottom:2}}>{form.title}</div>
+                  {form.description&&<div style={{fontSize:12,color:C.t2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const,maxWidth:260}}>{form.description}</div>}
                 </div>
-              );
-            })}
-          </div>
+                <div style={{fontSize:13,color:C.t2}}>{form.questions?.length||0}</div>
+                <div style={{fontSize:13,color:C.t2}}>—</div>
+                <div>
+                  <Chip color={form.is_active?"#16A34A":undefined}>{form.is_active?"Активна":"Откл."}</Chip>
+                </div>
+                <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
+                  <GhostBtn onClick={()=>copyLink(form.slug)} icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>}>
+                    {copied===form.slug?"Скопировано":"Ссылка"}
+                  </GhostBtn>
+                  <GhostBtn onClick={()=>loadAnalytics(form)} icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>}>Ответы</GhostBtn>
+                  <GhostBtn onClick={()=>openBuilder(form)} icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>}/>
+                  <button onClick={()=>toggleActive(form)} style={{padding:"7px 8px",borderRadius:9,border:`1px solid ${gl.cardBorder}`,background:gl.card,cursor:"pointer",color:C.t2,fontSize:11,fontWeight:600}}>{form.is_active?"Откл.":"Вкл."}</button>
+                  <button onClick={()=>deleteForm(form.id)} style={{padding:"7px 8px",borderRadius:9,border:"1px solid rgba(239,68,68,0.15)",background:"transparent",cursor:"pointer",color:"#EF4444",fontSize:12}}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </SectionCard>
       )}
 
-      {/* ── BUILDER ── */}
+      {/* ══ BUILDER ══ */}
       {tab==="builder"&&(
-        <div>
-          {/* Steps progress */}
-          <div style={{display:"flex",gap:0,marginBottom:28}}>
-            {[{n:1,label:"Настройки"},{n:2,label:"Вопросы"},{n:3,label:"Завершение"}].map(({n,label},i)=>(
-              <div key={n} style={{display:"flex",alignItems:"center",flex:1}}>
-                <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,flex:1}}>
-                  <div style={{width:32,height:32,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,cursor:"pointer",
-                    background:builderStep===n?"linear-gradient(135deg,#059669,#10B981)":builderStep>n?"#10B981":(dark?"#1E293B":"#F1F5F9"),
-                    color:builderStep>=n?"#fff":C.t2,transition:"all 0.2s"
-                  }} onClick={()=>setBuilderStep(n as 1|2|3)}>{builderStep>n?"✓":n}</div>
-                  <span style={{fontSize:11,color:builderStep===n?"#10B981":C.t2,fontWeight:builderStep===n?700:500}}>{label}</span>
-                </div>
-                {i<2&&<div style={{height:2,flex:0,width:40,background:builderStep>n+1?"#10B981":(dark?"rgba(255,255,255,0.08)":"#E5E7EB"),marginBottom:20}}/>}
-              </div>
+        <div style={{display:"flex",flexDirection:"column",gap:20}}>
+
+          {/* Steps */}
+          <div style={{display:"flex",alignItems:"center",gap:0,marginBottom:4}}>
+            {([{n:1,label:"Настройки"},{n:2,label:"Вопросы"},{n:3,label:"Финал"}] as const).map(({n,label},i)=>(
+              <React.Fragment key={n}>
+                <button onClick={()=>setBuilderStep(n)} style={{display:"flex",alignItems:"center",gap:8,background:"none",border:"none",cursor:"pointer",padding:"6px 12px",borderRadius:8,transition:"background 0.12s"}}
+                  onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background=dark?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.03)"}
+                  onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background="transparent"}>
+                  <div style={{width:26,height:26,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,background:builderStep===n?"#18181B":(builderStep>n?(dark?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.06)"):(dark?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.04)")),color:builderStep===n?"#fff":(builderStep>n?C.t1:C.t2),border:builderStep>n&&builderStep!==n?`1px solid ${gl.cardBorder}`:"none",transition:"all 0.2s"}}>
+                    {builderStep>n?<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>:n}
+                  </div>
+                  <span style={{fontSize:13,fontWeight:builderStep===n?700:500,color:builderStep===n?C.t1:C.t2}}>{label}</span>
+                </button>
+                {i<2&&<div style={{flex:1,height:1,background:gl.cardBorder,maxWidth:40}}/>}
+              </React.Fragment>
             ))}
           </div>
 
-          {/* Step 1 — Settings */}
+          {/* Step 1 */}
           {builderStep===1&&(
-            <div style={{display:"flex",flexDirection:"column",gap:14}}>
-              <div style={{background:dark?"#0F1420":"#fff",borderRadius:18,padding:24,border:`1px solid ${dark?"rgba(255,255,255,0.06)":C.bd}`,boxShadow:C.sh}}>
-                <div style={{fontSize:11,fontWeight:700,letterSpacing:2,color:"#10B981",textTransform:"uppercase" as const,marginBottom:16}}>Основное</div>
-                <div style={{display:"flex",flexDirection:"column",gap:12}}>
-                  <input value={bTitle} onChange={e=>setBTitle(e.target.value)} placeholder="Название формы *" style={iS()}/>
-                  <textarea value={bDesc} onChange={e=>setBDesc(e.target.value)} placeholder="Описание (показывается на первом экране формы)" rows={3} style={{...iS(),resize:"vertical" as const,minHeight:80}}/>
-                  <div style={{display:"flex",alignItems:"center",gap:12}}>
-                    <label style={{fontSize:13,color:C.t2,fontWeight:600}}>Акцентный цвет:</label>
-                    <input type="color" value={bAccent} onChange={e=>setBAccent(e.target.value)} style={{width:40,height:32,borderRadius:8,border:`1px solid ${dark?"rgba(255,255,255,0.1)":C.bd}`,cursor:"pointer",padding:2,background:"transparent"}}/>
-                    <span style={{fontSize:12,color:C.t2,fontFamily:"monospace"}}>{bAccent}</span>
-                  </div>
-                </div>
+            <SectionCard>
+              <FieldLabel>Название формы *</FieldLabel>
+              <input value={bTitle} onChange={e=>setBTitle(e.target.value)} placeholder="Например: Анкета квалификации клиента" style={{...gInput,marginBottom:14,fontSize:16,fontWeight:600}}/>
+              <FieldLabel>Описание (видит пользователь)</FieldLabel>
+              <textarea value={bDesc} onChange={e=>setBDesc(e.target.value)} placeholder="Расскажи зачем нужна эта форма..." rows={3} style={{...gInput,resize:"vertical" as const,minHeight:80,marginBottom:16}}/>
+              <FieldLabel>Акцентный цвет</FieldLabel>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <input type="color" value={bAccent} onChange={e=>setBAccent(e.target.value)} style={{width:36,height:36,borderRadius:8,border:`1px solid ${gl.cardBorder}`,cursor:"pointer",padding:2,background:"transparent"}}/>
+                <span style={{fontSize:12,color:C.t2,fontFamily:"monospace"}}>{bAccent}</span>
               </div>
-              <button onClick={()=>setBuilderStep(2)} disabled={!bTitle.trim()}
-                style={{padding:"15px",borderRadius:12,border:"none",background:bTitle.trim()?"linear-gradient(135deg,#059669,#10B981)":"rgba(255,255,255,0.06)",color:bTitle.trim()?"#fff":C.t2,fontSize:15,fontWeight:700,cursor:bTitle.trim()?"pointer":"not-allowed",boxShadow:bTitle.trim()?"0 4px 16px rgba(16,185,129,0.3)":"none"}}>
-                Далее → Вопросы
-              </button>
-            </div>
+              <div style={{marginTop:20}}>
+                <PrimaryBtn onClick={()=>setBuilderStep(2)} disabled={!bTitle.trim()}>Далее — Вопросы →</PrimaryBtn>
+              </div>
+            </SectionCard>
           )}
 
-          {/* Step 2 — Questions */}
+          {/* Step 2 */}
           {builderStep===2&&(
-            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
               {bQuestions.length===0&&(
-                <div style={{padding:40,border:`2px dashed ${dark?"rgba(255,255,255,0.08)":"#E5E7EB"}`,borderRadius:16,textAlign:"center",color:C.t2}}>
-                  <div style={{fontSize:24,marginBottom:8}}>📋</div>
-                  <div style={{fontSize:14}}>Добавь первый вопрос</div>
+                <div style={{padding:"48px 24px",border:`1px dashed ${gl.cardBorder}`,borderRadius:14,textAlign:"center",color:C.t2}}>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{margin:"0 auto 10px",display:"block"}}><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                  <div style={{fontSize:14,fontWeight:600,marginBottom:4}}>Вопросов пока нет</div>
+                  <div style={{fontSize:12}}>Добавь первый вопрос ниже</div>
                 </div>
               )}
               {bQuestions.map((q,i)=>(
-                <div key={q.id} style={{background:dark?"#0F1420":"#fff",borderRadius:16,padding:20,border:`1px solid ${dark?"rgba(255,255,255,0.07)":C.bd}`,boxShadow:C.sh}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
-                    <span style={{fontSize:13,fontWeight:700,color:C.t2,minWidth:24}}>Q{i+1}</span>
+                <SectionCard key={q.id} style={{padding:18}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+                    <span style={{fontSize:12,fontWeight:700,color:C.t2,minWidth:24}}>Q{i+1}</span>
                     <select value={q.type} onChange={e=>updateQ(q.id,{type:e.target.value})}
-                      style={{...iS(),flex:"none",width:"auto",padding:"6px 10px",fontSize:12}}>
+                      style={{...gInput,width:"auto",flex:"none",padding:"6px 10px",fontSize:12,cursor:"pointer"}}>
                       {QTYPES.map(t=><option key={t.id} value={t.id}>{t.ic} {t.label}</option>)}
                     </select>
-                    <label style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:C.t2,cursor:"pointer",marginLeft:"auto"}}>
-                      <input type="checkbox" checked={q.required} onChange={e=>updateQ(q.id,{required:e.target.checked})} style={{accentColor:"#10B981"}}/>
+                    <label style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:C.t2,cursor:"pointer",marginLeft:"auto",whiteSpace:"nowrap" as const}}>
+                      <input type="checkbox" checked={q.required} onChange={e=>updateQ(q.id,{required:e.target.checked})} style={{accentColor:"#18181B"}}/>
                       Обязательный
                     </label>
-                    <button onClick={()=>moveQ(i,-1)} disabled={i===0} style={{background:"none",border:"none",cursor:"pointer",color:C.t2,fontSize:14,padding:"2px 6px",opacity:i===0?0.3:1}}>↑</button>
-                    <button onClick={()=>moveQ(i,1)} disabled={i===bQuestions.length-1} style={{background:"none",border:"none",cursor:"pointer",color:C.t2,fontSize:14,padding:"2px 6px",opacity:i===bQuestions.length-1?0.3:1}}>↓</button>
-                    <button onClick={()=>removeQ(q.id)} style={{background:"none",border:"none",cursor:"pointer",color:C.r,fontSize:18,padding:"2px 6px"}}>×</button>
+                    <div style={{display:"flex",gap:2}}>
+                      <button onClick={()=>moveQ(i,-1)} disabled={i===0} style={{width:26,height:26,borderRadius:6,border:`1px solid ${gl.cardBorder}`,background:"transparent",cursor:"pointer",color:C.t2,fontSize:12,opacity:i===0?0.3:1,display:"flex",alignItems:"center",justifyContent:"center"}}>↑</button>
+                      <button onClick={()=>moveQ(i,1)} disabled={i===bQuestions.length-1} style={{width:26,height:26,borderRadius:6,border:`1px solid ${gl.cardBorder}`,background:"transparent",cursor:"pointer",color:C.t2,fontSize:12,opacity:i===bQuestions.length-1?0.3:1,display:"flex",alignItems:"center",justifyContent:"center"}}>↓</button>
+                      <button onClick={()=>removeQ(q.id)} style={{width:26,height:26,borderRadius:6,border:"1px solid rgba(239,68,68,0.15)",background:"transparent",cursor:"pointer",color:"#EF4444",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+                    </div>
                   </div>
-                  <input value={q.label} onChange={e=>updateQ(q.id,{label:e.target.value})} placeholder={`Текст вопроса ${i+1}...`} style={iS()}/>
+                  <input value={q.label} onChange={e=>updateQ(q.id,{label:e.target.value})} placeholder={`Текст вопроса ${i+1}...`} style={gInput}/>
                   {(q.type==="radio"||q.type==="checkbox")&&(
-                    <div style={{marginTop:12}}>
-                      <div style={{fontSize:11,color:C.t2,marginBottom:8,fontWeight:600}}>Варианты ответа:</div>
+                    <div style={{marginTop:12,paddingTop:12,borderTop:`1px solid ${gl.cardBorder}`}}>
+                      <FieldLabel>Варианты</FieldLabel>
                       {q.options.map((opt,oi)=>(
                         <div key={oi} style={{display:"flex",gap:8,marginBottom:6,alignItems:"center"}}>
-                          <span style={{fontSize:13,color:C.t2}}>{oi+1}.</span>
-                          <input value={opt} onChange={e=>{const o=[...q.options];o[oi]=e.target.value;updateQ(q.id,{options:o});}} placeholder={`Вариант ${oi+1}`} style={{...iS(),padding:"7px 10px"}}/>
-                          {q.options.length>2&&<button onClick={()=>{const o=q.options.filter((_,j)=>j!==oi);updateQ(q.id,{options:o});}} style={{background:"none",border:"none",cursor:"pointer",color:C.r,fontSize:16}}>×</button>}
+                          <span style={{fontSize:12,color:C.t2,width:16,textAlign:"center" as const,flexShrink:0}}>{oi+1}</span>
+                          <input value={opt} onChange={e=>{const o=[...q.options];o[oi]=e.target.value;updateQ(q.id,{options:o});}} placeholder={`Вариант ${oi+1}`} style={{...gInput,padding:"7px 10px"}}/>
+                          {q.options.length>2&&<button onClick={()=>{const o=q.options.filter((_,j)=>j!==oi);updateQ(q.id,{options:o});}} style={{background:"none",border:"none",cursor:"pointer",color:C.t2,fontSize:16,padding:"0 4px"}}>×</button>}
                         </div>
                       ))}
-                      {q.options.length<8&&<button onClick={()=>updateQ(q.id,{options:[...q.options,""]})} style={{fontSize:12,color:"#10B981",background:"none",border:"none",cursor:"pointer",fontWeight:700,padding:0}}>+ Добавить вариант</button>}
+                      {q.options.length<8&&<button onClick={()=>updateQ(q.id,{options:[...q.options,""]})} style={{fontSize:12,color:C.t2,background:"none",border:"none",cursor:"pointer",padding:0,marginTop:2}}>+ Добавить вариант</button>}
                     </div>
                   )}
-                </div>
+                </SectionCard>
               ))}
               <button onClick={addQuestion}
-                style={{padding:"13px",borderRadius:12,border:`2px dashed ${dark?"rgba(16,185,129,0.3)":"#A7F3D0"}`,background:dark?"rgba(16,185,129,0.04)":"#F0FDF4",color:"#10B981",fontSize:14,fontWeight:700,cursor:"pointer"}}>
-                + Добавить вопрос
+                style={{padding:"12px",borderRadius:12,border:`1px dashed ${gl.cardBorder}`,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,transition:"all 0.15s"}}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=dark?"rgba(255,255,255,0.03)":"rgba(0,0,0,0.02)";}}
+                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Добавить вопрос
               </button>
               <div style={{display:"flex",gap:10}}>
-                <button onClick={()=>setBuilderStep(1)} style={{flex:1,padding:"13px",borderRadius:12,border:`1px solid ${dark?"rgba(255,255,255,0.08)":C.bd}`,background:"transparent",color:C.t2,fontSize:14,fontWeight:600,cursor:"pointer"}}>← Назад</button>
-                <button onClick={()=>setBuilderStep(3)} disabled={bQuestions.length===0}
-                  style={{flex:2,padding:"13px",borderRadius:12,border:"none",background:bQuestions.length>0?"linear-gradient(135deg,#059669,#10B981)":"rgba(255,255,255,0.06)",color:bQuestions.length>0?"#fff":C.t2,fontSize:14,fontWeight:700,cursor:bQuestions.length>0?"pointer":"not-allowed"}}>
-                  Далее → Завершение
-                </button>
+                <GhostBtn onClick={()=>setBuilderStep(1)}>← Назад</GhostBtn>
+                <div style={{flex:1}}/>
+                <PrimaryBtn onClick={()=>setBuilderStep(3)} disabled={bQuestions.length===0}>Далее — Финал →</PrimaryBtn>
               </div>
             </div>
           )}
 
-          {/* Step 3 — Completion */}
+          {/* Step 3 */}
           {builderStep===3&&(
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
-              <div style={{background:dark?"#0F1420":"#fff",borderRadius:18,padding:24,border:`1px solid ${dark?"rgba(255,255,255,0.06)":C.bd}`,boxShadow:C.sh}}>
-                <div style={{fontSize:11,fontWeight:700,letterSpacing:2,color:"#10B981",textTransform:"uppercase" as const,marginBottom:16}}>Финальный экран</div>
-                <div style={{display:"flex",flexDirection:"column",gap:12}}>
-                  <input value={bCompTitle} onChange={e=>setBCompTitle(e.target.value)} placeholder="Заголовок (например: Спасибо!)" style={iS()}/>
-                  <input value={bCompSub} onChange={e=>setBCompSub(e.target.value)} placeholder="Подзаголовок (опционально)" style={iS()}/>
-                  <input value={bCompUrl} onChange={e=>setBCompUrl(e.target.value)} placeholder="Ссылка для кнопки (https://...)" style={iS()}/>
-                  <input value={bCompBtn} onChange={e=>setBCompBtn(e.target.value)} placeholder="Текст кнопки (например: Получить материал)" style={iS()}/>
-                </div>
-              </div>
+              <SectionCard>
+                <FieldLabel>Заголовок финального экрана</FieldLabel>
+                <input value={bCompTitle} onChange={e=>setBCompTitle(e.target.value)} placeholder="Спасибо за ответы!" style={{...gInput,marginBottom:12}}/>
+                <FieldLabel>Подзаголовок</FieldLabel>
+                <input value={bCompSub} onChange={e=>setBCompSub(e.target.value)} placeholder="Мы свяжемся с тобой в течение 24 часов" style={{...gInput,marginBottom:12}}/>
+                <FieldLabel>Ссылка для кнопки</FieldLabel>
+                <input value={bCompUrl} onChange={e=>setBCompUrl(e.target.value)} placeholder="https://t.me/username" style={{...gInput,marginBottom:12}}/>
+                <FieldLabel>Текст кнопки</FieldLabel>
+                <input value={bCompBtn} onChange={e=>setBCompBtn(e.target.value)} placeholder="Перейти в Telegram" style={gInput}/>
+              </SectionCard>
 
               {/* Preview */}
-              <div style={{background:dark?"rgba(16,185,129,0.05)":"#F0FDF4",border:`1.5px solid ${dark?"rgba(16,185,129,0.15)":"#A7F3D0"}`,borderRadius:18,padding:24}}>
-                <div style={{fontSize:11,color:"#10B981",fontWeight:700,marginBottom:14,textTransform:"uppercase" as const,letterSpacing:1}}>Превью финального экрана</div>
-                <div style={{textAlign:"center",padding:"24px 0"}}>
-                  <div style={{fontSize:40,marginBottom:12}}>🎉</div>
-                  <div style={{fontSize:20,fontWeight:800,color:C.t1,marginBottom:8}}>{bCompTitle||"Спасибо!"}</div>
-                  {bCompSub&&<div style={{fontSize:14,color:C.t2,marginBottom:16}}>{bCompSub}</div>}
-                  {bCompUrl&&<div style={{display:"inline-block",padding:"12px 24px",borderRadius:10,background:bAccent,color:"#fff",fontSize:14,fontWeight:700}}>{bCompBtn||"Перейти"}</div>}
+              <SectionCard style={{padding:32,textAlign:"center"}}>
+                <div style={{fontSize:11,fontWeight:600,color:C.t2,letterSpacing:1,textTransform:"uppercase" as const,marginBottom:20}}>Превью финала</div>
+                <div style={{width:40,height:40,borderRadius:12,background:`${bAccent}14`,border:`1px solid ${bAccent}30`,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={bAccent} strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                 </div>
-              </div>
+                <div style={{fontSize:19,fontWeight:800,color:C.t1,marginBottom:6}}>{bCompTitle||"Спасибо!"}</div>
+                {bCompSub&&<div style={{fontSize:13,color:C.t2,marginBottom:16}}>{bCompSub}</div>}
+                {bCompUrl&&<div style={{display:"inline-block",padding:"10px 22px",borderRadius:9,background:"#18181B",color:"#fff",fontSize:13,fontWeight:600}}>{bCompBtn||"Перейти"}</div>}
+              </SectionCard>
 
               <div style={{display:"flex",gap:10}}>
-                <button onClick={()=>setBuilderStep(2)} style={{flex:1,padding:"13px",borderRadius:12,border:`1px solid ${dark?"rgba(255,255,255,0.08)":C.bd}`,background:"transparent",color:C.t2,fontSize:14,fontWeight:600,cursor:"pointer"}}>← Назад</button>
-                <button onClick={saveForm} disabled={saving||!bTitle.trim()}
-                  style={{flex:2,padding:"13px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#059669,#10B981)",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(16,185,129,0.3)"}}>
+                <GhostBtn onClick={()=>setBuilderStep(2)}>← Назад</GhostBtn>
+                <div style={{flex:1}}/>
+                <PrimaryBtn onClick={saveForm} disabled={saving||!bTitle.trim()}>
                   {saving?"Сохраняем...":(editId?"Сохранить изменения":"Сохранить и получить ссылку")}
-                </button>
+                </PrimaryBtn>
               </div>
             </div>
           )}
         </div>
       )}
 
-      {/* ── ANALYTICS ── */}
+      {/* ══ ANALYTICS ══ */}
       {tab==="analytics"&&selectedForm&&(
-        <div>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
-            <div style={{fontSize:18,fontWeight:800,color:C.t1}}>{selectedForm.title}</div>
+        <div style={{display:"flex",flexDirection:"column",gap:16}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div>
+              <div style={{fontSize:17,fontWeight:700,color:C.t1}}>{selectedForm.title}</div>
+              <div style={{fontSize:12,color:C.t2,marginTop:2,fontFamily:"monospace"}}>{`${window.location.origin}/f/${selectedForm.slug}`}</div>
+            </div>
             <div style={{display:"flex",gap:8}}>
-              <button onClick={()=>copyLink(selectedForm.slug)}
-                style={{padding:"8px 14px",borderRadius:10,border:`1px solid ${dark?"rgba(255,255,255,0.08)":C.bd}`,background:"transparent",color:C.t2,cursor:"pointer",fontSize:12,fontWeight:700}}>
-                {copied===selectedForm.slug?"✓ Скопировано":"🔗 Ссылка"}
-              </button>
-              {responses.length>0&&<button onClick={exportCSV}
-                style={{padding:"8px 14px",borderRadius:10,border:`1px solid ${dark?"rgba(255,255,255,0.08)":C.bd}`,background:"transparent",color:C.t2,cursor:"pointer",fontSize:12,fontWeight:700}}>
-                ⬇️ CSV
-              </button>}
+              <GhostBtn onClick={()=>copyLink(selectedForm.slug)} icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>}>
+                {copied===selectedForm.slug?"Скопировано":"Ссылка"}
+              </GhostBtn>
+              {responses.length>0&&<GhostBtn onClick={exportCSV} icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>}>CSV</GhostBtn>}
             </div>
           </div>
 
           {/* Stats */}
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
             {[
-              {label:"Всего ответов",value:responses.length,color:"#10B981"},
-              {label:"За 7 дней",value:responses.filter(r=>new Date(r.created_at)>new Date(Date.now()-7*864e5)).length,color:"#4F8EF7"},
-              {label:"За 30 дней",value:responses.filter(r=>new Date(r.created_at)>new Date(Date.now()-30*864e5)).length,color:"#A855F7"},
-              {label:"Конверсия",value:views?`${Math.round(responses.length/views*100)}%`:"—",color:"#F59E0B"},
-            ].map(({label,value,color})=>(
-              <div key={label} style={{background:dark?"#0F1420":"#fff",borderRadius:14,padding:16,border:`1px solid ${dark?"rgba(255,255,255,0.07)":C.bd}`,boxShadow:C.sh}}>
+              {label:"Всего ответов",value:responses.length},
+              {label:"За 7 дней",value:responses.filter(r=>new Date(r.created_at)>new Date(Date.now()-7*864e5)).length},
+              {label:"За 30 дней",value:responses.filter(r=>new Date(r.created_at)>new Date(Date.now()-30*864e5)).length},
+              {label:"Конверсия",value:views?`${Math.round(responses.length/views*100)}%`:"—"},
+            ].map(({label,value})=>(
+              <SectionCard key={label} style={{padding:16}}>
                 <div style={{fontSize:11,color:C.t2,fontWeight:600,marginBottom:6}}>{label}</div>
-                <div style={{fontSize:26,fontWeight:900,color}}>{value}</div>
-              </div>
+                <div style={{fontSize:24,fontWeight:800,color:C.t1}}>{value}</div>
+              </SectionCard>
             ))}
           </div>
 
-          {/* Charts for choice questions */}
+          {/* Charts */}
           {selectedForm.questions.filter((q:Question)=>q.type==="radio"||q.type==="checkbox").map((q:Question)=>{
             const counts:Record<string,number>={};
-            q.options.forEach(o=>{counts[o]=0;});
+            q.options.filter(Boolean).forEach(o=>{counts[o]=0;});
             responses.forEach(r=>{
               const ans=r.answers?.find((a:any)=>a.question_id===q.id);
               if(!ans)return;
               const vals=Array.isArray(ans.answer)?ans.answer:[ans.answer];
-              vals.forEach((v:string)=>{if(counts[v]!==undefined)counts[v]++;else counts[v]=(counts[v]||0)+1;});
+              vals.forEach((v:string)=>{counts[v]=(counts[v]||0)+1;});
             });
             const max=Math.max(...Object.values(counts),1);
             return(
-              <div key={q.id} style={{background:dark?"#0F1420":"#fff",borderRadius:16,padding:20,marginBottom:12,border:`1px solid ${dark?"rgba(255,255,255,0.07)":C.bd}`,boxShadow:C.sh}}>
+              <SectionCard key={q.id}>
                 <div style={{fontSize:13,fontWeight:700,color:C.t1,marginBottom:16}}>{q.label}</div>
                 {Object.entries(counts).map(([opt,cnt])=>(
                   <div key={opt} style={{marginBottom:10}}>
-                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                      <span style={{fontSize:12,color:C.t1}}>{opt}</span>
-                      <span style={{fontSize:12,color:C.t2,fontWeight:700}}>{cnt} ({responses.length?Math.round(cnt/responses.length*100):0}%)</span>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                      <span style={{fontSize:13,color:C.t1}}>{opt}</span>
+                      <span style={{fontSize:12,color:C.t2,fontWeight:600}}>{cnt} · {responses.length?Math.round(cnt/responses.length*100):0}%</span>
                     </div>
-                    <div style={{height:8,background:dark?"rgba(255,255,255,0.06)":"#F1F5F9",borderRadius:4,overflow:"hidden"}}>
-                      <div style={{height:"100%",width:`${(cnt/max)*100}%`,background:"linear-gradient(90deg,#059669,#10B981)",borderRadius:4,transition:"width 0.5s ease"}}/>
+                    <div style={{height:5,background:dark?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",borderRadius:3,overflow:"hidden"}}>
+                      <div style={{height:"100%",width:`${(cnt/max)*100}%`,background:C.t1,borderRadius:3,transition:"width 0.5s ease",opacity:0.7}}/>
                     </div>
                   </div>
                 ))}
-              </div>
+              </SectionCard>
             );
           })}
 
-          {/* Responses table */}
+          {/* Table */}
           {responses.length===0
-            ?<div style={{padding:40,textAlign:"center",color:C.t2}}>
-              <div style={{fontSize:24,marginBottom:8}}>📭</div>
-              <div>Ответов пока нет</div>
-            </div>
-            :<div style={{overflowX:"auto" as const}}>
-              <table style={{width:"100%",borderCollapse:"collapse" as const,fontSize:13}}>
-                <thead>
-                  <tr style={{borderBottom:`2px solid ${dark?"rgba(255,255,255,0.06)":C.bd}`}}>
-                    <th style={{padding:"10px 12px",textAlign:"left" as const,color:C.t2,fontWeight:700,fontSize:11,textTransform:"uppercase" as const,letterSpacing:1,whiteSpace:"nowrap" as const}}>Дата</th>
-                    {selectedForm.questions.map((q:Question)=>(
-                      <th key={q.id} style={{padding:"10px 12px",textAlign:"left" as const,color:C.t2,fontWeight:700,fontSize:11,textTransform:"uppercase" as const,letterSpacing:1,maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{q.label.slice(0,30)}{q.label.length>30?"…":""}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {responses.map((r,ri)=>(
-                    <tr key={r.id} style={{borderBottom:`1px solid ${dark?"rgba(255,255,255,0.04)":"#F1F5F9"}`,background:ri%2===0?"transparent":(dark?"rgba(255,255,255,0.01)":"#FAFAFA")}}>
-                      <td style={{padding:"10px 12px",color:C.t2,whiteSpace:"nowrap" as const,fontSize:12}}>{new Date(r.created_at).toLocaleDateString("ru-RU")}</td>
-                      {selectedForm.questions.map((q:Question)=>{
-                        const ans=r.answers?.find((a:any)=>a.question_id===q.id);
-                        const val=Array.isArray(ans?.answer)?ans.answer.join(", "):(ans?.answer||"—");
-                        return<td key={q.id} style={{padding:"10px 12px",color:C.t1,maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{val}</td>;
-                      })}
+            ?<SectionCard style={{padding:48,textAlign:"center"}}>
+              <div style={{color:C.t2,fontSize:13}}>Ответов пока нет</div>
+            </SectionCard>
+            :<SectionCard style={{padding:0,overflow:"hidden"}}>
+              <div style={{overflowX:"auto" as const}}>
+                <table style={{width:"100%",borderCollapse:"collapse" as const,fontSize:13}}>
+                  <thead>
+                    <tr style={{borderBottom:`1px solid ${gl.cardBorder}`}}>
+                      <th style={{padding:"11px 16px",textAlign:"left" as const,fontSize:11,fontWeight:600,color:C.t2,whiteSpace:"nowrap" as const}}>Дата</th>
+                      {selectedForm.questions.map((q:Question)=>(
+                        <th key={q.id} style={{padding:"11px 16px",textAlign:"left" as const,fontSize:11,fontWeight:600,color:C.t2,maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{q.label.slice(0,28)}{q.label.length>28?"…":""}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {responses.map((r,ri)=>(
+                      <tr key={r.id} style={{borderBottom:ri<responses.length-1?`1px solid ${gl.cardBorder}`:"none"}}>
+                        <td style={{padding:"11px 16px",color:C.t2,whiteSpace:"nowrap" as const,fontSize:12}}>{new Date(r.created_at).toLocaleDateString("ru-RU")}</td>
+                        {selectedForm.questions.map((q:Question)=>{
+                          const ans=r.answers?.find((a:any)=>a.question_id===q.id);
+                          const val=Array.isArray(ans?.answer)?ans.answer.join(", "):(ans?.answer||"—");
+                          return<td key={q.id} style={{padding:"11px 16px",color:C.t1,maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{val}</td>;
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </SectionCard>
           }
         </div>
       )}
