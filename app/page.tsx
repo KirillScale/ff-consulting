@@ -11312,13 +11312,7 @@ function OfferPage({userId}:{userId:string}){
       const data=await res.json();
       const text=data.choices?.[0]?.message?.content||"";
       if(!text){setAiError("ИИ не вернул ответ. Попробуй ещё раз.");setMode("quiz");return;}
-      setGeneratedOffer(text);setMode("result");
-      setDisplayedOffer("");
-      let i=0;
-      const iv=setInterval(()=>{
-        if(i<text.length){setDisplayedOffer(text.slice(0,i+1));i++;}
-        else clearInterval(iv);
-      },12);
+      setGeneratedOffer(text);setDisplayedOffer(text);setMode("result");
     }catch(e){setAiError("Ошибка генерации. Проверь API ключ или попробуй ещё раз.");setMode("quiz");}
   };
 
@@ -11615,12 +11609,8 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
     setFormErr("");
   };
 
-  const typewrite=(text:string,setter:(v:string)=>void,speed=12)=>{
-    setter("");let i=0;
-    const iv=setInterval(()=>{
-      if(i<text.length){setter(text.slice(0,i+1));i++;}
-      else clearInterval(iv);
-    },speed);
+  const typewrite=(text:string,setter:(v:string)=>void)=>{
+    setter(text);
   };
 
   const callAI=async(type:"offer"|"marketing"|"funnel")=>{
