@@ -140,25 +140,29 @@ export default function PublicForm({ params }: { params: Promise<{ slug: string 
 
   // ── Done ──
   if (isDone) return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0A0F1A", padding: 24 }}>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#0A0F1A", padding: 24, fontFamily: "'Inter', -apple-system, sans-serif", letterSpacing: "-0.011em" }}>
       <div style={{ textAlign: "center", maxWidth: 440 }}>
-        <div style={{ width: 80, height: 80, borderRadius: "50%", background: `${accent}22`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px", border: `2px solid ${accent}44` }}>
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
+        <div style={{ width: 72, height: 72, borderRadius: "50%", background: `${accent}1A`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 28px", border: `1.5px solid ${accent}40` }}>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
         </div>
-        <div style={{ fontSize: 28, fontWeight: 900, color: "#fff", marginBottom: 12 }}>{form.completion_title || "Спасибо!"}</div>
+        <div style={{ fontSize: 28, fontWeight: 800, color: "#fff", marginBottom: 12, letterSpacing: "-0.02em" }}>{form.completion_title || "Спасибо!"}</div>
         {form.completion_subtitle && <div style={{ fontSize: 16, color: "rgba(255,255,255,0.5)", marginBottom: 28, lineHeight: 1.6 }}>{form.completion_subtitle}</div>}
         {form.completion_url && (
           <a href={form.completion_url} target="_blank" rel="noreferrer"
-            style={{ display: "inline-block", padding: "14px 32px", borderRadius: 12, background: accent, color: "#fff", fontSize: 15, fontWeight: 700, textDecoration: "none", boxShadow: `0 4px 20px ${accent}44` }}>
+            style={{ display: "inline-block", padding: "14px 32px", borderRadius: 12, background: accent, color: "#fff", fontSize: 15, fontWeight: 600, textDecoration: "none", letterSpacing: "-0.01em" }}>
             {form.completion_btn_label || "Перейти"}
           </a>
         )}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 48, opacity: 0.25 }}>
+        <span style={{ fontSize: 11, color: "#fff", fontWeight: 500 }}>Powered by</span>
+        <img src="/logo.png" alt="Vizzy" style={{ height: 13, objectFit: "contain" }} />
       </div>
     </div>
   );
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0A0F1A", display: "flex", flexDirection: "column", fontFamily: "'Inter', 'Montserrat', sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#0A0F1A", display: "flex", flexDirection: "column", fontFamily: "'Inter', -apple-system, sans-serif", letterSpacing: "-0.011em" }}>
       {/* Progress bar */}
       {!isIntro && (
         <div style={{ height: 3, background: "rgba(255,255,255,0.06)", position: "fixed", top: 0, left: 0, right: 0, zIndex: 50 }}>
@@ -172,17 +176,15 @@ export default function PublicForm({ params }: { params: Promise<{ slug: string 
           {/* Intro */}
           {isIntro && (
             <div style={{ textAlign: "center" }}>
-              <div style={{ width: 64, height: 64, borderRadius: 18, background: `${accent}22`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px", border: `1.5px solid ${accent}44` }}>
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
-              </div>
-              <h1 style={{ fontSize: 28, fontWeight: 900, color: "#fff", marginBottom: 12, lineHeight: 1.3 }}>{form.title}</h1>
+              <img src="/logo.png" alt="Vizzy" style={{ height: 36, margin: "0 auto 28px", display: "block", objectFit: "contain" }} />
+              <h1 style={{ fontSize: 30, fontWeight: 800, color: "#fff", marginBottom: 14, lineHeight: 1.25, letterSpacing: "-0.02em" }}>{form.title}</h1>
               {form.description && <p style={{ fontSize: 16, color: "rgba(255,255,255,0.5)", marginBottom: 32, lineHeight: 1.65 }}>{form.description}</p>}
-              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", marginBottom: 32 }}>{totalSteps} вопрос{totalSteps === 1 ? "" : totalSteps < 5 ? "а" : "ов"}</div>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", marginBottom: 32, fontWeight: 500 }}>{totalSteps} вопрос{totalSteps === 1 ? "" : totalSteps < 5 ? "а" : "ов"} · 2 минуты</div>
               <button onClick={() => setStep(1)}
-                style={{ padding: "15px 40px", borderRadius: 12, border: "none", background: accent, color: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer", boxShadow: `0 4px 20px ${accent}44`, transition: "opacity 0.2s" }}
-                onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = "0.85"}
+                style={{ padding: "15px 40px", borderRadius: 12, border: "none", background: accent, color: "#fff", fontSize: 16, fontWeight: 600, cursor: "pointer", transition: "opacity 0.2s", letterSpacing: "-0.01em" }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = "0.88"}
                 onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = "1"}>
-                Начать →
+                Начать
               </button>
             </div>
           )}
@@ -302,8 +304,9 @@ export default function PublicForm({ params }: { params: Promise<{ slug: string 
       </div>
 
       {/* Footer */}
-      <div style={{ textAlign: "center", padding: "16px", fontSize: 11, color: "rgba(255,255,255,0.15)" }}>
-        Powered by Vizzy
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "20px", opacity: 0.25 }}>
+        <span style={{ fontSize: 11, color: "#fff", fontWeight: 500 }}>Powered by</span>
+        <img src="/logo.png" alt="Vizzy" style={{ height: 13, objectFit: "contain" }} />
       </div>
     </div>
   );
