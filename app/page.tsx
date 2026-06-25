@@ -134,7 +134,7 @@ const iS = ():React.CSSProperties => ({
   background:C.ib,
   color:C.t1,
   boxSizing:"border-box" as const,
-  fontFamily:"'Montserrat',sans-serif",
+  fontFamily:"'Inter',sans-serif",
   transition:"border-color 0.15s",
 });
 const Logo = ({s=28}:{s?:number}) => <img src="/logo.png" width={s} height={s} style={{objectFit:"contain",display:"block",flexShrink:0}} alt="Vizzy"/>;
@@ -252,7 +252,7 @@ function Auth({ onLogin }: { onLogin: (u: any) => void }) {
   };
 
   return (
-    <div style={{minHeight:"100vh",background:`linear-gradient(135deg,${C.dk},${C.da},${C.a})`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Montserrat',sans-serif",padding:20}}>
+    <div style={{minHeight:"100vh",background:`linear-gradient(135deg,${C.dk},${C.da},${C.a})`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter',sans-serif",padding:20}}>
       <div style={{background:C.w,borderRadius:24,padding:"48px 40px",width:"100%",maxWidth:420,boxShadow:"0 24px 80px rgba(0,0,0,0.25)"}}>
         <div style={{textAlign:"center",marginBottom:36}}>
           <div style={{display:"inline-flex",alignItems:"center",gap:10,background:C.dk,padding:"14px 28px",borderRadius:12}}>
@@ -817,7 +817,7 @@ export default function App() {
     setPage("dashboard");
   };
 
-  if (loading) return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.bg,fontFamily:"'Montserrat',sans-serif"}}><div style={{fontSize:18,color:C.t2}}>Загрузка...</div></div>;
+  if (loading) return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.bg,fontFamily:"'Inter',sans-serif"}}><div style={{fontSize:18,color:C.t2}}>Загрузка...</div></div>;
   if (!user) return <Auth onLogin={(u) => { setUser(u); loadProfile(u.id); }} />;
 
   const nav = NAV.find(n => n.id === page);
@@ -885,7 +885,7 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
 
   return (
     <div style={{
-      fontFamily:"'Montserrat',-apple-system,BlinkMacSystemFont,sans-serif",
+      fontFamily:"'Inter',-apple-system,BlinkMacSystemFont,sans-serif",
       background:dark?"#080B12":C.bg,
       minHeight:"100vh",color:C.t1,
       position:"relative",
@@ -898,7 +898,7 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
         <div style={{position:"fixed",top:"40%",left:"50%",width:400,height:400,borderRadius:"50%",background:"radial-gradient(ellipse,rgba(6,182,212,0.03) 0%,transparent 60%)",pointerEvents:"none",zIndex:0}}/>
       </>}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
         @keyframes burningGlow{0%,100%{box-shadow:0 0 12px rgba(239,68,68,0.2)}50%{box-shadow:0 0 24px rgba(239,68,68,0.4)}}
@@ -1039,7 +1039,7 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
           border-radius:16px !important;
         }
       `}</style>
-      <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 
       {isMobile ? <>
         <MobileNav active={page} onNav={setPage} onLogout={logout}/>
@@ -3300,7 +3300,7 @@ function StrategyPage({userId}:{userId:string}){
     </div>
 
     {/* Vizzy AI EA Chat panel */}
-    <div style={{position:"fixed",right:0,top:0,bottom:0,width:376,background:"#12101E",borderLeft:"1px solid rgba(167,139,250,0.18)",transform:vizzyOpen?"translateX(0)":"translateX(100%)",transition:"transform 0.3s ease",zIndex:105,display:"flex",flexDirection:"column",fontFamily:"'Montserrat',sans-serif"}}>
+    <div style={{position:"fixed",right:0,top:0,bottom:0,width:376,background:"#12101E",borderLeft:"1px solid rgba(167,139,250,0.18)",transform:vizzyOpen?"translateX(0)":"translateX(100%)",transition:"transform 0.3s ease",zIndex:105,display:"flex",flexDirection:"column",fontFamily:"'Inter',sans-serif"}}>
 
       {/* Header */}
       <div style={{padding:"16px 18px",borderBottom:"1px solid rgba(167,139,250,0.15)",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"space-between",background:"rgba(167,139,250,0.05)"}}>
@@ -3379,7 +3379,7 @@ function StrategyPage({userId}:{userId:string}){
             onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendVizzy();}}}
             placeholder="Напиши вопрос... (Enter — отправить)"
             rows={1}
-            style={{flex:1,border:"1px solid rgba(167,139,250,0.25)",outline:"none",resize:"none",fontSize:13,fontFamily:"'Montserrat',sans-serif",color:"#fff",background:"rgba(255,255,255,0.05)",lineHeight:1.5,maxHeight:100,overflowY:"auto",borderRadius:10,padding:"9px 12px",transition:"all 0.2s"}}
+            style={{flex:1,border:"1px solid rgba(167,139,250,0.25)",outline:"none",resize:"none",fontSize:13,fontFamily:"'Inter',sans-serif",color:"#fff",background:"rgba(255,255,255,0.05)",lineHeight:1.5,maxHeight:100,overflowY:"auto",borderRadius:10,padding:"9px 12px",transition:"all 0.2s"}}
             onInput={e=>{const t=e.currentTarget;t.style.height="auto";t.style.height=Math.min(t.scrollHeight,100)+"px";}}
           />
           <button onClick={sendVizzy} disabled={!vizzyInput.trim()||vizzyLoading}
@@ -4036,7 +4036,7 @@ function CrmPage({userId}:{userId:string}){
                 <div key={k}>
                   <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4,fontWeight:500}}>{label}</label>
                   <input type={k==="deal"?"number":"text"} value={editLeadData[k]||""} onChange={e=>setEditLeadData({...editLeadData,[k]:e.target.value})}
-                    style={{width:"100%",padding:"9px 11px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"'Montserrat',sans-serif"}}/>
+                    style={{width:"100%",padding:"9px 11px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"'Inter',sans-serif"}}/>
                 </div>
               ))}
             </div>
@@ -4044,7 +4044,7 @@ function CrmPage({userId}:{userId:string}){
               <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4,fontWeight:500}}>Описание лида</label>
               <textarea value={editLeadData.note||""} onChange={e=>setEditLeadData({...editLeadData,note:e.target.value})} rows={5}
                 placeholder="Подробный конспект по лиду: боль, ситуация, договорённости, следующий шаг..."
-                style={{width:"100%",padding:"9px 11px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,outline:"none",background:C.ib,color:C.t1,resize:"vertical",fontFamily:"'Montserrat',sans-serif",boxSizing:"border-box" as const}}/>
+                style={{width:"100%",padding:"9px 11px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,outline:"none",background:C.ib,color:C.t1,resize:"vertical",fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
             </div>
             <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
               <button onClick={()=>setEditLeadId(null)} style={{padding:"9px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:10,fontSize:13,cursor:"pointer"}}>Отмена</button>
@@ -4234,7 +4234,7 @@ function CrmPage({userId}:{userId:string}){
                 <div style={{fontSize:10,fontWeight:700,color:C.t2,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>{label}</div>
                 <textarea defaultValue={val} placeholder={ph} rows={2}
                   onBlur={async e=>{const v=e.target.value;if(v!==val)await allLeads.update(l.id,{[key]:v});}}
-                  style={{width:"100%",padding:"9px 12px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,background:C.ib,color:C.t1,resize:"none",fontFamily:"Montserrat,sans-serif",lineHeight:1.6,outline:"none",boxSizing:"border-box" as const,transition:"border-color 0.15s"}}
+                  style={{width:"100%",padding:"9px 12px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,background:C.ib,color:C.t1,resize:"none",fontFamily:"Inter,sans-serif",lineHeight:1.6,outline:"none",boxSizing:"border-box" as const,transition:"border-color 0.15s"}}
                   onFocus={e=>{e.target.style.borderColor=stageColor;}}
                   onBlurCapture={e=>{e.target.style.borderColor=C.bd;}}/>
               </div>;
@@ -4285,7 +4285,7 @@ function CrmPage({userId}:{userId:string}){
               <div style={{fontSize:10,fontWeight:700,color:C.t2,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Цель касания</div>
               <textarea value={touchGenGoal} onChange={e=>setTouchGenGoal(e.target.value)} rows={2}
                 placeholder="Например: закрыть на звонок, дожать до оплаты, отработать возражение, напомнить о себе..."
-                style={{width:"100%",padding:"10px 12px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,background:C.ib,color:C.t1,resize:"none",fontFamily:"Montserrat,sans-serif",outline:"none",boxSizing:"border-box" as const,lineHeight:1.6}}/>
+                style={{width:"100%",padding:"10px 12px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,background:C.ib,color:C.t1,resize:"none",fontFamily:"Inter,sans-serif",outline:"none",boxSizing:"border-box" as const,lineHeight:1.6}}/>
             </div>
             <button disabled={touchGenLoading||!hasReport}
               onClick={()=>generateTouchpoint(workPanelLead)}
@@ -4600,16 +4600,16 @@ function CrmPage({userId}:{userId:string}){
                   <div>
                     <label style={{display:"block",fontSize:12,fontWeight:800,color:C.t2,marginBottom:7}}>Текст сообщения</label>
                     <textarea value={touch.message||""} onChange={e=>updateTouch(touchModalLeadId!,touch.id,{message:e.target.value,sent:false})} placeholder="Напиши follow-up, напоминание или готовое сообщение для отправки..." rows={5}
-                      style={{width:"100%",padding:"14px 15px",border:"1px solid "+C.bd,borderRadius:14,fontSize:14,outline:"none",background:C.ib,color:C.t1,resize:"vertical",fontFamily:"Montserrat, sans-serif",lineHeight:1.55,boxSizing:"border-box" as const}}/>
+                      style={{width:"100%",padding:"14px 15px",border:"1px solid "+C.bd,borderRadius:14,fontSize:14,outline:"none",background:C.ib,color:C.t1,resize:"vertical",fontFamily:"Inter, sans-serif",lineHeight:1.55,boxSizing:"border-box" as const}}/>
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12}}>
                     <div>
                       <label style={{display:"block",fontSize:12,fontWeight:800,color:C.t2,marginBottom:7}}>Дата отправки</label>
-                      <input type="date" value={touch.date||""} onChange={e=>updateTouch(touchModalLeadId!,touch.id,{date:e.target.value,sent:false})} style={{width:"100%",padding:"12px 13px",border:"1px solid "+C.bd,borderRadius:14,fontSize:14,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"Montserrat, sans-serif"}}/>
+                      <input type="date" value={touch.date||""} onChange={e=>updateTouch(touchModalLeadId!,touch.id,{date:e.target.value,sent:false})} style={{width:"100%",padding:"12px 13px",border:"1px solid "+C.bd,borderRadius:14,fontSize:14,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"Inter, sans-serif"}}/>
                     </div>
                     <div>
                       <label style={{display:"block",fontSize:12,fontWeight:800,color:C.t2,marginBottom:7}}>Время отправки</label>
-                      <input type="time" value={touch.time||""} onChange={e=>updateTouch(touchModalLeadId!,touch.id,{time:e.target.value,sent:false})} style={{width:"100%",padding:"12px 13px",border:"1px solid "+C.bd,borderRadius:14,fontSize:14,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"Montserrat, sans-serif"}}/>
+                      <input type="time" value={touch.time||""} onChange={e=>updateTouch(touchModalLeadId!,touch.id,{time:e.target.value,sent:false})} style={{width:"100%",padding:"12px 13px",border:"1px solid "+C.bd,borderRadius:14,fontSize:14,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"Inter, sans-serif"}}/>
                     </div>
                   </div>
 
@@ -4677,7 +4677,7 @@ function CrmPage({userId}:{userId:string}){
               <div key={k}>
                 <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>{label}</label>
                 <input type={k==="deal"?"number":"text"} value={editLeadData[k]||""} onChange={e=>setEditLeadData({...editLeadData,[k]:e.target.value})}
-                  style={{width:"100%",padding:"10px 12px",border:"1px solid "+C.bd,borderRadius:11,fontSize:12,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"Montserrat, sans-serif"}}/>
+                  style={{width:"100%",padding:"10px 12px",border:"1px solid "+C.bd,borderRadius:11,fontSize:12,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"Inter, sans-serif"}}/>
               </div>
             ))}
           </div>
@@ -4685,7 +4685,7 @@ function CrmPage({userId}:{userId:string}){
             <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>📋 Описание лида</label>
             <textarea value={editLeadData.note||""} onChange={e=>setEditLeadData({...editLeadData,note:e.target.value})} rows={4}
               placeholder="Подробный конспект по лиду: откуда пришёл, в чём боль, что обсуждали, договорённости, следующий шаг..."
-              style={{width:"100%",padding:"10px 12px",border:"1px solid "+C.bd,borderRadius:11,fontSize:12,outline:"none",background:C.ib,color:C.t1,resize:"vertical",fontFamily:"Montserrat, sans-serif",boxSizing:"border-box" as const,lineHeight:1.6}}/>
+              style={{width:"100%",padding:"10px 12px",border:"1px solid "+C.bd,borderRadius:11,fontSize:12,outline:"none",background:C.ib,color:C.t1,resize:"vertical",fontFamily:"Inter, sans-serif",boxSizing:"border-box" as const,lineHeight:1.6}}/>
           </div>
           {/* 5 CRM fields */}
           <div style={{marginBottom:18}}>
@@ -4702,7 +4702,7 @@ function CrmPage({userId}:{userId:string}){
                   <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4,fontWeight:600}}>{l}</label>
                   <textarea value={editLeadData[k]||""} onChange={e=>setEditLeadData({...editLeadData,[k]:e.target.value})} rows={2}
                     placeholder={ph}
-                    style={{width:"100%",padding:"8px 11px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,outline:"none",background:C.ib,color:C.t1,resize:"none",fontFamily:"Montserrat, sans-serif",boxSizing:"border-box" as const,lineHeight:1.55}}/>
+                    style={{width:"100%",padding:"8px 11px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,outline:"none",background:C.ib,color:C.t1,resize:"none",fontFamily:"Inter, sans-serif",boxSizing:"border-box" as const,lineHeight:1.55}}/>
                 </div>
               ))}
             </div>
@@ -4843,7 +4843,7 @@ function CrmPage({userId}:{userId:string}){
             <div key={k}>
               <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4,fontWeight:500}}>{l}</label>
               <input type={k==="deal"?"number":"text"} value={(f as any)[k]} onChange={e=>sF({...f,[k]:e.target.value})}
-                style={{width:"100%",padding:"9px 11px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"'Montserrat',sans-serif"}}/>
+                style={{width:"100%",padding:"9px 11px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"'Inter',sans-serif"}}/>
             </div>
           ))}
           <div>
@@ -4950,7 +4950,7 @@ function CrmPage({userId}:{userId:string}){
             <div key={k}>
               <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4,fontWeight:500}}>{l}</label>
               <input type={k==="deal"?"number":"text"} value={(f as any)[k]} onChange={e=>sF({...f,[k]:e.target.value})}
-                style={{width:"100%",padding:"9px 11px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"'Montserrat',sans-serif"}}/>
+                style={{width:"100%",padding:"9px 11px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"'Inter',sans-serif"}}/>
             </div>
           ))}
           <div>
@@ -5338,7 +5338,7 @@ function ContentPage({userId}:{userId:string}){
           <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Платформа</label>
             <div style={{display:"flex",alignItems:"center",gap:8,padding:"0 10px",border:"1px solid "+C.bd,borderRadius:8,background:C.ib,height:38}}>
               <PlatformIcon pid={f.platform} size={18}/>
-              <select value={f.platform} onChange={e=>sF({...f,platform:e.target.value})} style={{flex:1,border:"none",background:"transparent",fontSize:13,outline:"none",fontFamily:"'Montserrat',sans-serif",cursor:"pointer",color:C.t1}}>
+              <select value={f.platform} onChange={e=>sF({...f,platform:e.target.value})} style={{flex:1,border:"none",background:"transparent",fontSize:13,outline:"none",fontFamily:"'Inter',sans-serif",cursor:"pointer",color:C.t1}}>
                 {PLATS.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}
               </select>
             </div>
@@ -5357,7 +5357,7 @@ function ContentPage({userId}:{userId:string}){
             </div>
             <textarea value={f.scenario} onChange={e=>sF({...f,scenario:e.target.value})}
               rows={8} placeholder={"Напиши сценарий, текст поста, хэштеги, описание видео...\n\nМожно структурировать:\n• Крючок: ...\n• Основная мысль: ...\n• Призыв к действию: ..."}
-              style={{...iS(),resize:"vertical",lineHeight:"1.6",fontFamily:"'Montserrat',sans-serif"}}/>
+              style={{...iS(),resize:"vertical",lineHeight:"1.6",fontFamily:"'Inter',sans-serif"}}/>
           </div>
         </div>
         <div style={{display:"flex",gap:10,marginTop:16,flexWrap:"wrap"}}>
@@ -5885,13 +5885,13 @@ function StoriesCarouselTab({userId}:{userId:string}){
                           <IgIcon/>
                           <input type="number" value={slot.ig_view_count||""} onChange={e=>items.update(slot.id,{ig_view_count:+e.target.value||0})}
                             placeholder="IG"
-                            style={{flex:1,border:"none",background:"transparent",fontSize:11,outline:"none",fontFamily:"'Montserrat',sans-serif",color:C.t1,minWidth:0,textAlign:"center"}}/>
+                            style={{flex:1,border:"none",background:"transparent",fontSize:11,outline:"none",fontFamily:"'Inter',sans-serif",color:C.t1,minWidth:0,textAlign:"center"}}/>
                         </div>
                         <div style={{display:"flex",alignItems:"center",gap:4,background:TG_COLOR+"12",borderRadius:8,padding:"5px 7px",border:"1px solid "+TG_COLOR+"25"}}>
                           <TgIcon/>
                           <input type="number" value={slot.tg_view_count||""} onChange={e=>items.update(slot.id,{tg_view_count:+e.target.value||0})}
                             placeholder="TG"
-                            style={{flex:1,border:"none",background:"transparent",fontSize:11,outline:"none",fontFamily:"'Montserrat',sans-serif",color:C.t1,minWidth:0,textAlign:"center"}}/>
+                            style={{flex:1,border:"none",background:"transparent",fontSize:11,outline:"none",fontFamily:"'Inter',sans-serif",color:C.t1,minWidth:0,textAlign:"center"}}/>
                         </div>
                       </div>
                     </div>
@@ -7119,7 +7119,7 @@ function AIChatBase({pageId,system}:{pageId:string,system?:string}){
           </div>
           {config.suggestions&&<div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:7,width:"100%",maxWidth:520}}>
             {config.suggestions.map((s,i)=><button key={i} className="ai-suggestion-btn" onClick={()=>send(s)}
-              style={{padding:"9px 12px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,fontSize:11,color:"rgba(255,255,255,0.65)",cursor:"pointer",textAlign:"left",lineHeight:1.4,fontFamily:"'Montserrat',sans-serif",transition:"all 0.15s"}}>
+              style={{padding:"9px 12px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,fontSize:11,color:"rgba(255,255,255,0.65)",cursor:"pointer",textAlign:"left",lineHeight:1.4,fontFamily:"'Inter',sans-serif",transition:"all 0.15s"}}>
               {s}
             </button>)}
           </div>}
@@ -7132,7 +7132,7 @@ function AIChatBase({pageId,system}:{pageId:string,system?:string}){
             {formatMsg(config.welcome)}
             {config.suggestions&&pageId!=="ai"&&<div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:10}}>
               {config.suggestions.map((s,i)=><button key={i} onClick={()=>send(s)}
-                style={{padding:"6px 12px",background:ac+"15",border:"1px solid "+ac+"30",borderRadius:20,fontSize:11,color:ac,cursor:"pointer",fontWeight:500,fontFamily:"'Montserrat',sans-serif",transition:"all 0.15s"}}>
+                style={{padding:"6px 12px",background:ac+"15",border:"1px solid "+ac+"30",borderRadius:20,fontSize:11,color:ac,cursor:"pointer",fontWeight:500,fontFamily:"'Inter',sans-serif",transition:"all 0.15s"}}>
                 {s}
               </button>)}
             </div>}
@@ -7191,7 +7191,7 @@ function AIChatBase({pageId,system}:{pageId:string,system?:string}){
             onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}}
             placeholder="Напиши сообщение... (Enter — отправить)"
             rows={1} className="ai-chat-input"
-            style={{flex:1,border:"1px solid rgba(255,255,255,0.1)",outline:"none",resize:"none",fontSize:13,fontFamily:"'Montserrat',sans-serif",color:"#fff",background:theme.inputBg,lineHeight:1.5,maxHeight:120,overflowY:"auto",borderRadius:10,padding:"9px 12px",transition:"border-color 0.2s,box-shadow 0.2s"}}
+            style={{flex:1,border:"1px solid rgba(255,255,255,0.1)",outline:"none",resize:"none",fontSize:13,fontFamily:"'Inter',sans-serif",color:"#fff",background:theme.inputBg,lineHeight:1.5,maxHeight:120,overflowY:"auto",borderRadius:10,padding:"9px 12px",transition:"border-color 0.2s,box-shadow 0.2s"}}
             onInput={e=>{const t=e.currentTarget;t.style.height="auto";t.style.height=Math.min(t.scrollHeight,120)+"px";}}
           />
           <button className="ai-send-btn" onClick={()=>send()} disabled={(!input.trim()&&!fileData)||loading}
@@ -7499,13 +7499,13 @@ function StoriesAIPage(){
                 {q.options
                   ? <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                       {q.options.map(opt=><button key={opt} className="stories-opt" onClick={()=>setForm(f=>({...f,[q.id]:opt}))}
-                        style={{padding:"7px 14px",background:form[q.id]===opt?"rgba(204,0,255,0.2)":"rgba(255,255,255,0.04)",border:"1px solid "+(form[q.id]===opt?ac:"rgba(255,255,255,0.1)"),borderRadius:20,fontSize:12,color:form[q.id]===opt?ac:"rgba(255,255,255,0.6)",cursor:"pointer",transition:"all 0.15s",fontFamily:"'Montserrat',sans-serif",fontWeight:form[q.id]===opt?600:400}}>
+                        style={{padding:"7px 14px",background:form[q.id]===opt?"rgba(204,0,255,0.2)":"rgba(255,255,255,0.04)",border:"1px solid "+(form[q.id]===opt?ac:"rgba(255,255,255,0.1)"),borderRadius:20,fontSize:12,color:form[q.id]===opt?ac:"rgba(255,255,255,0.6)",cursor:"pointer",transition:"all 0.15s",fontFamily:"'Inter',sans-serif",fontWeight:form[q.id]===opt?600:400}}>
                         {opt}
                       </button>)}
                     </div>
                   : <input value={form[q.id]||""} onChange={e=>setForm(f=>({...f,[q.id]:e.target.value}))}
                       placeholder={q.placeholder} className="stories-input"
-                      style={{width:"100%",padding:"10px 14px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,fontSize:13,color:"#fff",outline:"none",fontFamily:"'Montserrat',sans-serif",boxSizing:"border-box",transition:"all 0.2s"}}/>
+                      style={{width:"100%",padding:"10px 14px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,fontSize:13,color:"#fff",outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box",transition:"all 0.2s"}}/>
                 }
               </div>)}
 
@@ -7560,7 +7560,7 @@ function StoriesAIPage(){
                 onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}}
                 placeholder="Доработай слайд, измени тон, добавь интерактив..."
                 rows={1} className="stories-input"
-                style={{flex:1,border:"1px solid rgba(255,255,255,0.1)",outline:"none",resize:"none",fontSize:13,fontFamily:"'Montserrat',sans-serif",color:"#fff",background:"rgba(255,255,255,0.04)",lineHeight:1.5,maxHeight:100,overflowY:"auto",borderRadius:10,padding:"9px 12px",transition:"all 0.2s"}}
+                style={{flex:1,border:"1px solid rgba(255,255,255,0.1)",outline:"none",resize:"none",fontSize:13,fontFamily:"'Inter',sans-serif",color:"#fff",background:"rgba(255,255,255,0.04)",lineHeight:1.5,maxHeight:100,overflowY:"auto",borderRadius:10,padding:"9px 12px",transition:"all 0.2s"}}
                 onInput={e=>{const t=e.currentTarget;t.style.height="auto";t.style.height=Math.min(t.scrollHeight,100)+"px";}}
               />
               <button className="stories-send" onClick={send} disabled={!input.trim()||loading}
@@ -7728,7 +7728,7 @@ function MailingsPage({userId}:{userId:string}){
       </div>
 
       {/* AI PANEL */}
-      <div style={{position:"fixed",right:0,top:0,bottom:0,width:360,background:"#1A1030",borderLeft:"1px solid rgba(167,139,250,0.2)",transform:aiOpen?"translateX(0)":"translateX(100%)",transition:"transform 0.3s ease",zIndex:105,display:"flex",flexDirection:"column",fontFamily:"'Montserrat',sans-serif",overflowY:"auto"}}>
+      <div style={{position:"fixed",right:0,top:0,bottom:0,width:360,background:"#1A1030",borderLeft:"1px solid rgba(167,139,250,0.2)",transform:aiOpen?"translateX(0)":"translateX(100%)",transition:"transform 0.3s ease",zIndex:105,display:"flex",flexDirection:"column",fontFamily:"'Inter',sans-serif",overflowY:"auto"}}>
         <div style={{padding:"20px 20px 16px",borderBottom:"1px solid rgba(167,139,250,0.15)",flexShrink:0}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -7751,7 +7751,7 @@ function MailingsPage({userId}:{userId:string}){
           {/* Goal */}
           <div>
             <label style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.5)",letterSpacing:0.5,textTransform:"uppercase",display:"block",marginBottom:6}}>Цель рассылки *</label>
-            <select value={aiGoal} onChange={e=>setAiGoal(e.target.value)} style={{width:"100%",padding:"10px 12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(167,139,250,0.25)",borderRadius:10,fontSize:13,color:aiGoal?"#fff":"rgba(255,255,255,0.4)",outline:"none",fontFamily:"'Montserrat',sans-serif"}}>
+            <select value={aiGoal} onChange={e=>setAiGoal(e.target.value)} style={{width:"100%",padding:"10px 12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(167,139,250,0.25)",borderRadius:10,fontSize:13,color:aiGoal?"#fff":"rgba(255,255,255,0.4)",outline:"none",fontFamily:"'Inter',sans-serif"}}>
               <option value="" style={{background:"#1A1030"}}>Выберите цель...</option>
               {MAILING_GOALS_AI.map(g=><option key={g} value={g} style={{background:"#1A1030"}}>{g}</option>)}
             </select>
@@ -7773,7 +7773,7 @@ function MailingsPage({userId}:{userId:string}){
           {/* Tone */}
           <div>
             <label style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.5)",letterSpacing:0.5,textTransform:"uppercase",display:"block",marginBottom:6}}>Тон рассылки *</label>
-            <select value={aiTone} onChange={e=>setAiTone(e.target.value)} style={{width:"100%",padding:"10px 12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(167,139,250,0.25)",borderRadius:10,fontSize:13,color:aiTone?"#fff":"rgba(255,255,255,0.4)",outline:"none",fontFamily:"'Montserrat',sans-serif"}}>
+            <select value={aiTone} onChange={e=>setAiTone(e.target.value)} style={{width:"100%",padding:"10px 12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(167,139,250,0.25)",borderRadius:10,fontSize:13,color:aiTone?"#fff":"rgba(255,255,255,0.4)",outline:"none",fontFamily:"'Inter',sans-serif"}}>
               <option value="" style={{background:"#1A1030"}}>Выберите тон...</option>
               {MAILING_TONES.map(t=><option key={t} value={t} style={{background:"#1A1030"}}>{t}</option>)}
             </select>
@@ -7792,7 +7792,7 @@ function MailingsPage({userId}:{userId:string}){
             <label style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.5)",letterSpacing:0.5,textTransform:"uppercase",display:"block",marginBottom:6}}>Доп. информация</label>
             <textarea value={aiExtra} onChange={e=>setAiExtra(e.target.value)} rows={3}
               placeholder="Имя клиента, название продукта, условия акции..."
-              style={{width:"100%",padding:"10px 12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(167,139,250,0.2)",borderRadius:10,fontSize:12,color:"#fff",outline:"none",resize:"vertical",fontFamily:"'Montserrat',sans-serif",lineHeight:1.5}}/>
+              style={{width:"100%",padding:"10px 12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(167,139,250,0.2)",borderRadius:10,fontSize:12,color:"#fff",outline:"none",resize:"vertical",fontFamily:"'Inter',sans-serif",lineHeight:1.5}}/>
           </div>
 
           <button onClick={generateAI} disabled={!aiGoal||!aiTone||aiLoading}
@@ -8070,7 +8070,7 @@ function VisiTextPage({userId}:{userId:string}){
   const exportHtml=()=>{
     if(!activeDoc)return;
     persistContent(true);
-    const blob=new Blob([`<!doctype html><html><head><meta charset="utf-8"><title>${activeDoc.title}</title><style>body{font-family:Montserrat,Arial,sans-serif;background:#f3f4f6;padding:32px}.page{width:794px;min-height:1123px;background:#fff;margin:0 auto;padding:72px;box-shadow:0 10px 40px rgba(0,0,0,.12);font-size:${activeDoc.fontSize}px;line-height:${activeDoc.lineHeight}}</style></head><body><div class="page">${editorRef.current?.innerHTML||activeDoc.html}</div></body></html>`],{type:"text/html;charset=utf-8"});
+    const blob=new Blob([`<!doctype html><html><head><meta charset="utf-8"><title>${activeDoc.title}</title><style>body{font-family:Inter,Arial,sans-serif;background:#f3f4f6;padding:32px}.page{width:794px;min-height:1123px;background:#fff;margin:0 auto;padding:72px;box-shadow:0 10px 40px rgba(0,0,0,.12);font-size:${activeDoc.fontSize}px;line-height:${activeDoc.lineHeight}}</style></head><body><div class="page">${editorRef.current?.innerHTML||activeDoc.html}</div></body></html>`],{type:"text/html;charset=utf-8"});
     const a=document.createElement("a");
     a.href=URL.createObjectURL(blob);a.download=(activeDoc.title||"visitext")+".html";a.click();URL.revokeObjectURL(a.href);
   };
@@ -8156,7 +8156,7 @@ function VisiTextPage({userId}:{userId:string}){
               width:isMobile?"min(794px, calc(100vw - 48px))":794,minHeight:isMobile?Math.round(VISITEXT_A4_HEIGHT*0.72):VISITEXT_A4_HEIGHT,background:"#fff",color:"#111827",
               padding:isMobile?"36px":"72px",outline:"none",borderRadius:2,
               boxShadow:dark?"0 24px 80px rgba(0,0,0,0.55)":"0 20px 70px rgba(15,23,42,0.18)",
-              border:"1px solid #E5E7EB",fontFamily:"'Montserrat',Arial,sans-serif",
+              border:"1px solid #E5E7EB",fontFamily:"'Inter',Arial,sans-serif",
               fontSize:activeDoc?.fontSize||16,lineHeight:activeDoc?.lineHeight||"1.5",
               overflowWrap:"break-word",wordBreak:"break-word",caretColor:C.a,
             }}
@@ -8701,7 +8701,7 @@ function SheetsPage({userId}:{userId:string}){
           <input autoFocus value={newWbName} onChange={e=>setNewWbName(e.target.value)}
             onKeyDown={e=>{if(e.key==="Enter")createWb();if(e.key==="Escape")setNewWbModal(false);}}
             placeholder="Название таблицы..."
-            style={{width:"100%",padding:"11px 14px",border:"1px solid "+C.bd,borderRadius:10,fontSize:14,outline:"none",background:dark?"#141927":C.ib,color:C.t1,fontFamily:"'Montserrat',sans-serif",boxSizing:"border-box"}}/>
+            style={{width:"100%",padding:"11px 14px",border:"1px solid "+C.bd,borderRadius:10,fontSize:14,outline:"none",background:dark?"#141927":C.ib,color:C.t1,fontFamily:"'Inter',sans-serif",boxSizing:"border-box"}}/>
           <div style={{display:"flex",gap:10,marginTop:20,justifyContent:"flex-end"}}>
             <Btn onClick={()=>setNewWbModal(false)} primary={false}>Отмена</Btn>
             <Btn onClick={createWb}>Создать</Btn>
@@ -8740,7 +8740,7 @@ function SheetsPage({userId}:{userId:string}){
 
       {/* WB name */}
       <input value={wb.name} onChange={e=>updWbs(ws=>ws.map(w=>w.id===activeWbId?{...w,name:e.target.value}:w))}
-        style={{fontSize:14,fontWeight:700,color:C.t1,background:"transparent",border:"1px solid transparent",borderRadius:7,padding:"4px 8px",outline:"none",cursor:"pointer",fontFamily:"'Montserrat',sans-serif",minWidth:140,flexShrink:0}}
+        style={{fontSize:14,fontWeight:700,color:C.t1,background:"transparent",border:"1px solid transparent",borderRadius:7,padding:"4px 8px",outline:"none",cursor:"pointer",fontFamily:"'Inter',sans-serif",minWidth:140,flexShrink:0}}
         onFocus={e=>{(e.target as HTMLInputElement).style.borderColor=C.bd;}}
         onBlur={e=>{(e.target as HTMLInputElement).style.borderColor="transparent";}}/>
 
@@ -9114,7 +9114,7 @@ const BOARD_STICKY_PALETTE=["#FEF9A6","#FFE568","#FDBA74","#FB8B8F","#F5B7E6","#
 const BOARD_DRAW_COLORS=["#EF4444","#2563EB","#111827","#22C55E","#06B6D4","#FACC15","#7C3AED"];
 const BOARD_PALETTE=["#FEF08A","#BBF7D0","#BFDBFE","#FED7AA","#F9A8D4","#E9D5FF","#FECACA","#A7F3D0","#ffffff","#F1F5F9","#1E293B","#7C3AED","#2563EB","#DC2626","#16A34A","#D97706"];
 const BOARD_FONTS=[
-  {id:"Montserrat",label:"Montserrat"},
+  {id:"Inter",label:"Inter"},
   {id:"Inter, sans-serif",label:"Inter"},
   {id:"Arial, sans-serif",label:"Arial"},
   {id:"Georgia, serif",label:"Georgia"},
@@ -9207,7 +9207,7 @@ const normalizeBoardItems=(raw:any[]):BItem[]=>{
         fontSize:safeNum(it.fontSize,14),
         fontBold:!!it.fontBold,
         fontItalic:!!it.fontItalic,
-        fontFamily:it.fontFamily||"Montserrat",
+        fontFamily:it.fontFamily||"Inter",
       } as BItem;
     });
 };
@@ -9435,7 +9435,7 @@ function BoardPage({userId}:{userId:string}){
         return {
           id:d?.id,type:d?.type,x:d?.x,y:d?.y,w:d?.w,h:d?.h,
           text:d?.type==="external_card"?(ext.title||d?.link_title||"Карточка"):(d?.type==="icon"?(icon.label||""):(d?.text||"")),color:d?.color||ext.color||"",fontSize:d?.font_size||14,
-          fontBold:d?.font_bold||false,fontItalic:d?.font_italic||false,fontFamily:d?.type!=="link"?(d?.link_favicon||"Montserrat"):"Montserrat",
+          fontBold:d?.font_bold||false,fontItalic:d?.font_italic||false,fontFamily:d?.type!=="link"?(d?.link_favicon||"Inter"):"Inter",
           shapeKind:d?.shape_kind||"rect",imageUrl:d?.image_url||"",
           linkUrl:d?.link_url||"",linkTitle:d?.link_title||"",linkFavicon:d?.link_favicon||"",
           zIndex:d?.z_index||0,
@@ -9475,7 +9475,7 @@ function BoardPage({userId}:{userId:string}){
           text:it.type==="external_card"?externalCardPayload(it):it.type==="icon"?boardIconPayload(it):(it.text||""),color:it.color||"",font_size:it.fontSize||14,
           font_bold:it.fontBold||false,font_italic:it.fontItalic||false,
           shape_kind:it.shapeKind||null,image_url:it.imageUrl||"",
-          link_url:it.linkUrl||"",link_title:it.linkTitle||"",link_favicon:it.type==="link"?(it.linkFavicon||""):(it.fontFamily||"Montserrat"),
+          link_url:it.linkUrl||"",link_title:it.linkTitle||"",link_favicon:it.type==="link"?(it.linkFavicon||""):(it.fontFamily||"Inter"),
           z_index:i,draw_path:it.drawPath||null,draw_color:it.drawColor||null,draw_thickness:it.drawThickness||null,
         }));
         const lineRows=cleanLines.map(ln=>({
@@ -9592,7 +9592,7 @@ function BoardPage({userId}:{userId:string}){
   const addItem=(partial:Partial<BItem>&{type:BItemType},cx:number,cy:number)=>{
     const base=normalizeBoardItems(itemsRef.current as any[]);
     if(base.length>=MAX_BOARD_ITEMS){alert(`На одной доске максимум ${MAX_BOARD_ITEMS} элементов. Удали лишнее или создай новую доску.`);return null as any;}
-    const it:BItem={id:bid(),x:cx-100,y:cy-80,w:200,h:160,zIndex:base.length,fontFamily:"Montserrat",...partial};
+    const it:BItem={id:bid(),x:cx-100,y:cy-80,w:200,h:160,zIndex:base.length,fontFamily:"Inter",...partial};
     const next=[...base,it];
     updItems(next);
     setSelectedIds(new Set([it.id]));
@@ -9602,7 +9602,7 @@ function BoardPage({userId}:{userId:string}){
 
   const addBoardDoc=(cx=360,cy=260)=>addItem({type:"doc",text:"Новый документ",color:"#EEF2FF",w:240,h:110,fontSize:16,fontBold:true},cx,cy);
   const addBoardTable=(cx=380,cy=280)=>addItem({type:"table",text:"Новая таблица",color:"#ECFDF5",w:260,h:130,fontSize:16,fontBold:true},cx,cy);
-  const addStickyWithColor=(color:string,cx=360,cy=260)=>addItem({type:"sticky",text:"",color,w:200,h:180,fontFamily:"Montserrat"},cx,cy);
+  const addStickyWithColor=(color:string,cx=360,cy=260)=>addItem({type:"sticky",text:"",color,w:200,h:180,fontFamily:"Inter"},cx,cy);
   const iconByKey=useMemo(()=>Object.fromEntries(BOARD_ICON_LIBRARY.map(icon=>[icon.key,icon])),[] as any);
   const filteredLibraryIcons=useMemo(()=>{
     const q=iconSearch.trim().toLowerCase();
@@ -9730,13 +9730,13 @@ function BoardPage({userId}:{userId:string}){
     const{x,y}=toCanvas(e.clientX,e.clientY);
 
     if(tool==="sticky"){
-      const it=addItem({type:"sticky",text:"",color:BOARD_PALETTE[0],w:200,h:180,fontFamily:"Montserrat"},x,y);
+      const it=addItem({type:"sticky",text:"",color:BOARD_PALETTE[0],w:200,h:180,fontFamily:"Inter"},x,y);
       if(it)setTimeout(()=>{setEditingId(it.id);setEditText("");},60);
     } else if(tool==="text"){
-      const it=addItem({type:"text",text:"Текст",color:"#1E293B",w:180,h:50,fontSize:16,fontFamily:"Montserrat"},x,y);
+      const it=addItem({type:"text",text:"Текст",color:"#1E293B",w:180,h:50,fontSize:16,fontFamily:"Inter"},x,y);
       if(it)setTimeout(()=>{setEditingId(it.id);setEditText("Текст");},60);
     } else if(tool==="shape"){
-      const it=addItem({type:"shape",shapeKind,color:"#3B82F6",w:160,h:110,text:"",shapeText:"",fontFamily:"Montserrat",fontSize:14},x,y);
+      const it=addItem({type:"shape",shapeKind,color:"#3B82F6",w:160,h:110,text:"",shapeText:"",fontFamily:"Inter",fontSize:14},x,y);
       if(it)setTimeout(()=>{setEditingId(it.id);setEditText("");},60);
     } else if(tool==="link"){
       setLinkClickPos({x,y});setLinkModal(true);
@@ -10132,7 +10132,7 @@ function BoardPage({userId}:{userId:string}){
     const c=it.color||"#3B82F6";
     const textStyle:React.CSSProperties={
       position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",
-      fontFamily:it.fontFamily||"Montserrat",fontSize:it.fontSize||13,fontWeight:it.fontBold?800:600,fontStyle:it.fontItalic?"italic":"normal",color:"#fff",
+      fontFamily:it.fontFamily||"Inter",fontSize:it.fontSize||13,fontWeight:it.fontBold?800:600,fontStyle:it.fontItalic?"italic":"normal",color:"#fff",
       textAlign:"center",padding:"4px 8px",wordBreak:"break-word",
       textShadow:"0 1px 3px rgba(0,0,0,0.4)",pointerEvents:"none",lineHeight:1.3,
     };
@@ -10603,7 +10603,7 @@ function BoardPage({userId}:{userId:string}){
 
           {/* Item-specific controls */}
           {sel1&&["sticky","text","shape"].includes(sel1.type)&&<>
-            <select value={sel1.fontFamily||"Montserrat"} onChange={e=>updItems(items.map(it=>it.id===sel1.id?{...it,fontFamily:e.target.value}:it))}
+            <select value={sel1.fontFamily||"Inter"} onChange={e=>updItems(items.map(it=>it.id===sel1.id?{...it,fontFamily:e.target.value}:it))}
               style={{height:34,border:"1px solid #E2E8F0",borderRadius:10,background:"#fff",fontSize:13,fontWeight:500,color:C.t1,outline:"none",minWidth:132,maxWidth:160,padding:"0 8px",flexShrink:0}}>
               {BOARD_FONTS.map(f=><option key={f.id} value={f.id}>{f.label}</option>)}
             </select>
@@ -10786,8 +10786,8 @@ function BoardPage({userId}:{userId:string}){
                       ?<textarea autoFocus value={editText} onChange={e=>setEditText(e.target.value)}
                           onKeyDown={e=>{if(e.key==="Escape"||(e.key==="Enter"&&e.ctrlKey)){const next=items.map(i=>i.id===it.id?{...i,text:editText}:i);updItems(next);setEditingId(null);}}}
                           onBlur={()=>{const next=items.map(i=>i.id===it.id?{...i,text:editText}:i);updItems(next);setEditingId(null);}}
-                          style={{flex:1,border:"none",background:"transparent",resize:"none",outline:"none",fontFamily:it.fontFamily||"Montserrat",fontSize:it.fontSize||14,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:"rgba(0,0,0,0.8)",lineHeight:1.55}}/>
-                      :<div style={{flex:1,fontFamily:it.fontFamily||"Montserrat",fontSize:it.fontSize||14,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:"rgba(0,0,0,0.8)",lineHeight:1.55,wordBreak:"break-word",whiteSpace:"pre-wrap",overflow:"hidden"}}>{it.text||<span style={{opacity:0.35,fontStyle:"italic"}}>Двойной клик для ввода...</span>}</div>
+                          style={{flex:1,border:"none",background:"transparent",resize:"none",outline:"none",fontFamily:it.fontFamily||"Inter",fontSize:it.fontSize||14,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:"rgba(0,0,0,0.8)",lineHeight:1.55}}/>
+                      :<div style={{flex:1,fontFamily:it.fontFamily||"Inter",fontSize:it.fontSize||14,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:"rgba(0,0,0,0.8)",lineHeight:1.55,wordBreak:"break-word",whiteSpace:"pre-wrap",overflow:"hidden"}}>{it.text||<span style={{opacity:0.35,fontStyle:"italic"}}>Двойной клик для ввода...</span>}</div>
                     }
                   </div>
                 )}
@@ -10799,8 +10799,8 @@ function BoardPage({userId}:{userId:string}){
                       ?<textarea autoFocus value={editText} onChange={e=>setEditText(e.target.value)}
                           onBlur={()=>{const next=items.map(i=>i.id===it.id?{...i,text:editText}:i);updItems(next);setEditingId(null);}}
                           onKeyDown={e=>{if(e.key==="Escape"){const next=items.map(i=>i.id===it.id?{...i,text:editText}:i);updItems(next);setEditingId(null);}}}
-                          style={{flex:1,border:"none",background:"transparent",resize:"none",outline:"none",fontFamily:it.fontFamily||"Montserrat",fontSize:it.fontSize||16,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:it.color||"#1E293B",lineHeight:1.4,width:"100%",minHeight:"100%"}}/>
-                      :<div style={{fontFamily:it.fontFamily||"Montserrat",fontSize:it.fontSize||16,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:it.color||"#1E293B",lineHeight:1.4,wordBreak:"break-word",whiteSpace:"pre-wrap",width:"100%"}}>{it.text||"Текст"}</div>
+                          style={{flex:1,border:"none",background:"transparent",resize:"none",outline:"none",fontFamily:it.fontFamily||"Inter",fontSize:it.fontSize||16,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:it.color||"#1E293B",lineHeight:1.4,width:"100%",minHeight:"100%"}}/>
+                      :<div style={{fontFamily:it.fontFamily||"Inter",fontSize:it.fontSize||16,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:it.color||"#1E293B",lineHeight:1.4,wordBreak:"break-word",whiteSpace:"pre-wrap",width:"100%"}}>{it.text||"Текст"}</div>
                     }
                   </div>
                 )}
@@ -10910,7 +10910,7 @@ function BoardPage({userId}:{userId:string}){
                       onBlur={()=>{const next=items.map(i=>i.id===it.id?{...i,text:editText,shapeText:editText}:i);updItems(next);setEditingId(null);}}
                       onKeyDown={e=>{if(e.key==="Escape"){const next=items.map(i=>i.id===it.id?{...i,text:editText,shapeText:editText}:i);updItems(next);setEditingId(null);}e.stopPropagation();}}
                       placeholder="Текст..."
-                      style={{width:"80%",maxHeight:"70%",border:"none",background:"rgba(0,0,0,0.5)",backdropFilter:"blur(4px)",borderRadius:8,resize:"none",outline:"none",fontFamily:it.fontFamily||"Montserrat",fontSize:it.fontSize||13,fontWeight:it.fontBold?800:600,fontStyle:it.fontItalic?"italic":"normal",color:"#fff",textAlign:"center",padding:"8px",lineHeight:1.4}}/>
+                      style={{width:"80%",maxHeight:"70%",border:"none",background:"rgba(0,0,0,0.5)",backdropFilter:"blur(4px)",borderRadius:8,resize:"none",outline:"none",fontFamily:it.fontFamily||"Inter",fontSize:it.fontSize||13,fontWeight:it.fontBold?800:600,fontStyle:it.fontItalic?"italic":"normal",color:"#fff",textAlign:"center",padding:"8px",lineHeight:1.4}}/>
                   </div>
                 )}
 
@@ -11041,7 +11041,7 @@ function BoardPage({userId}:{userId:string}){
               const next=normalizeBoardItems(items as any[]).map(i=>i.id===docItem.id?{...i,text:e.target.value}:i);
               setItems(next);clearTimeout((window as any)._titleTimer);
               (window as any)._titleTimer=setTimeout(()=>triggerSave(next,lines),1500);
-            }} style={{flex:1,border:"none",background:"transparent",fontSize:15,fontWeight:700,color:"#1E293B",outline:"none",fontFamily:"'Montserrat',sans-serif"}}
+            }} style={{flex:1,border:"none",background:"transparent",fontSize:15,fontWeight:700,color:"#1E293B",outline:"none",fontFamily:"'Inter',sans-serif"}}
             placeholder={isDoc?"Название документа":"Название таблицы"}/>
             <button onClick={exportPDF} title="Скачать PDF"
               style={{padding:"5px 12px",background:"linear-gradient(135deg,#16A34A,#15803D)",color:"#fff",border:"none",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
@@ -11077,7 +11077,7 @@ function BoardPage({userId}:{userId:string}){
                 (window as any)._docTimer=setTimeout(()=>triggerSave(next,lines),1500);
               }}
               dangerouslySetInnerHTML={{__html:(docItem as any).docContent||"<p>Начни писать здесь...</p>"}}
-              style={{flex:1,padding:"20px 22px",outline:"none",fontSize:14,lineHeight:1.8,color:"#1E293B",overflowY:"auto",fontFamily:"'Montserrat',sans-serif"}}/>
+              style={{flex:1,padding:"20px 22px",outline:"none",fontSize:14,lineHeight:1.8,color:"#1E293B",overflowY:"auto",fontFamily:"'Inter',sans-serif"}}/>
           </div>}
 
           {/* Table editor */}
@@ -11105,7 +11105,7 @@ function BoardPage({userId}:{userId:string}){
                           <input value={cell} onChange={e=>{
                             const nr=tableRows.map((r,r2)=>r2===ri?r.map((c,c2)=>c2===ci?e.target.value:c):r);
                             saveTable(nr);
-                          }} style={{width:"100%",padding:"7px 9px",border:"none",background:"transparent",fontSize:12,fontFamily:"'Montserrat',sans-serif",fontWeight:ri===0?700:400,color:"#1E293B",outline:"none",boxSizing:"border-box" as const}}/>
+                          }} style={{width:"100%",padding:"7px 9px",border:"none",background:"transparent",fontSize:12,fontFamily:"'Inter',sans-serif",fontWeight:ri===0?700:400,color:"#1E293B",outline:"none",boxSizing:"border-box" as const}}/>
                         </td>
                       ))}
                     </tr>
@@ -11439,7 +11439,7 @@ function OfferPage({userId}:{userId:string}){
       <div style={{fontSize:14,color:C.t2,marginBottom:24}}>{mode==="manual"?"Напиши текст оффера в поле ниже":"Скопируй и вставь свой оффер"}</div>
       <textarea value={manualText} onChange={e=>setManualText(e.target.value)} autoFocus
         placeholder={mode==="manual"?"Мы помогаем [кому] достичь [результат] за [срок] через [метод]...":"Вставь текст оффера сюда..."}
-        style={{width:"100%",minHeight:180,padding:16,border:`1.5px solid ${dark?"rgba(79,142,247,0.25)":"#BFDBFE"}`,borderRadius:14,fontSize:16,background:dark?"#0F1420":C.ib,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.6,fontFamily:"'Montserrat',sans-serif",boxSizing:"border-box" as const}}/>
+        style={{width:"100%",minHeight:180,padding:16,border:`1.5px solid ${dark?"rgba(79,142,247,0.25)":"#BFDBFE"}`,borderRadius:14,fontSize:16,background:dark?"#0F1420":C.ib,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
       <div style={{marginTop:14}}><PrimaryBtn onClick={()=>saveOffer(manualText.trim())} disabled={!manualText.trim()||saving}>{saving?"Сохраняем...":"Сохранить оффер"}</PrimaryBtn></div>
     </div>
   );
@@ -11452,7 +11452,7 @@ function OfferPage({userId}:{userId:string}){
       <div style={{fontSize:14,color:C.t2,marginBottom:24}}>Кто ты, для кого, чем отличаешься от других</div>
       <textarea value={posText} onChange={e=>setPosText(e.target.value)} autoFocus
         placeholder="Например: Я бизнес-стратег для онлайн-предпринимателей с доходом от 500к. Помогаю выйти из операционки. В отличие от коучей — работаю с цифрами и процессами."
-        style={{width:"100%",minHeight:160,padding:16,border:`1.5px solid ${dark?"rgba(168,85,247,0.25)":"#DDD6FE"}`,borderRadius:14,fontSize:15,background:dark?"#0F1420":C.ib,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.6,fontFamily:"'Montserrat',sans-serif",boxSizing:"border-box" as const}}/>
+        style={{width:"100%",minHeight:160,padding:16,border:`1.5px solid ${dark?"rgba(168,85,247,0.25)":"#DDD6FE"}`,borderRadius:14,fontSize:15,background:dark?"#0F1420":C.ib,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
       <div style={{marginTop:14}}><PrimaryBtn onClick={()=>savePositioning(posText.trim())} disabled={!posText.trim()||saving} grad="purple">{saving?"Сохраняем...":"Сохранить позиционирование"}</PrimaryBtn></div>
     </div>
   );
@@ -11491,10 +11491,10 @@ function OfferPage({userId}:{userId:string}){
 
         {q.multi
           ?<textarea value={answer} onChange={e=>setAnswer(e.target.value)} autoFocus placeholder="Твой ответ..."
-              style={{width:"100%",minHeight:130,padding:16,border:`1.5px solid ${dark?"rgba(79,142,247,0.28)":"#BFDBFE"}`,borderRadius:14,fontSize:15,background:dark?"#0F1420":C.ib,color:C.t1,outline:"none",resize:"none" as const,lineHeight:1.6,fontFamily:"'Montserrat',sans-serif",boxSizing:"border-box" as const}}/>
+              style={{width:"100%",minHeight:130,padding:16,border:`1.5px solid ${dark?"rgba(79,142,247,0.28)":"#BFDBFE"}`,borderRadius:14,fontSize:15,background:dark?"#0F1420":C.ib,color:C.t1,outline:"none",resize:"none" as const,lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
           :<input value={answer} onChange={e=>setAnswer(e.target.value)} autoFocus placeholder="Твой ответ..."
               onKeyDown={e=>e.key==="Enter"&&canNext&&(isLast?generateWithAI():setQuizStep(s=>s+1))}
-              style={{width:"100%",padding:16,border:`1.5px solid ${dark?"rgba(79,142,247,0.28)":"#BFDBFE"}`,borderRadius:14,fontSize:15,background:dark?"#0F1420":C.ib,color:C.t1,outline:"none",fontFamily:"'Montserrat',sans-serif",boxSizing:"border-box" as const}}/>
+              style={{width:"100%",padding:16,border:`1.5px solid ${dark?"rgba(79,142,247,0.28)":"#BFDBFE"}`,borderRadius:14,fontSize:15,background:dark?"#0F1420":C.ib,color:C.t1,outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
         }
 
         {aiError&&<div style={{marginTop:12,padding:"10px 14px",borderRadius:10,background:"#FEF2F2",color:C.r,fontSize:13}}>{aiError}</div>}
@@ -11721,7 +11721,7 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
           </button>
         </div>
         <textarea value={full} onChange={e=>setter(e.target.value)}
-          style={{width:"100%",minHeight:110,padding:14,border:`1.5px solid ${dark?"rgba(79,142,247,0.2)":"#DBEAFE"}`,borderRadius:12,fontSize:14,background:dark?"#0A0F1A":C.ib,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.65,fontFamily:"'Montserrat',sans-serif",boxSizing:"border-box" as const}}/>
+          style={{width:"100%",minHeight:110,padding:14,border:`1.5px solid ${dark?"rgba(79,142,247,0.2)":"#DBEAFE"}`,borderRadius:12,fontSize:14,background:dark?"#0A0F1A":C.ib,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.65,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
       </div>
     );
   };
@@ -11986,6 +11986,7 @@ function FormsPage({userId}:{userId:string}){
   const[selectedForm,setSelectedForm]=useState<FormData|null>(null);
   const[responses,setResponses]=useState<any[]>([]);
   const[views,setViews]=useState(0);
+  const[clicks,setClicks]=useState(0);
   const[saving,setSaving]=useState(false);
   const[copied,setCopied]=useState<string|null>(null);
 
@@ -12012,12 +12013,14 @@ function FormsPage({userId}:{userId:string}){
 
   const loadAnalytics=async(form:FormData)=>{
     setSelectedForm(form);
-    const[{data:resp},{data:vw}]=await Promise.all([
+    const[{data:resp},{data:vw},{data:cl}]=await Promise.all([
       supabase.from("form_responses").select("*").eq("form_id",form.id).order("created_at",{ascending:false}),
-      supabase.from("form_views").select("id",{count:"exact"}).eq("form_id",form.id),
+      supabase.from("form_views").select("id").eq("form_id",form.id),
+      supabase.from("form_clicks").select("id").eq("form_id",form.id),
     ]);
     setResponses(resp||[]);
     setViews((vw as any)?.length||0);
+    setClicks((cl as any)?.length||0);
     setTab("analytics");
   };
 
@@ -12078,8 +12081,20 @@ function FormsPage({userId}:{userId:string}){
     if(!confirm("Удалить форму и все ответы?"))return;
     await supabase.from("form_responses").delete().eq("form_id",id);
     await supabase.from("form_views").delete().eq("form_id",id);
+    await supabase.from("form_clicks").delete().eq("form_id",id);
     await supabase.from("forms").delete().eq("id",id);
     setForms(prev=>prev.filter(f=>f.id!==id));
+  };
+
+  const deleteResponse=async(responseId:string)=>{
+    await supabase.from("form_responses").delete().eq("id",responseId);
+    setResponses(prev=>prev.filter(r=>r.id!==responseId));
+  };
+
+  const deleteAllResponses=async()=>{
+    if(!selectedForm||!confirm("Удалить все ответы? Это нельзя отменить."))return;
+    await supabase.from("form_responses").delete().eq("form_id",selectedForm.id);
+    setResponses([]);
   };
 
   const copyLink=(slug:string)=>{
@@ -12128,7 +12143,7 @@ function FormsPage({userId}:{userId:string}){
       :"transparent",
     blur:"blur(20px) saturate(160%)",
   };
-  const gInput:React.CSSProperties={width:"100%",padding:"10px 13px",borderRadius:10,border:`1px solid ${gl.inputBorder}`,background:gl.input,backdropFilter:gl.blur,color:C.t1,fontSize:14,outline:"none",fontFamily:"'Montserrat',sans-serif",boxSizing:"border-box",transition:"border-color 0.15s"};
+  const gInput:React.CSSProperties={width:"100%",padding:"10px 13px",borderRadius:10,border:`1px solid ${gl.inputBorder}`,background:gl.input,backdropFilter:gl.blur,color:C.t1,fontSize:14,outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box",transition:"border-color 0.15s"};
 
   const Chip=({children,color}:{children:React.ReactNode,color?:string})=>(
     <span style={{fontSize:11,fontWeight:600,color:color||C.t2,background:color?`${color}14`:(dark?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.04)"),padding:"3px 9px",borderRadius:20,letterSpacing:0.2}}>{children}</span>
@@ -12160,7 +12175,7 @@ function FormsPage({userId}:{userId:string}){
   if(loading)return<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"60vh",color:C.t2,fontSize:14}}>Загрузка...</div>;
 
   return(
-    <div style={{maxWidth:840,margin:"0 auto",padding:"36px 24px",fontFamily:"'Montserrat',sans-serif"}}>
+    <div style={{maxWidth:840,margin:"0 auto",padding:"36px 24px",fontFamily:"'Inter',sans-serif"}}>
 
       {/* ── Header ── */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:32}}>
@@ -12383,6 +12398,10 @@ function FormsPage({userId}:{userId:string}){
                 {copied===selectedForm.slug?"Скопировано":"Ссылка"}
               </GhostBtn>
               {responses.length>0&&<GhostBtn onClick={exportCSV} icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>}>CSV</GhostBtn>}
+              {responses.length>0&&<button onClick={deleteAllResponses} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:9,border:"1px solid rgba(239,68,68,0.2)",background:"transparent",color:"#EF4444",fontSize:12,fontWeight:600,cursor:"pointer"}}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+                Удалить все
+              </button>}
             </div>
           </div>
 
@@ -12392,13 +12411,30 @@ function FormsPage({userId}:{userId:string}){
               {label:"Всего ответов",value:responses.length},
               {label:"За 7 дней",value:responses.filter(r=>new Date(r.created_at)>new Date(Date.now()-7*864e5)).length},
               {label:"За 30 дней",value:responses.filter(r=>new Date(r.created_at)>new Date(Date.now()-30*864e5)).length},
-              {label:"Конверсия",value:views?`${Math.round(responses.length/views*100)}%`:"—"},
             ].map(({label,value})=>(
               <SectionCard key={label} style={{padding:16}}>
                 <div style={{fontSize:11,color:C.t2,fontWeight:600,marginBottom:6}}>{label}</div>
                 <div style={{fontSize:24,fontWeight:800,color:C.t1}}>{value}</div>
               </SectionCard>
             ))}
+            {/* Conversion card with sub-metrics */}
+            <SectionCard style={{padding:16}}>
+              <div style={{fontSize:11,color:C.t2,fontWeight:600,marginBottom:6}}>Конверсия</div>
+              <div style={{fontSize:24,fontWeight:800,color:C.t1,marginBottom:10}}>
+                {clicks&&views?`${Math.round(clicks/views*100)}%`:"—"}
+              </div>
+              <div style={{display:"flex",flexDirection:"column" as const,gap:5}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 8px",borderRadius:7,background:dark?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.03)"}}>
+                  <span style={{fontSize:10,color:C.t2,fontWeight:500}}>👁 Просмотров</span>
+                  <span style={{fontSize:12,fontWeight:700,color:C.t1}}>{views}</span>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 8px",borderRadius:7,background:dark?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.03)"}}>
+                  <span style={{fontSize:10,color:C.t2,fontWeight:500}}>🎯 Нажали кнопку</span>
+                  <span style={{fontSize:12,fontWeight:700,color:C.t1}}>{clicks}</span>
+                </div>
+              </div>
+            </SectionCard>
+          </div>
           </div>
 
           {/* Charts */}
@@ -12444,17 +12480,28 @@ function FormsPage({userId}:{userId:string}){
                       {selectedForm.questions.map((q:Question)=>(
                         <th key={q.id} style={{padding:"11px 16px",textAlign:"left" as const,fontSize:11,fontWeight:600,color:C.t2,maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{q.label.slice(0,28)}{q.label.length>28?"…":""}</th>
                       ))}
+                      <th style={{padding:"11px 16px",width:40}}/>
                     </tr>
                   </thead>
                   <tbody>
                     {responses.map((r,ri)=>(
-                      <tr key={r.id} style={{borderBottom:ri<responses.length-1?`1px solid ${gl.cardBorder}`:"none"}}>
+                      <tr key={r.id} style={{borderBottom:ri<responses.length-1?`1px solid ${gl.cardBorder}`:"none"}}
+                        onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background=dark?"rgba(255,255,255,0.02)":"rgba(0,0,0,0.01)"}
+                        onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background="transparent"}>
                         <td style={{padding:"11px 16px",color:C.t2,whiteSpace:"nowrap" as const,fontSize:12}}>{new Date(r.created_at).toLocaleDateString("ru-RU")}</td>
                         {selectedForm.questions.map((q:Question)=>{
                           const ans=r.answers?.find((a:any)=>a.question_id===q.id);
                           const val=Array.isArray(ans?.answer)?ans.answer.join(", "):(ans?.answer||"—");
                           return<td key={q.id} style={{padding:"11px 16px",color:C.t1,maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{val}</td>;
                         })}
+                        <td style={{padding:"11px 16px"}}>
+                          <button onClick={()=>deleteResponse(r.id)} title="Удалить ответ"
+                            style={{width:26,height:26,borderRadius:7,border:"1px solid rgba(239,68,68,0.15)",background:"transparent",cursor:"pointer",color:"#EF4444",display:"flex",alignItems:"center",justifyContent:"center",opacity:0.6,transition:"opacity 0.15s"}}
+                            onMouseEnter={e=>(e.currentTarget as HTMLElement).style.opacity="1"}
+                            onMouseLeave={e=>(e.currentTarget as HTMLElement).style.opacity="0.6"}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
