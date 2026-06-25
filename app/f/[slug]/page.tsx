@@ -15,25 +15,30 @@ type FormData = {
   completion_url: string; completion_btn_label: string; accent_color: string; is_active: boolean;
 };
 
-export default function PublicForm({ params }: { params: { slug: string } }) {
+export default function PublicForm({ params }: { params: Promise<{ slug: string }> }) {
+  const [slug, setSlug] = useState("");
   const [form, setForm] = useState<FormData | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [step, setStep] = useState(0); // 0 = intro, 1..N = questions, N+1 = done
+  const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    loadForm();
-  }, [params.slug]);
+    params.then(p => { setSlug(p.slug); });
+  }, [params]);
 
-  const loadForm = async () => {
+  useEffect(() => {
+    if (slug) loadForm(slug);
+  }, [slug]);
+
+  const loadForm = async (s: string) => {
     const { data } = await supabase
       .from("forms")
       .select("*")
-      .eq("slug", params.slug)
+      .eq("slug", s)
       .eq("is_active", true)
       .single();
 
