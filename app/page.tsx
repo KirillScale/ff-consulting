@@ -12144,7 +12144,7 @@ function FormsPage({userId}:{userId:string}){
     <span style={{fontSize:11,fontWeight:600,color:color||C.t2,background:color?`${color}14`:(dark?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.04)"),padding:"3px 9px",borderRadius:20,letterSpacing:0.2}}>{children}</span>
   );
 
-  const GhostBtn=({children,onClick,icon}:{children:React.ReactNode,onClick?:()=>void,icon?:React.ReactNode})=>(
+  const GhostBtn=({children,onClick,icon}:{children?:React.ReactNode,onClick?:()=>void,icon?:React.ReactNode})=>(
     <button onClick={onClick} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:9,border:`1px solid ${gl.cardBorder}`,background:gl.card,backdropFilter:gl.blur,color:C.t1,fontSize:12,fontWeight:600,cursor:"pointer",transition:"all 0.15s",whiteSpace:"nowrap" as const}}>
       {icon}{children}
     </button>
