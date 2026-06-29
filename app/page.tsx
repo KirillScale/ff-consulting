@@ -12435,7 +12435,6 @@ function FormsPage({userId}:{userId:string}){
               </div>
             </SectionCard>
           </div>
-          </div>
 
           {/* Charts */}
           {selectedForm.questions.filter((q:Question)=>q.type==="radio"||q.type==="checkbox").map((q:Question)=>{
