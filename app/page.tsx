@@ -49,8 +49,7 @@ const CALL_GOALS=["Созвон с командой","Созвон с лидом
 // NAV grouped structure
 const NAV_GROUPS=[
   {
-    // Block 1 — MAIN (always open, no toggle)
-    label:"MAIN",
+    label:"MY BUSINESS",
     alwaysOpen:true,
     items:[
       {id:"dashboard",label:"Dashboard",accent:"#4F8EF7",ic:"M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"},
@@ -58,33 +57,19 @@ const NAV_GROUPS=[
       {id:"crm",label:"CRM",accent:"#38BDF8",ic:"M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"},
       {id:"content",label:"Content",accent:"#A855F7",ic:"M7 4v16M17 4v16M3 8h4m10 0h4M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"},
       {id:"calls",label:"Calls",accent:"#38BDF8",ic:"M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"},
-      {id:"forms",label:"Forms",accent:"#10B981",ic:"M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"},
+      {id:"offer",label:"Positioning",accent:"#F59E0B",ic:"M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"},
     ]
   },
   {
-    // Block 2 — AI
-    label:"AI",
+    label:"AI TOOLS",
     items:[
-      {id:"ai",label:"Kirill Skills AI",ic:"M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z",accent:"#A78BFA"},
-      {id:"script",label:"Vizzy Copy AI",ic:"M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z",accent:"#FB923C"},
+      {id:"ai",label:"Kirill Scales AI",ic:"M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z",accent:"#A78BFA"},
       {id:"product",label:"Vizzy Product AI",ic:"M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4",accent:"#34D399"},
-      {id:"design",label:"Vizzy Design AI",ic:"M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z",accent:"#60A5FA"},
+      {id:"script",label:"Vizzy Copy AI",ic:"M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z",accent:"#FB923C"},
       {id:"stories",label:"Vizzy Stories AI",ic:"M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z",accent:"gradient"},
     ]
   },
   {
-    // Block 3 — My Business
-    label:"MY BUSINESS",
-    items:[
-      {id:"offer",label:"Offer Position",accent:"#F59E0B",ic:"M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"},
-      {id:"prices",label:"Prices & Product",accent:"#F59E0B",ic:"M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"},
-      {id:"icp",label:"ICP & IVP",accent:"#F59E0B",ic:"M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"},
-      {id:"bizstrategy",label:"Strategy",accent:"#F59E0B",ic:"M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"},
-      {id:"team",label:"Team",accent:"#F59E0B",ic:"M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"},
-    ]
-  },
-  {
-    // Block 4 — Other
     label:"OTHER",
     items:[
       {id:"links",label:"Links",accent:"#94A3B8",ic:"M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"},
@@ -747,7 +732,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const APP_VERSION="v2.2"; // bump this to force-clear stale localStorage
-  const VALID_PAGES=["dashboard","strategy","crm","calls","content","forms","pnl","media","ads","links","profile","files","ai","script","product","stories","design","offer","prices","icp","bizstrategy","team","calc","tools","mailings"];
+  const VALID_PAGES=["dashboard","strategy","crm","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","pnl","media","ads","calc","tools","mailings"];
 
   // Clear stale localStorage on version change
   useEffect(()=>{
@@ -870,11 +855,10 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
     {page==="links"&&<SafePage name="База ссылок"><LinksPage userId={user.id}/></SafePage>}
     {page==="profile"&&<SafePage name="Настройки профиля"><ProfilePage user={user} name={userName} avatar={userAvatar} setName={setUserName} setAvatar={setUserAvatar}/></SafePage>}
     {page==="files"&&<SafePage name="Файлы"><FilesPage userId={user.id}/></SafePage>}
-    {page==="ai"&&<SafePage name="AI"><AIPage/></SafePage>}
-    {page==="script"&&<SafePage name="Copy AI"><ScriptAIPage/></SafePage>}
-    {page==="product"&&<SafePage name="Product AI"><ProductAIPage/></SafePage>}
-    {page==="stories"&&<SafePage name="Stories AI"><StoriesAIPage/></SafePage>}
-    {page==="design"&&<SafePage name="Design AI"><Placeholder title="Vizzy Design AI" ic="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></SafePage>}
+    {page==="ai"&&<SafePage name="AI"><Placeholder title="Kirill Scales AI" ic="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></SafePage>}
+    {page==="script"&&<SafePage name="Copy AI"><CopyAIPage userId={user.id}/></SafePage>}
+    {page==="product"&&<SafePage name="Product AI"><Placeholder title="Vizzy Product AI" ic="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></SafePage>}
+    {page==="stories"&&<SafePage name="Stories AI"><Placeholder title="Vizzy Stories AI" ic="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></SafePage>}
     {page==="forms"&&<SafePage name="Forms"><FormsPage userId={user.id}/></SafePage>}
     {page==="prices"&&<SafePage name="Prices & Product"><PricesPage userId={user.id} onNav={setPage}/></SafePage>}
     {page==="icp"&&<SafePage name="ICP & IVP"><Placeholder title="ICP & IVP" ic="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></SafePage>}
@@ -12510,6 +12494,163 @@ function FormsPage({userId}:{userId:string}){
           }
         </div>
       )}
+    </div>
+  );
+}
+
+/* ============ COPY AI PAGE ============ */
+const COPY_TOOLS=[
+  {id:"text-booster",name:"Text Booster",desc:"Проверяет и усиливает текст. Глубокий аудит с пошаговой инструкцией.",tag:"Редактура",ic:"M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"},
+  {id:"sales-master",name:"Sales Master",desc:"Генерирует убедительные слоганы, призывы к действию и сценарии продаж.",tag:"Продажи",ic:"M13 10V3L4 14h7v7l9-11h-7z"},
+  {id:"profit-planner",name:"Profit Planner",desc:"Разрабатывает стратегию монетизации на основе текущих показателей профиля.",tag:"Стратегия",ic:"M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"},
+  {id:"no-ai-text",name:"NO AI Text",desc:"Убирает эффект генерации текста — делает его живым и человеческим.",tag:"Редактура",ic:"M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"},
+  {id:"story-master",name:"Story Master",desc:"Берёт историю и переписывает её в другом жанре или стиле, сохраняя смыслы.",tag:"Сторителлинг",ic:"M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"},
+  {id:"reels-master",name:"Reels Master",desc:"Генерирует вирусные посты, цитаты и треды для коротких видео.",tag:"Контент",ic:"M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"},
+  {id:"style-master",name:"Style Master",desc:"Изучает фирменный тон голоса и создаёт тексты, звучащие как вы.",tag:"Стиль",ic:"M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"},
+  {id:"ad-master",name:"Ad Master",desc:"Предлагает нестандартные рекламные ходы для продвижения продукта.",tag:"Реклама",ic:"M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"},
+  {id:"youtube-master",name:"YouTube Master",desc:"Преобразует текст в готовый скрипт для диктора с ритмом и паузами.",tag:"Видео",ic:"M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z M21 12a9 9 0 11-18 0 9 9 0 0118 0z"},
+  {id:"dna-transformer",name:"DNA Transformer",desc:"Подгоняет любой текст под брендовые стандарты и ценности.",tag:"Бренд",ic:"M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"},
+  {id:"icp-master",name:"ICP Master",desc:"Помогает составить портрет идеальных покупателей, готовых платить больше.",tag:"Аудитория",ic:"M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"},
+  {id:"send-magnet",name:"Send Magnet",desc:"Генератор тем и текстов для рассылки, повышающих открываемость.",tag:"Рассылка",ic:"M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"},
+];
+
+const TAG_COLORS:Record<string,string>={
+  "Редактура":"#6366F1","Продажи":"#10B981","Стратегия":"#F59E0B",
+  "Сторителлинг":"#EC4899","Контент":"#8B5CF6","Стиль":"#14B8A6",
+  "Реклама":"#F97316","Видео":"#EF4444","Бренд":"#3B82F6",
+  "Аудитория":"#06B6D4","Рассылка":"#84CC16",
+};
+
+function CopyAIPage({userId}:{userId:string}){
+  const{dark}=useTheme();
+  const[search,setSearch]=useState("");
+  const[filter,setFilter]=useState<"all"|"fav"|"my">("all");
+  const[favs,setFavs]=useState<Set<string>>(()=>{
+    try{return new Set(JSON.parse(localStorage.getItem("copyai_favs")||"[]"));}
+    catch{return new Set();}
+  });
+  const[selected,setSelected]=useState<typeof COPY_TOOLS[0]|null>(null);
+
+  const toggleFav=(id:string,e:React.MouseEvent)=>{
+    e.stopPropagation();
+    setFavs(prev=>{
+      const next=new Set(prev);
+      next.has(id)?next.delete(id):next.add(id);
+      localStorage.setItem("copyai_favs",JSON.stringify([...next]));
+      return next;
+    });
+  };
+
+  const filtered=COPY_TOOLS.filter(t=>{
+    if(filter==="fav"&&!favs.has(t.id))return false;
+    if(search&&!t.name.toLowerCase().includes(search.toLowerCase())&&!t.desc.toLowerCase().includes(search.toLowerCase()))return false;
+    return true;
+  });
+
+  const bd=dark?"rgba(255,255,255,0.07)":"rgba(0,0,0,0.07)";
+  const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
+
+  if(selected)return(
+    <div style={{maxWidth:680,margin:"0 auto",padding:"36px 24px"}}>
+      <button onClick={()=>setSelected(null)} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",color:C.t2,fontSize:13,fontWeight:500,marginBottom:28,padding:0}}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Назад к инструментам
+      </button>
+      <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:28}}>
+        <div style={{width:52,height:52,borderRadius:14,background:dark?"rgba(255,255,255,0.05)":"#F8FAFC",border:`1px solid ${bd}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.5"><path d={selected.ic}/></svg>
+        </div>
+        <div>
+          <div style={{fontSize:22,fontWeight:800,color:C.t1,letterSpacing:"-0.02em",marginBottom:4}}>{selected.name}</div>
+          <span style={{fontSize:11,fontWeight:600,color:TAG_COLORS[selected.tag]||C.t2,background:`${TAG_COLORS[selected.tag]||"#888"}18`,padding:"3px 9px",borderRadius:20}}>{selected.tag}</span>
+        </div>
+      </div>
+      <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:16,padding:24,marginBottom:16}}>
+        <div style={{fontSize:14,color:C.t2,fontWeight:600,marginBottom:8,letterSpacing:0.3,textTransform:"uppercase" as const,fontSize:11}}>Описание</div>
+        <div style={{fontSize:15,color:C.t1,lineHeight:1.7}}>{selected.desc}</div>
+      </div>
+      <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:16,padding:24}}>
+        <div style={{fontSize:11,color:C.t2,fontWeight:600,marginBottom:16,letterSpacing:0.3,textTransform:"uppercase" as const}}>Инструмент</div>
+        <div style={{padding:40,border:`1px dashed ${bd}`,borderRadius:12,textAlign:"center" as const,color:C.t2}}>
+          <div style={{fontSize:13,fontWeight:500}}>Функционал в разработке</div>
+          <div style={{fontSize:12,marginTop:4,opacity:0.6}}>Скоро будет доступно</div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return(
+    <div style={{maxWidth:960,margin:"0 auto",padding:"36px 24px"}}>
+      {/* Header */}
+      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:28}}>
+        <div>
+          <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.025em",marginBottom:4}}>Инструменты Копирайтинга</div>
+          <div style={{fontSize:14,color:C.t2}}>{COPY_TOOLS.length} инструментов · Vizzy Copy AI</div>
+        </div>
+        <button style={{display:"flex",alignItems:"center",gap:8,padding:"10px 18px",borderRadius:11,border:"none",background:"#2563EB",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",flexShrink:0,letterSpacing:"-0.01em"}}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Создать свой
+        </button>
+      </div>
+
+      {/* Search + filters */}
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:24}}>
+        <div style={{position:"relative" as const,flex:1,maxWidth:320}}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2" style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",pointerEvents:"none" as const}}>
+            <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+          </svg>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Найти инструмент..."
+            style={{width:"100%",padding:"9px 12px 9px 34px",borderRadius:10,border:`1px solid ${bd}`,background:dark?"rgba(255,255,255,0.04)":"#fff",color:C.t1,fontSize:13,outline:"none",boxSizing:"border-box" as const,fontFamily:"'Inter',sans-serif"}}/>
+        </div>
+        <div style={{display:"flex",gap:2,padding:"3px",background:dark?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.04)",borderRadius:10,border:`1px solid ${bd}`}}>
+          {([["all","Все"],["fav","Любимые"],["my","Мои"]] as const).map(([id,label])=>(
+            <button key={id} onClick={()=>setFilter(id)}
+              style={{padding:"6px 14px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:filter===id?700:500,background:filter===id?(dark?"rgba(255,255,255,0.09)":"#fff"):"transparent",color:filter===id?C.t1:C.t2,transition:"all 0.15s",boxShadow:filter===id&&!dark?"0 1px 3px rgba(0,0,0,0.08)":"none"}}>
+              {label}{id==="fav"&&favs.size>0?` (${favs.size})`:""}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Grid */}
+      {filtered.length===0
+        ?<div style={{padding:"60px 24px",textAlign:"center" as const,color:C.t2}}>
+          <div style={{fontSize:14,fontWeight:500}}>Ничего не найдено</div>
+        </div>
+        :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
+          {filtered.map(tool=>(
+            <button key={tool.id} onClick={()=>setSelected(tool)}
+              style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:14,padding:20,cursor:"pointer",textAlign:"left" as const,transition:"all 0.15s",position:"relative" as const}}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(-1px)";(e.currentTarget as HTMLElement).style.boxShadow=dark?"0 4px 20px rgba(0,0,0,0.3)":"0 4px 20px rgba(0,0,0,0.08)";}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(0)";(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
+
+              {/* Star */}
+              <button onClick={e=>toggleFav(tool.id,e)}
+                style={{position:"absolute",top:14,right:14,background:"none",border:"none",cursor:"pointer",color:favs.has(tool.id)?"#F59E0B":C.t2,opacity:favs.has(tool.id)?1:0.4,transition:"all 0.15s",padding:2}}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.opacity="1";}}
+                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.opacity=favs.has(tool.id)?"1":"0.4";}}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill={favs.has(tool.id)?"currentColor":"none"} stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </button>
+
+              {/* Icon */}
+              <div style={{width:40,height:40,borderRadius:11,background:dark?"rgba(255,255,255,0.05)":"#F8FAFC",border:`1px solid ${bd}`,display:"flex",alignItems:"center",justifyContent:"center",marginBottom:14}}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.6"><path d={tool.ic}/></svg>
+              </div>
+
+              {/* Tag */}
+              <div style={{marginBottom:8}}>
+                <span style={{fontSize:10,fontWeight:600,color:TAG_COLORS[tool.tag]||C.t2,background:`${TAG_COLORS[tool.tag]||"#888"}15`,padding:"2px 8px",borderRadius:20,letterSpacing:0.2}}>{tool.tag}</span>
+              </div>
+
+              {/* Name */}
+              <div style={{fontSize:15,fontWeight:700,color:C.t1,marginBottom:6,letterSpacing:"-0.01em"}}>{tool.name}</div>
+
+              {/* Desc */}
+              <div style={{fontSize:13,color:C.t2,lineHeight:1.55,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical" as any}}>{tool.desc}</div>
+            </button>
+          ))}
+        </div>
+      }
     </div>
   );
 }
