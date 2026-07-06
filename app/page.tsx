@@ -12566,7 +12566,7 @@ function CopyAIPage({userId}:{userId:string}){
         </div>
       </div>
       <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:16,padding:24,marginBottom:16}}>
-        <div style={{fontSize:14,color:C.t2,fontWeight:600,marginBottom:8,letterSpacing:0.3,textTransform:"uppercase" as const,fontSize:11}}>Описание</div>
+        <div style={{fontSize:11,color:C.t2,fontWeight:600,marginBottom:8,letterSpacing:0.3,textTransform:"uppercase" as const}}>Описание</div>
         <div style={{fontSize:15,color:C.t1,lineHeight:1.7}}>{selected.desc}</div>
       </div>
       <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:16,padding:24}}>
