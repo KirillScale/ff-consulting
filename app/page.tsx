@@ -12681,103 +12681,205 @@ const KIRILL_AI_SYSTEM=`Ты — Kirill Scales AI, персональный би
 - Никакого корпоративного буллшита`;
 
 type ChatMessage={role:"user"|"assistant",content:string,id:string};
+type AIChat={id:string,title:string,messages:ChatMessage[],createdAt:number,updatedAt:number};
 
-function KirillAIPage({userId}:{userId:string}){
-  const{dark}=useTheme();
-  const[messages,setMessages]=useState<ChatMessage[]>([]);
-  const[input,setInput]=useState("");
-  const[loading,setLoading]=useState(false);
-  const[copiedId,setCopiedId]=useState<string|null>(null);
-  const[hoveredId,setHoveredId]=useState<string|null>(null);
-  const endRef=useRef<HTMLDivElement>(null);
-  const inputRef=useRef<HTMLTextAreaElement>(null);
-  const abortRef=useRef<AbortController|null>(null);
+/* ============ KIRILL AI STORE ============
+   Живёт вне React-компонента. Благодаря этому диалоги сохраняются, а генерация
+   ответа продолжается даже если пользователь ушёл на другую вкладку приложения. */
+const KS_AI_KEY="ks_kirill_ai_chats_v2";
+const KS_AI_ACTIVE_KEY="ks_kirill_ai_active_v2";
 
-  useEffect(()=>{
-    endRef.current?.scrollIntoView({behavior:"smooth"});
-  },[messages,loading]);
+const kirillAIStore=(()=>{
+  let chats:AIChat[]=[];
+  let activeId:string="";
+  let hydrated=false;
+  let lastPersist=0;
+  const generating=new Set<string>();
+  const aborts=new Map<string,AbortController>();
+  const listeners=new Set<()=>void>();
 
-  const send=async()=>{
-    if(!input.trim()||loading)return;
-    const text=input.trim();
-    setInput("");
-    inputRef.current?.focus();
+  const uid=(p:string)=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  const blank=():AIChat=>({id:uid("c"),title:"Новый чат",messages:[],createdAt:Date.now(),updatedAt:Date.now()});
+  const emit=()=>{listeners.forEach(l=>{try{l();}catch{}});};
 
-    const userMsg:ChatMessage={role:"user",content:text,id:Date.now().toString()};
-    const newMsgs=[...messages,userMsg];
-    setMessages(newMsgs);
-    setLoading(true);
+  const persist=(force=false)=>{
+    if(typeof window==="undefined")return;
+    const now=Date.now();
+    if(!force&&now-lastPersist<500)return;
+    lastPersist=now;
+    try{
+      localStorage.setItem(KS_AI_KEY,JSON.stringify(chats));
+      localStorage.setItem(KS_AI_ACTIVE_KEY,activeId);
+    }catch{}
+  };
 
-    const aiMsgId=(Date.now()+1).toString();
-    setMessages(m=>[...m,{role:"assistant",content:"",id:aiMsgId}]);
+  const hydrate=()=>{
+    if(hydrated)return;
+    if(typeof window==="undefined"){
+      if(!chats.length){const c=blank();chats=[c];activeId=c.id;}
+      return; // не помечаем hydrated — дочитаем на клиенте
+    }
+    hydrated=true;
+    try{
+      const raw=localStorage.getItem(KS_AI_KEY);
+      if(raw){const p=JSON.parse(raw);if(Array.isArray(p))chats=p;}
+      activeId=localStorage.getItem(KS_AI_ACTIVE_KEY)||"";
+    }catch{}
+    if(!chats.length){const c=blank();chats=[c];activeId=c.id;}
+    if(!chats.find(c=>c.id===activeId))activeId=chats[0].id;
+  };
 
-    abortRef.current=new AbortController();
+  const patch=(id:string,fn:(c:AIChat)=>AIChat)=>{chats=chats.map(c=>c.id===id?fn(c):c);};
+
+  const run=async(chatId:string)=>{
+    const target=chats.find(c=>c.id===chatId);
+    if(!target)return;
+    const aiMsg=target.messages[target.messages.length-1];
+    if(!aiMsg||aiMsg.role!=="assistant")return;
+    const aiId=aiMsg.id;
+    const history=target.messages.filter(m=>m.id!==aiId).map(m=>({role:m.role,content:m.content}));
+
+    const ctrl=new AbortController();
+    aborts.set(chatId,ctrl);
+    generating.add(chatId);
+    emit();
+
+    const setAI=(content:string,force=false)=>{
+      patch(chatId,c=>({...c,updatedAt:Date.now(),messages:c.messages.map(m=>m.id===aiId?{...m,content}:m)}));
+      persist(force);emit();
+    };
 
     try{
       const res=await fetch("https://api.deepseek.com/v1/chat/completions",{
-        method:"POST",
-        signal:abortRef.current.signal,
+        method:"POST",signal:ctrl.signal,
         headers:{"Content-Type":"application/json","Authorization":`Bearer ${process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY}`},
-        body:JSON.stringify({
-          model:"deepseek-chat",
-          max_tokens:2000,
-          stream:true,
-          messages:[
-            {role:"system",content:KIRILL_AI_SYSTEM},
-            ...newMsgs.map(m=>({role:m.role,content:m.content})),
-          ],
-        }),
+        body:JSON.stringify({model:"deepseek-chat",max_tokens:2000,stream:true,messages:[{role:"system",content:KIRILL_AI_SYSTEM},...history]}),
       });
-
       const reader=res.body?.getReader();
       const decoder=new TextDecoder();
       let full="";
-
       if(reader){
         while(true){
           const{done,value}=await reader.read();
           if(done)break;
           const chunk=decoder.decode(value);
-          const lines=chunk.split("\n").filter(l=>l.startsWith("data:"));
-          for(const line of lines){
-            const data=line.slice(5).trim();
+          const rows=chunk.split("\n").filter(l=>l.startsWith("data:"));
+          for(const row of rows){
+            const data=row.slice(5).trim();
             if(data==="[DONE]")break;
-            try{
-              const json=JSON.parse(data);
-              const delta=json.choices?.[0]?.delta?.content||"";
-              full+=delta;
-              setMessages(m=>m.map(msg=>msg.id===aiMsgId?{...msg,content:full}:msg));
-            }catch{}
+            try{const j=JSON.parse(data);const d=j.choices?.[0]?.delta?.content||"";if(d){full+=d;setAI(full);}}catch{}
           }
         }
       }
       if(!full){
-        // fallback non-streaming
         const fb=await fetch("https://api.deepseek.com/v1/chat/completions",{
-          method:"POST",
+          method:"POST",signal:ctrl.signal,
           headers:{"Content-Type":"application/json","Authorization":`Bearer ${process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY}`},
-          body:JSON.stringify({model:"deepseek-chat",max_tokens:2000,messages:[{role:"system",content:KIRILL_AI_SYSTEM},...newMsgs.map(m=>({role:m.role,content:m.content}))]}),
+          body:JSON.stringify({model:"deepseek-chat",max_tokens:2000,messages:[{role:"system",content:KIRILL_AI_SYSTEM},...history]}),
         });
         const fd=await fb.json();
         full=fd.choices?.[0]?.message?.content||"Ошибка ответа";
-        setMessages(m=>m.map(msg=>msg.id===aiMsgId?{...msg,content:full}:msg));
+        setAI(full,true);
       }
     }catch(e:any){
-      if(e?.name!=="AbortError"){
-        setMessages(m=>m.map(msg=>msg.id===aiMsgId?{...msg,content:"Ошибка соединения. Проверь API ключ или попробуй ещё раз."}:msg));
-      }
+      if(e?.name!=="AbortError"){setAI("Ошибка соединения. Проверь API-ключ или попробуй ещё раз.",true);}
+    }finally{
+      generating.delete(chatId);
+      aborts.delete(chatId);
+      persist(true);emit();
     }
-    setLoading(false);
   };
 
-  const stop=()=>{abortRef.current?.abort();setLoading(false);};
+  return{
+    subscribe(l:()=>void){hydrate();listeners.add(l);return()=>{listeners.delete(l);};},
+    getChats(){hydrate();return chats;},
+    getActiveId(){hydrate();return activeId;},
+    getActive(){hydrate();return chats.find(c=>c.id===activeId)||chats[0];},
+    isGenerating(id:string){return generating.has(id);},
+    setActive(id:string){hydrate();activeId=id;persist(true);emit();},
+    createChat(){hydrate();const c=blank();chats=[c,...chats];activeId=c.id;persist(true);emit();return c.id;},
+    deleteChat(id:string){
+      hydrate();
+      aborts.get(id)?.abort();aborts.delete(id);generating.delete(id);
+      chats=chats.filter(c=>c.id!==id);
+      if(!chats.length){const c=blank();chats=[c];activeId=c.id;}
+      else if(activeId===id)activeId=chats[0].id;
+      persist(true);emit();
+    },
+    clearActive(){
+      hydrate();
+      const id=activeId;
+      aborts.get(id)?.abort();aborts.delete(id);generating.delete(id);
+      patch(id,c=>({...c,messages:[],title:"Новый чат",updatedAt:Date.now()}));
+      persist(true);emit();
+    },
+    stop(id:string){aborts.get(id)?.abort();aborts.delete(id);generating.delete(id);emit();},
+    send(text:string){
+      hydrate();
+      const t=text.trim();
+      if(!t)return;
+      const id=activeId;
+      const chat=chats.find(c=>c.id===id);
+      if(!chat)return;
+      const userMsg:ChatMessage={role:"user",content:t,id:uid("u")};
+      const aiMsg:ChatMessage={role:"assistant",content:"",id:uid("a")};
+      const first=chat.messages.length===0;
+      patch(id,c=>({...c,title:first?(t.length>42?t.slice(0,42)+"…":t):c.title,messages:[...c.messages,userMsg,aiMsg],updatedAt:Date.now()}));
+      persist(true);emit();
+      run(id);
+    },
+  };
+})();
+
+const KS_AI_LOGO="/icon-ai.png";
+
+function KirillAIPage({userId}:{userId:string}){
+  const{dark}=useTheme();
+  const isMobile=useIsMobile();
+  const[mounted,setMounted]=useState(false);
+  const[,setTick]=useState(0);
+
+  useEffect(()=>{
+    setMounted(true);
+    const unsub=kirillAIStore.subscribe(()=>setTick(t=>t+1));
+    return unsub;
+  },[]);
+
+  const chats=kirillAIStore.getChats();
+  const activeId=kirillAIStore.getActiveId();
+  const activeChat=kirillAIStore.getActive();
+  const messages=activeChat?.messages||[];
+  const loading=activeChat?kirillAIStore.isGenerating(activeChat.id):false;
+
+  const[input,setInput]=useState("");
+  const[copiedId,setCopiedId]=useState<string|null>(null);
+  const[hoveredId,setHoveredId]=useState<string|null>(null);
+  const[hoverChat,setHoverChat]=useState<string|null>(null);
+  const[showList,setShowList]=useState(true);
+  const endRef=useRef<HTMLDivElement>(null);
+  const inputRef=useRef<HTMLTextAreaElement>(null);
+
+  useEffect(()=>{setShowList(!isMobile);},[isMobile]);
+  useEffect(()=>{endRef.current?.scrollIntoView({behavior:"smooth"});},[messages,loading,activeId]);
+
+  const send=()=>{
+    const text=input.trim();
+    if(!text||loading)return;
+    setInput("");
+    if(inputRef.current)inputRef.current.style.height="auto";
+    requestAnimationFrame(()=>inputRef.current?.focus());
+    kirillAIStore.send(text);
+  };
+  const stop=()=>{if(activeChat)kirillAIStore.stop(activeChat.id);};
+  const clear=()=>{if(confirm("Очистить весь диалог?"))kirillAIStore.clearActive();};
+  const newChat=()=>{kirillAIStore.createChat();setInput("");if(isMobile)setShowList(false);requestAnimationFrame(()=>inputRef.current?.focus());};
+  const pickChat=(id:string)=>{kirillAIStore.setActive(id);if(isMobile)setShowList(false);};
+  const removeChat=(id:string,e:React.MouseEvent)=>{e.stopPropagation();if(confirm("Удалить этот чат?"))kirillAIStore.deleteChat(id);};
 
   const copyMsg=(content:string,id:string)=>{
     navigator.clipboard.writeText(content);
     setCopiedId(id);setTimeout(()=>setCopiedId(null),2000);
   };
-
-  const clear=()=>{if(confirm("Очистить весь диалог?"))setMessages([]);};
 
   // Simple markdown renderer
   const renderContent=(text:string)=>{
@@ -12787,20 +12889,16 @@ function KirillAIPage({userId}:{userId:string}){
     let i=0;
     while(i<lines.length){
       const line=lines[i];
-      // Code block
       if(line.startsWith("```")){
-        const lang=line.slice(3).trim();
         const codeLines:string[]=[];
         i++;
         while(i<lines.length&&!lines[i].startsWith("```")){codeLines.push(lines[i]);i++;}
         els.push(<pre key={i} style={{background:dark?"#0A0F1A":"#F1F5F9",border:`1px solid ${dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.08)"}`,borderRadius:10,padding:"12px 14px",fontSize:12,overflowX:"auto" as const,fontFamily:"'SF Mono','Fira Code',monospace",lineHeight:1.6,margin:"8px 0",color:C.t1}}><code>{codeLines.join("\n")}</code></pre>);
         i++;continue;
       }
-      // Heading
       if(line.startsWith("### ")){els.push(<div key={i} style={{fontSize:14,fontWeight:700,color:C.t1,marginTop:14,marginBottom:4}}>{inlineRender(line.slice(4))}</div>);i++;continue;}
       if(line.startsWith("## ")){els.push(<div key={i} style={{fontSize:15,fontWeight:800,color:C.t1,marginTop:16,marginBottom:6,letterSpacing:"-0.01em"}}>{inlineRender(line.slice(3))}</div>);i++;continue;}
       if(line.startsWith("# ")){els.push(<div key={i} style={{fontSize:17,fontWeight:800,color:C.t1,marginTop:18,marginBottom:8,letterSpacing:"-0.015em"}}>{inlineRender(line.slice(2))}</div>);i++;continue;}
-      // Bullet
       if(line.startsWith("- ")||line.startsWith("* ")){
         const items:string[]=[line.slice(2)];
         i++;
@@ -12808,7 +12906,6 @@ function KirillAIPage({userId}:{userId:string}){
         els.push(<ul key={i} style={{margin:"6px 0",paddingLeft:18,display:"flex",flexDirection:"column" as const,gap:3}}>{items.map((it,j)=><li key={j} style={{fontSize:14,color:C.t1,lineHeight:1.6}}>{inlineRender(it)}</li>)}</ul>);
         continue;
       }
-      // Numbered list
       if(/^\d+\. /.test(line)){
         const items:string[]=[line.replace(/^\d+\. /,"")];
         i++;
@@ -12816,11 +12913,8 @@ function KirillAIPage({userId}:{userId:string}){
         els.push(<ol key={i} style={{margin:"6px 0",paddingLeft:18,display:"flex",flexDirection:"column" as const,gap:3}}>{items.map((it,j)=><li key={j} style={{fontSize:14,color:C.t1,lineHeight:1.6}}>{inlineRender(it)}</li>)}</ol>);
         continue;
       }
-      // Divider
       if(line==="---"||line==="***"){els.push(<hr key={i} style={{border:"none",borderTop:`1px solid ${dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.08)"}`,margin:"12px 0"}}/>);i++;continue;}
-      // Empty line
       if(line.trim()===""){els.push(<div key={i} style={{height:8}}/>);i++;continue;}
-      // Paragraph
       els.push(<div key={i} style={{fontSize:14,color:C.t1,lineHeight:1.7,marginBottom:2}}>{inlineRender(line)}</div>);
       i++;
     }
@@ -12839,124 +12933,189 @@ function KirillAIPage({userId}:{userId:string}){
 
   const bd=dark?"rgba(255,255,255,0.07)":"rgba(0,0,0,0.07)";
   const isEmpty=messages.length===0;
+  const panelBg=dark?"#0B1018":"#fff";
+
+  if(!mounted)return <div style={{height:"calc(100vh - 56px)"}}/>;
 
   return(
-    <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 56px)",maxWidth:820,margin:"0 auto",width:"100%"}}>
+    <div style={{display:"flex",height:"calc(100vh - 56px)",maxWidth:1180,margin:"0 auto",width:"100%",position:"relative" as const,overflow:"hidden"}}>
 
-      {/* Header */}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 24px 12px",borderBottom:`1px solid ${bd}`,flexShrink:0}}>
-        <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#1D4ED8,#6366F1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-            <span style={{fontSize:15,fontWeight:800,color:"#fff",letterSpacing:"-0.02em"}}>K</span>
-          </div>
-          <div>
-            <div style={{fontSize:15,fontWeight:700,color:C.t1,letterSpacing:"-0.01em"}}>Kirill Scales AI</div>
-            <div style={{fontSize:11,color:C.t2,fontWeight:500,display:"flex",alignItems:"center",gap:5}}>
-              <div style={{width:6,height:6,borderRadius:"50%",background:"#10B981"}}/>
-              Онлайн · DeepSeek
-            </div>
-          </div>
-        </div>
-        <div style={{display:"flex",gap:8}}>
-          {messages.length>0&&<button onClick={clear} style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:12,fontWeight:500,cursor:"pointer"}}>
-            Очистить
-          </button>}
-        </div>
-      </div>
+      {/* ===== LEFT: чат ===== */}
+      <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",height:"100%",borderRight:!isMobile&&showList?`1px solid ${bd}`:"none"}}>
 
-      {/* Messages */}
-      <div style={{flex:1,overflowY:"auto" as const,padding:"20px 24px",display:"flex",flexDirection:"column",gap:16}}>
-        {isEmpty&&(
-          <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",gap:20,paddingBottom:40}}>
-            <div style={{width:64,height:64,borderRadius:18,background:"linear-gradient(135deg,#1D4ED8,#6366F1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-              <span style={{fontSize:26,fontWeight:900,color:"#fff",letterSpacing:"-0.02em"}}>K</span>
-            </div>
-            <div style={{textAlign:"center"}}>
-              <div style={{fontSize:20,fontWeight:800,color:C.t1,marginBottom:6,letterSpacing:"-0.02em"}}>Kirill Scales AI</div>
-              <div style={{fontSize:14,color:C.t2,maxWidth:360,lineHeight:1.6}}>Твой персональный стратег по бизнесу и маркетингу. Спроси про стратегию, офферы, контент или воронки.</div>
-            </div>
-            <div style={{display:"flex",flexWrap:"wrap" as const,gap:8,justifyContent:"center",maxWidth:500}}>
-              {["Как усилить мой оффер?","Напиши стратегию привлечения клиентов","Разбери мою воронку","Помоги с контент-планом"].map(s=>(
-                <button key={s} onClick={()=>{setInput(s);inputRef.current?.focus();}}
-                  style={{padding:"8px 14px",borderRadius:20,border:`1px solid ${bd}`,background:dark?"rgba(255,255,255,0.04)":"#fff",color:C.t2,fontSize:13,cursor:"pointer",transition:"all 0.15s",fontFamily:"'Inter',sans-serif"}}
-                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color=C.t1;(e.currentTarget as HTMLElement).style.borderColor=dark?"rgba(255,255,255,0.15)":"rgba(0,0,0,0.15)";}}
-                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.color=C.t2;(e.currentTarget as HTMLElement).style.borderColor=bd;}}>
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {messages.map(msg=>(
-          <div key={msg.id} style={{display:"flex",flexDirection:"column",alignItems:msg.role==="user"?"flex-end":"flex-start",gap:4}}
-            onMouseEnter={()=>setHoveredId(msg.id)}
-            onMouseLeave={()=>setHoveredId(null)}>
-            {msg.role==="assistant"&&(
-              <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
-                <div style={{width:20,height:20,borderRadius:6,background:"linear-gradient(135deg,#1D4ED8,#6366F1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                  <span style={{fontSize:9,fontWeight:800,color:"#fff"}}>K</span>
-                </div>
-                <span style={{fontSize:11,fontWeight:600,color:C.t2}}>Kirill Scales AI</span>
+        {/* Header */}
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 24px 12px",borderBottom:`1px solid ${bd}`,flexShrink:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:12,minWidth:0}}>
+            <img src={KS_AI_LOGO} width={36} height={36} style={{borderRadius:10,objectFit:"cover" as const,flexShrink:0}} alt="Kirill Scales AI"/>
+            <div style={{minWidth:0}}>
+              <div style={{fontSize:15,fontWeight:700,color:C.t1,letterSpacing:"-0.01em"}}>Kirill Scales AI</div>
+              <div style={{fontSize:11,color:C.t2,fontWeight:500,display:"flex",alignItems:"center",gap:5}}>
+                <div style={{width:6,height:6,borderRadius:"50%",background:loading?"#F59E0B":"#10B981"}}/>
+                {loading?"Печатает…":"Твой персональный стратег по бизнесу"}
               </div>
-            )}
-            <div style={{
-              maxWidth:"82%",
-              padding:msg.role==="user"?"12px 16px":"14px 18px",
-              borderRadius:msg.role==="user"?"16px 16px 4px 16px":"4px 16px 16px 16px",
-              background:msg.role==="user"
-                ?"linear-gradient(135deg,#1D4ED8,#2563EB)"
-                :(dark?"rgba(255,255,255,0.05)":"#F8FAFC"),
-              border:msg.role==="assistant"?`1px solid ${bd}`:"none",
-              color:msg.role==="user"?"#fff":C.t1,
-              fontSize:14,lineHeight:1.7,
-              position:"relative" as const,
-            }}>
-              {msg.role==="user"
-                ?<div style={{fontSize:14,lineHeight:1.6}}>{msg.content}</div>
-                :msg.content
-                  ?renderContent(msg.content)
-                  :<div style={{display:"flex",gap:4,alignItems:"center",padding:"4px 0"}}>
-                    {[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:C.t2,animation:`bounce 1.2s ease-in-out ${i*0.15}s infinite`}}/>)}
-                    <style>{`@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-5px)}}`}</style>
-                  </div>
-              }
             </div>
-            {msg.role==="assistant"&&msg.content&&hoveredId===msg.id&&(
-              <button onClick={()=>copyMsg(msg.content,msg.id)}
-                style={{padding:"4px 10px",borderRadius:7,border:`1px solid ${bd}`,background:dark?"rgba(255,255,255,0.04)":"#fff",color:C.t2,fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"'Inter',sans-serif"}}>
-                {copiedId===msg.id
-                  ?<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Скопировано</>
-                  :<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Копировать</>
-                }
-              </button>
-            )}
           </div>
-        ))}
-        <div ref={endRef}/>
+          <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
+            {messages.length>0&&<button onClick={clear} style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:12,fontWeight:500,cursor:"pointer"}}>
+              Очистить
+            </button>}
+            <button onClick={()=>setShowList(s=>!s)} title="Список чатов"
+              style={{width:32,height:32,borderRadius:8,border:`1px solid ${showList&&!isMobile?"transparent":bd}`,background:showList&&!isMobile?(dark?"rgba(255,255,255,0.06)":"#F1F5F9"):"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Messages */}
+        <div style={{flex:1,overflowY:"auto" as const,padding:"20px 24px",display:"flex",flexDirection:"column",gap:16}}>
+          {isEmpty&&(
+            <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",gap:20,paddingBottom:40}}>
+              <img src={KS_AI_LOGO} width={64} height={64} style={{borderRadius:18,objectFit:"cover" as const}} alt="Kirill Scales AI"/>
+              <div style={{textAlign:"center" as const}}>
+                <div style={{fontSize:20,fontWeight:800,color:C.t1,marginBottom:6,letterSpacing:"-0.02em"}}>Kirill Scales AI</div>
+                <div style={{fontSize:14,color:C.t2,maxWidth:360,lineHeight:1.6}}>Твой персональный стратег по бизнесу</div>
+              </div>
+              <div style={{display:"flex",flexWrap:"wrap" as const,gap:8,justifyContent:"center",maxWidth:500}}>
+                {["Как усилить мой оффер?","Напиши стратегию привлечения клиентов","Разбери мою воронку","Помоги с контент-планом"].map(s=>(
+                  <button key={s} onClick={()=>{setInput(s);inputRef.current?.focus();}}
+                    style={{padding:"8px 14px",borderRadius:20,border:`1px solid ${bd}`,background:dark?"rgba(255,255,255,0.04)":"#fff",color:C.t2,fontSize:13,cursor:"pointer",transition:"all 0.15s",fontFamily:"'Inter',sans-serif"}}
+                    onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color=C.t1;(e.currentTarget as HTMLElement).style.borderColor=dark?"rgba(255,255,255,0.15)":"rgba(0,0,0,0.15)";}}
+                    onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.color=C.t2;(e.currentTarget as HTMLElement).style.borderColor=bd;}}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {messages.map(msg=>(
+            <div key={msg.id} style={{display:"flex",flexDirection:"column",alignItems:msg.role==="user"?"flex-end":"flex-start",gap:4}}
+              onMouseEnter={()=>setHoveredId(msg.id)}
+              onMouseLeave={()=>setHoveredId(null)}>
+              {msg.role==="assistant"&&(
+                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+                  <img src={KS_AI_LOGO} width={20} height={20} style={{borderRadius:6,objectFit:"cover" as const,flexShrink:0}} alt=""/>
+                  <span style={{fontSize:11,fontWeight:600,color:C.t2}}>Kirill Scales AI</span>
+                </div>
+              )}
+              <div style={{
+                maxWidth:"82%",
+                padding:msg.role==="user"?"12px 16px":"14px 18px",
+                borderRadius:msg.role==="user"?"16px 16px 4px 16px":"4px 16px 16px 16px",
+                background:msg.role==="user"
+                  ?"linear-gradient(135deg,#1D4ED8,#2563EB)"
+                  :(dark?"rgba(255,255,255,0.05)":"#F8FAFC"),
+                border:msg.role==="assistant"?`1px solid ${bd}`:"none",
+                color:msg.role==="user"?"#fff":C.t1,
+                fontSize:14,lineHeight:1.7,
+                position:"relative" as const,
+              }}>
+                {msg.role==="user"
+                  ?<div style={{fontSize:14,lineHeight:1.6}}>{msg.content}</div>
+                  :msg.content
+                    ?renderContent(msg.content)
+                    :<div style={{display:"flex",gap:4,alignItems:"center",padding:"4px 0"}}>
+                      {[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:C.t2,animation:`bounce 1.2s ease-in-out ${i*0.15}s infinite`}}/>)}
+                      <style>{`@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-5px)}}`}</style>
+                    </div>
+                }
+              </div>
+              {msg.role==="assistant"&&msg.content&&hoveredId===msg.id&&(
+                <button onClick={()=>copyMsg(msg.content,msg.id)}
+                  style={{padding:"4px 10px",borderRadius:7,border:`1px solid ${bd}`,background:dark?"rgba(255,255,255,0.04)":"#fff",color:C.t2,fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"'Inter',sans-serif"}}>
+                  {copiedId===msg.id
+                    ?<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Скопировано</>
+                    :<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Копировать</>
+                  }
+                </button>
+              )}
+            </div>
+          ))}
+          <div ref={endRef}/>
+        </div>
+
+        {/* Input */}
+        <div style={{padding:"12px 24px 20px",borderTop:`1px solid ${bd}`,flexShrink:0,background:dark?"#080C14":"#fff"}}>
+          <div style={{display:"flex",gap:10,alignItems:"flex-end",background:dark?"rgba(255,255,255,0.04)":"#F8FAFC",border:`1px solid ${dark?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.1)"}`,borderRadius:14,padding:"10px 12px 10px 16px",transition:"border-color 0.15s"}}>
+            <textarea ref={inputRef}
+              value={input}
+              onChange={e=>{setInput(e.target.value);e.target.style.height="auto";e.target.style.height=Math.min(e.target.scrollHeight,160)+"px";}}
+              onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}}
+              placeholder="Напиши запрос... (Enter — отправить, Shift+Enter — новая строка)"
+              rows={1}
+              style={{flex:1,background:"transparent",border:"none",outline:"none",resize:"none" as const,fontSize:14,color:C.t1,lineHeight:1.6,fontFamily:"'Inter',sans-serif",maxHeight:160,overflowY:"auto" as const,padding:0}}
+            />
+            <button onClick={loading?stop:send}
+              style={{width:36,height:36,borderRadius:9,border:"none",background:input.trim()||loading?"#1D4ED8":"rgba(0,0,0,0.08)",color:input.trim()||loading?"#fff":C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.15s"}}>
+              {loading
+                ?<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+                :<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              }
+            </button>
+          </div>
+          <div style={{fontSize:11,color:C.t2,textAlign:"center" as const,marginTop:8,opacity:0.5}}>Kirill Scales AI · Диалоги сохраняются автоматически</div>
+        </div>
       </div>
 
-      {/* Input */}
-      <div style={{padding:"12px 24px 20px",borderTop:`1px solid ${bd}`,flexShrink:0,background:dark?"#080C14":"#fff"}}>
-        <div style={{display:"flex",gap:10,alignItems:"flex-end",background:dark?"rgba(255,255,255,0.04)":"#F8FAFC",border:`1px solid ${dark?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.1)"}`,borderRadius:14,padding:"10px 12px 10px 16px",transition:"border-color 0.15s"}}>
-          <textarea ref={inputRef}
-            value={input}
-            onChange={e=>{setInput(e.target.value);e.target.style.height="auto";e.target.style.height=Math.min(e.target.scrollHeight,160)+"px";}}
-            onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}}
-            placeholder="Напиши запрос... (Enter — отправить, Shift+Enter — новая строка)"
-            rows={1}
-            style={{flex:1,background:"transparent",border:"none",outline:"none",resize:"none" as const,fontSize:14,color:C.t1,lineHeight:1.6,fontFamily:"'Inter',sans-serif",maxHeight:160,overflowY:"auto" as const,padding:0}}
-          />
-          <button onClick={loading?stop:send}
-            style={{width:36,height:36,borderRadius:9,border:"none",background:input.trim()||loading?"#1D4ED8":"rgba(0,0,0,0.08)",color:input.trim()||loading?"#fff":C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.15s"}}>
-            {loading
-              ?<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
-              :<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            }
-          </button>
+      {/* ===== RIGHT: список чатов ===== */}
+      {isMobile&&showList&&<div onClick={()=>setShowList(false)} style={{position:"absolute" as const,inset:0,background:"rgba(0,0,0,0.45)",zIndex:20}}/>}
+      {showList&&(
+        <div style={{
+          width:isMobile?"82%":288,
+          maxWidth:isMobile?340:288,
+          flexShrink:0,
+          height:"100%",
+          display:"flex",flexDirection:"column",
+          background:panelBg,
+          ...(isMobile?{position:"absolute" as const,right:0,top:0,zIndex:30,borderLeft:`1px solid ${bd}`,boxShadow:"-8px 0 32px rgba(0,0,0,0.28)"}:{}),
+        }}>
+          {/* List header */}
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 16px 12px",borderBottom:`1px solid ${bd}`,flexShrink:0}}>
+            <div style={{fontSize:14,fontWeight:700,color:C.t1,letterSpacing:"-0.01em"}}>Список чатов</div>
+            <button onClick={newChat}
+              style={{display:"flex",alignItems:"center",gap:5,padding:"6px 11px",borderRadius:8,border:"none",background:"#1D4ED8",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Новый
+            </button>
+          </div>
+
+          {/* List body */}
+          <div style={{flex:1,overflowY:"auto" as const,padding:8,display:"flex",flexDirection:"column",gap:4}}>
+            {chats.map(c=>{
+              const isAct=c.id===activeId;
+              const gen=kirillAIStore.isGenerating(c.id);
+              const last=c.messages[c.messages.length-1];
+              const preview=last?(last.content?last.content.replace(/[#*`>\-]/g," ").replace(/\s+/g," ").trim():(gen?"Печатает…":"…")):"Пустой чат";
+              const showDel=isMobile||hoverChat===c.id||isAct;
+              return(
+                <div key={c.id} onClick={()=>pickChat(c.id)}
+                  onMouseEnter={()=>setHoverChat(c.id)} onMouseLeave={()=>setHoverChat(null)}
+                  style={{
+                    display:"flex",alignItems:"center",gap:8,
+                    padding:"9px 10px",borderRadius:10,cursor:"pointer",
+                    background:isAct?(dark?"rgba(79,142,247,0.14)":"rgba(37,99,235,0.08)"):"transparent",
+                    border:`1px solid ${isAct?(dark?"rgba(79,142,247,0.28)":"rgba(37,99,235,0.18)"):"transparent"}`,
+                    transition:"background 0.15s",
+                  }}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6}}>
+                      {gen&&<div style={{width:6,height:6,borderRadius:"50%",background:"#F59E0B",flexShrink:0,animation:"bounce 1.2s ease-in-out infinite"}}/>}
+                      <div style={{fontSize:13,fontWeight:isAct?600:500,color:isAct?C.t1:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.title||"Новый чат"}</div>
+                    </div>
+                    <div style={{fontSize:11,color:C.t2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginTop:2}}>{preview.slice(0,60)}</div>
+                  </div>
+                  {showDel&&<button onClick={e=>removeChat(c.id,e)} title="Удалить чат"
+                    style={{width:24,height:24,borderRadius:6,border:"none",background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}
+                    onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color="#EF4444";(e.currentTarget as HTMLElement).style.background=dark?"rgba(239,68,68,0.12)":"rgba(239,68,68,0.08)";}}
+                    onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.color=C.t2;(e.currentTarget as HTMLElement).style.background="transparent";}}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                  </button>}
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <div style={{fontSize:11,color:C.t2,textAlign:"center" as const,marginTop:8,opacity:0.5}}>Kirill Scales AI · Память сохраняется в рамках сессии</div>
-      </div>
+      )}
     </div>
   );
 }
