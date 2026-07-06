@@ -855,7 +855,7 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
     {page==="links"&&<SafePage name="База ссылок"><LinksPage userId={user.id}/></SafePage>}
     {page==="profile"&&<SafePage name="Настройки профиля"><ProfilePage user={user} name={userName} avatar={userAvatar} setName={setUserName} setAvatar={setUserAvatar}/></SafePage>}
     {page==="files"&&<SafePage name="Файлы"><FilesPage userId={user.id}/></SafePage>}
-    {page==="ai"&&<SafePage name="AI"><Placeholder title="Kirill Scales AI" ic="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></SafePage>}
+    {page==="ai"&&<SafePage name="AI"><KirillAIPage userId={user.id}/></SafePage>}
     {page==="script"&&<SafePage name="Copy AI"><CopyAIPage userId={user.id}/></SafePage>}
     {page==="product"&&<SafePage name="Product AI"><Placeholder title="Vizzy Product AI" ic="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></SafePage>}
     {page==="stories"&&<SafePage name="Stories AI"><Placeholder title="Vizzy Stories AI" ic="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></SafePage>}
@@ -12651,6 +12651,312 @@ function CopyAIPage({userId}:{userId:string}){
           ))}
         </div>
       }
+    </div>
+  );
+}
+
+/* ============ KIRILL SCALES AI PAGE ============ */
+const KIRILL_AI_SYSTEM=`Ты — Kirill Scales AI, персональный бизнес-ассистент и стратегический советник Кирилла.
+
+Кто такой Кирилл:
+- 21-летний предприниматель и маркетинговый стратег из Москвы
+- Основатель Kirill Scales — консалтинговый и коучинговый бизнес
+- 4+ года в digital-маркетинге
+- Строит личный бренд и системы привлечения клиентов
+- Работает с клиентами через Telegram-воронку: контент → закрытый канал → консультация → программа «Геймплан»
+- Разрабатывает платформу Vizzy App для своих клиентов
+
+Твоя роль:
+- Стратегический советник по бизнесу, маркетингу и позиционированию
+- Помогаешь с задачами: стратегия, офферы, контент, воронки, тексты, анализ
+- Работаешь в стиле умного партнёра — без воды, конкретно, по делу
+- Говоришь на русском языке
+- Отвечаешь структурированно: используешь заголовки, списки, выделение жирным где нужно
+- Помнишь контекст в рамках текущего разговора
+
+Принципы ответов:
+- Конкретика и цифры вместо общих слов
+- Прямые рекомендации, не «зависит от ситуации»
+- Если нужно уточнить — задаёшь один точный вопрос
+- Никакого корпоративного буллшита`;
+
+type ChatMessage={role:"user"|"assistant",content:string,id:string};
+
+function KirillAIPage({userId}:{userId:string}){
+  const{dark}=useTheme();
+  const[messages,setMessages]=useState<ChatMessage[]>([]);
+  const[input,setInput]=useState("");
+  const[loading,setLoading]=useState(false);
+  const[copiedId,setCopiedId]=useState<string|null>(null);
+  const[hoveredId,setHoveredId]=useState<string|null>(null);
+  const endRef=useRef<HTMLDivElement>(null);
+  const inputRef=useRef<HTMLTextAreaElement>(null);
+  const abortRef=useRef<AbortController|null>(null);
+
+  useEffect(()=>{
+    endRef.current?.scrollIntoView({behavior:"smooth"});
+  },[messages,loading]);
+
+  const send=async()=>{
+    if(!input.trim()||loading)return;
+    const text=input.trim();
+    setInput("");
+    inputRef.current?.focus();
+
+    const userMsg:ChatMessage={role:"user",content:text,id:Date.now().toString()};
+    const newMsgs=[...messages,userMsg];
+    setMessages(newMsgs);
+    setLoading(true);
+
+    const aiMsgId=(Date.now()+1).toString();
+    setMessages(m=>[...m,{role:"assistant",content:"",id:aiMsgId}]);
+
+    abortRef.current=new AbortController();
+
+    try{
+      const res=await fetch("https://api.deepseek.com/v1/chat/completions",{
+        method:"POST",
+        signal:abortRef.current.signal,
+        headers:{"Content-Type":"application/json","Authorization":`Bearer ${process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY}`},
+        body:JSON.stringify({
+          model:"deepseek-chat",
+          max_tokens:2000,
+          stream:true,
+          messages:[
+            {role:"system",content:KIRILL_AI_SYSTEM},
+            ...newMsgs.map(m=>({role:m.role,content:m.content})),
+          ],
+        }),
+      });
+
+      const reader=res.body?.getReader();
+      const decoder=new TextDecoder();
+      let full="";
+
+      if(reader){
+        while(true){
+          const{done,value}=await reader.read();
+          if(done)break;
+          const chunk=decoder.decode(value);
+          const lines=chunk.split("\n").filter(l=>l.startsWith("data:"));
+          for(const line of lines){
+            const data=line.slice(5).trim();
+            if(data==="[DONE]")break;
+            try{
+              const json=JSON.parse(data);
+              const delta=json.choices?.[0]?.delta?.content||"";
+              full+=delta;
+              setMessages(m=>m.map(msg=>msg.id===aiMsgId?{...msg,content:full}:msg));
+            }catch{}
+          }
+        }
+      }
+      if(!full){
+        // fallback non-streaming
+        const fb=await fetch("https://api.deepseek.com/v1/chat/completions",{
+          method:"POST",
+          headers:{"Content-Type":"application/json","Authorization":`Bearer ${process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY}`},
+          body:JSON.stringify({model:"deepseek-chat",max_tokens:2000,messages:[{role:"system",content:KIRILL_AI_SYSTEM},...newMsgs.map(m=>({role:m.role,content:m.content}))]}),
+        });
+        const fd=await fb.json();
+        full=fd.choices?.[0]?.message?.content||"Ошибка ответа";
+        setMessages(m=>m.map(msg=>msg.id===aiMsgId?{...msg,content:full}:msg));
+      }
+    }catch(e:any){
+      if(e?.name!=="AbortError"){
+        setMessages(m=>m.map(msg=>msg.id===aiMsgId?{...msg,content:"Ошибка соединения. Проверь API ключ или попробуй ещё раз."}:msg));
+      }
+    }
+    setLoading(false);
+  };
+
+  const stop=()=>{abortRef.current?.abort();setLoading(false);};
+
+  const copyMsg=(content:string,id:string)=>{
+    navigator.clipboard.writeText(content);
+    setCopiedId(id);setTimeout(()=>setCopiedId(null),2000);
+  };
+
+  const clear=()=>{if(confirm("Очистить весь диалог?"))setMessages([]);};
+
+  // Simple markdown renderer
+  const renderContent=(text:string)=>{
+    if(!text)return null;
+    const lines=text.split("\n");
+    const els:React.ReactNode[]=[];
+    let i=0;
+    while(i<lines.length){
+      const line=lines[i];
+      // Code block
+      if(line.startsWith("```")){
+        const lang=line.slice(3).trim();
+        const codeLines:string[]=[];
+        i++;
+        while(i<lines.length&&!lines[i].startsWith("```")){codeLines.push(lines[i]);i++;}
+        els.push(<pre key={i} style={{background:dark?"#0A0F1A":"#F1F5F9",border:`1px solid ${dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.08)"}`,borderRadius:10,padding:"12px 14px",fontSize:12,overflowX:"auto" as const,fontFamily:"'SF Mono','Fira Code',monospace",lineHeight:1.6,margin:"8px 0",color:C.t1}}><code>{codeLines.join("\n")}</code></pre>);
+        i++;continue;
+      }
+      // Heading
+      if(line.startsWith("### ")){els.push(<div key={i} style={{fontSize:14,fontWeight:700,color:C.t1,marginTop:14,marginBottom:4}}>{inlineRender(line.slice(4))}</div>);i++;continue;}
+      if(line.startsWith("## ")){els.push(<div key={i} style={{fontSize:15,fontWeight:800,color:C.t1,marginTop:16,marginBottom:6,letterSpacing:"-0.01em"}}>{inlineRender(line.slice(3))}</div>);i++;continue;}
+      if(line.startsWith("# ")){els.push(<div key={i} style={{fontSize:17,fontWeight:800,color:C.t1,marginTop:18,marginBottom:8,letterSpacing:"-0.015em"}}>{inlineRender(line.slice(2))}</div>);i++;continue;}
+      // Bullet
+      if(line.startsWith("- ")||line.startsWith("* ")){
+        const items:string[]=[line.slice(2)];
+        i++;
+        while(i<lines.length&&(lines[i].startsWith("- ")||lines[i].startsWith("* "))){items.push(lines[i].slice(2));i++;}
+        els.push(<ul key={i} style={{margin:"6px 0",paddingLeft:18,display:"flex",flexDirection:"column" as const,gap:3}}>{items.map((it,j)=><li key={j} style={{fontSize:14,color:C.t1,lineHeight:1.6}}>{inlineRender(it)}</li>)}</ul>);
+        continue;
+      }
+      // Numbered list
+      if(/^\d+\. /.test(line)){
+        const items:string[]=[line.replace(/^\d+\. /,"")];
+        i++;
+        while(i<lines.length&&/^\d+\. /.test(lines[i])){items.push(lines[i].replace(/^\d+\. /,""));i++;}
+        els.push(<ol key={i} style={{margin:"6px 0",paddingLeft:18,display:"flex",flexDirection:"column" as const,gap:3}}>{items.map((it,j)=><li key={j} style={{fontSize:14,color:C.t1,lineHeight:1.6}}>{inlineRender(it)}</li>)}</ol>);
+        continue;
+      }
+      // Divider
+      if(line==="---"||line==="***"){els.push(<hr key={i} style={{border:"none",borderTop:`1px solid ${dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.08)"}`,margin:"12px 0"}}/>);i++;continue;}
+      // Empty line
+      if(line.trim()===""){els.push(<div key={i} style={{height:8}}/>);i++;continue;}
+      // Paragraph
+      els.push(<div key={i} style={{fontSize:14,color:C.t1,lineHeight:1.7,marginBottom:2}}>{inlineRender(line)}</div>);
+      i++;
+    }
+    return els;
+  };
+
+  const inlineRender=(text:string):React.ReactNode=>{
+    const parts=text.split(/(\*\*[^*]+\*\*|`[^`]+`|\*[^*]+\*)/g);
+    return parts.map((p,i)=>{
+      if(p.startsWith("**")&&p.endsWith("**"))return<strong key={i} style={{fontWeight:700,color:C.t1}}>{p.slice(2,-2)}</strong>;
+      if(p.startsWith("`")&&p.endsWith("`"))return<code key={i} style={{fontFamily:"monospace",fontSize:12,background:dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.07)",padding:"1px 5px",borderRadius:4,color:C.t1}}>{p.slice(1,-1)}</code>;
+      if(p.startsWith("*")&&p.endsWith("*"))return<em key={i}>{p.slice(1,-1)}</em>;
+      return p;
+    });
+  };
+
+  const bd=dark?"rgba(255,255,255,0.07)":"rgba(0,0,0,0.07)";
+  const isEmpty=messages.length===0;
+
+  return(
+    <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 56px)",maxWidth:820,margin:"0 auto",width:"100%"}}>
+
+      {/* Header */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 24px 12px",borderBottom:`1px solid ${bd}`,flexShrink:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <div style={{width:36,height:36,borderRadius:10,background:"linear-gradient(135deg,#1D4ED8,#6366F1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+            <span style={{fontSize:15,fontWeight:800,color:"#fff",letterSpacing:"-0.02em"}}>K</span>
+          </div>
+          <div>
+            <div style={{fontSize:15,fontWeight:700,color:C.t1,letterSpacing:"-0.01em"}}>Kirill Scales AI</div>
+            <div style={{fontSize:11,color:C.t2,fontWeight:500,display:"flex",alignItems:"center",gap:5}}>
+              <div style={{width:6,height:6,borderRadius:"50%",background:"#10B981"}}/>
+              Онлайн · DeepSeek
+            </div>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          {messages.length>0&&<button onClick={clear} style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:12,fontWeight:500,cursor:"pointer"}}>
+            Очистить
+          </button>}
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div style={{flex:1,overflowY:"auto" as const,padding:"20px 24px",display:"flex",flexDirection:"column",gap:16}}>
+        {isEmpty&&(
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",gap:20,paddingBottom:40}}>
+            <div style={{width:64,height:64,borderRadius:18,background:"linear-gradient(135deg,#1D4ED8,#6366F1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <span style={{fontSize:26,fontWeight:900,color:"#fff",letterSpacing:"-0.02em"}}>K</span>
+            </div>
+            <div style={{textAlign:"center"}}>
+              <div style={{fontSize:20,fontWeight:800,color:C.t1,marginBottom:6,letterSpacing:"-0.02em"}}>Kirill Scales AI</div>
+              <div style={{fontSize:14,color:C.t2,maxWidth:360,lineHeight:1.6}}>Твой персональный стратег по бизнесу и маркетингу. Спроси про стратегию, офферы, контент или воронки.</div>
+            </div>
+            <div style={{display:"flex",flexWrap:"wrap" as const,gap:8,justifyContent:"center",maxWidth:500}}>
+              {["Как усилить мой оффер?","Напиши стратегию привлечения клиентов","Разбери мою воронку","Помоги с контент-планом"].map(s=>(
+                <button key={s} onClick={()=>{setInput(s);inputRef.current?.focus();}}
+                  style={{padding:"8px 14px",borderRadius:20,border:`1px solid ${bd}`,background:dark?"rgba(255,255,255,0.04)":"#fff",color:C.t2,fontSize:13,cursor:"pointer",transition:"all 0.15s",fontFamily:"'Inter',sans-serif"}}
+                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color=C.t1;(e.currentTarget as HTMLElement).style.borderColor=dark?"rgba(255,255,255,0.15)":"rgba(0,0,0,0.15)";}}
+                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.color=C.t2;(e.currentTarget as HTMLElement).style.borderColor=bd;}}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {messages.map(msg=>(
+          <div key={msg.id} style={{display:"flex",flexDirection:"column",alignItems:msg.role==="user"?"flex-end":"flex-start",gap:4}}
+            onMouseEnter={()=>setHoveredId(msg.id)}
+            onMouseLeave={()=>setHoveredId(null)}>
+            {msg.role==="assistant"&&(
+              <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+                <div style={{width:20,height:20,borderRadius:6,background:"linear-gradient(135deg,#1D4ED8,#6366F1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  <span style={{fontSize:9,fontWeight:800,color:"#fff"}}>K</span>
+                </div>
+                <span style={{fontSize:11,fontWeight:600,color:C.t2}}>Kirill Scales AI</span>
+              </div>
+            )}
+            <div style={{
+              maxWidth:"82%",
+              padding:msg.role==="user"?"12px 16px":"14px 18px",
+              borderRadius:msg.role==="user"?"16px 16px 4px 16px":"4px 16px 16px 16px",
+              background:msg.role==="user"
+                ?"linear-gradient(135deg,#1D4ED8,#2563EB)"
+                :(dark?"rgba(255,255,255,0.05)":"#F8FAFC"),
+              border:msg.role==="assistant"?`1px solid ${bd}`:"none",
+              color:msg.role==="user"?"#fff":C.t1,
+              fontSize:14,lineHeight:1.7,
+              position:"relative" as const,
+            }}>
+              {msg.role==="user"
+                ?<div style={{fontSize:14,lineHeight:1.6}}>{msg.content}</div>
+                :msg.content
+                  ?renderContent(msg.content)
+                  :<div style={{display:"flex",gap:4,alignItems:"center",padding:"4px 0"}}>
+                    {[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:C.t2,animation:`bounce 1.2s ease-in-out ${i*0.15}s infinite`}}/>)}
+                    <style>{`@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-5px)}}`}</style>
+                  </div>
+              }
+            </div>
+            {msg.role==="assistant"&&msg.content&&hoveredId===msg.id&&(
+              <button onClick={()=>copyMsg(msg.content,msg.id)}
+                style={{padding:"4px 10px",borderRadius:7,border:`1px solid ${bd}`,background:dark?"rgba(255,255,255,0.04)":"#fff",color:C.t2,fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"'Inter',sans-serif"}}>
+                {copiedId===msg.id
+                  ?<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Скопировано</>
+                  :<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Копировать</>
+                }
+              </button>
+            )}
+          </div>
+        ))}
+        <div ref={endRef}/>
+      </div>
+
+      {/* Input */}
+      <div style={{padding:"12px 24px 20px",borderTop:`1px solid ${bd}`,flexShrink:0,background:dark?"#080C14":"#fff"}}>
+        <div style={{display:"flex",gap:10,alignItems:"flex-end",background:dark?"rgba(255,255,255,0.04)":"#F8FAFC",border:`1px solid ${dark?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.1)"}`,borderRadius:14,padding:"10px 12px 10px 16px",transition:"border-color 0.15s"}}>
+          <textarea ref={inputRef}
+            value={input}
+            onChange={e=>{setInput(e.target.value);e.target.style.height="auto";e.target.style.height=Math.min(e.target.scrollHeight,160)+"px";}}
+            onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}}
+            placeholder="Напиши запрос... (Enter — отправить, Shift+Enter — новая строка)"
+            rows={1}
+            style={{flex:1,background:"transparent",border:"none",outline:"none",resize:"none" as const,fontSize:14,color:C.t1,lineHeight:1.6,fontFamily:"'Inter',sans-serif",maxHeight:160,overflowY:"auto" as const,padding:0}}
+          />
+          <button onClick={loading?stop:send}
+            style={{width:36,height:36,borderRadius:9,border:"none",background:input.trim()||loading?"#1D4ED8":"rgba(0,0,0,0.08)",color:input.trim()||loading?"#fff":C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.15s"}}>
+            {loading
+              ?<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+              :<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            }
+          </button>
+        </div>
+        <div style={{fontSize:11,color:C.t2,textAlign:"center" as const,marginTop:8,opacity:0.5}}>Kirill Scales AI · Память сохраняется в рамках сессии</div>
+      </div>
     </div>
   );
 }
