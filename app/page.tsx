@@ -842,7 +842,7 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
 
   const pageContent=<>
     {page==="dashboard"&&<SafePage name="Dashboard"><DashPage userId={user.id} name={userName} avatar={userAvatar} onNav={setPage} onAvatarChange={async(url:string)=>{setUserAvatar(url);await supabase.from("profiles").upsert({id:user.id,avatar_url:url},{onConflict:"id"});}}/></SafePage>}
-    {page==="strategy"&&<SafePage name="War Room"><StrategyPage userId={user.id}/></SafePage>}
+    {page==="strategy"&&<SafePage name="War Room"><StrategyPage userId={user.id} onNav={setPage}/></SafePage>}
     {page==="crm"&&<SafePage name="CRM"><CrmPage userId={user.id}/></SafePage>}
     {page==="calls"&&<SafePage name="Созвоны"><CallsPage userId={user.id}/></SafePage>}
     {page==="mailings"&&<SafePage name="Рассылки"><MailingsPage userId={user.id}/></SafePage>}
@@ -1024,6 +1024,17 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
         }
       `}</style>
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+
+      {/* Kirill Scales AI — global tab visible on all MY BUSINESS pages */}
+      {!isMobile&&["dashboard","strategy","crm","content","calls","offer","prices"].includes(page)&&(
+        <div onClick={()=>setPage("ai")} title="Kirill Scales AI"
+          style={{position:"fixed",right:0,top:"40%",transform:"translateY(-50%)",background:"linear-gradient(180deg,#1D4ED8 0%,#06B6D4 100%)",width:32,height:130,borderRadius:"12px 0 0 12px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:7,boxShadow:"-4px 0 24px rgba(6,182,212,0.35)",zIndex:200,transition:"box-shadow 0.2s"}}
+          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="-6px 0 32px rgba(6,182,212,0.55)";}}
+          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="-4px 0 24px rgba(6,182,212,0.35)";}}>
+          <img src="/icon-ai.png" width={18} height={18} style={{borderRadius:4,objectFit:"cover" as const}} alt=""/>
+          <div style={{writingMode:"vertical-rl" as const,textOrientation:"mixed" as const,transform:"rotate(180deg)",fontSize:10,fontWeight:700,color:"#fff",letterSpacing:1.5}}>KS AI</div>
+        </div>
+      )}
 
       {isMobile ? <>
         <MobileNav active={page} onNav={setPage} onLogout={logout}/>
@@ -2440,7 +2451,7 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
   </div>;
 }
 
-function StrategyPage({userId}:{userId:string}){
+function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
   const kanban = useTable("kanban", userId);
   const goals = useTable("goals", userId);
   const goalTasks = useTable("goal_tasks", userId);
@@ -3223,159 +3234,13 @@ function StrategyPage({userId}:{userId:string}){
     cursor:"pointer",transition:"all 0.2s",
   });
 
-  // ── Vizzy AI EA Chat state ──
-  const[vizzyOpen,setVizzyOpen]=useState(false);
-  const[vizzyMessages,setVizzyMessages]=useState<{role:"user"|"assistant",text:string}[]>([
-    {role:"assistant",text:"Привет! Я Vizzy AI — твой Executive Assistant. Помогу с задачами, стратегией и планированием. Что нужно?"}
-  ]);
-  const[vizzyInput,setVizzyInput]=useState("");
-  const[vizzyLoading,setVizzyLoading]=useState(false);
-  const vizzyBottomRef=useRef<HTMLDivElement>(null);
-  const VIZZY_ACCENT="#A78BFA";
 
-  const buildContext=()=>{
-    if(stratTab==="sprint"){
-      const taskList=kanban.data.map((t:any)=>`- ${t.text} (${tsLbl(t.status||"todo")}, ${t.mins}мин, ${t.date})`).join("\n");
-      return`[Контекст: Текущий спринт]\n${taskList||"Задач нет"}`;
-    }
-    if(stratTab==="yearmap"){
-      const goalList=goals.data.map((g:any)=>{
-        const gTasks=goalTasks.data.filter((t:any)=>t.goal_id===g.id);
-        return`Цель: ${g.name}\n  Задачи: ${gTasks.map((t:any)=>t.text).join(", ")||"нет"}`;
-      }).join("\n");
-      return`[Контекст: Карта года]\n${goalList||"Целей нет"}`;
-    }
-    return"";
-  };
-
-  const sendVizzy=async()=>{
-    const txt=vizzyInput.trim();
-    if(!txt||vizzyLoading)return;
-    const ctx=buildContext();
-    const userMsg={role:"user" as const,text:txt};
-    setVizzyMessages(prev=>[...prev,userMsg]);
-    setVizzyInput("");
-    setVizzyLoading(true);
-    const history=vizzyMessages.slice(-8).map(m=>({role:m.role,content:m.text}));
-    try{
-      const res=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-          system:`Ты — Vizzy AI, строгий Executive Assistant. Отвечай чётко и по делу. Без воды. Используй короткие абзацы. Контекст платформы пользователя:\n${ctx}`,
-          messages:[...history,{role:"user",content:txt}]
-        })});
-      const data=await res.json();
-      const reply=data.content?.[0]?.text||"Нет ответа";
-      setVizzyMessages(prev=>[...prev,{role:"assistant",text:reply}]);
-    }catch{
-      setVizzyMessages(prev=>[...prev,{role:"assistant",text:"Ошибка соединения. Попробуй ещё раз."}]);
-    }
-    setVizzyLoading(false);
-  };
-
-  useEffect(()=>{
-    if(vizzyBottomRef.current)vizzyBottomRef.current.scrollIntoView({behavior:"smooth"});
-  },[vizzyMessages]);
 
   return <>
-    {/* Vizzy AI toggle tab */}
-    <div onClick={()=>setVizzyOpen(!vizzyOpen)} style={{position:"fixed",right:vizzyOpen?376:0,top:"40%",transform:"translateY(-50%)",background:`linear-gradient(135deg,${VIZZY_ACCENT},#7C3AED)`,width:32,height:120,borderRadius:"12px 0 0 12px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,boxShadow:"-4px 0 20px rgba(167,139,250,0.35)",zIndex:110,transition:"right 0.3s ease"}}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-      <div style={{writingMode:"vertical-rl",textOrientation:"mixed",transform:"rotate(180deg)",fontSize:10,fontWeight:700,color:"#fff",letterSpacing:1}}>VIZZY AI</div>
-    </div>
 
-    {/* Vizzy AI EA Chat panel */}
-    <div style={{position:"fixed",right:0,top:0,bottom:0,width:376,background:"#12101E",borderLeft:"1px solid rgba(167,139,250,0.18)",transform:vizzyOpen?"translateX(0)":"translateX(100%)",transition:"transform 0.3s ease",zIndex:105,display:"flex",flexDirection:"column",fontFamily:"'Inter',sans-serif"}}>
 
-      {/* Header */}
-      <div style={{padding:"16px 18px",borderBottom:"1px solid rgba(167,139,250,0.15)",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"space-between",background:"rgba(167,139,250,0.05)"}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <div style={{width:34,height:34,borderRadius:10,background:"linear-gradient(135deg,#A78BFA,#7C3AED)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-          </div>
-          <div>
-            <div style={{fontSize:14,fontWeight:700,color:"#fff",lineHeight:1.2}}>Vizzy AI</div>
-            <div style={{fontSize:10,color:"rgba(167,139,250,0.7)",display:"flex",alignItems:"center",gap:4}}>
-              <div style={{width:6,height:6,borderRadius:"50%",background:"#10B981"}}/>
-              Executive Assistant · {stratTab==="sprint"?"Спринт":"Карта года"}
-            </div>
-          </div>
-        </div>
-        <div style={{display:"flex",gap:6}}>
-          <button onClick={()=>setVizzyMessages([{role:"assistant",text:"История очищена. Чем могу помочь?"}])}
-            title="Очистить чат"
-            style={{width:28,height:28,borderRadius:7,border:"1px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.05)",cursor:"pointer",color:"rgba(255,255,255,0.4)",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
-          </button>
-          <button onClick={()=>setVizzyOpen(false)} style={{width:28,height:28,borderRadius:7,border:"none",background:"rgba(255,255,255,0.07)",cursor:"pointer",color:"rgba(255,255,255,0.5)",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
-        </div>
-      </div>
-
-      {/* Quick action chips */}
-      <div style={{padding:"8px 14px",borderBottom:"1px solid rgba(167,139,250,0.1)",display:"flex",gap:6,flexWrap:"wrap",flexShrink:0}}>
-        {["Проанализируй задачи","Найди слабые места","Что делать дальше?","Оптимизируй план"].map(q=>(
-          <button key={q} onClick={()=>{setVizzyInput(q);}}
-            style={{padding:"4px 10px",background:"rgba(167,139,250,0.1)",border:"1px solid rgba(167,139,250,0.2)",borderRadius:20,fontSize:10,color:VIZZY_ACCENT,cursor:"pointer",fontWeight:500,whiteSpace:"nowrap"}}>
-            {q}
-          </button>
-        ))}
-      </div>
-
-      {/* Messages */}
-      <div style={{flex:1,overflowY:"auto",padding:"14px 16px",display:"flex",flexDirection:"column",gap:12}}>
-        {vizzyMessages.map((m,i)=>(
-          <div key={i} style={{display:"flex",flexDirection:"column",alignItems:m.role==="user"?"flex-end":"flex-start",gap:3}}>
-            {m.role==="assistant"&&(
-              <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:2}}>
-                <div style={{width:18,height:18,borderRadius:5,background:"linear-gradient(135deg,#A78BFA,#7C3AED)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-                </div>
-                <span style={{fontSize:10,color:"rgba(167,139,250,0.6)",fontWeight:600}}>Vizzy AI</span>
-              </div>
-            )}
-            <div style={{
-              maxWidth:"88%",padding:"10px 13px",borderRadius:m.role==="user"?"12px 12px 4px 12px":"12px 12px 12px 4px",
-              background:m.role==="user"?"linear-gradient(135deg,#A78BFA,#7C3AED)":"rgba(255,255,255,0.06)",
-              border:m.role==="user"?"none":"1px solid rgba(255,255,255,0.08)",
-              fontSize:13,color:m.role==="user"?"#fff":"rgba(255,255,255,0.88)",
-              lineHeight:1.6,whiteSpace:"pre-wrap",wordBreak:"break-word",
-            }}>
-              {m.text}
-            </div>
-          </div>
-        ))}
-        {vizzyLoading&&(
-          <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0"}}>
-            <div style={{width:18,height:18,borderRadius:5,background:"linear-gradient(135deg,#A78BFA,#7C3AED)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-            </div>
-            <div style={{display:"flex",gap:4}}>
-              {[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:VIZZY_ACCENT,animation:`pulse 1.2s ease-in-out ${i*0.2}s infinite`}}/>)}
-            </div>
-          </div>
-        )}
-        <div ref={vizzyBottomRef}/>
-      </div>
-
-      {/* Input */}
-      <div style={{padding:"10px 14px",borderTop:"1px solid rgba(167,139,250,0.15)",background:"rgba(0,0,0,0.2)",flexShrink:0}}>
-        <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
-          <textarea value={vizzyInput} onChange={e=>setVizzyInput(e.target.value)}
-            onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendVizzy();}}}
-            placeholder="Напиши вопрос... (Enter — отправить)"
-            rows={1}
-            style={{flex:1,border:"1px solid rgba(167,139,250,0.25)",outline:"none",resize:"none",fontSize:13,fontFamily:"'Inter',sans-serif",color:"#fff",background:"rgba(255,255,255,0.05)",lineHeight:1.5,maxHeight:100,overflowY:"auto",borderRadius:10,padding:"9px 12px",transition:"all 0.2s"}}
-            onInput={e=>{const t=e.currentTarget;t.style.height="auto";t.style.height=Math.min(t.scrollHeight,100)+"px";}}
-          />
-          <button onClick={sendVizzy} disabled={!vizzyInput.trim()||vizzyLoading}
-            style={{width:36,height:36,borderRadius:9,border:"none",background:vizzyInput.trim()&&!vizzyLoading?"linear-gradient(135deg,#A78BFA,#7C3AED)":"rgba(255,255,255,0.08)",cursor:vizzyInput.trim()&&!vizzyLoading?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.15s"}}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          </button>
-        </div>
-      </div>
-    </div>
 
     {/* Main content shifts when panel is open */}
-    <div style={{marginRight:vizzyOpen?376:0,transition:"margin-right 0.3s ease"}}>
 
     {/* Tabs */}
     <div style={{display:"inline-flex",background:C.bg,borderRadius:12,padding:3,gap:2,marginBottom:24,border:"1px solid "+C.bd}}>
@@ -3590,7 +3455,6 @@ function StrategyPage({userId}:{userId:string}){
       </div>
     </div>}
 
-    </div>
   </>;
 }
 
