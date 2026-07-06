@@ -12681,7 +12681,7 @@ const KIRILL_AI_SYSTEM=`Ты — Kirill Scales AI, персональный би
 - Никакого корпоративного буллшита`;
 
 type ChatMessage={role:"user"|"assistant",content:string,id:string};
-type AIChat={id:string,title:string,messages:ChatMessage[],createdAt:number,updatedAt:number};
+type KSChat={id:string,title:string,messages:ChatMessage[],createdAt:number,updatedAt:number};
 
 /* ============ KIRILL AI STORE ============
    Живёт вне React-компонента. Благодаря этому диалоги сохраняются, а генерация
@@ -12690,7 +12690,7 @@ const KS_AI_KEY="ks_kirill_ai_chats_v2";
 const KS_AI_ACTIVE_KEY="ks_kirill_ai_active_v2";
 
 const kirillAIStore=(()=>{
-  let chats:AIChat[]=[];
+  let chats:KSChat[]=[];
   let activeId:string="";
   let hydrated=false;
   let lastPersist=0;
@@ -12699,7 +12699,7 @@ const kirillAIStore=(()=>{
   const listeners=new Set<()=>void>();
 
   const uid=(p:string)=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-  const blank=():AIChat=>({id:uid("c"),title:"Новый чат",messages:[],createdAt:Date.now(),updatedAt:Date.now()});
+  const blank=():KSChat=>({id:uid("c"),title:"Новый чат",messages:[],createdAt:Date.now(),updatedAt:Date.now()});
   const emit=()=>{listeners.forEach(l=>{try{l();}catch{}});};
 
   const persist=(force=false)=>{
@@ -12729,7 +12729,7 @@ const kirillAIStore=(()=>{
     if(!chats.find(c=>c.id===activeId))activeId=chats[0].id;
   };
 
-  const patch=(id:string,fn:(c:AIChat)=>AIChat)=>{chats=chats.map(c=>c.id===id?fn(c):c);};
+  const patch=(id:string,fn:(c:KSChat)=>KSChat)=>{chats=chats.map(c=>c.id===id?fn(c):c);};
 
   const run=async(chatId:string)=>{
     const target=chats.find(c=>c.id===chatId);
