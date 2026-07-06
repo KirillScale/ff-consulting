@@ -18,21 +18,21 @@ const LIGHT={
 
 // Deep Dark Glass — референс Quantix
 const DARK={
-  bg:"#080B12",
-  w:"#0F1420",          // тёмный цвет карточек (не прозрачный — для надёжности)
+  bg:"#0A0A0A",         // чистый нейтральный чёрный фон (как ChatGPT)
+  w:"#171717",          // нейтральные тёмно-серые карточки
   a:"#4F8EF7",
   ah:"#3B82F6",
-  t1:"#E8F0FF",
-  t2:"#5A6A8A",
-  bd:"rgba(255,255,255,0.07)",
+  t1:"#ECECEC",         // нейтральный светлый текст
+  t2:"#8A8A8A",         // нейтральный серый вторичный текст
+  bd:"rgba(255,255,255,0.08)",
   g:"#10B981",r:"#EF4444",y:"#F59E0B",
   sh:"0 8px 32px rgba(0,0,0,0.6)",
-  ib:"#141927",         // тёмный инпут
+  ib:"#1C1C1C",         // нейтральный инпут
   pk:"#EC4899",lb:"#06B6D4",
-  dk:"#060810",
-  da:"#0D1018",
-  glass:"rgba(15,20,32,0.85)",
-  glassBd:"rgba(255,255,255,0.07)",
+  dk:"#0A0A0A",
+  da:"#141414",
+  glass:"rgba(23,23,23,0.85)",
+  glassBd:"rgba(255,255,255,0.08)",
 };
 
 let C:{[k:string]:string}={...LIGHT};
@@ -150,7 +150,7 @@ const Tag = ({label,color}:{label:string,color:string}) => <span style={{fontSiz
 const Card = ({children,style:sx}:{children:React.ReactNode,style?:React.CSSProperties}) => {
   const{dark}=useTheme();
   return <div style={{
-    background:dark?"#0F1420":C.w,
+    background:dark?"#171717":C.w,
     borderRadius:16,padding:24,
     boxShadow:dark?"0 4px 24px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.04)":C.sh,
     border:dark?"1px solid rgba(255,255,255,0.06)":"none",
@@ -162,7 +162,7 @@ const Card = ({children,style:sx}:{children:React.ReactNode,style?:React.CSSProp
 const useCardStyle=(overrides?:React.CSSProperties):React.CSSProperties=>{
   const{dark}=useTheme();
   return{
-    background:dark?"#0F1420":C.w,
+    background:dark?"#171717":C.w,
     border:dark?"1px solid rgba(255,255,255,0.06)":"none",
     boxShadow:dark?"0 4px 24px rgba(0,0,0,0.4)":C.sh,
     borderRadius:16,
@@ -175,7 +175,7 @@ const useColStyle=(isOver?:boolean):React.CSSProperties=>{
   const{dark}=useTheme();
   return{
     background:dark
-      ?(isOver?"rgba(79,142,247,0.08)":"#0C1019")
+      ?(isOver?"rgba(79,142,247,0.08)":"#141414")
       :(isOver?"#F0F6FF":"#F2F2F7"),
     border:dark
       ?(isOver?"2px solid rgba(79,142,247,0.4)":"2px solid rgba(255,255,255,0.04)")
@@ -425,7 +425,7 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
     );
   };
 
-  const SB_BG="linear-gradient(180deg,#06080F 0%,#080B14 50%,#060810 100%)";
+  const SB_BG="linear-gradient(180deg,#0C0C0C 0%,#0A0A0A 100%)";
 
   return(
     <div style={{
@@ -454,7 +454,7 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
       <div style={{
         position:"absolute",top:-60,left:"50%",transform:"translateX(-50%)",
         width:200,height:120,
-        background:"radial-gradient(ellipse,rgba(79,142,247,0.12) 0%,transparent 70%)",
+        background:"transparent",
         pointerEvents:"none",
       }}/>
 
@@ -468,16 +468,16 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
       }}>
         <div style={{
           width:36,height:36,borderRadius:10,
-          background:"linear-gradient(135deg,#1a2340,#0d1428)",
-          border:"1px solid rgba(79,142,247,0.3)",
+          background:"linear-gradient(135deg,#1E1E1E,#141414)",
+          border:"1px solid rgba(255,255,255,0.1)",
           display:"flex",alignItems:"center",justifyContent:"center",
-          boxShadow:"0 0 16px rgba(79,142,247,0.2),inset 0 1px 0 rgba(255,255,255,0.05)",
+          boxShadow:"inset 0 1px 0 rgba(255,255,255,0.05)",
           flexShrink:0,
         }}>
           <Logo s={26}/>
         </div>
         {!collapsed&&<div style={{display:"flex",flexDirection:"column",lineHeight:1.2}}>
-          <span style={{fontSize:14,fontWeight:800,color:"#E8F0FF",letterSpacing:1.5}}>VIZZY</span>
+          <span style={{fontSize:14,fontWeight:800,color:"#ECECEC",letterSpacing:1.5}}>VIZZY</span>
           <span style={{fontSize:8,color:"rgba(255,255,255,0.25)",letterSpacing:1}}>by Kirill Scales</span>
         </div>}
       </div>
@@ -700,7 +700,7 @@ const Head=({name,onMenuOpen}:{name:string,onMenuOpen?:()=>void})=>{
   return <div style={{
     height:64,
     background:dark
-      ?"rgba(8,11,18,0.85)"
+      ?"rgba(14,14,14,0.85)"
       :C.w,
     backdropFilter:dark?"blur(24px)":"none",
     WebkitBackdropFilter:dark?"blur(24px)":"none",
@@ -714,7 +714,7 @@ const Head=({name,onMenuOpen}:{name:string,onMenuOpen?:()=>void})=>{
       background:dark?"rgba(255,255,255,0.04)":"#1F1F1F",
       border:dark?"1px solid rgba(255,255,255,0.08)":"none",
       padding:"8px 20px",borderRadius:12,
-      boxShadow:dark?"0 0 20px rgba(79,142,247,0.1),inset 0 1px 0 rgba(255,255,255,0.04)":"none",
+      boxShadow:dark?"inset 0 1px 0 rgba(255,255,255,0.04)":"none",
     }}>
       <Logo s={28}/>
       <div style={{display:"flex",flexDirection:"column",lineHeight:1.15}}>
@@ -870,17 +870,11 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
   return (
     <div style={{
       fontFamily:"'Inter',-apple-system,BlinkMacSystemFont,sans-serif",
-      background:dark?"#080B12":C.bg,
+      background:dark?"#0A0A0A":C.bg,
       minHeight:"100vh",color:C.t1,
       position:"relative",
       transition:"background 0.5s ease, color 0.4s ease",
     }}>
-      {/* Ambient glows — dark mode only */}
-      {dark&&<>
-        <div style={{position:"fixed",top:-200,left:"30%",width:700,height:700,borderRadius:"50%",background:"radial-gradient(ellipse,rgba(37,99,235,0.07) 0%,transparent 65%)",pointerEvents:"none",zIndex:0}}/>
-        <div style={{position:"fixed",bottom:-200,right:"5%",width:500,height:500,borderRadius:"50%",background:"radial-gradient(ellipse,rgba(139,92,246,0.06) 0%,transparent 65%)",pointerEvents:"none",zIndex:0}}/>
-        <div style={{position:"fixed",top:"40%",left:"50%",width:400,height:400,borderRadius:"50%",background:"radial-gradient(ellipse,rgba(6,182,212,0.03) 0%,transparent 60%)",pointerEvents:"none",zIndex:0}}/>
-      </>}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         @keyframes spin{to{transform:rotate(360deg)}}
@@ -905,19 +899,19 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
 
         /* ── DARK MODE GLOBAL OVERRIDES ── */
         body.dark {
-          background:#080B12;
-          color:#E8F0FF;
+          background:#0A0A0A;
+          color:#ECECEC;
         }
         /* All white/light card surfaces */
         body.dark [data-card],
         body.dark .card-surface {
-          background:#0F1420 !important;
+          background:#171717 !important;
           border:1px solid rgba(255,255,255,0.06) !important;
-          color:#E8F0FF;
+          color:#ECECEC;
         }
         /* Kanban columns */
         body.dark .kanban-col {
-          background:#0C1019 !important;
+          background:#141414 !important;
           border-color:rgba(255,255,255,0.05) !important;
         }
         /* Segment controls (F2F2F7 backgrounds) */
@@ -929,9 +923,9 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
         body.dark input,
         body.dark textarea,
         body.dark select {
-          background:#141927 !important;
+          background:#1C1C1C !important;
           border-color:rgba(255,255,255,0.08) !important;
-          color:#E8F0FF !important;
+          color:#ECECEC !important;
         }
         body.dark input::placeholder,
         body.dark textarea::placeholder {
@@ -949,7 +943,7 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
         }
         /* Modals */
         body.dark [data-modal] {
-          background:#0F1420 !important;
+          background:#171717 !important;
           border:1px solid rgba(255,255,255,0.08) !important;
           box-shadow:0 24px 60px rgba(0,0,0,0.7) !important;
         }
@@ -960,65 +954,65 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
         body.dark ::-webkit-scrollbar-thumb:hover {background:rgba(255,255,255,0.14);}
         /* Lead/task cards */
         body.dark .lead-card {
-          background:#131926 !important;
+          background:#171717 !important;
           border:1px solid rgba(255,255,255,0.06) !important;
           box-shadow:0 2px 12px rgba(0,0,0,0.4) !important;
         }
         body.dark .lead-card:hover {
-          border-color:rgba(79,142,247,0.25) !important;
+          border-color:rgba(255,255,255,0.12) !important;
           box-shadow:0 4px 20px rgba(0,0,0,0.5) !important;
         }
         /* Year map table */
         body.dark .yearmap-table {
-          background:#0C1019 !important;
+          background:#141414 !important;
           border-color:rgba(255,255,255,0.05) !important;
         }
         /* Priority menus, dropdowns */
         body.dark .dropdown-menu {
-          background:#131926 !important;
+          background:#171717 !important;
           border:1px solid rgba(255,255,255,0.08) !important;
           box-shadow:0 12px 40px rgba(0,0,0,0.6) !important;
         }
         /* Segment button active state */
         body.dark .seg-active {
-          background:#0F1420 !important;
+          background:#171717 !important;
           box-shadow:0 1px 4px rgba(0,0,0,0.5) !important;
-          color:#E8F0FF !important;
+          color:#ECECEC !important;
         }
         /* Stats cards on CRM, Content etc */
         body.dark .stat-card {
-          background:#0F1420 !important;
+          background:#171717 !important;
           border:1px solid rgba(255,255,255,0.06) !important;
         }
         /* Empty state areas */
         body.dark .empty-state {
-          background:#0C1019 !important;
+          background:#141414 !important;
           border:1px solid rgba(255,255,255,0.05) !important;
         }
         /* Board preview cards */
         body.dark .board-preview-card {
-          background:#0F1420 !important;
+          background:#171717 !important;
           border:1px solid rgba(255,255,255,0.07) !important;
           box-shadow:0 4px 20px rgba(0,0,0,0.5) !important;
         }
         body.dark .board-preview-card:hover {
-          border-color:rgba(79,142,247,0.3) !important;
-          box-shadow:0 8px 32px rgba(79,142,247,0.08),0 0 0 1px rgba(79,142,247,0.15) !important;
+          border-color:rgba(255,255,255,0.14) !important;
+          box-shadow:0 8px 32px rgba(0,0,0,0.5) !important;
         }
         /* Funnel cards in CRM */
         body.dark .funnel-card {
-          background:#0F1420 !important;
+          background:#171717 !important;
           border:1px solid rgba(255,255,255,0.06) !important;
           box-shadow:0 4px 20px rgba(0,0,0,0.4) !important;
         }
         /* Notification/toast */
         body.dark .toast-panel {
-          background:#131926 !important;
+          background:#171717 !important;
           border:1px solid rgba(255,255,255,0.08) !important;
         }
         /* Form new-item panels */
         body.dark .form-panel {
-          background:#0E1521 !important;
+          background:#161616 !important;
           border:1px solid rgba(255,255,255,0.07) !important;
           border-radius:16px !important;
         }
@@ -7986,7 +7980,7 @@ function VisiTextPage({userId}:{userId:string}){
       <div style={{display:"flex",justifyContent:"center",padding:"10px 0 28px",overflowX:"auto"}}>
         <div style={{position:"relative"}}>
           <div style={{position:isMobile?"relative":"absolute",right:isMobile?"auto":-78,top:isMobile?0:10,display:"flex",flexDirection:isMobile?"row":"column",gap:8,alignItems:"center",justifyContent:isMobile?"center":"flex-start",marginBottom:isMobile?10:0}}>
-            <div style={{padding:"8px 10px",borderRadius:10,background:dark?"#0F1420":"#fff",border:"1px solid "+C.bd,boxShadow:C.sh,fontSize:11,fontWeight:800,color:pages>VISITEXT_MAX_PAGES?C.r:C.t2,whiteSpace:"nowrap"}}>{pages} / {VISITEXT_MAX_PAGES} стр.</div>
+            <div style={{padding:"8px 10px",borderRadius:10,background:dark?"#171717":"#fff",border:"1px solid "+C.bd,boxShadow:C.sh,fontSize:11,fontWeight:800,color:pages>VISITEXT_MAX_PAGES?C.r:C.t2,whiteSpace:"nowrap"}}>{pages} / {VISITEXT_MAX_PAGES} стр.</div>
             <div style={{fontSize:10,color:C.t2,writingMode:isMobile?"horizontal-tb":"vertical-rl",textTransform:"uppercase",letterSpacing:1}}>A4 лист</div>
           </div>
           <div
@@ -8455,9 +8449,9 @@ function SheetsPage({userId}:{userId:string}){
   },[editing,editVal,sel,selRange,wb,sheet,data]);
 
   // ── Colors ──
-  const bg=dark?"#080B12":"#F8FAFC";
-  const surfBg=dark?"#0C1019":"#FFFFFF";
-  const hdrBg=dark?"#0C1019":"#F1F5F9";
+  const bg=dark?"#0A0A0A":"#F8FAFC";
+  const surfBg=dark?"#141414":"#FFFFFF";
+  const hdrBg=dark?"#141414":"#F1F5F9";
   const cellBd=dark?"rgba(255,255,255,0.05)":"#E2E8F0";
   const hdrBd=dark?"rgba(255,255,255,0.08)":"#CBD5E1";
   const selBg=dark?"rgba(79,142,247,0.18)":"rgba(37,99,235,0.1)";
@@ -8522,7 +8516,7 @@ function SheetsPage({userId}:{userId:string}){
               style={{background:surfBg,borderRadius:16,overflow:"hidden",border:"1px solid "+C.bd,cursor:"pointer",transition:"all 0.2s",boxShadow:dark?"0 4px 20px rgba(0,0,0,0.4)":C.sh}}
               onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(-2px)";(e.currentTarget as HTMLElement).style.boxShadow=dark?"0 8px 32px rgba(79,142,247,0.12)":"0 8px 28px rgba(0,0,0,0.12)";}}
               onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform="none";(e.currentTarget as HTMLElement).style.boxShadow=dark?"0 4px 20px rgba(0,0,0,0.4)":C.sh;}}>
-              <div style={{height:100,background:dark?"#0C1019":"#F0FDF4",padding:"10px",display:"flex",flexDirection:"column",gap:3,overflow:"hidden",borderBottom:"1px solid "+C.bd}}>
+              <div style={{height:100,background:dark?"#141414":"#F0FDF4",padding:"10px",display:"flex",flexDirection:"column",gap:3,overflow:"hidden",borderBottom:"1px solid "+C.bd}}>
                 {[0,1,2,3].map(r=><div key={r} style={{display:"flex",gap:2}}>
                   {[0,1,2,3,4].map(c=>{
                     const cell=w.sheets[0]?.data[shKey(r,c)];
@@ -8549,7 +8543,7 @@ function SheetsPage({userId}:{userId:string}){
           <input autoFocus value={newWbName} onChange={e=>setNewWbName(e.target.value)}
             onKeyDown={e=>{if(e.key==="Enter")createWb();if(e.key==="Escape")setNewWbModal(false);}}
             placeholder="Название таблицы..."
-            style={{width:"100%",padding:"11px 14px",border:"1px solid "+C.bd,borderRadius:10,fontSize:14,outline:"none",background:dark?"#141927":C.ib,color:C.t1,fontFamily:"'Inter',sans-serif",boxSizing:"border-box"}}/>
+            style={{width:"100%",padding:"11px 14px",border:"1px solid "+C.bd,borderRadius:10,fontSize:14,outline:"none",background:dark?"#1C1C1C":C.ib,color:C.t1,fontFamily:"'Inter',sans-serif",boxSizing:"border-box"}}/>
           <div style={{display:"flex",gap:10,marginTop:20,justifyContent:"flex-end"}}>
             <Btn onClick={()=>setNewWbModal(false)} primary={false}>Отмена</Btn>
             <Btn onClick={createWb}>Создать</Btn>
@@ -8557,7 +8551,7 @@ function SheetsPage({userId}:{userId:string}){
         </div>
       </div>}
 
-      {toast&&<div style={{position:"fixed",bottom:24,right:24,background:dark?"#1E293B":"#1F2937",color:"#fff",padding:"10px 18px",borderRadius:10,fontSize:13,fontWeight:500,zIndex:500,boxShadow:"0 4px 20px rgba(0,0,0,0.3)"}}>{toast}</div>}
+      {toast&&<div style={{position:"fixed",bottom:24,right:24,background:dark?"#1C1C1C":"#1F2937",color:"#fff",padding:"10px 18px",borderRadius:10,fontSize:13,fontWeight:500,zIndex:500,boxShadow:"0 4px 20px rgba(0,0,0,0.3)"}}>{toast}</div>}
     </div>;
   }
 
@@ -8831,7 +8825,7 @@ function SheetsPage({userId}:{userId:string}){
                               if(e.key==="Escape"){setEditing(false);setFormulaMode(false);setFormulaRef(null);}
                               e.stopPropagation();
                             }}
-                            style={{position:"absolute",inset:0,width:"100%",height:"100%",border:"none",outline:"none",background:dark?"#141927":"#fff",fontFamily:"monospace",fontSize:12,padding:"0 4px",color:C.t1,zIndex:10,fontWeight:cell.fmt.bold?700:400,fontStyle:cell.fmt.italic?"italic":"normal",textAlign:cell.fmt.align||"left"}}/>
+                            style={{position:"absolute",inset:0,width:"100%",height:"100%",border:"none",outline:"none",background:dark?"#1C1C1C":"#fff",fontFamily:"monospace",fontSize:12,padding:"0 4px",color:C.t1,zIndex:10,fontWeight:cell.fmt.bold?700:400,fontStyle:cell.fmt.italic?"italic":"normal",textAlign:cell.fmt.align||"left"}}/>
                         :<div style={{padding:"0 4px",fontSize:12,lineHeight:rh(r)+"px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontWeight:cell.fmt.bold?700:400,fontStyle:cell.fmt.italic?"italic":"normal",textAlign:cell.fmt.align||(val&&!isNaN(Number(val))?"right":"left"),color:isErr?"#EF4444":(cell.fmt.color||C.t1),fontFamily:"monospace"}}>
                             {val}
                           </div>
@@ -8877,7 +8871,7 @@ function SheetsPage({userId}:{userId:string}){
       </div>
     </div>
 
-    {toast&&<div style={{position:"fixed",bottom:24,right:24,background:dark?"#1E293B":"#1F2937",color:"#fff",padding:"10px 18px",borderRadius:10,fontSize:13,fontWeight:500,zIndex:500,boxShadow:"0 4px 20px rgba(0,0,0,0.4)"}}>{toast}</div>}
+    {toast&&<div style={{position:"fixed",bottom:24,right:24,background:dark?"#1C1C1C":"#1F2937",color:"#fff",padding:"10px 18px",borderRadius:10,fontSize:13,fontWeight:500,zIndex:500,boxShadow:"0 4px 20px rgba(0,0,0,0.4)"}}>{toast}</div>}
   </div>;
 }
 
@@ -11263,7 +11257,7 @@ function OfferPage({userId}:{userId:string}){
           }} style={{
             padding:24,borderRadius:18,cursor:"pointer",textAlign:"left",
             display:"flex",gap:16,alignItems:"flex-start",
-            background:opt.accent?(dark?"rgba(79,142,247,0.1)":"#EFF6FF"):(dark?"#0F1420":"#fff"),
+            background:opt.accent?(dark?"rgba(79,142,247,0.1)":"#EFF6FF"):(dark?"#171717":"#fff"),
             border:opt.accent?`1.5px solid rgba(79,142,247,0.3)`:`1px solid ${dark?"rgba(255,255,255,0.07)":C.bd}`,
             boxShadow:opt.accent?"0 4px 24px rgba(79,142,247,0.12)":C.sh,
           }}>
@@ -11287,7 +11281,7 @@ function OfferPage({userId}:{userId:string}){
       <div style={{fontSize:14,color:C.t2,marginBottom:24}}>{mode==="manual"?"Напиши текст оффера в поле ниже":"Скопируй и вставь свой оффер"}</div>
       <textarea value={manualText} onChange={e=>setManualText(e.target.value)} autoFocus
         placeholder={mode==="manual"?"Мы помогаем [кому] достичь [результат] за [срок] через [метод]...":"Вставь текст оффера сюда..."}
-        style={{width:"100%",minHeight:180,padding:16,border:`1.5px solid ${dark?"rgba(79,142,247,0.25)":"#BFDBFE"}`,borderRadius:14,fontSize:16,background:dark?"#0F1420":C.ib,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
+        style={{width:"100%",minHeight:180,padding:16,border:`1.5px solid ${dark?"rgba(79,142,247,0.25)":"#BFDBFE"}`,borderRadius:14,fontSize:16,background:dark?"#171717":C.ib,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
       <div style={{marginTop:14}}><PrimaryBtn onClick={()=>saveOffer(manualText.trim())} disabled={!manualText.trim()||saving}>{saving?"Сохраняем...":"Сохранить оффер"}</PrimaryBtn></div>
     </div>
   );
@@ -11300,7 +11294,7 @@ function OfferPage({userId}:{userId:string}){
       <div style={{fontSize:14,color:C.t2,marginBottom:24}}>Кто ты, для кого, чем отличаешься от других</div>
       <textarea value={posText} onChange={e=>setPosText(e.target.value)} autoFocus
         placeholder="Например: Я бизнес-стратег для онлайн-предпринимателей с доходом от 500к. Помогаю выйти из операционки. В отличие от коучей — работаю с цифрами и процессами."
-        style={{width:"100%",minHeight:160,padding:16,border:`1.5px solid ${dark?"rgba(168,85,247,0.25)":"#DDD6FE"}`,borderRadius:14,fontSize:15,background:dark?"#0F1420":C.ib,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
+        style={{width:"100%",minHeight:160,padding:16,border:`1.5px solid ${dark?"rgba(168,85,247,0.25)":"#DDD6FE"}`,borderRadius:14,fontSize:15,background:dark?"#171717":C.ib,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
       <div style={{marginTop:14}}><PrimaryBtn onClick={()=>savePositioning(posText.trim())} disabled={!posText.trim()||saving} grad="purple">{saving?"Сохраняем...":"Сохранить позиционирование"}</PrimaryBtn></div>
     </div>
   );
@@ -11339,10 +11333,10 @@ function OfferPage({userId}:{userId:string}){
 
         {q.multi
           ?<textarea value={answer} onChange={e=>setAnswer(e.target.value)} autoFocus placeholder="Твой ответ..."
-              style={{width:"100%",minHeight:130,padding:16,border:`1.5px solid ${dark?"rgba(79,142,247,0.28)":"#BFDBFE"}`,borderRadius:14,fontSize:15,background:dark?"#0F1420":C.ib,color:C.t1,outline:"none",resize:"none" as const,lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
+              style={{width:"100%",minHeight:130,padding:16,border:`1.5px solid ${dark?"rgba(79,142,247,0.28)":"#BFDBFE"}`,borderRadius:14,fontSize:15,background:dark?"#171717":C.ib,color:C.t1,outline:"none",resize:"none" as const,lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
           :<input value={answer} onChange={e=>setAnswer(e.target.value)} autoFocus placeholder="Твой ответ..."
               onKeyDown={e=>e.key==="Enter"&&canNext&&(isLast?generateWithAI():setQuizStep(s=>s+1))}
-              style={{width:"100%",padding:16,border:`1.5px solid ${dark?"rgba(79,142,247,0.28)":"#BFDBFE"}`,borderRadius:14,fontSize:15,background:dark?"#0F1420":C.ib,color:C.t1,outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
+              style={{width:"100%",padding:16,border:`1.5px solid ${dark?"rgba(79,142,247,0.28)":"#BFDBFE"}`,borderRadius:14,fontSize:15,background:dark?"#171717":C.ib,color:C.t1,outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
         }
 
         {aiError&&<div style={{marginTop:12,padding:"10px 14px",borderRadius:10,background:"#FEF2F2",color:C.r,fontSize:13}}>{aiError}</div>}
@@ -11392,7 +11386,7 @@ function OfferPage({userId}:{userId:string}){
       <div style={{fontSize:22,fontWeight:800,color:C.t1,marginBottom:20}}>История офферов</div>
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
         {history.map((h:any)=>(
-          <div key={h.id} style={{background:dark?"#0F1420":"#fff",border:`1px solid ${dark?"rgba(255,255,255,0.07)":C.bd}`,borderRadius:16,padding:20}}>
+          <div key={h.id} style={{background:dark?"#171717":"#fff",border:`1px solid ${dark?"rgba(255,255,255,0.07)":C.bd}`,borderRadius:16,padding:20}}>
             <div style={{fontSize:11,color:C.t2,marginBottom:8,fontWeight:600}}>
               {new Date(h.created_at).toLocaleDateString("ru-RU",{day:"numeric",month:"long",year:"numeric"})}
             </div>
@@ -11569,7 +11563,7 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
           </button>
         </div>
         <textarea value={full} onChange={e=>setter(e.target.value)}
-          style={{width:"100%",minHeight:110,padding:14,border:`1.5px solid ${dark?"rgba(79,142,247,0.2)":"#DBEAFE"}`,borderRadius:12,fontSize:14,background:dark?"#0A0F1A":C.ib,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.65,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
+          style={{width:"100%",minHeight:110,padding:14,border:`1.5px solid ${dark?"rgba(79,142,247,0.2)":"#DBEAFE"}`,borderRadius:12,fontSize:14,background:dark?"#121212":C.ib,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.65,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
       </div>
     );
   };
@@ -11617,7 +11611,7 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:16}}>
         {active.map((p:any)=>(
           <button key={p.id} onClick={()=>{setSelected(p);setDetailPrices(p.prices||[]);setDetailPains(p.pains||[]);setMode("detail");}}
-            style={{background:dark?"#0F1420":"#fff",border:`1px solid ${dark?"rgba(255,255,255,0.07)":C.bd}`,borderRadius:18,padding:20,cursor:"pointer",textAlign:"left",boxShadow:C.sh,transition:"all 0.2s"}}
+            style={{background:dark?"#171717":"#fff",border:`1px solid ${dark?"rgba(255,255,255,0.07)":C.bd}`,borderRadius:18,padding:20,cursor:"pointer",textAlign:"left",boxShadow:C.sh,transition:"all 0.2s"}}
             onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(-2px)";(e.currentTarget as HTMLElement).style.boxShadow="0 8px 32px rgba(0,0,0,0.12)";}}
             onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(0)";(e.currentTarget as HTMLElement).style.boxShadow=C.sh;}}>
             <div style={{width:52,height:52,borderRadius:14,background:dark?"rgba(245,158,11,0.1)":"#FFFBEB",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:14,overflow:"hidden",border:`1px solid ${dark?"rgba(245,158,11,0.2)":"#FDE68A"}`}}>
@@ -11639,7 +11633,7 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
           <div style={{fontSize:11,color:C.t2,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",marginBottom:14}}>Архив</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:12}}>
             {products.filter((p:any)=>p.is_archived).map((p:any)=>(
-              <div key={p.id} style={{background:dark?"#080C14":"#F8FAFC",border:`1px solid ${dark?"rgba(255,255,255,0.04)":C.bd}`,borderRadius:16,padding:16,opacity:0.6,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <div key={p.id} style={{background:dark?"#0D0D0D":"#F8FAFC",border:`1px solid ${dark?"rgba(255,255,255,0.04)":C.bd}`,borderRadius:16,padding:16,opacity:0.6,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                 <div style={{fontSize:14,fontWeight:600,color:C.t2}}>{p.name}</div>
                 <button onClick={async()=>{await supabase.from("user_products").update({is_archived:false}).eq("id",p.id);loadProducts();}}
                   style={{fontSize:11,color:C.a,background:"none",border:"none",cursor:"pointer",fontWeight:700}}>Восстановить</button>
@@ -11661,7 +11655,7 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
       <div style={{fontSize:22,fontWeight:900,color:C.t1,marginBottom:28}}>Новый продукт</div>
 
       {/* Section 1 */}
-      <div style={{background:dark?"#0F1420":"#fff",borderRadius:20,padding:24,marginBottom:16,border:`1px solid ${dark?"rgba(255,255,255,0.06)":C.bd}`,boxShadow:C.sh}}>
+      <div style={{background:dark?"#171717":"#fff",borderRadius:20,padding:24,marginBottom:16,border:`1px solid ${dark?"rgba(255,255,255,0.06)":C.bd}`,boxShadow:C.sh}}>
         <SectionLabel color="#F59E0B">Основная информация</SectionLabel>
 
         {/* Logo upload */}
@@ -11693,7 +11687,7 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
       </div>
 
       {/* Section 2 */}
-      <div style={{background:dark?"#0F1420":"#fff",borderRadius:20,padding:24,marginBottom:16,border:`1px solid ${dark?"rgba(255,255,255,0.06)":C.bd}`,boxShadow:C.sh}}>
+      <div style={{background:dark?"#171717":"#fff",borderRadius:20,padding:24,marginBottom:16,border:`1px solid ${dark?"rgba(255,255,255,0.06)":C.bd}`,boxShadow:C.sh}}>
         <SectionLabel color="#A855F7">Целевая аудитория и боли</SectionLabel>
         <textarea value={form.targetAudience} onChange={e=>setForm(f=>({...f,targetAudience:e.target.value}))} placeholder="Кто твой идеальный клиент для этого продукта? Опиши конкретно." rows={2} style={{...iS(),resize:"vertical" as const,minHeight:70,marginBottom:14}}/>
         <div style={{fontSize:12,fontWeight:700,color:C.t2,marginBottom:8}}>Главные боли аудитории</div>
@@ -11792,7 +11786,7 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
           </div>
         )}
 
-        <div style={{background:dark?"#0F1420":"#fff",borderRadius:20,padding:24,border:`1px solid ${dark?"rgba(255,255,255,0.06)":C.bd}`,boxShadow:C.sh,marginBottom:16}}>
+        <div style={{background:dark?"#171717":"#fff",borderRadius:20,padding:24,border:`1px solid ${dark?"rgba(255,255,255,0.06)":C.bd}`,boxShadow:C.sh,marginBottom:16}}>
           <InlineEdit field="description" value={s.description} multiline label="Описание" color="#4F8EF7"/>
           <InlineEdit field="target_audience" value={s.target_audience} multiline label="Целевая аудитория" color="#A855F7"/>
           {s.pains?.length>0&&(
@@ -12757,7 +12751,7 @@ function KirillAIPage({userId}:{userId:string}){
         const codeLines:string[]=[];
         i++;
         while(i<lines.length&&!lines[i].startsWith("```")){codeLines.push(lines[i]);i++;}
-        els.push(<pre key={i} style={{background:dark?"#0A0F1A":"#F1F5F9",border:`1px solid ${dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.08)"}`,borderRadius:10,padding:"12px 14px",fontSize:12,overflowX:"auto" as const,fontFamily:"'SF Mono','Fira Code',monospace",lineHeight:1.6,margin:"8px 0",color:C.t1}}><code>{codeLines.join("\n")}</code></pre>);
+        els.push(<pre key={i} style={{background:dark?"#121212":"#F1F5F9",border:`1px solid ${dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.08)"}`,borderRadius:10,padding:"12px 14px",fontSize:12,overflowX:"auto" as const,fontFamily:"'SF Mono','Fira Code',monospace",lineHeight:1.6,margin:"8px 0",color:C.t1}}><code>{codeLines.join("\n")}</code></pre>);
         i++;continue;
       }
       if(line.startsWith("### ")){els.push(<div key={i} style={{fontSize:14,fontWeight:700,color:C.t1,marginTop:14,marginBottom:4}}>{inlineRender(line.slice(4))}</div>);i++;continue;}
@@ -12797,7 +12791,7 @@ function KirillAIPage({userId}:{userId:string}){
 
   const bd=dark?"rgba(255,255,255,0.07)":"rgba(0,0,0,0.07)";
   const isEmpty=messages.length===0;
-  const panelBg=dark?"#0B1018":"#fff";
+  const panelBg=dark?"#111111":"#fff";
 
   if(!mounted)return <div style={{height:"calc(100vh - 56px)"}}/>;
 
@@ -12899,7 +12893,7 @@ function KirillAIPage({userId}:{userId:string}){
         </div>
 
         {/* Input */}
-        <div style={{padding:"12px 24px 20px",borderTop:`1px solid ${bd}`,flexShrink:0,background:dark?"#080C14":"#fff"}}>
+        <div style={{padding:"12px 24px 20px",borderTop:`1px solid ${bd}`,flexShrink:0,background:dark?"#0D0D0D":"#fff"}}>
           <div style={{display:"flex",gap:10,alignItems:"flex-end",background:dark?"rgba(255,255,255,0.04)":"#F8FAFC",border:`1px solid ${dark?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.1)"}`,borderRadius:14,padding:"10px 12px 10px 16px",transition:"border-color 0.15s"}}>
             <textarea ref={inputRef}
               value={input}
