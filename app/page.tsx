@@ -7451,9 +7451,20 @@ ${itemsHTML}
 
 /* ============ VIZZY STORIES AI ============ */
 type SImg={id:string,url:string};
-type SStory={id:string,text:string,imgUrl:string,gradientPosition:"top"|"bottom",fontFamily:"Montserrat"|"Inter"|"Times New Roman",textPosition:"top"|"upper"|"center"|"lower"|"bottom",textAlign:"left"|"center"|"right",fontScale:number,grayscale:boolean};
+type SStory={id:string,text:string,imgUrl:string,gradientPosition:"top"|"bottom",fontId:string,textY:number,textAlign:"left"|"center"|"right",fontScale:number,grayscale:boolean};
 
-const STORY_FONTS:SStory["fontFamily"][]=["Montserrat","Inter","Times New Roman"];
+const STORY_FONTS:{id:string,label:string,family:string,weight:number}[]=[
+  {id:"mont-black",label:"Montserrat Чёрный",family:"Montserrat",weight:900},
+  {id:"mont-bold",label:"Montserrat Жирный",family:"Montserrat",weight:700},
+  {id:"mont-thin",label:"Montserrat Тонкий",family:"Montserrat",weight:300},
+  {id:"inter-black",label:"Inter Чёрный",family:"Inter",weight:900},
+  {id:"inter-bold",label:"Inter Жирный",family:"Inter",weight:700},
+  {id:"inter-reg",label:"Inter",family:"Inter",weight:400},
+  {id:"inter-thin",label:"Inter Тонкий",family:"Inter",weight:300},
+  {id:"times",label:"Times",family:"Times New Roman",weight:700},
+  {id:"coolvetica",label:"Coolvetica",family:"Coolvetica",weight:400},
+  {id:"instagram",label:"Instagram",family:"Poppins",weight:700},
+];
 const STORY_GOALS=["Продажа","Прогрев","Личный бренд","Вовлечение","Кейсы","Анонс","Контент","Свой вариант"];
 
 const _imgCache=new Map<string,Promise<HTMLImageElement>>();
@@ -7502,22 +7513,17 @@ function drawStory(ctx:CanvasRenderingContext2D,W:number,H:number,o:SStory,img:H
   else{g.addColorStop(0,"rgba(0,0,0,0)");g.addColorStop(0.55,"rgba(0,0,0,0.18)");g.addColorStop(1,"rgba(0,0,0,0.85)");}
   ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
   const pad=W*0.075,maxW=W-pad*2,availH=H-pad*2;
-  const family=o.fontFamily;
-  const weight=family==="Times New Roman"?"700":"800";
+  const font=STORY_FONTS.find(f=>f.id===o.fontId)||STORY_FONTS[0];
+  const family=font.family,weight=font.weight;
   let size=Math.round(W*0.064*(o.fontScale||1));
   const minSize=Math.round(W*0.028);
-  const setF=(fs:number)=>{ctx.font=`${weight} ${fs}px ${family},sans-serif`;};
+  const setF=(fs:number)=>{ctx.font=`${weight} ${fs}px "${family}",sans-serif`;};
   setF(size);let lines=storyWrap(ctx,o.text,maxW);let lineH=size*1.22;
   while(lines.length*lineH>availH&&size>minSize){size-=2;setF(size);lines=storyWrap(ctx,o.text,maxW);lineH=size*1.22;}
   const blockH=lines.length*lineH;
-  const center0=(H-blockH)/2,top0=pad,bottom0=H-pad-blockH;
-  const tp=o.textPosition;
-  let y0=center0;
-  if(tp==="top")y0=top0;
-  else if(tp==="upper")y0=(top0+center0)/2;
-  else if(tp==="center")y0=center0;
-  else if(tp==="lower")y0=(center0+bottom0)/2;
-  else if(tp==="bottom")y0=bottom0;
+  const top0=pad,bottom0=H-pad-blockH;
+  const ty=Math.min(1,Math.max(0,o.textY==null?0.5:o.textY));
+  const y0=bottom0>top0?top0+ty*(bottom0-top0):top0;
   const align=o.textAlign||"left";
   const x=align==="center"?W/2:align==="right"?W-pad:pad;
   ctx.fillStyle="#FFFFFF";ctx.textAlign=align as CanvasTextAlign;ctx.textBaseline="alphabetic";
@@ -7539,7 +7545,7 @@ function StoryCanvas({story,width,height,radius=0,rev=0}:{story:SStory,width:num
       drawStory(ctx,width,height,story,img);
     })();
     return ()=>{alive=false;};
-  },[story.imgUrl,story.text,story.gradientPosition,story.fontFamily,story.textPosition,story.textAlign,story.fontScale,story.grayscale,width,height,rev]);
+  },[story.imgUrl,story.text,story.gradientPosition,story.fontId,story.textY,story.textAlign,story.fontScale,story.grayscale,width,height,rev]);
   return <canvas ref={ref} width={width} height={height} style={{width,height,borderRadius:radius,display:"block"}}/>;
 }
 
@@ -7596,6 +7602,13 @@ async function generateStoryScript(form:any):Promise<{text:string}[]>{
   return arr.map((s:any)=>({text:(typeof s==="string"?s:s.text)||""}));
 }
 
+async function generateMoreStoryText(form:any,cur:string,idx:number,total:number):Promise<string>{
+  const system="Ты — сценарист сторис для соцсетей. Возвращаешь только текст слайда, без пояснений и кавычек.";
+  const user=`Карусель сторис. Цель: ${form.goal}. Тема: ${form.theme}. Аудитория: ${form.audience}. Посыл: ${form.message}.\n\nЭто слайд ${idx+1} из ${total}. Текущий текст слайда:\n"${cur}"\n\nРасширь и усиль текст ИМЕННО этого слайда: добавь ещё одну мысль, деталь или эмоцию, сохрани стиль и смысл, сделай убедительнее. 2–6 коротких строк, можно перенос строки. Верни только новый текст слайда.`;
+  const t=await paChat(system,user,600,0.9);
+  return t.replace(/```/g,"").replace(/^["']|["']$/g,"").trim();
+}
+
 function StoriesAIPage({userId}:{userId:string}){
   const{dark}=useTheme();
   const isMobile=useIsMobile();
@@ -7610,6 +7623,7 @@ function StoriesAIPage({userId}:{userId:string}){
   const[sel,setSel]=useState(0);
   const[picker,setPicker]=useState(false);
   const[exporting,setExporting]=useState(false);
+  const[moreBusyIdx,setMoreBusyIdx]=useState<number|null>(null);
 
   const bd=C.bd;
   const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
@@ -7620,12 +7634,18 @@ function StoriesAIPage({userId}:{userId:string}){
   useEffect(()=>{
     if(!document.getElementById("ks-story-fonts")){
       const l=document.createElement("link");l.id="ks-story-fonts";l.rel="stylesheet";
-      l.href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Inter:wght@700;800&display=swap";
+      l.href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;700;900&family=Inter:wght@300;400;700;900&family=Poppins:wght@700&display=swap";
+      document.head.appendChild(l);
+    }
+    if(!document.getElementById("ks-story-fonts-cv")){
+      const l=document.createElement("link");l.id="ks-story-fonts-cv";l.rel="stylesheet";
+      l.href="https://fonts.cdnfonts.com/css/coolvetica";
       document.head.appendChild(l);
     }
     const fonts:any=(document as any).fonts;
     if(fonts&&fonts.load){
-      Promise.all([fonts.load('800 100px Montserrat'),fonts.load('800 100px Inter')]).then(()=>setFontsRev(r=>r+1)).catch(()=>setFontsRev(r=>r+1));
+      const jobs=['300 100px Montserrat','700 100px Montserrat','900 100px Montserrat','300 100px Inter','400 100px Inter','700 100px Inter','900 100px Inter','700 100px Poppins','400 100px Coolvetica'].map(s=>fonts.load(s).catch(()=>{}));
+      Promise.allSettled(jobs).then(()=>setFontsRev(r=>r+1));
     }
   },[]);
 
@@ -7704,7 +7724,7 @@ function StoriesAIPage({userId}:{userId:string}){
       const imgs=pickImages(scripts.length);
       const built:SStory[]=scripts.map((s,i)=>{
         const gp:SStory["gradientPosition"]=Math.random()<0.5?"top":"bottom";
-        return{id:"st"+i+Date.now().toString(36),text:s.text,imgUrl:imgs[i],gradientPosition:gp,fontFamily:"Montserrat",textPosition:gp==="top"?"top":"bottom",textAlign:"left",fontScale:1,grayscale:false};
+        return{id:"st"+i+Date.now().toString(36),text:s.text,imgUrl:imgs[i],gradientPosition:gp,fontId:"mont-black",textY:gp==="top"?0:1,textAlign:"left",fontScale:1,grayscale:false};
       });
       setStories(built);setSel(0);setView("editor");
     }catch(e){
@@ -7714,6 +7734,16 @@ function StoriesAIPage({userId}:{userId:string}){
   };
 
   const patchStory=(idx:number,patch:Partial<SStory>)=>setStories(prev=>prev.map((s,i)=>i===idx?{...s,...patch}:s));
+
+  const moreText=async(idx:number)=>{
+    setMoreBusyIdx(idx);
+    try{
+      const goal=form.goal==="Свой вариант"?(form.goalCustom||"Контент"):form.goal;
+      const t=await generateMoreStoryText({...form,goal},stories[idx].text,idx,stories.length);
+      if(t)patchStory(idx,{text:t});
+    }catch(e){alert("Не удалось догенерировать текст. Попробуй ещё раз.");}
+    setMoreBusyIdx(null);
+  };
 
   const downloadPNG=async(story:SStory,idx:number)=>{
     try{const blob=await exportStoryBlob(story);dlBlob(blob,`story_${String(idx+1).padStart(2,"0")}.png`);}
@@ -7899,7 +7929,15 @@ function StoriesAIPage({userId}:{userId:string}){
         {/* controls */}
         {cur&&<div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",gap:20,width:isMobile?"100%":"auto"}}>
           <div>
-            <div style={{fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8}}>Текст сторис {sel+1}</div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:8}}>
+              <div style={{fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3}}>Текст сторис {sel+1}</div>
+              <button onClick={()=>moreText(sel)} disabled={moreBusyIdx===sel} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:"#8B5CF6",fontSize:12,fontWeight:600,cursor:moreBusyIdx===sel?"default":"pointer",fontFamily:"'Inter',sans-serif"}}>
+                <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+                {moreBusyIdx===sel
+                  ?<><div style={{width:12,height:12,border:"2px solid rgba(139,92,246,0.3)",borderTopColor:"#8B5CF6",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>Генерирую</>
+                  :<><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Больше текста</>}
+              </button>
+            </div>
             <textarea value={cur.text} onChange={e=>patchStory(sel,{text:e.target.value})} style={{width:"100%",minHeight:90,padding:"12px 14px",border:`1px solid ${bd}`,borderRadius:12,fontSize:14,background:inputBg,color:C.t1,outline:"none",lineHeight:1.6,resize:"vertical" as const,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
           </div>
           <div>
@@ -7915,7 +7953,7 @@ function StoriesAIPage({userId}:{userId:string}){
           <div>
             <div style={{fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8}}>Шрифт</div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap" as const}}>
-              {STORY_FONTS.map(f=><button key={f} onClick={()=>patchStory(sel,{fontFamily:f})} style={segBtn(cur.fontFamily===f)}>{f==="Times New Roman"?"Times":f}</button>)}
+              {STORY_FONTS.map(f=><button key={f.id} onClick={()=>patchStory(sel,{fontId:f.id})} style={{...segBtn(cur.fontId===f.id),fontFamily:`"${f.family}",sans-serif`,fontWeight:f.weight}}>{f.label}</button>)}
             </div>
           </div>
           <div>
@@ -7928,8 +7966,16 @@ function StoriesAIPage({userId}:{userId:string}){
           </div>
           <div>
             <div style={{fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8}}>Положение текста</div>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap" as const}}>
-              {([["top","Верх"],["upper","Выше"],["center","Центр"],["lower","Ниже"],["bottom","Низ"]] as const).map(([p,l])=><button key={p} onClick={()=>patchStory(sel,{textPosition:p})} style={segBtn(cur.textPosition===p)}>{l}</button>)}
+            <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap" as const}}>
+              {([[0,"Верх"],[0.5,"Центр"],[1,"Низ"]] as const).map(([val,l])=><button key={l} onClick={()=>patchStory(sel,{textY:val})} style={segBtn(Math.abs((cur.textY==null?0.5:cur.textY)-val)<0.02)}>{l}</button>)}
+              <div style={{display:"flex",gap:4,marginLeft:2}}>
+                <button title="Выше" onClick={()=>patchStory(sel,{textY:Math.max(0,Math.round(((cur.textY==null?0.5:cur.textY)-0.03)*100)/100)})} style={{width:40,height:36,borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:C.t1,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M18 15l-6-6-6 6"/></svg>
+                </button>
+                <button title="Ниже" onClick={()=>patchStory(sel,{textY:Math.min(1,Math.round(((cur.textY==null?0.5:cur.textY)+0.03)*100)/100)})} style={{width:40,height:36,borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:C.t1,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+              </div>
             </div>
           </div>
           <div>
@@ -14074,7 +14120,7 @@ function FormsPage({userId}:{userId:string}){
 const COPY_TOOLS=[
   {id:"text-booster",name:"Text Booster",desc:"Проверяет и усиливает текст. Глубокий аудит с пошаговой инструкцией.",tag:"Редактура",ic:"M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"},
   {id:"sales-master",name:"Sales Master",desc:"Генерирует убедительные слоганы, призывы к действию и сценарии продаж.",tag:"Продажи",ic:"M13 10V3L4 14h7v7l9-11h-7z"},
-  {id:"profile-check",name:"Profile Check",desc:"Анализирует профиль Instagram и формирует подробный отчёт на основе фактических данных.",tag:"Стратегия",ic:"M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"},
+  {id:"profile-description",name:"Profile Description",desc:"По офферу и целевой аудитории пишет описания профиля под соцсети: Instagram, Telegram, YouTube, TikTok, Twitter и закреп/сообщение в Telegram.",tag:"Соцсети",ic:"M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"},
   {id:"no-ai-text",name:"NO AI Text",desc:"Убирает эффект генерации текста — делает его живым и человеческим.",tag:"Редактура",ic:"M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"},
   {id:"story-master",name:"Story Master",desc:"Берёт историю и переписывает её в другом жанре или стиле, сохраняя смыслы.",tag:"Сторителлинг",ic:"M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"},
   {id:"reels-master",name:"Reels Master",desc:"Генерирует вирусные посты, цитаты и треды для коротких видео.",tag:"Контент",ic:"M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"},
@@ -14090,7 +14136,7 @@ const TAG_COLORS:Record<string,string>={
   "Редактура":"#6366F1","Продажи":"#10B981","Стратегия":"#F59E0B",
   "Сторителлинг":"#EC4899","Контент":"#8B5CF6","Стиль":"#14B8A6",
   "Реклама":"#F97316","Видео":"#EF4444","Бренд":"#3B82F6",
-  "Аудитория":"#06B6D4","Рассылка":"#84CC16",
+  "Аудитория":"#06B6D4","Рассылка":"#84CC16","Соцсети":"#0EA5E9",
 };
 
 function CopyAIPage({userId}:{userId:string}){
