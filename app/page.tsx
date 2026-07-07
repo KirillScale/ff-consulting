@@ -7451,7 +7451,7 @@ ${itemsHTML}
 
 /* ============ VIZZY STORIES AI ============ */
 type SImg={id:string,url:string};
-type SStory={id:string,text:string,imgUrl:string,gradientPosition:"top"|"bottom",fontFamily:"Montserrat"|"Inter"|"Times New Roman",textPosition:"top"|"center"|"bottom"};
+type SStory={id:string,text:string,imgUrl:string,gradientPosition:"top"|"bottom",fontFamily:"Montserrat"|"Inter"|"Times New Roman",textPosition:"top"|"upper"|"center"|"lower"|"bottom",textAlign:"left"|"center"|"right",fontScale:number,grayscale:boolean};
 
 const STORY_FONTS:SStory["fontFamily"][]=["Montserrat","Inter","Times New Roman"];
 const STORY_GOALS=["Продажа","Прогрев","Личный бренд","Вовлечение","Кейсы","Анонс","Контент","Свой вариант"];
@@ -7493,28 +7493,37 @@ function drawStory(ctx:CanvasRenderingContext2D,W:number,H:number,o:SStory,img:H
   if(img){
     const ir=img.width/img.height,cr=W/H;let dw,dh,dx,dy;
     if(ir>cr){dh=H;dw=H*ir;dx=(W-dw)/2;dy=0;}else{dw=W;dh=W/ir;dx=0;dy=(H-dh)/2;}
+    if(o.grayscale)ctx.filter="grayscale(1)";
     ctx.drawImage(img,dx,dy,dw,dh);
+    ctx.filter="none";
   }else{ctx.fillStyle="#1a1a1a";ctx.fillRect(0,0,W,H);}
   const g=ctx.createLinearGradient(0,0,0,H);
   if(o.gradientPosition==="top"){g.addColorStop(0,"rgba(0,0,0,0.82)");g.addColorStop(0.45,"rgba(0,0,0,0.18)");g.addColorStop(1,"rgba(0,0,0,0)");}
   else{g.addColorStop(0,"rgba(0,0,0,0)");g.addColorStop(0.55,"rgba(0,0,0,0.18)");g.addColorStop(1,"rgba(0,0,0,0.85)");}
   ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
-  const pad=W*0.075,maxW=W-pad*2;
+  const pad=W*0.075,maxW=W-pad*2,availH=H-pad*2;
   const family=o.fontFamily;
   const weight=family==="Times New Roman"?"700":"800";
-  let size=Math.round(W*0.064);
-  const minSize=Math.round(W*0.04);
-  const fit=(fs:number)=>{ctx.font=`${weight} ${fs}px ${family},sans-serif`;return storyWrap(ctx,o.text,maxW);};
-  let lines=fit(size);
-  while(lines.length>5&&size>minSize){size-=Math.max(1,Math.round(W*0.004));lines=fit(size);}
-  const lineH=size*1.22,blockH=lines.length*lineH;
-  let y;
-  if(o.textPosition==="top")y=pad+size;
-  else if(o.textPosition==="center")y=(H-blockH)/2+size;
-  else y=H-pad-blockH+size;
-  ctx.fillStyle="#FFFFFF";ctx.textAlign="left";ctx.textBaseline="alphabetic";
+  let size=Math.round(W*0.064*(o.fontScale||1));
+  const minSize=Math.round(W*0.028);
+  const setF=(fs:number)=>{ctx.font=`${weight} ${fs}px ${family},sans-serif`;};
+  setF(size);let lines=storyWrap(ctx,o.text,maxW);let lineH=size*1.22;
+  while(lines.length*lineH>availH&&size>minSize){size-=2;setF(size);lines=storyWrap(ctx,o.text,maxW);lineH=size*1.22;}
+  const blockH=lines.length*lineH;
+  const center0=(H-blockH)/2,top0=pad,bottom0=H-pad-blockH;
+  const tp=o.textPosition;
+  let y0=center0;
+  if(tp==="top")y0=top0;
+  else if(tp==="upper")y0=(top0+center0)/2;
+  else if(tp==="center")y0=center0;
+  else if(tp==="lower")y0=(center0+bottom0)/2;
+  else if(tp==="bottom")y0=bottom0;
+  const align=o.textAlign||"left";
+  const x=align==="center"?W/2:align==="right"?W-pad:pad;
+  ctx.fillStyle="#FFFFFF";ctx.textAlign=align as CanvasTextAlign;ctx.textBaseline="alphabetic";
   ctx.shadowColor="rgba(0,0,0,0.4)";ctx.shadowBlur=W*0.012;ctx.shadowOffsetY=W*0.002;
-  for(const ln of lines){ctx.fillText(ln,pad,y);y+=lineH;}
+  let y=y0+size;
+  for(const ln of lines){ctx.fillText(ln,x,y);y+=lineH;}
   ctx.shadowColor="transparent";ctx.shadowBlur=0;ctx.shadowOffsetY=0;
 }
 
@@ -7530,7 +7539,7 @@ function StoryCanvas({story,width,height,radius=0,rev=0}:{story:SStory,width:num
       drawStory(ctx,width,height,story,img);
     })();
     return ()=>{alive=false;};
-  },[story.imgUrl,story.text,story.gradientPosition,story.fontFamily,story.textPosition,width,height,rev]);
+  },[story.imgUrl,story.text,story.gradientPosition,story.fontFamily,story.textPosition,story.textAlign,story.fontScale,story.grayscale,width,height,rev]);
   return <canvas ref={ref} width={width} height={height} style={{width,height,borderRadius:radius,display:"block"}}/>;
 }
 
@@ -7695,7 +7704,7 @@ function StoriesAIPage({userId}:{userId:string}){
       const imgs=pickImages(scripts.length);
       const built:SStory[]=scripts.map((s,i)=>{
         const gp:SStory["gradientPosition"]=Math.random()<0.5?"top":"bottom";
-        return{id:"st"+i+Date.now().toString(36),text:s.text,imgUrl:imgs[i],gradientPosition:gp,fontFamily:"Montserrat",textPosition:gp==="top"?"top":"bottom"};
+        return{id:"st"+i+Date.now().toString(36),text:s.text,imgUrl:imgs[i],gradientPosition:gp,fontFamily:"Montserrat",textPosition:gp==="top"?"top":"bottom",textAlign:"left",fontScale:1,grayscale:false};
       });
       setStories(built);setSel(0);setView("editor");
     }catch(e){
@@ -7895,10 +7904,13 @@ function StoriesAIPage({userId}:{userId:string}){
           </div>
           <div>
             <div style={{fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8}}>Фото</div>
-            <button onClick={()=>setPicker(true)} style={{display:"flex",alignItems:"center",gap:8,padding:"9px 16px",borderRadius:10,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-              Заменить фото
-            </button>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap" as const}}>
+              <button onClick={()=>setPicker(true)} style={{display:"flex",alignItems:"center",gap:8,padding:"9px 16px",borderRadius:10,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                Заменить фото
+              </button>
+              <button onClick={()=>patchStory(sel,{grayscale:!cur.grayscale})} style={segBtn(!!cur.grayscale)}>Ч/Б фото</button>
+            </div>
           </div>
           <div>
             <div style={{fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8}}>Шрифт</div>
@@ -7907,9 +7919,23 @@ function StoriesAIPage({userId}:{userId:string}){
             </div>
           </div>
           <div>
+            <div style={{fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8}}>Размер шрифта · {Math.round((cur.fontScale||1)*100)}%</div>
+            <div style={{display:"flex",gap:8,alignItems:"center"}}>
+              <button onClick={()=>patchStory(sel,{fontScale:Math.max(0.6,Math.round(((cur.fontScale||1)-0.1)*10)/10)})} style={segBtn(false)}>A −</button>
+              <button onClick={()=>patchStory(sel,{fontScale:1})} style={segBtn(false)}>Сброс</button>
+              <button onClick={()=>patchStory(sel,{fontScale:Math.min(1.8,Math.round(((cur.fontScale||1)+0.1)*10)/10)})} style={segBtn(false)}>A +</button>
+            </div>
+          </div>
+          <div>
             <div style={{fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8}}>Положение текста</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap" as const}}>
+              {([["top","Верх"],["upper","Выше"],["center","Центр"],["lower","Ниже"],["bottom","Низ"]] as const).map(([p,l])=><button key={p} onClick={()=>patchStory(sel,{textPosition:p})} style={segBtn(cur.textPosition===p)}>{l}</button>)}
+            </div>
+          </div>
+          <div>
+            <div style={{fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8}}>Выравнивание</div>
             <div style={{display:"flex",gap:8}}>
-              {(["top","center","bottom"] as const).map(p=><button key={p} onClick={()=>patchStory(sel,{textPosition:p})} style={segBtn(cur.textPosition===p)}>{p==="top"?"Верх":p==="center"?"Центр":"Низ"}</button>)}
+              {([["left","Слева"],["center","По центру"],["right","Справа"]] as const).map(([p,l])=><button key={p} onClick={()=>patchStory(sel,{textAlign:p})} style={segBtn((cur.textAlign||"left")===p)}>{l}</button>)}
             </div>
           </div>
           <div>
