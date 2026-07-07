@@ -858,7 +858,7 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
     {page==="ai"&&<SafePage name="AI"><KirillAIPage userId={user.id}/></SafePage>}
     {page==="script"&&<SafePage name="Copy AI"><CopyAIPage userId={user.id}/></SafePage>}
     {page==="product"&&<SafePage name="Product AI"><ProductAIPage userId={user.id}/></SafePage>}
-    {page==="stories"&&<SafePage name="Stories AI"><Placeholder title="Vizzy Stories AI" ic="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></SafePage>}
+    {page==="stories"&&<SafePage name="Stories AI"><StoriesAIPage userId={user.id}/></SafePage>}
     {page==="forms"&&<SafePage name="Forms"><FormsPage userId={user.id}/></SafePage>}
     {page==="prices"&&<SafePage name="Prices & Product"><PricesPage userId={user.id} onNav={setPage}/></SafePage>}
     {page==="icp"&&<SafePage name="ICP & IVP"><Placeholder title="ICP & IVP" ic="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></SafePage>}
@@ -7449,6 +7449,498 @@ ${itemsHTML}
 }
 
 
+/* ============ VIZZY STORIES AI ============ */
+type SImg={id:string,url:string};
+type SStory={id:string,text:string,imgUrl:string,gradientPosition:"top"|"bottom",fontFamily:"Montserrat"|"Inter"|"Times New Roman",textPosition:"top"|"center"|"bottom"};
+
+const STORY_FONTS:SStory["fontFamily"][]=["Montserrat","Inter","Times New Roman"];
+const STORY_GOALS=["Продажа","Прогрев","Личный бренд","Вовлечение","Кейсы","Анонс","Контент","Свой вариант"];
+
+const _imgCache=new Map<string,Promise<HTMLImageElement>>();
+function loadStoryImg(url:string):Promise<HTMLImageElement>{
+  if(_imgCache.has(url))return _imgCache.get(url)!;
+  const p=(async()=>{
+    try{
+      const res=await fetch(url,{mode:"cors"});
+      const blob=await res.blob();
+      const obj=URL.createObjectURL(blob);
+      return await new Promise<HTMLImageElement>((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=reject;im.src=obj;});
+    }catch(e){
+      return await new Promise<HTMLImageElement>((resolve,reject)=>{const im=new Image();im.crossOrigin="anonymous";im.onload=()=>resolve(im);im.onerror=reject;im.src=url;});
+    }
+  })();
+  _imgCache.set(url,p);
+  return p;
+}
+
+function storyWrap(ctx:CanvasRenderingContext2D,text:string,maxW:number):string[]{
+  const out:string[]=[];
+  for(const para of String(text||"").split("\n")){
+    const words=para.split(/\s+/).filter(Boolean);
+    let line="";
+    for(const w of words){
+      const t=line?line+" "+w:w;
+      if(ctx.measureText(t).width>maxW&&line){out.push(line);line=w;}
+      else line=t;
+    }
+    out.push(line);
+  }
+  return out.length?out:[""];
+}
+
+function drawStory(ctx:CanvasRenderingContext2D,W:number,H:number,o:SStory,img:HTMLImageElement|null){
+  ctx.clearRect(0,0,W,H);
+  if(img){
+    const ir=img.width/img.height,cr=W/H;let dw,dh,dx,dy;
+    if(ir>cr){dh=H;dw=H*ir;dx=(W-dw)/2;dy=0;}else{dw=W;dh=W/ir;dx=0;dy=(H-dh)/2;}
+    ctx.drawImage(img,dx,dy,dw,dh);
+  }else{ctx.fillStyle="#1a1a1a";ctx.fillRect(0,0,W,H);}
+  const g=ctx.createLinearGradient(0,0,0,H);
+  if(o.gradientPosition==="top"){g.addColorStop(0,"rgba(0,0,0,0.82)");g.addColorStop(0.45,"rgba(0,0,0,0.18)");g.addColorStop(1,"rgba(0,0,0,0)");}
+  else{g.addColorStop(0,"rgba(0,0,0,0)");g.addColorStop(0.55,"rgba(0,0,0,0.18)");g.addColorStop(1,"rgba(0,0,0,0.85)");}
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  const pad=W*0.075,maxW=W-pad*2;
+  const family=o.fontFamily;
+  const weight=family==="Times New Roman"?"700":"800";
+  let size=Math.round(W*0.064);
+  const minSize=Math.round(W*0.04);
+  const fit=(fs:number)=>{ctx.font=`${weight} ${fs}px ${family},sans-serif`;return storyWrap(ctx,o.text,maxW);};
+  let lines=fit(size);
+  while(lines.length>5&&size>minSize){size-=Math.max(1,Math.round(W*0.004));lines=fit(size);}
+  const lineH=size*1.22,blockH=lines.length*lineH;
+  let y;
+  if(o.textPosition==="top")y=pad+size;
+  else if(o.textPosition==="center")y=(H-blockH)/2+size;
+  else y=H-pad-blockH+size;
+  ctx.fillStyle="#FFFFFF";ctx.textAlign="left";ctx.textBaseline="alphabetic";
+  ctx.shadowColor="rgba(0,0,0,0.4)";ctx.shadowBlur=W*0.012;ctx.shadowOffsetY=W*0.002;
+  for(const ln of lines){ctx.fillText(ln,pad,y);y+=lineH;}
+  ctx.shadowColor="transparent";ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+}
+
+function StoryCanvas({story,width,height,radius=0,rev=0}:{story:SStory,width:number,height:number,radius?:number,rev?:number}){
+  const ref=useRef<HTMLCanvasElement>(null);
+  useEffect(()=>{
+    let alive=true;
+    (async()=>{
+      const img=story.imgUrl?await loadStoryImg(story.imgUrl).catch(()=>null):null;
+      if(!alive)return;
+      const c=ref.current;if(!c)return;
+      const ctx=c.getContext("2d");if(!ctx)return;
+      drawStory(ctx,width,height,story,img);
+    })();
+    return ()=>{alive=false;};
+  },[story.imgUrl,story.text,story.gradientPosition,story.fontFamily,story.textPosition,width,height,rev]);
+  return <canvas ref={ref} width={width} height={height} style={{width,height,borderRadius:radius,display:"block"}}/>;
+}
+
+async function exportStoryBlob(story:SStory):Promise<Blob>{
+  const W=1080,H=1920;
+  const c=document.createElement("canvas");c.width=W;c.height=H;
+  const ctx=c.getContext("2d")!;
+  const img=story.imgUrl?await loadStoryImg(story.imgUrl).catch(()=>null):null;
+  drawStory(ctx,W,H,story,img);
+  return await new Promise<Blob>((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(new Error("blob")),"image/png"));
+}
+
+function crc32(buf:Uint8Array):number{
+  let c=~0;
+  for(let i=0;i<buf.length;i++){c^=buf[i];for(let k=0;k<8;k++)c=(c>>>1)^(0xEDB88320&(-(c&1)));}
+  return (~c)>>>0;
+}
+function makeZip(files:{name:string,data:Uint8Array}[]):Blob{
+  const enc=new TextEncoder();
+  const u16=(n:number)=>[n&255,(n>>8)&255];
+  const u32=(n:number)=>[n&255,(n>>8)&255,(n>>16)&255,(n>>24)&255];
+  const locals:Uint8Array[]=[];const centrals:Uint8Array[]=[];let offset=0;
+  for(const f of files){
+    const name=enc.encode(f.name);const data=f.data;const crc=crc32(data);
+    const lh=[0x50,0x4b,0x03,0x04,...u16(20),...u16(0),...u16(0),...u16(0),...u16(0),...u32(crc),...u32(data.length),...u32(data.length),...u16(name.length),...u16(0)];
+    const local=new Uint8Array(lh.length+name.length+data.length);
+    local.set(lh,0);local.set(name,lh.length);local.set(data,lh.length+name.length);
+    locals.push(local);
+    const ch=[0x50,0x4b,0x01,0x02,...u16(20),...u16(20),...u16(0),...u16(0),...u16(0),...u16(0),...u16(0),...u32(crc),...u32(data.length),...u32(data.length),...u16(name.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(offset)];
+    const central=new Uint8Array(ch.length+name.length);
+    central.set(ch,0);central.set(name,ch.length);
+    centrals.push(central);
+    offset+=local.length;
+  }
+  const cenSize=centrals.reduce((a,c)=>a+c.length,0);
+  const end=new Uint8Array([0x50,0x4b,0x05,0x06,...u16(0),...u16(0),...u16(files.length),...u16(files.length),...u32(cenSize),...u32(offset),...u16(0)]);
+  const total=offset+cenSize+end.length;
+  const out=new Uint8Array(total);let p=0;
+  for(const l of locals){out.set(l,p);p+=l.length;}
+  for(const c of centrals){out.set(c,p);p+=c.length;}
+  out.set(end,p);
+  return new Blob([out],{type:"application/zip"});
+}
+function dlBlob(blob:Blob,name:string){
+  const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);
+}
+
+async function generateStoryScript(form:any):Promise<{text:string}[]>{
+  const sell=form.sell,val=form.value,count=form.count;
+  const system="Ты — сценарист продающих и контентных сторис для соцсетей (формат 9:16). Пишешь короткие, цепляющие, живые тексты для серии сторис. Возвращаешь строго валидный JSON без markdown и пояснений.";
+  const user=`Задача: сценарий карусели из ${count} сторис.\n\nЦель: ${form.goal}\nТема: ${form.theme}\nЦелевая аудитория: ${form.audience}\nГлавный посыл: ${form.message}\nУровень продажности (1 — чистый контент, 10 — жёсткая продажа): ${sell}\nУровень пользы (1 — эмоции, 10 — обучение): ${val}\n\nПострой драматургию карусели (например: боль → усиление проблемы → причина → решение → пример/кейс → призыв к действию), адаптируя под цель, продажность и пользу. Каждый текст — короткий и хлёсткий, максимум ~12 слов, можно разбить на 2 строки через \\n. Первая сторис цепляет, последняя — призыв к действию.\n\nВерни строго JSON:\n{"stories":[{"slide":1,"text":"..."}]}\nМассив должен содержать РОВНО ${count} элементов.`;
+  const data=paParseJSON(await paChat(system,user,1800,0.85));
+  const arr=(data.stories||data||[]).slice(0,count);
+  return arr.map((s:any)=>({text:(typeof s==="string"?s:s.text)||""}));
+}
+
+function StoriesAIPage({userId}:{userId:string}){
+  const{dark}=useTheme();
+  const isMobile=useIsMobile();
+  const[view,setView]=useState<"library"|"wizard"|"generating"|"editor">("library");
+  const[images,setImages]=useState<SImg[]>([]);
+  const[libLoading,setLibLoading]=useState(true);
+  const[uploading,setUploading]=useState(0);
+  const[fontsRev,setFontsRev]=useState(0);
+
+  const[form,setForm]=useState<any>({goal:"Продажа",goalCustom:"",theme:"",audience:"",message:"",sell:6,value:5,count:6});
+  const[stories,setStories]=useState<SStory[]>([]);
+  const[sel,setSel]=useState(0);
+  const[picker,setPicker]=useState(false);
+  const[exporting,setExporting]=useState(false);
+
+  const bd=C.bd;
+  const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
+  const inputBg=dark?"#1C1C1C":"#F8FAFC";
+  const GRAD="linear-gradient(135deg,#8B5CF6,#6366F1)";
+
+  // load fonts for canvas
+  useEffect(()=>{
+    if(!document.getElementById("ks-story-fonts")){
+      const l=document.createElement("link");l.id="ks-story-fonts";l.rel="stylesheet";
+      l.href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Inter:wght@700;800&display=swap";
+      document.head.appendChild(l);
+    }
+    const fonts:any=(document as any).fonts;
+    if(fonts&&fonts.load){
+      Promise.all([fonts.load('800 100px Montserrat'),fonts.load('800 100px Inter')]).then(()=>setFontsRev(r=>r+1)).catch(()=>setFontsRev(r=>r+1));
+    }
+  },[]);
+
+  // restore media library from storage
+  useEffect(()=>{
+    (async()=>{
+      try{
+        const{data}=await supabase.storage.from("stories").list(`${userId}/storiesai`,{limit:500,sortBy:{column:"created_at",order:"asc"}});
+        const imgs:SImg[]=(data||[]).filter(f=>f.name&&!f.name.startsWith(".")).map(f=>{
+          const path=`${userId}/storiesai/${f.name}`;
+          return{id:f.name,url:supabase.storage.from("stories").getPublicUrl(path).data.publicUrl};
+        });
+        setImages(imgs);
+      }catch(e){}
+      setLibLoading(false);
+    })();
+  },[userId]);
+
+  const compress=(file:File)=>new Promise<Blob>((resolve,reject)=>{
+    const img=new Image();const o=URL.createObjectURL(file);
+    img.onload=()=>{
+      const MAX=1400;const scale=Math.min(1,MAX/Math.max(img.width,img.height));
+      const w=Math.round(img.width*scale),h=Math.round(img.height*scale);
+      const c=document.createElement("canvas");c.width=w;c.height=h;
+      c.getContext("2d")!.drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(o);
+      c.toBlob(b=>b?resolve(b):reject(new Error("blob")),"image/jpeg",0.82);
+    };
+    img.onerror=reject;img.src=o;
+  });
+
+  const onUpload=async(files:FileList|null)=>{
+    if(!files)return;
+    const list=Array.from(files).filter(f=>/image\/(jpeg|png|webp|jpg)/.test(f.type)).slice(0,500-images.length);
+    if(!list.length)return;
+    setUploading(list.length);
+    let done=0;
+    for(const file of list){
+      try{
+        const blob=await compress(file);
+        const id=`${Date.now()}_${Math.random().toString(36).slice(2,7)}.jpg`;
+        const path=`${userId}/storiesai/${id}`;
+        const{error}=await supabase.storage.from("stories").upload(path,blob,{contentType:"image/jpeg"});
+        if(!error){
+          const url=supabase.storage.from("stories").getPublicUrl(path).data.publicUrl;
+          setImages(prev=>[...prev,{id,url}]);
+        }
+      }catch(e){}
+      done++;setUploading(list.length-done);
+    }
+    setUploading(0);
+  };
+
+  const removeImg=async(im:SImg)=>{
+    setImages(prev=>prev.filter(x=>x.id!==im.id));
+    try{await supabase.storage.from("stories").remove([`${userId}/storiesai/${im.id}`]);}catch(e){}
+  };
+
+  const pickImages=(n:number)=>{
+    const pool=[...images];
+    const out:string[]=[];
+    for(let i=0;i<n;i++){
+      if(pool.length===0)pool.push(...images);
+      const idx=Math.floor(Math.random()*pool.length);
+      out.push(pool.splice(idx,1)[0].url);
+    }
+    return out;
+  };
+
+  const runGenerate=async()=>{
+    if(images.length<5)return;
+    setView("generating");
+    try{
+      const goal=form.goal==="Свой вариант"?(form.goalCustom||"Контент"):form.goal;
+      const scripts=await generateStoryScript({...form,goal});
+      const imgs=pickImages(scripts.length);
+      const built:SStory[]=scripts.map((s,i)=>{
+        const gp:SStory["gradientPosition"]=Math.random()<0.5?"top":"bottom";
+        return{id:"st"+i+Date.now().toString(36),text:s.text,imgUrl:imgs[i],gradientPosition:gp,fontFamily:"Montserrat",textPosition:gp==="top"?"top":"bottom"};
+      });
+      setStories(built);setSel(0);setView("editor");
+    }catch(e){
+      alert("Не удалось сгенерировать сценарий. Проверь API-ключ и попробуй ещё раз.");
+      setView("wizard");
+    }
+  };
+
+  const patchStory=(idx:number,patch:Partial<SStory>)=>setStories(prev=>prev.map((s,i)=>i===idx?{...s,...patch}:s));
+
+  const downloadPNG=async(story:SStory,idx:number)=>{
+    try{const blob=await exportStoryBlob(story);dlBlob(blob,`story_${String(idx+1).padStart(2,"0")}.png`);}
+    catch(e){alert("Не удалось экспортировать PNG.");}
+  };
+  const downloadZIP=async()=>{
+    setExporting(true);
+    try{
+      const files:{name:string,data:Uint8Array}[]=[];
+      for(let i=0;i<stories.length;i++){
+        const blob=await exportStoryBlob(stories[i]);
+        const buf=new Uint8Array(await blob.arrayBuffer());
+        files.push({name:`story_${String(i+1).padStart(2,"0")}.png`,data:buf});
+      }
+      dlBlob(makeZip(files),"stories.zip");
+    }catch(e){alert("Не удалось собрать ZIP.");}
+    setExporting(false);
+  };
+
+  const segBtn=(active:boolean)=>({padding:"8px 14px",borderRadius:9,border:`1px solid ${active?"transparent":bd}`,background:active?"rgba(139,92,246,0.16)":"transparent",color:active?"#8B5CF6":C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"} as React.CSSProperties);
+
+  /* ---------- LIBRARY ---------- */
+  if(view==="library")return(
+    <div style={{maxWidth:960,margin:"0 auto",padding:"36px 24px"}}>
+      <div style={{marginBottom:8}}>
+        <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.025em",marginBottom:4}}>Vizzy Stories AI</div>
+        <div style={{fontSize:14,color:C.t2,lineHeight:1.6,maxWidth:560}}>Загрузи фото — AI напишет сценарий, а движок соберёт готовую серию сторис 9:16 для Instagram, Telegram, TikTok и др.</div>
+      </div>
+
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,margin:"24px 0 16px",flexWrap:"wrap" as const}}>
+        <div style={{fontSize:15,fontWeight:700,color:C.t1}}>Медиабаза проекта <span style={{color:C.t2,fontWeight:500}}>· {images.length}/500</span></div>
+        <div style={{display:"flex",gap:10,alignItems:"center"}}>
+          <label style={{display:"inline-flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:11,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+            Загрузить фото
+            <input type="file" accept="image/jpeg,image/png,image/webp" multiple style={{display:"none"}} onChange={e=>{onUpload(e.target.files);e.currentTarget.value="";}}/>
+          </label>
+          <button onClick={()=>setView("wizard")} disabled={images.length<5}
+            style={{display:"flex",alignItems:"center",gap:8,padding:"10px 20px",borderRadius:11,border:"none",background:images.length>=5?GRAD:inputBg,color:images.length>=5?"#fff":C.t2,fontSize:14,fontWeight:700,cursor:images.length>=5?"pointer":"default",fontFamily:"'Inter',sans-serif",boxShadow:images.length>=5?"0 4px 20px rgba(139,92,246,0.3)":"none"}}>
+            Создать карусель Stories
+          </button>
+        </div>
+      </div>
+
+      {uploading>0&&<div style={{fontSize:13,color:"#8B5CF6",marginBottom:12}}>Загрузка… осталось {uploading}</div>}
+      {images.length<5&&<div style={{fontSize:13,color:C.t2,marginBottom:16}}>Загрузите минимум 5 фото, чтобы начать (JPG, PNG, WEBP).</div>}
+
+      {libLoading?(
+        <div style={{padding:60,textAlign:"center" as const,color:C.t2,fontSize:14}}>Загрузка библиотеки…</div>
+      ):images.length===0?(
+        <label style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:14,background:cardBg,border:`1px dashed ${bd}`,borderRadius:20,padding:"64px 24px",cursor:"pointer",textAlign:"center" as const}}>
+          <div style={{width:60,height:60,borderRadius:16,background:dark?"rgba(139,92,246,0.12)":"#F5F3FF",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          </div>
+          <div>
+            <div style={{fontSize:17,fontWeight:700,color:C.t1,marginBottom:4}}>Загрузите фотографии</div>
+            <div style={{fontSize:13,color:C.t2}}>от 5 до 500 изображений · JPG, PNG, WEBP</div>
+          </div>
+          <input type="file" accept="image/jpeg,image/png,image/webp" multiple style={{display:"none"}} onChange={e=>{onUpload(e.target.files);e.currentTarget.value="";}}/>
+        </label>
+      ):(
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(110px,1fr))",gap:10}}>
+          {images.map(im=>(
+            <div key={im.id} style={{position:"relative" as const,aspectRatio:"9/16",borderRadius:12,overflow:"hidden",border:`1px solid ${bd}`}}>
+              <img src={im.url} alt="" style={{width:"100%",height:"100%",objectFit:"cover" as const,display:"block"}}/>
+              <button onClick={()=>removeImg(im)} style={{position:"absolute" as const,top:6,right:6,width:26,height:26,borderRadius:8,border:"none",background:"rgba(0,0,0,0.55)",color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  /* ---------- WIZARD ---------- */
+  if(view==="wizard"){
+    const canGen=form.theme.trim()&&form.audience.trim()&&form.message.trim();
+    const fld:React.CSSProperties={width:"100%",padding:"12px 14px",border:`1px solid ${bd}`,borderRadius:12,fontSize:14,background:inputBg,color:C.t1,outline:"none",lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box",resize:"vertical" as const};
+    const lbl:React.CSSProperties={fontSize:14,fontWeight:700,color:C.t1,marginBottom:8,display:"block"};
+    return(
+      <div style={{maxWidth:640,margin:"0 auto",padding:"36px 24px"}}>
+        <button onClick={()=>setView("library")} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",color:C.t2,fontSize:13,fontWeight:500,marginBottom:24,padding:0}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Медиабаза
+        </button>
+        <div style={{fontSize:24,fontWeight:800,color:C.t1,letterSpacing:"-0.02em",marginBottom:24}}>Настройка карусели</div>
+
+        <div style={{display:"flex",flexDirection:"column",gap:22}}>
+          <div>
+            <label style={lbl}>Какая цель сторис?</label>
+            <div style={{display:"flex",flexWrap:"wrap" as const,gap:8}}>
+              {STORY_GOALS.map(g=><button key={g} onClick={()=>setForm((f:any)=>({...f,goal:g}))} style={{padding:"8px 15px",borderRadius:20,border:`1px solid ${form.goal===g?"transparent":bd}`,background:form.goal===g?"rgba(139,92,246,0.16)":"transparent",color:form.goal===g?"#8B5CF6":C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>{g}</button>)}
+            </div>
+            {form.goal==="Свой вариант"&&<input value={form.goalCustom} onChange={e=>setForm((f:any)=>({...f,goalCustom:e.target.value}))} placeholder="Ваша цель" style={{...fld,marginTop:10}}/>}
+          </div>
+
+          <div><label style={lbl}>Тема сторис</label><input value={form.theme} onChange={e=>setForm((f:any)=>({...f,theme:e.target.value}))} placeholder="Напр.: как увеличить продажи" style={fld}/></div>
+          <div><label style={lbl}>Целевая аудитория</label><input value={form.audience} onChange={e=>setForm((f:any)=>({...f,audience:e.target.value}))} placeholder="Напр.: предприниматели с оборотом от 1 млн ₽" style={fld}/></div>
+          <div><label style={lbl}>Главный посыл</label><textarea value={form.message} onChange={e=>setForm((f:any)=>({...f,message:e.target.value}))} placeholder="Напр.: бизнесы теряют деньги из-за отсутствия системы продаж" style={{...fld,minHeight:70}}/></div>
+
+          <div>
+            <label style={lbl}>Уровень продажности <span style={{color:"#8B5CF6"}}>{form.sell}</span></label>
+            <input type="range" min={1} max={10} value={form.sell} onChange={e=>setForm((f:any)=>({...f,sell:+e.target.value}))} style={{width:"100%",accentColor:"#8B5CF6"}}/>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:C.t2,marginTop:4}}><span>чистый контент</span><span>жёсткая продажа</span></div>
+          </div>
+          <div>
+            <label style={lbl}>Уровень пользы <span style={{color:"#8B5CF6"}}>{form.value}</span></label>
+            <input type="range" min={1} max={10} value={form.value} onChange={e=>setForm((f:any)=>({...f,value:+e.target.value}))} style={{width:"100%",accentColor:"#8B5CF6"}}/>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:C.t2,marginTop:4}}><span>эмоции</span><span>обучение</span></div>
+          </div>
+          <div>
+            <label style={lbl}>Количество сторис <span style={{color:"#8B5CF6"}}>{form.count}</span></label>
+            <input type="range" min={3} max={15} value={form.count} onChange={e=>setForm((f:any)=>({...f,count:+e.target.value}))} style={{width:"100%",accentColor:"#8B5CF6"}}/>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:C.t2,marginTop:4}}><span>3</span><span>15</span></div>
+          </div>
+        </div>
+
+        <button onClick={runGenerate} disabled={!canGen}
+          style={{width:"100%",marginTop:26,padding:"15px",borderRadius:14,border:"none",background:canGen?GRAD:inputBg,color:canGen?"#fff":C.t2,fontSize:15,fontWeight:700,cursor:canGen?"pointer":"default",fontFamily:"'Inter',sans-serif",boxShadow:canGen?"0 4px 20px rgba(139,92,246,0.3)":"none"}}>
+          Сгенерировать сценарий
+        </button>
+      </div>
+    );
+  }
+
+  /* ---------- GENERATING ---------- */
+  if(view==="generating")return(
+    <div style={{maxWidth:640,margin:"0 auto",padding:"36px 24px",minHeight:"60vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:22}}>
+      <div style={{width:72,height:72,borderRadius:20,background:GRAD,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 8px 32px rgba(139,92,246,0.35)"}}>
+        <div style={{width:30,height:30,border:"3px solid rgba(255,255,255,0.35)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      </div>
+      <div style={{textAlign:"center" as const}}>
+        <div style={{fontSize:22,fontWeight:800,color:C.t1,letterSpacing:"-0.02em",marginBottom:8}}>Собираем карусель</div>
+        <div style={{fontSize:14,color:C.t2,lineHeight:1.6,maxWidth:400}}>AI пишет сценарий, движок подбирает фото и собирает сторис. Пара секунд…</div>
+      </div>
+    </div>
+  );
+
+  /* ---------- EDITOR ---------- */
+  const cur=stories[sel];
+  return(
+    <div style={{maxWidth:1080,margin:"0 auto",padding:"28px 24px"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,marginBottom:20,flexWrap:"wrap" as const}}>
+        <button onClick={()=>setView("wizard")} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",color:C.t2,fontSize:13,fontWeight:500,padding:0}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Настройки
+        </button>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          <button onClick={runGenerate} style={{display:"flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:11,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Новый сценарий
+          </button>
+          <button onClick={downloadZIP} disabled={exporting} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 18px",borderRadius:11,border:"none",background:GRAD,color:"#fff",fontSize:14,fontWeight:700,cursor:exporting?"default":"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 4px 20px rgba(139,92,246,0.3)"}}>
+            {exporting?"Собираю ZIP…":"Скачать ZIP"}
+          </button>
+        </div>
+      </div>
+
+      <div style={{display:"flex",gap:24,alignItems:"flex-start",flexDirection:isMobile?"column":"row"}}>
+        {/* thumbnails */}
+        <div style={{display:"flex",flexDirection:isMobile?"row":"column",gap:10,overflowX:isMobile?"auto":"visible",maxHeight:isMobile?"none":600,overflowY:isMobile?"visible":"auto",paddingRight:4,flexShrink:0}}>
+          {stories.map((s,i)=>(
+            <div key={s.id} onClick={()=>setSel(i)} style={{position:"relative" as const,cursor:"pointer",borderRadius:10,overflow:"hidden",border:`2px solid ${i===sel?"#8B5CF6":"transparent"}`,flexShrink:0}}>
+              <StoryCanvas story={s} width={72} height={128} radius={8} rev={fontsRev}/>
+              <div style={{position:"absolute" as const,top:4,left:4,width:18,height:18,borderRadius:6,background:"rgba(0,0,0,0.6)",color:"#fff",fontSize:10,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>{i+1}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* preview */}
+        <div style={{flexShrink:0,margin:isMobile?"0 auto":0}}>
+          {cur&&<div style={{borderRadius:18,overflow:"hidden",boxShadow:"0 12px 40px rgba(0,0,0,0.35)"}}>
+            <StoryCanvas story={cur} width={300} height={533} rev={fontsRev}/>
+          </div>}
+          {cur&&<button onClick={()=>downloadPNG(cur,sel)} style={{width:"100%",marginTop:12,padding:"11px",borderRadius:11,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            Скачать PNG
+          </button>}
+        </div>
+
+        {/* controls */}
+        {cur&&<div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",gap:20,width:isMobile?"100%":"auto"}}>
+          <div>
+            <div style={{fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8}}>Текст сторис {sel+1}</div>
+            <textarea value={cur.text} onChange={e=>patchStory(sel,{text:e.target.value})} style={{width:"100%",minHeight:90,padding:"12px 14px",border:`1px solid ${bd}`,borderRadius:12,fontSize:14,background:inputBg,color:C.t1,outline:"none",lineHeight:1.6,resize:"vertical" as const,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
+          </div>
+          <div>
+            <div style={{fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8}}>Фото</div>
+            <button onClick={()=>setPicker(true)} style={{display:"flex",alignItems:"center",gap:8,padding:"9px 16px",borderRadius:10,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+              Заменить фото
+            </button>
+          </div>
+          <div>
+            <div style={{fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8}}>Шрифт</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap" as const}}>
+              {STORY_FONTS.map(f=><button key={f} onClick={()=>patchStory(sel,{fontFamily:f})} style={segBtn(cur.fontFamily===f)}>{f==="Times New Roman"?"Times":f}</button>)}
+            </div>
+          </div>
+          <div>
+            <div style={{fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8}}>Положение текста</div>
+            <div style={{display:"flex",gap:8}}>
+              {(["top","center","bottom"] as const).map(p=><button key={p} onClick={()=>patchStory(sel,{textPosition:p})} style={segBtn(cur.textPosition===p)}>{p==="top"?"Верх":p==="center"?"Центр":"Низ"}</button>)}
+            </div>
+          </div>
+          <div>
+            <div style={{fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8}}>Градиент</div>
+            <div style={{display:"flex",gap:8}}>
+              {(["top","bottom"] as const).map(p=><button key={p} onClick={()=>patchStory(sel,{gradientPosition:p})} style={segBtn(cur.gradientPosition===p)}>{p==="top"?"Сверху":"Снизу"}</button>)}
+            </div>
+          </div>
+        </div>}
+      </div>
+
+      {/* image picker */}
+      {picker&&<div onClick={()=>setPicker(false)} style={{position:"fixed" as const,inset:0,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(4px)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+        <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:680,maxHeight:"84vh",overflowY:"auto",background:dark?"#161616":"#fff",border:`1px solid ${bd}`,borderRadius:20,padding:22}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+            <div style={{fontSize:16,fontWeight:800,color:C.t1}}>Выберите фото</div>
+            <button onClick={()=>setPicker(false)} style={{width:32,height:32,borderRadius:9,border:"none",background:"transparent",color:C.t2,cursor:"pointer"}}>✕</button>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(90px,1fr))",gap:8}}>
+            {images.map(im=>(
+              <div key={im.id} onClick={()=>{patchStory(sel,{imgUrl:im.url});setPicker(false);}} style={{aspectRatio:"9/16",borderRadius:10,overflow:"hidden",cursor:"pointer",border:`2px solid ${cur&&cur.imgUrl===im.url?"#8B5CF6":"transparent"}`}}>
+                <img src={im.url} alt="" style={{width:"100%",height:"100%",objectFit:"cover" as const,display:"block"}}/>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>}
+    </div>
+  );
+}
+
 function ProductAIPage({userId}:{userId:string}){
   const{dark}=useTheme();
   const{data:products,loading,add,update,remove}=useTable("products",userId);
@@ -8345,7 +8837,7 @@ const STORIES_QUESTIONS=[
   {id:"rules",label:"Ограничения",placeholder:"Например: на «ты», без обещаний (необязательно)"},
 ];
 
-function StoriesAIPage(){
+function StoriesAILegacy(){
   const isMobile=useIsMobile();
   const theme=AI_THEMES.stories;
   const ac="#CC00FF";
