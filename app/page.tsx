@@ -7183,7 +7183,7 @@ async function regenCourseLesson(answers:Record<string,string>,product:any,lesso
   };
 }
 
-function CourseLessonEditor({lesson,index,total,dark,busy,onSave,onRegen,onClose}:{lesson:any,index:number,total:number,dark:boolean,busy:boolean,onSave:(p:any)=>void,onRegen:(hint:string)=>void,onClose:()=>void}){
+function CourseLessonEditor({lesson,index,total,dark,busy,onSave,onRegen,onClose,unitLabel="Урок"}:{lesson:any,index:number,total:number,dark:boolean,busy:boolean,onSave:(p:any)=>void,onRegen:(hint:string)=>void,onClose:()=>void,unitLabel?:string}){
   const[title,setTitle]=useState(lesson.title||"");
   const[description,setDescription]=useState(lesson.description||"");
   const[scenario,setScenario]=useState(lesson.scenario||"");
@@ -7199,7 +7199,7 @@ function CourseLessonEditor({lesson,index,total,dark,busy,onSave,onRegen,onClose
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:22}}>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
             <div style={{width:34,height:34,borderRadius:10,background:"linear-gradient(135deg,#10B981,#059669)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:14,fontWeight:800}}>{index+1}</div>
-            <div style={{fontSize:12,fontWeight:600,color:C.t2}}>Урок {index+1} из {total}</div>
+            <div style={{fontSize:12,fontWeight:600,color:C.t2}}>{unitLabel} {index+1} из {total}</div>
           </div>
           <button onClick={onClose} style={{width:32,height:32,borderRadius:9,border:"none",background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -7239,6 +7239,216 @@ function CourseLessonEditor({lesson,index,total,dark,busy,onSave,onRegen,onClose
 }
 
 
+async function generateMastermind(answers:Record<string,string>,product:any,sessionCount:number):Promise<any>{
+  const system="Ты — архитектор офлайн-мастермайндов и премиальных групповых программ. Мастермайнд — это ЖИВОЕ офлайн-мероприятие: встречи, разборы, hot seats, работа в группе, нетворкинг. Ты продумываешь концепцию, локацию, организацию и программу встреч на профессиональном уровне. Возвращаешь строго валидный JSON без markdown и пояснений.";
+  const user=`Данные эксперта:\n\n${paContext(answers)}\n\nВыбранный продукт:\nФормат: ${product.format}\nНазвание: ${product.title}\nОписание: ${product.description||""}\n\nСпроектируй офлайн-мастермайнд из ${sessionCount} встреч. Это живое мероприятие — место встречи, атмосфера и логистика важны так же, как содержание.\n\nВерни JSON строго такой структуры:\n{\n"concept":"Концепция: для кого этот мастермайнд, главное обещание, ключевая ценность и чем он отличается от курса. 4-6 предложений.",\n"location":"Локация и место встречи: рекомендуемый тип площадки (загородная резиденция, премиум-коворкинг, отель и т.п.), нужная атмосфера, вместимость, 2-3 конкретных варианта формата локации и на что обратить внимание при выборе. Каждый пункт с новой строки.",\n"organization":"Организация: число участников, длительность и периодичность встреч, что входит (проживание, питание, трансфер, материалы), pre-work до встреч, поддержка между встречами, ориентир по стоимости участия. Каждый пункт с новой строки.",\n"sessions":[{"title":"название встречи","description":"одно предложение о цели встречи","scenario":"подробная повестка встречи: формат работы (разборы, hot seats, групповая работа), тайминг по блокам, что происходит и какой результат уносит участник — 5-8 пунктов, каждый с новой строки"}]\n}\nМассив sessions должен содержать РОВНО ${sessionCount} встреч, идущих логично от старта к финальному результату.`;
+  const obj=paParseJSON(await paChat(system,user,4000,0.7));
+  const sessions=(obj.sessions||[]).slice(0,sessionCount).map((s:any,i:number)=>({
+    id:"s"+i+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+    title:s.title||`Встреча ${i+1}`,
+    description:s.description||"",
+    scenario:s.scenario||"",
+  }));
+  return {type:"mastermind",sessionCount,concept:obj.concept||"",location:obj.location||"",organization:obj.organization||"",sessions};
+}
+
+async function regenMMSection(answers:Record<string,string>,product:any,key:string,hint:string):Promise<string>{
+  const labels:Record<string,string>={concept:"Концепция",location:"Локация и место встречи",organization:"Организация"};
+  const system="Ты — архитектор офлайн-мастермайндов. Возвращаешь только текст раздела: без markdown-заголовков, без пояснений вокруг.";
+  const user=`Данные эксперта:\n\n${paContext(answers)}\n\nМастермайнд: ${product.title} (${product.format})\n\nПерепиши раздел «${labels[key]||key}» для этого офлайн-мастермайнда.${hint?(" Пожелание автора: "+hint+".") :""} Верни только текст раздела, каждый пункт с новой строки.`;
+  return (await paChat(system,user,1300,0.8)).replace(/```/g,"").trim();
+}
+
+async function regenMMSession(answers:Record<string,string>,product:any,sessions:any[],idx:number,hint:string):Promise<any>{
+  const titles=sessions.map((s,i)=>`${i+1}. ${s.title}`).join("\n");
+  const system="Ты — архитектор офлайн-мастермайндов. Возвращаешь строго валидный JSON без markdown и пояснений.";
+  const user=`Данные эксперта:\n\n${paContext(answers)}\n\nМастермайнд: ${product.title}\n\nТекущая программа встреч:\n${titles}\n\nПерегенерируй встречу №${idx+1}.${hint?(" Пожелание автора: "+hint+".") :""} Она не должна дублировать другие встречи и должна вписываться в логику программы.\n\nВерни ОДИН JSON-объект строго такой структуры:\n{"title":"название встречи","description":"одно предложение о цели","scenario":"повестка встречи: формат работы, тайминг по блокам, результат — 5-8 пунктов, каждый с новой строки"}`;
+  const obj=paParseJSON(await paChat(system,user,1400,0.8));
+  return {
+    id:sessions[idx].id,
+    title:obj.title||sessions[idx].title,
+    description:obj.description||sessions[idx].description,
+    scenario:obj.scenario||sessions[idx].scenario,
+  };
+}
+
+function SectionEditor({title,text,dark,busy,onSave,onRegen,onClose}:{title:string,text:string,dark:boolean,busy:boolean,onSave:(t:string)=>void,onRegen:(hint:string)=>void,onClose:()=>void}){
+  const[val,setVal]=useState(text||"");
+  const[hint,setHint]=useState("");
+  useEffect(()=>{setVal(text||"");},[text]);
+  const bd=C.bd;
+  const inputBg=dark?"#1C1C1C":"#F8FAFC";
+  const lbl:React.CSSProperties={fontSize:11,fontWeight:700,color:C.t2,letterSpacing:0.3,textTransform:"uppercase" as const,marginBottom:8,display:"block"};
+  const fld:React.CSSProperties={width:"100%",padding:"12px 14px",border:`1px solid ${bd}`,borderRadius:12,fontSize:14,background:inputBg,color:C.t1,outline:"none",lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const};
+  return(
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(4px)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:660,maxHeight:"88vh",overflowY:"auto",background:dark?"#161616":"#fff",border:`1px solid ${bd}`,borderRadius:20,padding:26,boxShadow:"0 24px 60px rgba(0,0,0,0.5)"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:22}}>
+          <div style={{fontSize:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em"}}>{title}</div>
+          <button onClick={onClose} style={{width:32,height:32,borderRadius:9,border:"none",background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <textarea value={val} onChange={e=>setVal(e.target.value)} style={{...fld,minHeight:240,resize:"vertical" as const,marginBottom:20}}/>
+        <div style={{background:dark?"rgba(255,255,255,0.03)":"#F8FAFC",border:`1px solid ${bd}`,borderRadius:14,padding:16,marginBottom:22}}>
+          <label style={lbl}>Перегенерировать раздел</label>
+          <div style={{display:"flex",gap:10,alignItems:"stretch"}}>
+            <input value={hint} onChange={e=>setHint(e.target.value)} placeholder="Что изменить? (необязательно)" style={{...fld,flex:1}}/>
+            <button onClick={()=>onRegen(hint)} disabled={busy}
+              style={{padding:"0 18px",borderRadius:12,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:13,fontWeight:600,cursor:busy?"default":"pointer",display:"flex",alignItems:"center",gap:8,whiteSpace:"nowrap",fontFamily:"'Inter',sans-serif"}}>
+              {busy
+                ?<><div style={{width:14,height:14,border:"2px solid rgba(150,150,150,0.3)",borderTopColor:C.t1,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Генерирую</>
+                :<><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Перегенерировать</>}
+            </button>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+          <button onClick={onClose} style={{padding:"11px 20px",borderRadius:11,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Отмена</button>
+          <button onClick={()=>onSave(val)} disabled={busy}
+            style={{padding:"11px 24px",borderRadius:11,border:"none",background:"linear-gradient(135deg,#10B981,#059669)",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 4px 16px rgba(16,185,129,0.3)"}}>Сохранить</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+async function generateCommunity(answers:Record<string,string>,product:any,days:number):Promise<any>{
+  const system="Ты — архитектор закрытых онлайн-сообществ и клубов (чаще всего это закрытый Telegram-канал или чат, но не обязательно). Ты продумываешь identity, позиционирование, структуру, систему удержания и контент. Возвращаешь строго валидный JSON без markdown и пояснений.";
+  const user=`Данные эксперта:\n\n${paContext(answers)}\n\nВыбранный продукт:\nФормат: ${product.format}\nНазвание: ${product.title}\nОписание: ${product.description||""}\n\nСпроектируй закрытое сообщество с нуля. Чаще всего это закрытый Telegram-канал или чат — выбери оптимальную платформу под аудиторию и обоснуй. Продумай identity, структуру, стартовый набор контента (чтобы новый участник при входе не разочаровался) и систему постоянного напоминания о себе. Затем составь контент-план на ${days} дней.\n\nВерни JSON строго такой структуры:\n{\n"identity":"Identity и позиционирование: название сообщества, суть в одном предложении, для кого, tone of voice, главное обещание, чем отличается от бесплатных чатов. Каждый пункт с новой строки.",\n"structure":"Структура и организация: платформа (Telegram-канал / чат / связка — обоснуй выбор), рубрики и разделы, навигация и закреплённые сообщения, роли (админ/модератор/эксперты), правила, онбординг нового участника. Каждый пункт с новой строки.",\n"starter":"Минимальный стартовый набор контента, который обязан быть в сообществе к моменту входа первого участника, чтобы он не разочаровался: приветственный пост, закреплённый гайд-навигация, стартовая база материалов, 5-7 первых ценных постов. Каждый пункт с новой строки.",\n"retention":"Как постоянно напоминать о себе и удерживать участников: регулярные рубрики и ритуалы по дням недели, триггеры вовлечения (опросы, разборы, эфиры, челленджи), поводы вернуться, работа с молчунами. Каждый пункт с новой строки.",\n"plan":[{"day":1,"format":"Пост","title":"заголовок публикации","description":"о чём эта публикация в одном предложении","scenario":"короткая структура публикации: 2-4 пункта, каждый с новой строки"}]\n}\nМассив plan должен содержать РОВНО ${days} публикаций (по одной на день, day от 1 до ${days}), разнообразных по формату (пост, видео, опрос, эфир, разбор, кейс) и рубрикам, работающих на удержание и мягкий прогрев к продукту. Пиши компактно.`;
+  const obj=paParseJSON(await paChat(system,user,4096,0.7));
+  const plan=(obj.plan||[]).slice(0,days).map((p:any,i:number)=>({
+    id:"d"+i+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+    day:p.day||i+1,
+    format:p.format||"Пост",
+    title:p.title||`День ${i+1}`,
+    description:p.description||"",
+    scenario:p.scenario||"",
+  }));
+  return {type:"community",days,identity:obj.identity||"",structure:obj.structure||"",starter:obj.starter||"",retention:obj.retention||"",plan};
+}
+
+async function regenCommSection(answers:Record<string,string>,product:any,key:string,hint:string):Promise<string>{
+  const labels:Record<string,string>={identity:"Identity и позиционирование",structure:"Структура и организация",starter:"Стартовый набор контента",retention:"Как напоминать о себе"};
+  const system="Ты — архитектор закрытых онлайн-сообществ. Возвращаешь только текст раздела: без markdown-заголовков, без пояснений вокруг.";
+  const user=`Данные эксперта:\n\n${paContext(answers)}\n\nСообщество: ${product.title} (${product.format})\n\nПерепиши раздел «${labels[key]||key}» для этого закрытого сообщества.${hint?(" Пожелание автора: "+hint+".") :""} Верни только текст раздела, каждый пункт с новой строки.`;
+  return (await paChat(system,user,1300,0.8)).replace(/```/g,"").trim();
+}
+
+async function regenCommDay(answers:Record<string,string>,product:any,plan:any[],idx:number,hint:string):Promise<any>{
+  const around=plan.slice(Math.max(0,idx-3),idx+4).map(p=>`День ${p.day}: ${p.title}`).join("\n");
+  const system="Ты — контент-стратег закрытого сообщества. Возвращаешь строго валидный JSON без markdown и пояснений.";
+  const user=`Данные эксперта:\n\n${paContext(answers)}\n\nСообщество: ${product.title}\n\nСоседние публикации плана:\n${around}\n\nПерегенерируй публикацию Дня ${plan[idx].day}.${hint?(" Пожелание автора: "+hint+".") :""} Она не должна дублировать соседние.\n\nВерни ОДИН JSON-объект: {"format":"Пост/Видео/Опрос/Эфир/Разбор","title":"заголовок","description":"о чём в одном предложении","scenario":"структура публикации: 2-4 пункта, каждый с новой строки"}`;
+  const obj=paParseJSON(await paChat(system,user,1200,0.85));
+  return {
+    id:plan[idx].id,
+    day:plan[idx].day,
+    format:obj.format||plan[idx].format,
+    title:obj.title||plan[idx].title,
+    description:obj.description||plan[idx].description,
+    scenario:obj.scenario||plan[idx].scenario,
+  };
+}
+
+
+async function generateProgram(answers:Record<string,string>,product:any,months:number,kind:string):Promise<any>{
+  const isCoach=kind==="coaching";
+  const role=isCoach
+    ?"персональный коучинг: сопровождение 1-на-1, работа над трансформацией и результатом клиента через регулярные сессии"
+    :"консалтинг: решение конкретных задач клиента, экспертные рекомендации и внедрение изменений под ключ";
+  const system=`Ты — архитектор премиальных программ сопровождения. Проектируешь ${role}. Продумываешь онбординг, приветственный подарок и содержание программы по месяцам на профессиональном уровне. Возвращаешь строго валидный JSON без markdown и пояснений.`;
+  const user=`Данные эксперта:\n\n${paContext(answers)}\n\nВыбранный продукт:\nФормат: ${product.format}\nНазвание: ${product.title}\nОписание: ${product.description||""}\n\nСпроектируй программу «${product.title}» длительностью ${months} мес.\n\nВерни JSON строго такой структуры:\n{\n"onboarding":"Онбординг-процесс: как проходит первое касание сразу после оплаты, welcome-сообщение, установочная встреча, что заполняет клиент (анкета целей и точки А), как ставятся ожидания и регламент работы, доступы и материалы. Пошагово, каждый пункт с новой строки.",\n"gift":"Приветственный подарок при покупке, который сразу показывает заботу о клиенте: что именно подарить (гайд, шаблон, бонус-сессия, чек-лист, доступ), почему это ценно и уместно, как красиво вручить. Каждый пункт с новой строки.",\n"program":[{"title":"тема и фокус месяца","description":"главный результат месяца в одном предложении","scenario":"содержание месяца: цели, ключевые темы, задачи и практики клиента, точки контроля, результат месяца — 5-8 пунктов, каждый с новой строки"}]\n}\nМассив program должен содержать РОВНО ${months} месяцев, логично ведущих клиента от старта к финальному результату.`;
+  const obj=paParseJSON(await paChat(system,user,4096,0.7));
+  const program=(obj.program||[]).slice(0,months).map((m:any,i:number)=>({
+    id:"mo"+i+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+    month:i+1,
+    title:m.title||`Месяц ${i+1}`,
+    description:m.description||"",
+    scenario:m.scenario||"",
+  }));
+  return {type:kind,months,onboarding:obj.onboarding||"",gift:obj.gift||"",program};
+}
+
+async function regenProgSection(answers:Record<string,string>,product:any,key:string,hint:string,kind:string):Promise<string>{
+  const labels:Record<string,string>={onboarding:"Онбординг-процесс",gift:"Приветственный подарок"};
+  const role=kind==="coaching"?"персонального коучинга":"консалтинга";
+  const system=`Ты — архитектор программ ${role}. Возвращаешь только текст раздела: без markdown-заголовков, без пояснений вокруг.`;
+  const user=`Данные эксперта:\n\n${paContext(answers)}\n\nПрограмма: ${product.title} (${product.format})\n\nПерепиши раздел «${labels[key]||key}».${hint?(" Пожелание автора: "+hint+".") :""} Верни только текст раздела, каждый пункт с новой строки.`;
+  return (await paChat(system,user,1300,0.8)).replace(/```/g,"").trim();
+}
+
+async function regenProgMonth(answers:Record<string,string>,product:any,program:any[],idx:number,hint:string,kind:string):Promise<any>{
+  const titles=program.map((m,i)=>`Месяц ${i+1}: ${m.title}`).join("\n");
+  const role=kind==="coaching"?"персонального коучинга":"консалтинга";
+  const system=`Ты — архитектор программ ${role}. Возвращаешь строго валидный JSON без markdown и пояснений.`;
+  const user=`Данные эксперта:\n\n${paContext(answers)}\n\nПрограмма: ${product.title}\n\nТекущая структура по месяцам:\n${titles}\n\nПерегенерируй Месяц ${idx+1}.${hint?(" Пожелание автора: "+hint+".") :""} Он не должен дублировать другие месяцы и должен вписываться в логику программы.\n\nВерни ОДИН JSON-объект: {"title":"тема месяца","description":"главный результат месяца одним предложением","scenario":"содержание месяца: цели, темы, задачи, точки контроля, результат — 5-8 пунктов, каждый с новой строки"}`;
+  const obj=paParseJSON(await paChat(system,user,1500,0.8));
+  return {
+    id:program[idx].id,
+    month:program[idx].month,
+    title:obj.title||program[idx].title,
+    description:obj.description||program[idx].description,
+    scenario:obj.scenario||program[idx].scenario,
+  };
+}
+
+function exportProductPDF(product:any){
+  const b=product?.build||{};
+  const esc=(s:any)=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const br=(s:any)=>esc(s).replace(/\n/g,"<br>");
+
+  let sections:any[]=[];
+  let group:any=null;
+  if(b.type==="course"){group={heading:"Программа курса",unit:"Урок",list:b.lessons||[]};}
+  else if(b.type==="mastermind"){sections=[["Концепция",b.concept],["Локация и место встречи",b.location],["Организация",b.organization]];group={heading:"Программа встреч",unit:"Встреча",list:b.sessions||[]};}
+  else if(b.type==="community"){sections=[["Identity и позиционирование",b.identity],["Структура и организация",b.structure],["Стартовый набор контента",b.starter],["Как напоминать о себе",b.retention]];group={heading:"Контент-план",unit:"День",list:b.plan||[]};}
+  else if(b.type==="coaching"||b.type==="consulting"){sections=[["Онбординг-процесс",b.onboarding],["Приветственный подарок",b.gift]];group={heading:"Программа по месяцам",unit:"Месяц",list:b.program||[]};}
+
+  const secHTML=sections.filter(s=>s[1]).map(s=>`<section class="block"><h2>${esc(s[0])}</h2><p>${br(s[1])}</p></section>`).join("");
+  const itemsHTML=group?`<h2 class="group">${esc(group.heading)}</h2>`+ (group.list||[]).map((it:any,i:number)=>{
+    const lead=it.month||it.day||(i+1);
+    const fmt=it.format?`<span class="fmt">${esc(it.format)}</span>`:"";
+    return `<section class="item"><div class="ihead"><span class="num">${esc(group.unit)} ${esc(lead)}</span>${fmt}</div><h3>${esc(it.title)}</h3>${it.description?`<p class="desc">${br(it.description)}</p>`:""}${it.scenario?`<p class="scn">${br(it.scenario)}</p>`:""}</section>`;
+  }).join("") : "";
+
+  const html=`<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>${esc(product.title||"Продукт")}</title>
+<style>
+@page{size:A4;margin:20mm 18mm}
+*{box-sizing:border-box}
+body{font-family:-apple-system,'Segoe UI',Inter,Roboto,Arial,sans-serif;color:#111;line-height:1.6;margin:0}
+.tag{display:inline-block;font-size:11px;font-weight:700;color:#059669;background:#ECFDF5;padding:4px 12px;border-radius:20px;letter-spacing:.3px}
+h1{font-size:26px;font-weight:800;letter-spacing:-.02em;margin:14px 0 8px}
+.lead{font-size:14px;color:#374151;margin:0 0 6px;max-width:640px}
+.rule{height:2px;background:linear-gradient(90deg,#10B981,#059669);border-radius:2px;margin:18px 0 26px;width:70px}
+h2{font-size:16px;font-weight:800;letter-spacing:-.01em;margin:0 0 8px;color:#065F46}
+h2.group{margin:34px 0 14px;padding-bottom:8px;border-bottom:1px solid #E5E7EB}
+.block{margin-bottom:20px}
+.block p{margin:0;font-size:13.5px;color:#1F2937;white-space:pre-wrap}
+.item{border:1px solid #E5E7EB;border-radius:12px;padding:16px 18px;margin-bottom:12px;page-break-inside:avoid}
+.ihead{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.num{font-size:11px;font-weight:800;color:#059669;background:#ECFDF5;padding:3px 10px;border-radius:20px}
+.fmt{font-size:10px;font-weight:700;color:#6B7280;background:#F3F4F6;padding:2px 8px;border-radius:12px;text-transform:uppercase;letter-spacing:.3px}
+.item h3{font-size:15px;font-weight:700;margin:0 0 5px}
+.desc{font-size:13px;color:#4B5563;margin:0 0 8px}
+.scn{font-size:12.5px;color:#374151;margin:0;white-space:pre-wrap}
+.foot{margin-top:32px;padding-top:14px;border-top:1px solid #E5E7EB;font-size:11px;color:#9CA3AF;text-align:center}
+</style></head><body>
+<span class="tag">${esc(product.format||"Продукт")}</span>
+<h1>${esc(product.title||"Продукт")}</h1>
+${product.description?`<p class="lead">${esc(product.description)}</p>`:""}
+<div class="rule"></div>
+${secHTML}
+${itemsHTML}
+<div class="foot">Создано в Vizzy Product AI</div>
+</body></html>`;
+
+  const w=window.open("","_blank");
+  if(!w){alert("Разреши всплывающие окна, чтобы скачать PDF.");return;}
+  w.document.open();w.document.write(html);w.document.close();w.focus();
+  setTimeout(()=>{try{w.print();}catch(e){}},350);
+}
+
+
 function ProductAIPage({userId}:{userId:string}){
   const{dark}=useTheme();
   const{data:products,loading,add,update,remove}=useTable("products",userId);
@@ -7253,6 +7463,11 @@ function ProductAIPage({userId}:{userId:string}){
   const[courseBusy,setCourseBusy]=useState(false);
   const[editIdx,setEditIdx]=useState<number|null>(null);
   const[lessonBusy,setLessonBusy]=useState(false);
+  const[mmCount,setMmCount]=useState(6);
+  const[editSection,setEditSection]=useState<string|null>(null);
+  const[sectionBusy,setSectionBusy]=useState(false);
+  const[commDays,setCommDays]=useState(30);
+  const[monthsCount,setMonthsCount]=useState(3);
 
   const bd=C.bd;
   const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
@@ -7285,6 +7500,8 @@ function ProductAIPage({userId}:{userId:string}){
     setAnswers(row.answers||{});
     setFiles({});
     setGenError(null);
+    setEditIdx(null);
+    setEditSection(null);
     setView(row.status==="variants"?"variants":row.status==="building"?"building":"quiz");
   };
 
@@ -7357,6 +7574,119 @@ function ProductAIPage({userId}:{userId:string}){
       const fresh=await regenCourseLesson(answers,draft.selected,draft.selected.build.lessons,idx,hint);
       await saveLesson(idx,fresh);
     }catch(e){alert("Не удалось перегенерировать урок. Попробуй ещё раз.");}
+    setLessonBusy(false);
+  };
+
+  const buildMastermind=async(count:number)=>{
+    if(!draft)return;
+    setCourseBusy(true);
+    try{
+      const build=await generateMastermind(answers,draft.selected,count);
+      const selected={...draft.selected,build};
+      await update(draft.id,{selected});
+      setDraft((d:any)=>({...d,selected}));
+    }catch(e){alert("Не удалось сгенерировать мастермайнд. Проверь API-ключ и попробуй ещё раз.");}
+    setCourseBusy(false);
+  };
+
+  const saveSession=async(idx:number,patch:any)=>{
+    if(!draft?.selected?.build)return;
+    const build=draft.selected.build;
+    const sessions=build.sessions.map((s:any,i:number)=>i===idx?{...s,...patch}:s);
+    const selected={...draft.selected,build:{...build,sessions}};
+    await update(draft.id,{selected});
+    setDraft((d:any)=>({...d,selected}));
+  };
+
+  const regenSession=async(idx:number,hint:string)=>{
+    if(!draft?.selected?.build)return;
+    setLessonBusy(true);
+    try{
+      const fresh=await regenMMSession(answers,draft.selected,draft.selected.build.sessions,idx,hint);
+      await saveSession(idx,fresh);
+    }catch(e){alert("Не удалось перегенерировать встречу. Попробуй ещё раз.");}
+    setLessonBusy(false);
+  };
+
+  const saveSection=async(key:string,text:string)=>{
+    if(!draft?.selected?.build)return;
+    const selected={...draft.selected,build:{...draft.selected.build,[key]:text}};
+    await update(draft.id,{selected});
+    setDraft((d:any)=>({...d,selected}));
+  };
+
+  const regenSection=async(key:string,hint:string)=>{
+    if(!draft?.selected?.build)return;
+    setSectionBusy(true);
+    try{
+      const t=draft.selected.build.type;
+      const text=t==="community"?await regenCommSection(answers,draft.selected,key,hint)
+        :(t==="coaching"||t==="consulting")?await regenProgSection(answers,draft.selected,key,hint,t)
+        :await regenMMSection(answers,draft.selected,key,hint);
+      await saveSection(key,text);
+    }catch(e){alert("Не удалось перегенерировать раздел. Попробуй ещё раз.");}
+    setSectionBusy(false);
+  };
+
+  const buildCommunity=async(days:number)=>{
+    if(!draft)return;
+    setCourseBusy(true);
+    try{
+      const build=await generateCommunity(answers,draft.selected,days);
+      const selected={...draft.selected,build};
+      await update(draft.id,{selected});
+      setDraft((d:any)=>({...d,selected}));
+    }catch(e){alert("Не удалось сгенерировать сообщество. Проверь API-ключ и попробуй ещё раз.");}
+    setCourseBusy(false);
+  };
+
+  const savePlanDay=async(idx:number,patch:any)=>{
+    if(!draft?.selected?.build)return;
+    const build=draft.selected.build;
+    const plan=build.plan.map((p:any,i:number)=>i===idx?{...p,...patch}:p);
+    const selected={...draft.selected,build:{...build,plan}};
+    await update(draft.id,{selected});
+    setDraft((d:any)=>({...d,selected}));
+  };
+
+  const regenPlanDay=async(idx:number,hint:string)=>{
+    if(!draft?.selected?.build)return;
+    setLessonBusy(true);
+    try{
+      const fresh=await regenCommDay(answers,draft.selected,draft.selected.build.plan,idx,hint);
+      await savePlanDay(idx,fresh);
+    }catch(e){alert("Не удалось перегенерировать публикацию. Попробуй ещё раз.");}
+    setLessonBusy(false);
+  };
+
+  const buildProgram=async(kind:string,months:number)=>{
+    if(!draft)return;
+    setCourseBusy(true);
+    try{
+      const build=await generateProgram(answers,draft.selected,months,kind);
+      const selected={...draft.selected,build};
+      await update(draft.id,{selected});
+      setDraft((d:any)=>({...d,selected}));
+    }catch(e){alert("Не удалось сгенерировать программу. Проверь API-ключ и попробуй ещё раз.");}
+    setCourseBusy(false);
+  };
+
+  const saveMonth=async(idx:number,patch:any)=>{
+    if(!draft?.selected?.build)return;
+    const build=draft.selected.build;
+    const program=build.program.map((m:any,i:number)=>i===idx?{...m,...patch}:m);
+    const selected={...draft.selected,build:{...build,program}};
+    await update(draft.id,{selected});
+    setDraft((d:any)=>({...d,selected}));
+  };
+
+  const regenMonth=async(idx:number,hint:string)=>{
+    if(!draft?.selected?.build)return;
+    setLessonBusy(true);
+    try{
+      const fresh=await regenProgMonth(answers,draft.selected,draft.selected.build.program,idx,hint,draft.selected.build.type);
+      await saveMonth(idx,fresh);
+    }catch(e){alert("Не удалось перегенерировать месяц. Попробуй ещё раз.");}
     setLessonBusy(false);
   };
 
@@ -7475,10 +7805,19 @@ function ProductAIPage({userId}:{userId:string}){
   if(view==="building"){
     const v=draft?.selected;
     const isCourse=/курс/i.test(v?.format||"");
+    const isMM=/мастермайнд/i.test(v?.format||"");
     const course=(v&&v.build&&v.build.type==="course")?v.build:null;
+    const mm=(v&&v.build&&v.build.type==="mastermind")?v.build:null;
+    const isCommunity=/сообществ/i.test(v?.format||"");
+    const comm=(v&&v.build&&v.build.type==="community")?v.build:null;
+    const isCoaching=/коучинг/i.test(v?.format||"");
+    const isConsulting=/консалтинг/i.test(v?.format||"");
+    const isProgram=isCoaching||isConsulting;
+    const kind=isCoaching?"coaching":"consulting";
+    const prog=(v&&v.build&&(v.build.type==="coaching"||v.build.type==="consulting"))?v.build:null;
 
     const Back=(
-      <button onClick={()=>setView("list")} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",color:C.t2,fontSize:13,fontWeight:500,marginBottom:24,padding:0}}>
+      <button onClick={()=>{setEditIdx(null);setEditSection(null);setView("list");}} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",color:C.t2,fontSize:13,fontWeight:500,marginBottom:24,padding:0}}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         Мои продукты
       </button>
@@ -7491,8 +7830,8 @@ function ProductAIPage({userId}:{userId:string}){
       </div>
     ):null;
 
-    // Не-курсовые типы — панель в разработке
-    if(!isCourse)return(
+    // Типы без конструктора — заглушка
+    if(!isCourse&&!isMM&&!isCommunity&&!isProgram)return(
       <div style={{maxWidth:720,margin:"0 auto",padding:"36px 24px"}}>
         {Back}{ProductHead}
         <div style={{background:cardBg,border:`1px dashed ${bd}`,borderRadius:18,padding:"48px 24px",textAlign:"center" as const}}>
@@ -7500,12 +7839,12 @@ function ProductAIPage({userId}:{userId:string}){
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7.4L12 17l-6.3 4.4L8 14 2 9.4h7.6z"/></svg>
           </div>
           <div style={{fontSize:17,fontWeight:700,color:C.t1,marginBottom:6}}>Сборка для этого типа — скоро</div>
-          <div style={{fontSize:14,color:C.t2,lineHeight:1.6,maxWidth:400,margin:"0 auto"}}>Сейчас готова сборка онлайн-курсов. Конструкторы для закрытого сообщества, коучинга, консалтинга и мастермайнда добавим следующими. Выбор уже сохранён на сервере.</div>
+          <div style={{fontSize:14,color:C.t2,lineHeight:1.6,maxWidth:400,margin:"0 auto"}}>Сейчас готовы конструкторы онлайн-курса, мастермайнда и закрытого сообщества. Коучинг и консалтинг добавим следующими. Выбор уже сохранён на сервере.</div>
         </div>
       </div>
     );
 
-    // Курс без программы — выбор количества уроков
+    // ===== ОНЛАЙН-КУРС =====
     if(isCourse&&!course)return(
       <div style={{maxWidth:640,margin:"0 auto",padding:"36px 24px"}}>
         {Back}{ProductHead}
@@ -7513,78 +7852,390 @@ function ProductAIPage({userId}:{userId:string}){
           <div style={{fontSize:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em",marginBottom:6}}>Сколько уроков в курсе?</div>
           <div style={{fontSize:13,color:C.t2,lineHeight:1.6,marginBottom:24}}>Выберите количество уроков (минимум 5). AI составит программу по вашим ответам и теме продукта — вы сможете отредактировать каждый урок.</div>
           <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:24,marginBottom:28}}>
-            <button onClick={()=>setLessonCount(c=>Math.max(5,c-1))}
-              style={{width:48,height:48,borderRadius:14,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:24,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
+            <button onClick={()=>setLessonCount(c=>Math.max(5,c-1))} style={{width:48,height:48,borderRadius:14,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:24,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
             <div style={{minWidth:80,textAlign:"center" as const}}>
               <div style={{fontSize:44,fontWeight:800,color:C.t1,lineHeight:1}}>{lessonCount}</div>
               <div style={{fontSize:12,color:C.t2,marginTop:4}}>уроков</div>
             </div>
-            <button onClick={()=>setLessonCount(c=>Math.min(30,c+1))}
-              style={{width:48,height:48,borderRadius:14,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:24,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+            <button onClick={()=>setLessonCount(c=>Math.min(30,c+1))} style={{width:48,height:48,borderRadius:14,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:24,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
           </div>
           <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:28,flexWrap:"wrap" as const}}>
             {[5,8,10,12].map(n=>(
-              <button key={n} onClick={()=>setLessonCount(n)}
-                style={{padding:"7px 16px",borderRadius:20,border:`1px solid ${lessonCount===n?"transparent":bd}`,background:lessonCount===n?"rgba(16,185,129,0.14)":"transparent",color:lessonCount===n?"#10B981":C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>{n}</button>
+              <button key={n} onClick={()=>setLessonCount(n)} style={{padding:"7px 16px",borderRadius:20,border:`1px solid ${lessonCount===n?"transparent":bd}`,background:lessonCount===n?"rgba(16,185,129,0.14)":"transparent",color:lessonCount===n?"#10B981":C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>{n}</button>
             ))}
           </div>
-          <button onClick={()=>buildCourse(lessonCount)} disabled={courseBusy}
-            style={{width:"100%",padding:"15px",borderRadius:14,border:"none",background:"linear-gradient(135deg,#10B981,#059669)",color:"#fff",fontSize:15,fontWeight:700,cursor:courseBusy?"default":"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 4px 20px rgba(16,185,129,0.3)",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
-            {courseBusy
-              ?<><div style={{width:18,height:18,border:"2.5px solid rgba(255,255,255,0.35)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Составляю программу…</>
-              :"Сгенерировать программу курса"}
+          <button onClick={()=>buildCourse(lessonCount)} disabled={courseBusy} style={{width:"100%",padding:"15px",borderRadius:14,border:"none",background:"linear-gradient(135deg,#10B981,#059669)",color:"#fff",fontSize:15,fontWeight:700,cursor:courseBusy?"default":"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 4px 20px rgba(16,185,129,0.3)",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+            {courseBusy?<><div style={{width:18,height:18,border:"2.5px solid rgba(255,255,255,0.35)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Составляю программу…</>:"Сгенерировать программу курса"}
           </button>
         </div>
       </div>
     );
 
-    // Курс с программой — карточки уроков + редактор
-    const lessons:any[]=course.lessons||[];
-    const editing=editIdx!=null?lessons[editIdx]:null;
-    return(
-      <div style={{maxWidth:840,margin:"0 auto",padding:"36px 24px"}}>
-        {Back}
-        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16,marginBottom:8,flexWrap:"wrap" as const}}>
-          <div>
-            <span style={{fontSize:11,fontWeight:700,color:"#10B981",background:"rgba(16,185,129,0.12)",padding:"4px 10px",borderRadius:20}}>{v.format}</span>
-            <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.025em",margin:"12px 0 4px"}}>{v.title}</div>
-            <div style={{fontSize:14,color:C.t2}}>Программа курса · {lessons.length} уроков</div>
-          </div>
-          <button onClick={()=>{if(confirm("Пересобрать программу заново? Текущие уроки будут заменены."))setDraft((d:any)=>({...d,selected:{...d.selected,build:null}}));}}
-            style={{display:"flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:11,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif",flexShrink:0}}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-            Пересобрать
-          </button>
-        </div>
-
-        <div style={{display:"flex",flexDirection:"column",gap:12,marginTop:24}}>
-          {lessons.map((l,i)=>(
-            <div key={l.id||i} onClick={()=>setEditIdx(i)}
-              style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:16,padding:18,cursor:"pointer",display:"flex",gap:16,alignItems:"flex-start",transition:"all 0.15s"}}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(16,185,129,0.35)";}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=bd;}}>
-              <div style={{width:36,height:36,borderRadius:11,background:dark?"rgba(16,185,129,0.12)":"#F0FDF4",color:"#10B981",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:800,flexShrink:0}}>{i+1}</div>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:16,fontWeight:700,color:C.t1,lineHeight:1.35,marginBottom:5}}>{l.title}</div>
-                <div style={{fontSize:13,color:C.t2,lineHeight:1.55}}>{l.description}</div>
-              </div>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.8" style={{flexShrink:0,marginTop:8}}><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+    if(isCourse&&course){
+      const lessons:any[]=course.lessons||[];
+      const editing=editIdx!=null?lessons[editIdx]:null;
+      return(
+        <div style={{maxWidth:840,margin:"0 auto",padding:"36px 24px"}}>
+          {Back}
+          <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16,marginBottom:8,flexWrap:"wrap" as const}}>
+            <div>
+              <span style={{fontSize:11,fontWeight:700,color:"#10B981",background:"rgba(16,185,129,0.12)",padding:"4px 10px",borderRadius:20}}>{v.format}</span>
+              <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.025em",margin:"12px 0 4px"}}>{v.title}</div>
+              <div style={{fontSize:14,color:C.t2}}>Программа курса · {lessons.length} уроков</div>
             </div>
-          ))}
+            <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
+              <button onClick={()=>exportProductPDF(v)} style={{display:"flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:11,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                Скачать PDF
+              </button>
+              <button onClick={()=>{if(confirm("Пересобрать программу заново? Текущие уроки будут заменены."))setDraft((d:any)=>({...d,selected:{...d.selected,build:null}}));}} style={{display:"flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:11,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif",}}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              Пересобрать
+            </button>
+            </div>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:12,marginTop:24}}>
+            {lessons.map((l,i)=>(
+              <div key={l.id||i} onClick={()=>setEditIdx(i)} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:16,padding:18,cursor:"pointer",display:"flex",gap:16,alignItems:"flex-start",transition:"all 0.15s"}}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(16,185,129,0.35)";}}
+                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=bd;}}>
+                <div style={{width:36,height:36,borderRadius:11,background:dark?"rgba(16,185,129,0.12)":"#F0FDF4",color:"#10B981",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:800,flexShrink:0}}>{i+1}</div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:16,fontWeight:700,color:C.t1,lineHeight:1.35,marginBottom:5}}>{l.title}</div>
+                  <div style={{fontSize:13,color:C.t2,lineHeight:1.55}}>{l.description}</div>
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.8" style={{flexShrink:0,marginTop:8}}><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </div>
+            ))}
+          </div>
+          {editing&&<CourseLessonEditor lesson={editing} index={editIdx as number} total={lessons.length} unitLabel="Урок" dark={dark} busy={lessonBusy}
+            onClose={()=>setEditIdx(null)} onSave={(p)=>{saveLesson(editIdx as number,p);setEditIdx(null);}} onRegen={(hint)=>regenLesson(editIdx as number,hint)}/>}
         </div>
+      );
+    }
 
-        {editing&&<CourseLessonEditor
-          lesson={editing}
-          index={editIdx as number}
-          total={lessons.length}
-          dark={dark}
-          busy={lessonBusy}
-          onClose={()=>setEditIdx(null)}
-          onSave={(p)=>{saveLesson(editIdx as number,p);setEditIdx(null);}}
-          onRegen={(hint)=>regenLesson(editIdx as number,hint)}
-        />}
+    // ===== МАСТЕРМАЙНД =====
+    if(isMM&&!mm)return(
+      <div style={{maxWidth:640,margin:"0 auto",padding:"36px 24px"}}>
+        {Back}{ProductHead}
+        <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:18,padding:28}}>
+          <div style={{fontSize:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em",marginBottom:6}}>Сколько встреч в мастермайнде?</div>
+          <div style={{fontSize:13,color:C.t2,lineHeight:1.6,marginBottom:24}}>Мастермайнд — офлайн-формат. Выберите количество живых встреч (минимум 3). AI продумает концепцию, локацию, организацию и программу встреч — всё можно отредактировать.</div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:24,marginBottom:28}}>
+            <button onClick={()=>setMmCount(c=>Math.max(3,c-1))} style={{width:48,height:48,borderRadius:14,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:24,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
+            <div style={{minWidth:80,textAlign:"center" as const}}>
+              <div style={{fontSize:44,fontWeight:800,color:C.t1,lineHeight:1}}>{mmCount}</div>
+              <div style={{fontSize:12,color:C.t2,marginTop:4}}>встреч</div>
+            </div>
+            <button onClick={()=>setMmCount(c=>Math.min(24,c+1))} style={{width:48,height:48,borderRadius:14,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:24,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+          </div>
+          <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:28,flexWrap:"wrap" as const}}>
+            {[3,4,6,8].map(n=>(
+              <button key={n} onClick={()=>setMmCount(n)} style={{padding:"7px 16px",borderRadius:20,border:`1px solid ${mmCount===n?"transparent":bd}`,background:mmCount===n?"rgba(16,185,129,0.14)":"transparent",color:mmCount===n?"#10B981":C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>{n}</button>
+            ))}
+          </div>
+          <button onClick={()=>buildMastermind(mmCount)} disabled={courseBusy} style={{width:"100%",padding:"15px",borderRadius:14,border:"none",background:"linear-gradient(135deg,#10B981,#059669)",color:"#fff",fontSize:15,fontWeight:700,cursor:courseBusy?"default":"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 4px 20px rgba(16,185,129,0.3)",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+            {courseBusy?<><div style={{width:18,height:18,border:"2.5px solid rgba(255,255,255,0.35)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Проектирую мастермайнд…</>:"Сгенерировать мастермайнд"}
+          </button>
+        </div>
       </div>
     );
+
+    if(isMM&&mm){
+      const sessions:any[]=mm.sessions||[];
+      const editing=editIdx!=null?sessions[editIdx]:null;
+      const SECTIONS=[
+        {key:"concept",label:"Концепция",ic:"M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"},
+        {key:"location",label:"Локация и место встречи",ic:"M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z"},
+        {key:"organization",label:"Организация",ic:"M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"},
+      ];
+      const secTitle=editSection?(SECTIONS.find(s=>s.key===editSection)?.label||""):"";
+      return(
+        <div style={{maxWidth:840,margin:"0 auto",padding:"36px 24px"}}>
+          {Back}
+          <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16,marginBottom:8,flexWrap:"wrap" as const}}>
+            <div>
+              <span style={{fontSize:11,fontWeight:700,color:"#10B981",background:"rgba(16,185,129,0.12)",padding:"4px 10px",borderRadius:20}}>{v.format}</span>
+              <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.025em",margin:"12px 0 4px"}}>{v.title}</div>
+              <div style={{fontSize:14,color:C.t2}}>Офлайн-мастермайнд · {sessions.length} встреч</div>
+            </div>
+            <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
+              <button onClick={()=>exportProductPDF(v)} style={{display:"flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:11,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                Скачать PDF
+              </button>
+              <button onClick={()=>{if(confirm("Пересобрать мастермайнд заново? Текущий план будет заменён."))setDraft((d:any)=>({...d,selected:{...d.selected,build:null}}));}} style={{display:"flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:11,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif",}}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              Пересобрать
+            </button>
+            </div>
+          </div>
+
+          {/* Информационные разделы */}
+          <div style={{display:"flex",flexDirection:"column",gap:14,marginTop:24}}>
+            {SECTIONS.map(sec=>(
+              <div key={sec.key} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:16,padding:20}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <div style={{width:32,height:32,borderRadius:9,background:dark?"rgba(16,185,129,0.12)":"#F0FDF4",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="1.7"><path d={sec.ic}/></svg>
+                    </div>
+                    <div style={{fontSize:15,fontWeight:700,color:C.t1}}>{sec.label}</div>
+                  </div>
+                  <button onClick={()=>setEditSection(sec.key)} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Изменить
+                  </button>
+                </div>
+                <div style={{fontSize:14,color:C.t1,lineHeight:1.7,opacity:0.9,whiteSpace:"pre-wrap" as const}}>{mm[sec.key]||"—"}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Программа встреч */}
+          <div style={{fontSize:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em",margin:"28px 0 4px"}}>Программа встреч</div>
+          <div style={{fontSize:13,color:C.t2,marginBottom:16}}>Нажмите на встречу, чтобы изменить повестку или перегенерировать её.</div>
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            {sessions.map((s,i)=>(
+              <div key={s.id||i} onClick={()=>setEditIdx(i)} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:16,padding:18,cursor:"pointer",display:"flex",gap:16,alignItems:"flex-start",transition:"all 0.15s"}}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(16,185,129,0.35)";}}
+                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=bd;}}>
+                <div style={{width:36,height:36,borderRadius:11,background:dark?"rgba(16,185,129,0.12)":"#F0FDF4",color:"#10B981",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:800,flexShrink:0}}>{i+1}</div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:16,fontWeight:700,color:C.t1,lineHeight:1.35,marginBottom:5}}>{s.title}</div>
+                  <div style={{fontSize:13,color:C.t2,lineHeight:1.55}}>{s.description}</div>
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.8" style={{flexShrink:0,marginTop:8}}><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </div>
+            ))}
+          </div>
+
+          {editing&&<CourseLessonEditor lesson={editing} index={editIdx as number} total={sessions.length} unitLabel="Встреча" dark={dark} busy={lessonBusy}
+            onClose={()=>setEditIdx(null)} onSave={(p)=>{saveSession(editIdx as number,p);setEditIdx(null);}} onRegen={(hint)=>regenSession(editIdx as number,hint)}/>}
+          {editSection&&<SectionEditor title={secTitle} text={mm[editSection]||""} dark={dark} busy={sectionBusy}
+            onClose={()=>setEditSection(null)} onSave={(t)=>{saveSection(editSection,t);setEditSection(null);}} onRegen={(hint)=>regenSection(editSection,hint)}/>}
+        </div>
+      );
+    }
+
+    // ===== ЗАКРЫТОЕ СООБЩЕСТВО =====
+    if(isCommunity&&!comm)return(
+      <div style={{maxWidth:640,margin:"0 auto",padding:"36px 24px"}}>
+        {Back}{ProductHead}
+        <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:18,padding:28}}>
+          <div style={{fontSize:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em",marginBottom:6}}>На сколько дней контент-план?</div>
+          <div style={{fontSize:13,color:C.t2,lineHeight:1.6,marginBottom:24}}>AI оформит закрытое сообщество полностью: identity, структуру, стартовый набор контента и систему удержания — плюс контент-план на выбранное число дней. Всё можно отредактировать.</div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:24,marginBottom:28}}>
+            <button onClick={()=>setCommDays(c=>Math.max(7,c-1))} style={{width:48,height:48,borderRadius:14,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:24,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
+            <div style={{minWidth:80,textAlign:"center" as const}}>
+              <div style={{fontSize:44,fontWeight:800,color:C.t1,lineHeight:1}}>{commDays}</div>
+              <div style={{fontSize:12,color:C.t2,marginTop:4}}>дней</div>
+            </div>
+            <button onClick={()=>setCommDays(c=>Math.min(30,c+1))} style={{width:48,height:48,borderRadius:14,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:24,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+          </div>
+          <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:28,flexWrap:"wrap" as const}}>
+            {[7,14,30].map(n=>(
+              <button key={n} onClick={()=>setCommDays(n)} style={{padding:"7px 16px",borderRadius:20,border:`1px solid ${commDays===n?"transparent":bd}`,background:commDays===n?"rgba(16,185,129,0.14)":"transparent",color:commDays===n?"#10B981":C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>{n}</button>
+            ))}
+          </div>
+          <button onClick={()=>buildCommunity(commDays)} disabled={courseBusy} style={{width:"100%",padding:"15px",borderRadius:14,border:"none",background:"linear-gradient(135deg,#10B981,#059669)",color:"#fff",fontSize:15,fontWeight:700,cursor:courseBusy?"default":"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 4px 20px rgba(16,185,129,0.3)",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+            {courseBusy?<><div style={{width:18,height:18,border:"2.5px solid rgba(255,255,255,0.35)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Оформляю сообщество…</>:"Сгенерировать сообщество"}
+          </button>
+        </div>
+      </div>
+    );
+
+    if(isCommunity&&comm){
+      const plan:any[]=comm.plan||[];
+      const editing=editIdx!=null?plan[editIdx]:null;
+      const CSECTIONS=[
+        {key:"identity",label:"Identity и позиционирование",ic:"M12 2l7 4v6c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-4z"},
+        {key:"structure",label:"Структура и организация",ic:"M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"},
+        {key:"starter",label:"Стартовый набор контента",ic:"M12 2l2.4 7.4H22l-6 4.6 2.3 7.4L12 17l-6.3 4.4L8 14 2 9.4h7.6z"},
+        {key:"retention",label:"Как напоминать о себе",ic:"M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"},
+      ];
+      const csecTitle=editSection?(CSECTIONS.find(s=>s.key===editSection)?.label||""):"";
+      return(
+        <div style={{maxWidth:840,margin:"0 auto",padding:"36px 24px"}}>
+          {Back}
+          <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16,marginBottom:8,flexWrap:"wrap" as const}}>
+            <div>
+              <span style={{fontSize:11,fontWeight:700,color:"#10B981",background:"rgba(16,185,129,0.12)",padding:"4px 10px",borderRadius:20}}>{v.format}</span>
+              <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.025em",margin:"12px 0 4px"}}>{v.title}</div>
+              <div style={{fontSize:14,color:C.t2}}>Закрытое сообщество · контент-план на {plan.length} дней</div>
+            </div>
+            <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
+              <button onClick={()=>exportProductPDF(v)} style={{display:"flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:11,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                Скачать PDF
+              </button>
+              <button onClick={()=>{if(confirm("Пересобрать сообщество заново? Текущее оформление и план будут заменены."))setDraft((d:any)=>({...d,selected:{...d.selected,build:null}}));}} style={{display:"flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:11,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif",}}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              Пересобрать
+            </button>
+            </div>
+          </div>
+
+          {/* Оформление сообщества */}
+          <div style={{display:"flex",flexDirection:"column",gap:14,marginTop:24}}>
+            {CSECTIONS.map(sec=>(
+              <div key={sec.key} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:16,padding:20}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <div style={{width:32,height:32,borderRadius:9,background:dark?"rgba(16,185,129,0.12)":"#F0FDF4",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="1.7"><path d={sec.ic}/></svg>
+                    </div>
+                    <div style={{fontSize:15,fontWeight:700,color:C.t1}}>{sec.label}</div>
+                  </div>
+                  <button onClick={()=>setEditSection(sec.key)} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Изменить
+                  </button>
+                </div>
+                <div style={{fontSize:14,color:C.t1,lineHeight:1.7,opacity:0.9,whiteSpace:"pre-wrap" as const}}>{comm[sec.key]||"—"}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Контент-план */}
+          <div style={{fontSize:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em",margin:"28px 0 4px"}}>Контент-план на {plan.length} дней</div>
+          <div style={{fontSize:13,color:C.t2,marginBottom:16}}>Нажмите на день, чтобы изменить публикацию или перегенерировать её.</div>
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {plan.map((p,i)=>(
+              <div key={p.id||i} onClick={()=>setEditIdx(i)} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:14,padding:16,cursor:"pointer",display:"flex",gap:14,alignItems:"flex-start",transition:"all 0.15s"}}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(16,185,129,0.35)";}}
+                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=bd;}}>
+                <div style={{width:44,height:44,borderRadius:11,background:dark?"rgba(16,185,129,0.12)":"#F0FDF4",color:"#10B981",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0,lineHeight:1}}>
+                  <span style={{fontSize:9,fontWeight:600,opacity:0.7}}>ДЕНЬ</span>
+                  <span style={{fontSize:16,fontWeight:800}}>{p.day}</span>
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,flexWrap:"wrap" as const}}>
+                    <span style={{fontSize:10,fontWeight:700,color:C.t2,background:dark?"rgba(255,255,255,0.06)":"#F1F5F9",padding:"2px 8px",borderRadius:12,textTransform:"uppercase" as const,letterSpacing:0.3}}>{p.format}</span>
+                    <div style={{fontSize:15,fontWeight:700,color:C.t1,lineHeight:1.3}}>{p.title}</div>
+                  </div>
+                  <div style={{fontSize:13,color:C.t2,lineHeight:1.5}}>{p.description}</div>
+                </div>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.8" style={{flexShrink:0,marginTop:6}}><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </div>
+            ))}
+          </div>
+
+          {editing&&<CourseLessonEditor lesson={editing} index={editIdx as number} total={plan.length} unitLabel="День" dark={dark} busy={lessonBusy}
+            onClose={()=>setEditIdx(null)} onSave={(pt)=>{savePlanDay(editIdx as number,pt);setEditIdx(null);}} onRegen={(hint)=>regenPlanDay(editIdx as number,hint)}/>}
+          {editSection&&<SectionEditor title={csecTitle} text={comm[editSection]||""} dark={dark} busy={sectionBusy}
+            onClose={()=>setEditSection(null)} onSave={(t)=>{saveSection(editSection,t);setEditSection(null);}} onRegen={(hint)=>regenSection(editSection,hint)}/>}
+        </div>
+      );
+    }
+
+    // ===== КОУЧИНГ / КОНСАЛТИНГ =====
+    if(isProgram&&!prog)return(
+      <div style={{maxWidth:640,margin:"0 auto",padding:"36px 24px"}}>
+        {Back}{ProductHead}
+        <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:18,padding:28}}>
+          <div style={{fontSize:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em",marginBottom:6}}>Сколько месяцев длится программа?</div>
+          <div style={{fontSize:13,color:C.t2,lineHeight:1.6,marginBottom:24}}>AI продумает онбординг, приветственный подарок и содержание программы по месяцам — под вашу аудиторию и тему. Всё можно отредактировать.</div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:24,marginBottom:28}}>
+            <button onClick={()=>setMonthsCount(c=>Math.max(1,c-1))} style={{width:48,height:48,borderRadius:14,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:24,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
+            <div style={{minWidth:80,textAlign:"center" as const}}>
+              <div style={{fontSize:44,fontWeight:800,color:C.t1,lineHeight:1}}>{monthsCount}</div>
+              <div style={{fontSize:12,color:C.t2,marginTop:4}}>мес.</div>
+            </div>
+            <button onClick={()=>setMonthsCount(c=>Math.min(12,c+1))} style={{width:48,height:48,borderRadius:14,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:24,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+          </div>
+          <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:28,flexWrap:"wrap" as const}}>
+            {[3,6,9,12].map(n=>(
+              <button key={n} onClick={()=>setMonthsCount(n)} style={{padding:"7px 16px",borderRadius:20,border:`1px solid ${monthsCount===n?"transparent":bd}`,background:monthsCount===n?"rgba(16,185,129,0.14)":"transparent",color:monthsCount===n?"#10B981":C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>{n}</button>
+            ))}
+          </div>
+          <button onClick={()=>buildProgram(kind,monthsCount)} disabled={courseBusy} style={{width:"100%",padding:"15px",borderRadius:14,border:"none",background:"linear-gradient(135deg,#10B981,#059669)",color:"#fff",fontSize:15,fontWeight:700,cursor:courseBusy?"default":"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 4px 20px rgba(16,185,129,0.3)",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+            {courseBusy?<><div style={{width:18,height:18,border:"2.5px solid rgba(255,255,255,0.35)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Проектирую программу…</>:"Сгенерировать программу"}
+          </button>
+        </div>
+      </div>
+    );
+
+    if(isProgram&&prog){
+      const program:any[]=prog.program||[];
+      const editing=editIdx!=null?program[editIdx]:null;
+      const PSECTIONS=[
+        {key:"onboarding",label:"Онбординг-процесс",ic:"M22 11.08V12a10 10 0 11-5.93-9.14M22 4L12 14.01l-3-3"},
+        {key:"gift",label:"Приветственный подарок",ic:"M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"},
+      ];
+      const psecTitle=editSection?(PSECTIONS.find(s=>s.key===editSection)?.label||""):"";
+      return(
+        <div style={{maxWidth:840,margin:"0 auto",padding:"36px 24px"}}>
+          {Back}
+          <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16,marginBottom:8,flexWrap:"wrap" as const}}>
+            <div>
+              <span style={{fontSize:11,fontWeight:700,color:"#10B981",background:"rgba(16,185,129,0.12)",padding:"4px 10px",borderRadius:20}}>{v.format}</span>
+              <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.025em",margin:"12px 0 4px"}}>{v.title}</div>
+              <div style={{fontSize:14,color:C.t2}}>{v.format} · программа на {program.length} мес.</div>
+            </div>
+            <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
+              <button onClick={()=>exportProductPDF(v)} style={{display:"flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:11,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                Скачать PDF
+              </button>
+              <button onClick={()=>{if(confirm("Пересобрать программу заново? Текущее содержание будет заменено."))setDraft((d:any)=>({...d,selected:{...d.selected,build:null}}));}} style={{display:"flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:11,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                Пересобрать
+              </button>
+            </div>
+          </div>
+
+          {/* Онбординг + подарок */}
+          <div style={{display:"flex",flexDirection:"column",gap:14,marginTop:24}}>
+            {PSECTIONS.map(sec=>(
+              <div key={sec.key} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:16,padding:20}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <div style={{width:32,height:32,borderRadius:9,background:dark?"rgba(16,185,129,0.12)":"#F0FDF4",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="1.7"><path d={sec.ic}/></svg>
+                    </div>
+                    <div style={{fontSize:15,fontWeight:700,color:C.t1}}>{sec.label}</div>
+                  </div>
+                  <button onClick={()=>setEditSection(sec.key)} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Изменить
+                  </button>
+                </div>
+                <div style={{fontSize:14,color:C.t1,lineHeight:1.7,opacity:0.9,whiteSpace:"pre-wrap" as const}}>{prog[sec.key]||"—"}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Программа по месяцам */}
+          <div style={{fontSize:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em",margin:"28px 0 4px"}}>Программа по месяцам</div>
+          <div style={{fontSize:13,color:C.t2,marginBottom:16}}>Нажмите на месяц, чтобы изменить содержание или перегенерировать его.</div>
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            {program.map((m,i)=>(
+              <div key={m.id||i} onClick={()=>setEditIdx(i)} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:16,padding:18,cursor:"pointer",display:"flex",gap:16,alignItems:"flex-start",transition:"all 0.15s"}}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(16,185,129,0.35)";}}
+                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=bd;}}>
+                <div style={{width:52,height:44,borderRadius:11,background:dark?"rgba(16,185,129,0.12)":"#F0FDF4",color:"#10B981",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0,lineHeight:1}}>
+                  <span style={{fontSize:9,fontWeight:600,opacity:0.7}}>МЕСЯЦ</span>
+                  <span style={{fontSize:16,fontWeight:800}}>{m.month}</span>
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:16,fontWeight:700,color:C.t1,lineHeight:1.35,marginBottom:5}}>{m.title}</div>
+                  <div style={{fontSize:13,color:C.t2,lineHeight:1.55}}>{m.description}</div>
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.8" style={{flexShrink:0,marginTop:8}}><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </div>
+            ))}
+          </div>
+
+          {editing&&<CourseLessonEditor lesson={editing} index={editIdx as number} total={program.length} unitLabel="Месяц" dark={dark} busy={lessonBusy}
+            onClose={()=>setEditIdx(null)} onSave={(p)=>{saveMonth(editIdx as number,p);setEditIdx(null);}} onRegen={(hint)=>regenMonth(editIdx as number,hint)}/>}
+          {editSection&&<SectionEditor title={psecTitle} text={prog[editSection]||""} dark={dark} busy={sectionBusy}
+            onClose={()=>setEditSection(null)} onSave={(t)=>{saveSection(editSection,t);setEditSection(null);}} onRegen={(hint)=>regenSection(editSection,hint)}/>}
+        </div>
+      );
+    }
+
+
   }
 
 
