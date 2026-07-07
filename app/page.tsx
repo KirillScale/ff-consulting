@@ -857,7 +857,7 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
     {page==="files"&&<SafePage name="Файлы"><FilesPage userId={user.id}/></SafePage>}
     {page==="ai"&&<SafePage name="AI"><KirillAIPage userId={user.id}/></SafePage>}
     {page==="script"&&<SafePage name="Copy AI"><CopyAIPage userId={user.id}/></SafePage>}
-    {page==="product"&&<SafePage name="Product AI"><Placeholder title="Vizzy Product AI" ic="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></SafePage>}
+    {page==="product"&&<SafePage name="Product AI"><ProductAIPage userId={user.id}/></SafePage>}
     {page==="stories"&&<SafePage name="Stories AI"><Placeholder title="Vizzy Stories AI" ic="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></SafePage>}
     {page==="forms"&&<SafePage name="Forms"><FormsPage userId={user.id}/></SafePage>}
     {page==="prices"&&<SafePage name="Prices & Product"><PricesPage userId={user.id} onNav={setPage}/></SafePage>}
@@ -7103,7 +7103,552 @@ const PRODUCT_SYSTEM=`Ты — Vizzy Product AI. Твоя единственна
 
 const PRODUCT_QUESTIONS=["Что ты умеешь делать лучше всего? В какой теме ты эксперт?","Кто твоя аудитория? Кому ты хочешь помочь?","Какую главную проблему решает твой продукт?","Какой результат получит человек после прохождения?","Какой формат выбираем?","Сколько времени у аудитории на прохождение?","Какой уровень аудитории?"];
 
-function ProductAIPage(){return <AIChatBase pageId="product" system={PRODUCT_SYSTEM}/>;}
+function ProductAIChatLegacy(){return <AIChatBase pageId="product" system={PRODUCT_SYSTEM}/>;}
+
+/* ============ VIZZY PRODUCT AI ============ */
+const PA_QUESTIONS=[
+  {id:"activity",q:"Чем вы занимаетесь?",hint:"Ваша ниша, экспертиза — в чём вы сильны и чем помогаете людям"},
+  {id:"client",q:"Кто ваш клиент?",hint:"Опишите вашу аудиторию максимально конкретно: кто эти люди, чем живут"},
+  {id:"result",q:"Какой результат вы помогаете получать?",hint:"Главная трансформация, которую получает клиент после работы с вами"},
+  {id:"experience",q:"Есть ли у вас опыт работы с клиентами?",hint:"Сколько клиентов, в каком формате, как долго вы этим занимаетесь"},
+  {id:"cases",q:"Есть ли у вас кейсы?",hint:"Конкретные результаты клиентов: цифры, истории, до/после"},
+];
+
+async function generateProductVariants(answers:Record<string,string>):Promise<any[]>{
+  const ctx=PA_QUESTIONS.map(q=>`${q.q}\n${(answers[q.id]||"").trim()}`).join("\n\n");
+  const system="Ты — продуктовый архитектор и маркетолог, специалист по упаковке экспертизы в цифровые продукты. По данным эксперта ты предлагаешь форматы продукта. Возвращаешь СТРОГО валидный JSON-массив без markdown, без пояснений, без текста вокруг.";
+  const user=`Данные эксперта:\n\n${ctx}\n\nНа основе этих данных предложи РОВНО 10 вариантов цифрового продукта, которые этот эксперт мог бы создать и продавать. Каждый вариант обязан относиться строго к одному из 5 типов, и поле "format" должно быть ТОЧНО одной из этих строк: "Онлайн-курс", "Закрытое сообщество", "Коучинг", "Консалтинг", "Мастермайнд". Распредели 10 вариантов по этим типам (примерно по 2 на тип), различающихся темой, содержанием и позиционированием.\n\nВерни JSON-массив из 10 объектов строго такой структуры:\n[{"format":"формат продукта одним-двумя словами","title":"цепляющее название продукта","description":"1-2 предложения о сути продукта","why":"почему этот формат подходит именно этому эксперту","price":"ориентировочная вилка цены в рублях"}]`;
+
+  const res=await fetch("https://api.deepseek.com/v1/chat/completions",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","Authorization":`Bearer ${process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY}`},
+    body:JSON.stringify({model:"deepseek-chat",max_tokens:2600,temperature:0.8,messages:[{role:"system",content:system},{role:"user",content:user}]}),
+  });
+  const data=await res.json();
+  let raw=data.choices?.[0]?.message?.content||"";
+  raw=raw.replace(/```json/gi,"").replace(/```/g,"").trim();
+  const start=raw.indexOf("["),end=raw.lastIndexOf("]");
+  if(start>=0&&end>start)raw=raw.slice(start,end+1);
+  const arr=JSON.parse(raw);
+  if(!Array.isArray(arr))throw new Error("bad shape");
+  return arr.slice(0,10);
+}
+
+function paParseJSON(raw:string):any{
+  let s=(raw||"").replace(/```json/gi,"").replace(/```/g,"").trim();
+  const a=s.indexOf("["),b=s.lastIndexOf("]");
+  const c=s.indexOf("{"),d=s.lastIndexOf("}");
+  if(a>=0&&b>a&&(c<0||a<c))s=s.slice(a,b+1);
+  else if(c>=0&&d>c)s=s.slice(c,d+1);
+  return JSON.parse(s);
+}
+
+function paContext(answers:Record<string,string>){
+  return PA_QUESTIONS.map(q=>`${q.q}\n${(answers[q.id]||"").trim()}`).join("\n\n");
+}
+
+async function paChat(system:string,user:string,maxTokens=4000,temperature=0.7){
+  const res=await fetch("https://api.deepseek.com/v1/chat/completions",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","Authorization":`Bearer ${process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY}`},
+    body:JSON.stringify({model:"deepseek-chat",max_tokens:maxTokens,temperature,messages:[{role:"system",content:system},{role:"user",content:user}]}),
+  });
+  const data=await res.json();
+  return data.choices?.[0]?.message?.content||"";
+}
+
+async function generateCourseLessons(answers:Record<string,string>,product:any,count:number):Promise<any[]>{
+  const system="Ты — методолог и архитектор образовательных продуктов с опытом создания курсов, которые доводят учеников до результата. Проектируешь профессиональную, логичную программу. Возвращаешь строго валидный JSON без markdown и без пояснений.";
+  const user=`Данные эксперта:\n\n${paContext(answers)}\n\nВыбранный продукт:\nФормат: ${product.format}\nНазвание: ${product.title}\nОписание: ${product.description||""}\n\nСоставь программу онлайн-курса из РОВНО ${count} уроков. Уроки идут логично от основ к финальному результату, без воды, с опорой на целевую аудиторию, её боли и желаемый результат.\n\nВерни JSON-массив из ${count} объектов строго такой структуры:\n[{"title":"название урока","description":"одно ёмкое предложение о содержании урока","scenario":"подробный план урока — 5-8 коротких пунктов, каждый с новой строки: что разбирается, какая практика, какой результат получает ученик"}]`;
+  const arr=paParseJSON(await paChat(system,user,4000,0.7));
+  if(!Array.isArray(arr))throw new Error("bad shape");
+  return arr.slice(0,count).map((l:any,i:number)=>({
+    id:"l"+i+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+    title:l.title||`Урок ${i+1}`,
+    description:l.description||"",
+    scenario:l.scenario||"",
+  }));
+}
+
+async function regenCourseLesson(answers:Record<string,string>,product:any,lessons:any[],idx:number,hint:string):Promise<any>{
+  const titles=lessons.map((l,i)=>`${i+1}. ${l.title}`).join("\n");
+  const system="Ты — методолог образовательных продуктов. Возвращаешь строго валидный JSON без markdown и пояснений.";
+  const user=`Данные эксперта:\n\n${paContext(answers)}\n\nПродукт: ${product.title} (${product.format})\n\nТекущая программа курса:\n${titles}\n\nПерегенерируй урок №${idx+1}.${hint?(" Пожелание автора: "+hint+".") :""} Он не должен дублировать другие уроки и должен вписываться в общую логику программы.\n\nВерни ОДИН JSON-объект строго такой структуры:\n{"title":"название урока","description":"одно ёмкое предложение","scenario":"подробный план урока: 5-8 коротких пунктов, каждый с новой строки"}`;
+  const obj=paParseJSON(await paChat(system,user,1400,0.8));
+  return {
+    id:lessons[idx].id,
+    title:obj.title||lessons[idx].title,
+    description:obj.description||lessons[idx].description,
+    scenario:obj.scenario||lessons[idx].scenario,
+  };
+}
+
+function CourseLessonEditor({lesson,index,total,dark,busy,onSave,onRegen,onClose}:{lesson:any,index:number,total:number,dark:boolean,busy:boolean,onSave:(p:any)=>void,onRegen:(hint:string)=>void,onClose:()=>void}){
+  const[title,setTitle]=useState(lesson.title||"");
+  const[description,setDescription]=useState(lesson.description||"");
+  const[scenario,setScenario]=useState(lesson.scenario||"");
+  const[hint,setHint]=useState("");
+  useEffect(()=>{setTitle(lesson.title||"");setDescription(lesson.description||"");setScenario(lesson.scenario||"");},[lesson]);
+  const bd=C.bd;
+  const inputBg=dark?"#1C1C1C":"#F8FAFC";
+  const lbl:React.CSSProperties={fontSize:11,fontWeight:700,color:C.t2,letterSpacing:0.3,textTransform:"uppercase" as const,marginBottom:8,display:"block"};
+  const fld:React.CSSProperties={width:"100%",padding:"12px 14px",border:`1px solid ${bd}`,borderRadius:12,fontSize:14,background:inputBg,color:C.t1,outline:"none",lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const};
+  return(
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(4px)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:660,maxHeight:"88vh",overflowY:"auto",background:dark?"#161616":"#fff",border:`1px solid ${bd}`,borderRadius:20,padding:26,boxShadow:"0 24px 60px rgba(0,0,0,0.5)"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:22}}>
+          <div style={{display:"flex",alignItems:"center",gap:12}}>
+            <div style={{width:34,height:34,borderRadius:10,background:"linear-gradient(135deg,#10B981,#059669)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:14,fontWeight:800}}>{index+1}</div>
+            <div style={{fontSize:12,fontWeight:600,color:C.t2}}>Урок {index+1} из {total}</div>
+          </div>
+          <button onClick={onClose} style={{width:32,height:32,borderRadius:9,border:"none",background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <label style={lbl}>Название урока</label>
+        <input value={title} onChange={e=>setTitle(e.target.value)} style={{...fld,marginBottom:18,fontWeight:600}}/>
+
+        <label style={lbl}>Краткое описание</label>
+        <textarea value={description} onChange={e=>setDescription(e.target.value)} style={{...fld,minHeight:64,resize:"vertical" as const,marginBottom:18}}/>
+
+        <label style={lbl}>Сценарий урока</label>
+        <textarea value={scenario} onChange={e=>setScenario(e.target.value)} style={{...fld,minHeight:200,resize:"vertical" as const,marginBottom:20}}/>
+
+        <div style={{background:dark?"rgba(255,255,255,0.03)":"#F8FAFC",border:`1px solid ${bd}`,borderRadius:14,padding:16,marginBottom:22}}>
+          <label style={lbl}>Перегенерировать урок</label>
+          <div style={{display:"flex",gap:10,alignItems:"stretch"}}>
+            <input value={hint} onChange={e=>setHint(e.target.value)} placeholder="Что изменить? (необязательно)" style={{...fld,flex:1}}/>
+            <button onClick={()=>onRegen(hint)} disabled={busy}
+              style={{padding:"0 18px",borderRadius:12,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:13,fontWeight:600,cursor:busy?"default":"pointer",display:"flex",alignItems:"center",gap:8,whiteSpace:"nowrap",fontFamily:"'Inter',sans-serif"}}>
+              {busy
+                ?<><div style={{width:14,height:14,border:"2px solid rgba(150,150,150,0.3)",borderTopColor:C.t1,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Генерирую</>
+                :<><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Перегенерировать</>}
+            </button>
+          </div>
+        </div>
+
+        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+          <button onClick={onClose} style={{padding:"11px 20px",borderRadius:11,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Отмена</button>
+          <button onClick={()=>onSave({title,description,scenario})} disabled={busy}
+            style={{padding:"11px 24px",borderRadius:11,border:"none",background:"linear-gradient(135deg,#10B981,#059669)",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 4px 16px rgba(16,185,129,0.3)"}}>Сохранить</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+function ProductAIPage({userId}:{userId:string}){
+  const{dark}=useTheme();
+  const{data:products,loading,add,update,remove}=useTable("products",userId);
+
+  const[view,setView]=useState<"list"|"quiz"|"generating"|"variants"|"building">("list");
+  const[draft,setDraft]=useState<any>(null);
+  const[answers,setAnswers]=useState<Record<string,string>>({});
+  const[files,setFiles]=useState<Record<string,string>>({});
+  const[genError,setGenError]=useState<string|null>(null);
+  const[busy,setBusy]=useState(false);
+  const[lessonCount,setLessonCount]=useState(8);
+  const[courseBusy,setCourseBusy]=useState(false);
+  const[editIdx,setEditIdx]=useState<number|null>(null);
+  const[lessonBusy,setLessonBusy]=useState(false);
+
+  const bd=C.bd;
+  const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
+  const inputBg=dark?"#1C1C1C":"#F8FAFC";
+  const GRAD="linear-gradient(135deg,#10B981,#059669)";
+
+  const allAnswered=PA_QUESTIONS.every(q=>(answers[q.id]||"").trim().length>0);
+
+  const deriveName=(a:Record<string,string>)=>{
+    const s=(a.activity||"").trim();
+    return s?(s.length>44?s.slice(0,44)+"…":s):"Новый продукт";
+  };
+
+  const statusMeta=(s:string)=>{
+    if(s==="variants")return{label:"Готовы варианты",color:"#F59E0B"};
+    if(s==="building")return{label:"В сборке",color:"#10B981"};
+    return{label:"Черновик",color:C.t2};
+  };
+
+  const openCreate=async()=>{
+    setBusy(true);
+    const row=await add({name:"Новый продукт",status:"quiz",answers:{},variants:[],selected:null});
+    setBusy(false);
+    if(!row){alert("Не удалось создать продукт. Проверь, что в базе создана таблица products (см. инструкцию).");return;}
+    setDraft(row);setAnswers({});setFiles({});setGenError(null);setView("quiz");
+  };
+
+  const openExisting=(row:any)=>{
+    setDraft(row);
+    setAnswers(row.answers||{});
+    setFiles({});
+    setGenError(null);
+    setView(row.status==="variants"?"variants":row.status==="building"?"building":"quiz");
+  };
+
+  const attachFile=(qid:string,file:File)=>{
+    const ext=(file.name.split(".").pop()||"").toLowerCase();
+    const okText=["txt","md","markdown","csv","json","text","rtf","log"];
+    if(file.type.startsWith("text/")||okText.includes(ext)){
+      const r=new FileReader();
+      r.onload=()=>{
+        const text=String(r.result||"").trim();
+        setAnswers(p=>({...p,[qid]:text}));
+        setFiles(p=>({...p,[qid]:file.name}));
+      };
+      r.readAsText(file);
+    }else{
+      alert("Пока читаются только текстовые файлы (.txt, .md, .csv, .json). Для PDF/Word вставь текст вручную — поддержку PDF добавим позже.");
+    }
+  };
+
+  const generate=async()=>{
+    if(!allAnswered||!draft)return;
+    setGenError(null);
+    const name=deriveName(answers);
+    await update(draft.id,{answers,name,status:"quiz"});
+    setDraft((d:any)=>({...d,answers,name}));
+    setView("generating");
+    try{
+      const variants=await generateProductVariants(answers);
+      await update(draft.id,{variants,status:"variants"});
+      setDraft((d:any)=>({...d,variants,status:"variants"}));
+      setView("variants");
+    }catch(e){
+      setGenError("Не удалось сгенерировать варианты. Проверь API-ключ и попробуй ещё раз.");
+      setView("variants");
+    }
+  };
+
+  const selectVariant=async(v:any)=>{
+    if(!draft)return;
+    await update(draft.id,{selected:v,status:"building",name:v.title||draft.name});
+    setDraft((d:any)=>({...d,selected:v,status:"building",name:v.title||d.name}));
+    setView("building");
+  };
+
+  const buildCourse=async(count:number)=>{
+    if(!draft)return;
+    setCourseBusy(true);
+    try{
+      const lessons=await generateCourseLessons(answers,draft.selected,count);
+      const selected={...draft.selected,build:{type:"course",lessonCount:count,lessons}};
+      await update(draft.id,{selected});
+      setDraft((d:any)=>({...d,selected}));
+    }catch(e){alert("Не удалось сгенерировать программу курса. Проверь API-ключ и попробуй ещё раз.");}
+    setCourseBusy(false);
+  };
+
+  const saveLesson=async(idx:number,patch:any)=>{
+    if(!draft?.selected?.build)return;
+    const build=draft.selected.build;
+    const lessons=build.lessons.map((l:any,i:number)=>i===idx?{...l,...patch}:l);
+    const selected={...draft.selected,build:{...build,lessons}};
+    await update(draft.id,{selected});
+    setDraft((d:any)=>({...d,selected}));
+  };
+
+  const regenLesson=async(idx:number,hint:string)=>{
+    if(!draft?.selected?.build)return;
+    setLessonBusy(true);
+    try{
+      const fresh=await regenCourseLesson(answers,draft.selected,draft.selected.build.lessons,idx,hint);
+      await saveLesson(idx,fresh);
+    }catch(e){alert("Не удалось перегенерировать урок. Попробуй ещё раз.");}
+    setLessonBusy(false);
+  };
+
+  const deleteProduct=async(id:string,e:React.MouseEvent)=>{
+    e.stopPropagation();
+    if(confirm("Удалить этот продукт? Действие необратимо."))await remove(id);
+  };
+
+  /* ---------- QUIZ ---------- */
+  if(view==="quiz")return(
+    <div style={{maxWidth:720,margin:"0 auto",padding:"36px 24px"}}>
+      <button onClick={()=>setView("list")} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",color:C.t2,fontSize:13,fontWeight:500,marginBottom:24,padding:0}}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Мои продукты
+      </button>
+      <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.025em",marginBottom:6}}>Расскажите о себе</div>
+      <div style={{fontSize:14,color:C.t2,lineHeight:1.6,marginBottom:28,maxWidth:560}}>Ответьте на 5 вопросов — на их основе AI предложит 10 вариантов продукта. Отвечайте сами: текстом или прикрепите файл. Чем конкретнее ответы, тем точнее варианты.</div>
+
+      <div style={{display:"flex",flexDirection:"column",gap:16}}>
+        {PA_QUESTIONS.map((q,idx)=>{
+          const filled=(answers[q.id]||"").trim().length>0;
+          return(
+            <div key={q.id} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:16,padding:20}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
+                <div style={{width:22,height:22,borderRadius:7,background:filled?GRAD:inputBg,border:filled?"none":`1px solid ${bd}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  {filled
+                    ?<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                    :<span style={{fontSize:11,fontWeight:700,color:C.t2}}>{idx+1}</span>}
+                </div>
+                <div style={{fontSize:15,fontWeight:700,color:C.t1}}>{q.q}</div>
+              </div>
+              <div style={{fontSize:12,color:C.t2,marginBottom:12,marginLeft:32,lineHeight:1.5}}>{q.hint}</div>
+              <textarea
+                value={answers[q.id]||""}
+                onChange={e=>{setAnswers(p=>({...p,[q.id]:e.target.value}));if(files[q.id])setFiles(p=>{const n={...p};delete n[q.id];return n;});}}
+                placeholder="Напишите ваш ответ..."
+                style={{width:"100%",minHeight:88,padding:"12px 14px",border:`1px solid ${bd}`,borderRadius:12,fontSize:14,background:inputBg,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginTop:10}}>
+                <label style={{display:"inline-flex",alignItems:"center",gap:6,padding:"7px 12px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:12,fontWeight:500,cursor:"pointer"}}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+                  Прикрепить файл
+                  <input type="file" style={{display:"none"}} onChange={e=>{const f=e.target.files?.[0];if(f)attachFile(q.id,f);e.currentTarget.value="";}}/>
+                </label>
+                {files[q.id]&&<span style={{fontSize:12,color:"#10B981",display:"inline-flex",alignItems:"center",gap:5}}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  {files[q.id]}
+                </span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <button onClick={generate} disabled={!allAnswered||busy}
+        style={{width:"100%",marginTop:24,padding:"15px",borderRadius:14,border:"none",background:allAnswered?GRAD:inputBg,color:allAnswered?"#fff":C.t2,fontSize:15,fontWeight:700,cursor:allAnswered?"pointer":"default",fontFamily:"'Inter',sans-serif",boxShadow:allAnswered?"0 4px 20px rgba(16,185,129,0.3)":"none",transition:"all 0.2s"}}>
+        {allAnswered?"Сгенерировать продукт":`Заполните все вопросы (${PA_QUESTIONS.filter(q=>(answers[q.id]||"").trim()).length}/5)`}
+      </button>
+    </div>
+  );
+
+  /* ---------- GENERATING ---------- */
+  if(view==="generating")return(
+    <div style={{maxWidth:720,margin:"0 auto",padding:"36px 24px",minHeight:"60vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:24}}>
+      <div style={{width:72,height:72,borderRadius:20,background:GRAD,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 8px 32px rgba(16,185,129,0.35)"}}>
+        <div style={{width:30,height:30,border:"3px solid rgba(255,255,255,0.35)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      </div>
+      <div style={{textAlign:"center" as const}}>
+        <div style={{fontSize:22,fontWeight:800,color:C.t1,letterSpacing:"-0.02em",marginBottom:8}}>Генерируем варианты продукта</div>
+        <div style={{fontSize:14,color:C.t2,lineHeight:1.6,maxWidth:400}}>AI анализирует ваши ответы и подбирает 10 форматов продукта под вашу экспертизу. Это займёт 10–20 секунд.</div>
+      </div>
+    </div>
+  );
+
+  /* ---------- VARIANTS ---------- */
+  if(view==="variants"){
+    const variants:any[]=draft?.variants||[];
+    return(
+      <div style={{maxWidth:960,margin:"0 auto",padding:"36px 24px"}}>
+        <button onClick={()=>setView("quiz")} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",color:C.t2,fontSize:13,fontWeight:500,marginBottom:24,padding:0}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Назад к ответам
+        </button>
+        <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.025em",marginBottom:6}}>Выберите продукт</div>
+        <div style={{fontSize:14,color:C.t2,lineHeight:1.6,marginBottom:28}}>AI предложил 10 вариантов на основе ваших ответов. Выберите тот, который хотите создать.</div>
+
+        {genError&&<div style={{background:dark?"rgba(239,68,68,0.1)":"#FEF2F2",border:"1px solid rgba(239,68,68,0.3)",borderRadius:14,padding:"16px 18px",marginBottom:20,display:"flex",alignItems:"center",justifyContent:"space-between",gap:16}}>
+          <span style={{fontSize:14,color:"#EF4444"}}>{genError}</span>
+          <button onClick={generate} style={{padding:"8px 16px",borderRadius:9,border:"none",background:"#EF4444",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",flexShrink:0}}>Повторить</button>
+        </div>}
+
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:16}}>
+          {variants.map((v,i)=>(
+            <div key={i} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:18,padding:22,display:"flex",flexDirection:"column",gap:12,transition:"all 0.2s"}}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(16,185,129,0.4)";(e.currentTarget as HTMLElement).style.transform="translateY(-2px)";}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=bd;(e.currentTarget as HTMLElement).style.transform="translateY(0)";}}>
+              <span style={{alignSelf:"flex-start",fontSize:11,fontWeight:700,color:"#10B981",background:"rgba(16,185,129,0.12)",padding:"4px 10px",borderRadius:20}}>{v.format}</span>
+              <div style={{fontSize:17,fontWeight:800,color:C.t1,letterSpacing:"-0.01em",lineHeight:1.3}}>{v.title}</div>
+              <div style={{fontSize:13,color:C.t1,lineHeight:1.6,opacity:0.85}}>{v.description}</div>
+              {v.why&&<div style={{fontSize:12,color:C.t2,lineHeight:1.55,borderLeft:`2px solid ${bd}`,paddingLeft:10}}>{v.why}</div>}
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:"auto",paddingTop:8}}>
+                {v.price&&<span style={{fontSize:13,fontWeight:700,color:C.t1}}>{v.price}</span>}
+                <button onClick={()=>selectVariant(v)}
+                  style={{marginLeft:"auto",padding:"8px 18px",borderRadius:10,border:"none",background:GRAD,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                  Выбрать
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  /* ---------- BUILDING ---------- */
+  if(view==="building"){
+    const v=draft?.selected;
+    const isCourse=/курс/i.test(v?.format||"");
+    const course=(v&&v.build&&v.build.type==="course")?v.build:null;
+
+    const Back=(
+      <button onClick={()=>setView("list")} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",color:C.t2,fontSize:13,fontWeight:500,marginBottom:24,padding:0}}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Мои продукты
+      </button>
+    );
+    const ProductHead=v?(
+      <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:18,padding:20,marginBottom:20}}>
+        <span style={{fontSize:11,fontWeight:700,color:"#10B981",background:"rgba(16,185,129,0.12)",padding:"4px 10px",borderRadius:20}}>{v.format}</span>
+        <div style={{fontSize:22,fontWeight:800,color:C.t1,letterSpacing:"-0.02em",margin:"12px 0 8px"}}>{v.title}</div>
+        <div style={{fontSize:14,color:C.t1,lineHeight:1.6,opacity:0.85}}>{v.description}</div>
+      </div>
+    ):null;
+
+    // Не-курсовые типы — панель в разработке
+    if(!isCourse)return(
+      <div style={{maxWidth:720,margin:"0 auto",padding:"36px 24px"}}>
+        {Back}{ProductHead}
+        <div style={{background:cardBg,border:`1px dashed ${bd}`,borderRadius:18,padding:"48px 24px",textAlign:"center" as const}}>
+          <div style={{width:56,height:56,borderRadius:16,background:"linear-gradient(135deg,#10B981,#059669)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",opacity:0.9}}>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7.4L12 17l-6.3 4.4L8 14 2 9.4h7.6z"/></svg>
+          </div>
+          <div style={{fontSize:17,fontWeight:700,color:C.t1,marginBottom:6}}>Сборка для этого типа — скоро</div>
+          <div style={{fontSize:14,color:C.t2,lineHeight:1.6,maxWidth:400,margin:"0 auto"}}>Сейчас готова сборка онлайн-курсов. Конструкторы для закрытого сообщества, коучинга, консалтинга и мастермайнда добавим следующими. Выбор уже сохранён на сервере.</div>
+        </div>
+      </div>
+    );
+
+    // Курс без программы — выбор количества уроков
+    if(isCourse&&!course)return(
+      <div style={{maxWidth:640,margin:"0 auto",padding:"36px 24px"}}>
+        {Back}{ProductHead}
+        <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:18,padding:28}}>
+          <div style={{fontSize:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em",marginBottom:6}}>Сколько уроков в курсе?</div>
+          <div style={{fontSize:13,color:C.t2,lineHeight:1.6,marginBottom:24}}>Выберите количество уроков (минимум 5). AI составит программу по вашим ответам и теме продукта — вы сможете отредактировать каждый урок.</div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:24,marginBottom:28}}>
+            <button onClick={()=>setLessonCount(c=>Math.max(5,c-1))}
+              style={{width:48,height:48,borderRadius:14,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:24,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
+            <div style={{minWidth:80,textAlign:"center" as const}}>
+              <div style={{fontSize:44,fontWeight:800,color:C.t1,lineHeight:1}}>{lessonCount}</div>
+              <div style={{fontSize:12,color:C.t2,marginTop:4}}>уроков</div>
+            </div>
+            <button onClick={()=>setLessonCount(c=>Math.min(30,c+1))}
+              style={{width:48,height:48,borderRadius:14,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:24,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+          </div>
+          <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:28,flexWrap:"wrap" as const}}>
+            {[5,8,10,12].map(n=>(
+              <button key={n} onClick={()=>setLessonCount(n)}
+                style={{padding:"7px 16px",borderRadius:20,border:`1px solid ${lessonCount===n?"transparent":bd}`,background:lessonCount===n?"rgba(16,185,129,0.14)":"transparent",color:lessonCount===n?"#10B981":C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>{n}</button>
+            ))}
+          </div>
+          <button onClick={()=>buildCourse(lessonCount)} disabled={courseBusy}
+            style={{width:"100%",padding:"15px",borderRadius:14,border:"none",background:"linear-gradient(135deg,#10B981,#059669)",color:"#fff",fontSize:15,fontWeight:700,cursor:courseBusy?"default":"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 4px 20px rgba(16,185,129,0.3)",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+            {courseBusy
+              ?<><div style={{width:18,height:18,border:"2.5px solid rgba(255,255,255,0.35)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Составляю программу…</>
+              :"Сгенерировать программу курса"}
+          </button>
+        </div>
+      </div>
+    );
+
+    // Курс с программой — карточки уроков + редактор
+    const lessons:any[]=course.lessons||[];
+    const editing=editIdx!=null?lessons[editIdx]:null;
+    return(
+      <div style={{maxWidth:840,margin:"0 auto",padding:"36px 24px"}}>
+        {Back}
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16,marginBottom:8,flexWrap:"wrap" as const}}>
+          <div>
+            <span style={{fontSize:11,fontWeight:700,color:"#10B981",background:"rgba(16,185,129,0.12)",padding:"4px 10px",borderRadius:20}}>{v.format}</span>
+            <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.025em",margin:"12px 0 4px"}}>{v.title}</div>
+            <div style={{fontSize:14,color:C.t2}}>Программа курса · {lessons.length} уроков</div>
+          </div>
+          <button onClick={()=>{if(confirm("Пересобрать программу заново? Текущие уроки будут заменены."))setDraft((d:any)=>({...d,selected:{...d.selected,build:null}}));}}
+            style={{display:"flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:11,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif",flexShrink:0}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Пересобрать
+          </button>
+        </div>
+
+        <div style={{display:"flex",flexDirection:"column",gap:12,marginTop:24}}>
+          {lessons.map((l,i)=>(
+            <div key={l.id||i} onClick={()=>setEditIdx(i)}
+              style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:16,padding:18,cursor:"pointer",display:"flex",gap:16,alignItems:"flex-start",transition:"all 0.15s"}}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(16,185,129,0.35)";}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=bd;}}>
+              <div style={{width:36,height:36,borderRadius:11,background:dark?"rgba(16,185,129,0.12)":"#F0FDF4",color:"#10B981",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:800,flexShrink:0}}>{i+1}</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:16,fontWeight:700,color:C.t1,lineHeight:1.35,marginBottom:5}}>{l.title}</div>
+                <div style={{fontSize:13,color:C.t2,lineHeight:1.55}}>{l.description}</div>
+              </div>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.8" style={{flexShrink:0,marginTop:8}}><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </div>
+          ))}
+        </div>
+
+        {editing&&<CourseLessonEditor
+          lesson={editing}
+          index={editIdx as number}
+          total={lessons.length}
+          dark={dark}
+          busy={lessonBusy}
+          onClose={()=>setEditIdx(null)}
+          onSave={(p)=>{saveLesson(editIdx as number,p);setEditIdx(null);}}
+          onRegen={(hint)=>regenLesson(editIdx as number,hint)}
+        />}
+      </div>
+    );
+  }
+
+
+  /* ---------- LIST ---------- */
+  return(
+    <div style={{maxWidth:960,margin:"0 auto",padding:"36px 24px"}}>
+      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:28,gap:16,flexWrap:"wrap" as const}}>
+        <div>
+          <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.025em",marginBottom:4}}>Мои продукты</div>
+          <div style={{fontSize:14,color:C.t2}}>Создавайте цифровые продукты из вашей экспертизы</div>
+        </div>
+        {products.length>0&&<button onClick={openCreate} disabled={busy}
+          style={{display:"flex",alignItems:"center",gap:8,padding:"11px 20px",borderRadius:12,border:"none",background:GRAD,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 4px 20px rgba(16,185,129,0.3)",flexShrink:0}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Создать продукт
+        </button>}
+      </div>
+
+      {loading?(
+        <div style={{padding:60,textAlign:"center" as const,color:C.t2,fontSize:14}}>Загрузка...</div>
+      ):products.length===0?(
+        <div style={{background:cardBg,border:`1px dashed ${bd}`,borderRadius:20,padding:"64px 24px",textAlign:"center" as const}}>
+          <div style={{width:64,height:64,borderRadius:18,background:dark?"rgba(255,255,255,0.05)":"#F0FDF4",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px"}}>
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="1.5"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+          </div>
+          <div style={{fontSize:20,fontWeight:800,color:C.t1,marginBottom:8,letterSpacing:"-0.02em"}}>У вас пока нет продуктов</div>
+          <div style={{fontSize:14,color:C.t2,lineHeight:1.6,maxWidth:360,margin:"0 auto 24px"}}>Создайте свой первый цифровой продукт за 15 минут — ответьте на 5 вопросов, остальное сделает AI.</div>
+          <button onClick={openCreate} disabled={busy}
+            style={{display:"inline-flex",alignItems:"center",gap:8,padding:"13px 26px",borderRadius:12,border:"none",background:GRAD,color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 4px 20px rgba(16,185,129,0.3)"}}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Создать продукт
+          </button>
+        </div>
+      ):(
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:16}}>
+          {products.map(p=>{
+            const sm=statusMeta(p.status);
+            return(
+              <div key={p.id} onClick={()=>openExisting(p)}
+                style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:18,padding:20,cursor:"pointer",transition:"all 0.2s",position:"relative" as const}}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(16,185,129,0.35)";}}
+                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=bd;}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+                  <div style={{width:40,height:40,borderRadius:11,background:dark?"rgba(255,255,255,0.05)":"#F0FDF4",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="1.6"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                  </div>
+                  <button onClick={e=>deleteProduct(p.id,e)} title="Удалить"
+                    style={{width:28,height:28,borderRadius:8,border:"none",background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}
+                    onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color="#EF4444";}}
+                    onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.color=C.t2;}}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                  </button>
+                </div>
+                <div style={{fontSize:16,fontWeight:700,color:C.t1,lineHeight:1.35,marginBottom:10,overflow:"hidden",textOverflow:"ellipsis",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical" as const}}>{p.name||"Новый продукт"}</div>
+                <span style={{fontSize:11,fontWeight:600,color:sm.color,background:`${sm.color}1A`,padding:"3px 10px",borderRadius:20}}>{sm.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 /* ============ STORIES AI PAGE ============ */
 const STORIES_SYSTEM_V2=`Ты — Vizzy Stories AI. Специализируешься ТОЛЬКО на создании сценариев для Stories и каруселей. На любые другие запросы отвечай: «Я создаю сценарии для Stories и каруселей. Давай создадим твой!»
@@ -12360,7 +12905,7 @@ function FormsPage({userId}:{userId:string}){
 const COPY_TOOLS=[
   {id:"text-booster",name:"Text Booster",desc:"Проверяет и усиливает текст. Глубокий аудит с пошаговой инструкцией.",tag:"Редактура",ic:"M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"},
   {id:"sales-master",name:"Sales Master",desc:"Генерирует убедительные слоганы, призывы к действию и сценарии продаж.",tag:"Продажи",ic:"M13 10V3L4 14h7v7l9-11h-7z"},
-  {id:"profit-planner",name:"Profit Planner",desc:"Разрабатывает стратегию монетизации на основе текущих показателей профиля.",tag:"Стратегия",ic:"M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"},
+  {id:"profile-check",name:"Profile Check",desc:"Анализирует профиль Instagram и формирует подробный отчёт на основе фактических данных.",tag:"Стратегия",ic:"M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"},
   {id:"no-ai-text",name:"NO AI Text",desc:"Убирает эффект генерации текста — делает его живым и человеческим.",tag:"Редактура",ic:"M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"},
   {id:"story-master",name:"Story Master",desc:"Берёт историю и переписывает её в другом жанре или стиле, сохраняя смыслы.",tag:"Сторителлинг",ic:"M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"},
   {id:"reels-master",name:"Reels Master",desc:"Генерирует вирусные посты, цитаты и треды для коротких видео.",tag:"Контент",ic:"M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"},
