@@ -4905,7 +4905,7 @@ const PlatformIcon=({pid,size=16}:{pid:string,size?:number})=>{
 function ContentPage({userId}:{userId:string}){
   const isMobile=useIsMobile();
   const{data:items,add,update,remove}=useTable("content",userId);
-  const[tab,setTab]=useState<"list"|"calendar"|"stories">("list");
+  const[tab,setTab]=useState<"list"|"calendar"|"stories"|"scripts">("list");
   const[show,setShow]=useState(false);
   const[editId,setEditId]=useState<string|null>(null);
   const[coverUploading,setCoverUploading]=useState(false);
@@ -5132,7 +5132,7 @@ function ContentPage({userId}:{userId:string}){
 
     {/* ── Tabs ── */}
     <div style={{display:"flex",gap:4,marginBottom:20,borderBottom:"2px solid "+C.bd}}>
-      {[{id:"list",label:"📋 Канбан"},{id:"calendar",label:"Календарь"},{id:"stories",label:"📊 Карусели историй"}].map(t=><button key={t.id} onClick={()=>setTab(t.id as any)} style={{padding:"10px 20px",background:"none",border:"none",borderBottom:tab===t.id?"3px solid "+C.a:"3px solid transparent",color:tab===t.id?C.a:C.t2,fontSize:14,fontWeight:tab===t.id?600:400,cursor:"pointer",marginBottom:-2}}>{t.label}</button>)}
+      {[{id:"list",label:"📋 Канбан"},{id:"calendar",label:"Календарь"},{id:"stories",label:"📊 Карусели историй"},{id:"scripts",label:"🎬 Сценарии"}].map(t=><button key={t.id} onClick={()=>setTab(t.id as any)} style={{padding:"10px 20px",background:"none",border:"none",borderBottom:tab===t.id?"3px solid "+C.a:"3px solid transparent",color:tab===t.id?C.a:C.t2,fontSize:14,fontWeight:tab===t.id?600:400,cursor:"pointer",marginBottom:-2}}>{t.label}</button>)}
     </div>
 
     {/* ── KANBAN TAB ── */}
@@ -5445,7 +5445,291 @@ function ContentPage({userId}:{userId:string}){
     </>}
 
     {tab==="stories"&&<StoriesCarouselTab userId={userId}/>}
+    {tab==="scripts"&&<ScriptsTab userId={userId}/>}
   </>;
+}
+
+/* ============ СЦЕНАРИИ (Scripts) ============ */
+const SCRIPT_SHORT_SYS="Ты — эксперт мирового уровня по созданию вирусных коротких видео для Instagram Reels, TikTok и YouTube Shorts. Твоя задача — не просто улучшить сценарий, а максимально повысить вероятность, что зритель досмотрит ролик до конца. Усиль первые 1–3 секунды и открывающие фразы; усиль эмоцию, любопытство, неожиданность, контраст и конфликт; убери скучные и медленные части; сделай каждую следующую фразу вызывающей желание смотреть дальше; сделай структуру максимально динамичной; используй психологические триггеры удержания; повышай вероятность сохранений и репостов. Если указан ICP — адаптируй все формулировки под эту аудиторию. Верни ПОЛНОСТЬЮ улучшённую версию сценария без комментариев.";
+const SCRIPT_LONG_SYS="Ты — эксперт мирового уровня по созданию образовательного и экспертного видеоконтента. Твоя задача — улучшить сценарий так, чтобы он усиливал доверие аудитории к автору и максимально удерживал внимание на протяжении всего видео. Улучши структуру повествования и логическую последовательность; добавь больше ценности и практической пользы; сделай объяснения понятнее; устрани провалы внимания; добавь плавные переходы между блоками; усиль экспертную позицию автора и убедительность аргументов; повышай доверие через примеры, наблюдения и объяснения; сохраняй естественный стиль речи. Если указан ICP — адаптируй под конкретную аудиторию. Верни ПОЛНОСТЬЮ улучшённую версию сценария без комментариев.";
+
+async function dsMessages(messages:any[],maxTokens=1600,temperature=0.8):Promise<string>{
+  const res=await fetch("https://api.deepseek.com/v1/chat/completions",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","Authorization":`Bearer ${process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY}`},
+    body:JSON.stringify({model:"deepseek-chat",max_tokens:maxTokens,temperature,messages}),
+  });
+  const d=await res.json();
+  return d.choices?.[0]?.message?.content||"";
+}
+
+async function improveScript(kind:string,content:string,icp:string):Promise<string>{
+  const system=kind==="short"?SCRIPT_SHORT_SYS:SCRIPT_LONG_SYS;
+  const user=`${icp?`ICP / Целевая аудитория:\n${icp}\n\n`:""}Текущий сценарий:\n\n${content}`;
+  const t=await dsMessages([{role:"system",content:system},{role:"user",content:user}],3200,0.8);
+  return t.replace(/```/g,"").trim();
+}
+
+function exportScriptPDF(name:string,content:string){
+  const esc=(s:any)=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const paras=String(content||"").split(/\n{2,}/).map(p=>`<p>${esc(p).replace(/\n/g,"<br>")}</p>`).join("");
+  const html=`<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>${esc(name||"Сценарий")}</title>
+<style>@page{size:A4;margin:22mm 20mm}body{font-family:-apple-system,'Segoe UI',Inter,Arial,sans-serif;color:#111;line-height:1.7;margin:0}
+h1{font-size:24px;font-weight:800;letter-spacing:-.02em;margin:0 0 6px}.rule{height:2px;background:linear-gradient(90deg,#4F8EF7,#3B82F6);width:70px;border-radius:2px;margin:14px 0 26px}
+p{font-size:14px;margin:0 0 14px;white-space:pre-wrap}.foot{margin-top:32px;padding-top:14px;border-top:1px solid #E5E7EB;font-size:11px;color:#9CA3AF;text-align:center}</style></head>
+<body><h1>${esc(name||"Сценарий")}</h1><div class="rule"></div>${paras}<div class="foot">Vizzy · Сценарии</div></body></html>`;
+  const w=window.open("","_blank");if(!w){alert("Разреши всплывающие окна, чтобы скачать PDF.");return;}
+  w.document.open();w.document.write(html);w.document.close();w.focus();setTimeout(()=>{try{w.print();}catch(e){}},350);
+}
+
+function ScriptsTab({userId}:{userId:string}){
+  const{dark}=useTheme();
+  const isMobile=useIsMobile();
+  const{data:scripts,loading,add,update,remove}=useTable("scripts",userId);
+
+  const[view,setView]=useState<"list"|"editor">("list");
+  const[curId,setCurId]=useState<string|null>(null);
+  const[picker,setPicker]=useState(false);
+
+  const[name,setName]=useState("");
+  const[kind,setKind]=useState<"short"|"long">("short");
+  const[content,setContent]=useState("");
+  const[icp,setIcp]=useState("");
+  const[versions,setVersions]=useState<any[]>([]);
+  const[chat,setChat]=useState<any[]>([]);
+
+  const[improving,setImproving]=useState(false);
+  const[chatting,setChatting]=useState(false);
+  const[chatInput,setChatInput]=useState("");
+  const[showHist,setShowHist]=useState(false);
+  const chatEnd=useRef<HTMLDivElement>(null);
+
+  const bd=C.bd;
+  const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
+  const inputBg=dark?"#1C1C1C":"#F8FAFC";
+  const accent="#4F8EF7";
+
+  const sorted=[...scripts].sort((a,b)=>String(b.updated_at||b.created_at||"").localeCompare(String(a.updated_at||a.created_at||"")));
+
+  // autosave (debounced)
+  useEffect(()=>{
+    if(view!=="editor"||!curId)return;
+    const t=setTimeout(()=>{
+      update(curId,{name,content,icp,versions,chat,updated_at:new Date().toISOString()});
+    },800);
+    return ()=>clearTimeout(t);
+  },[name,content,icp,versions,chat,view,curId]);
+
+  useEffect(()=>{chatEnd.current?.scrollIntoView({behavior:"smooth"});},[chat,chatting]);
+
+  const openScript=(row:any)=>{
+    setCurId(row.id);setName(row.name||"Новый сценарий");setKind(row.kind==="long"?"long":"short");
+    setContent(row.content||"");setIcp(row.icp||"");setVersions(row.versions||[]);setChat(row.chat||[]);
+    setChatInput("");setShowHist(false);setView("editor");
+  };
+
+  const createScript=async(k:"short"|"long")=>{
+    setPicker(false);
+    const row=await add({name:k==="short"?"Short Form сценарий":"Long Form сценарий",kind:k,content:"",icp:"",versions:[],chat:[],updated_at:new Date().toISOString()});
+    if(!row){alert("Не удалось создать сценарий. Проверь, что в базе создана таблица scripts (см. инструкцию).");return;}
+    openScript(row);
+  };
+
+  const del=async(id:string,e:React.MouseEvent)=>{e.stopPropagation();if(confirm("Удалить сценарий? Действие необратимо."))await remove(id);};
+
+  const doImprove=async()=>{
+    if(!content.trim()){alert("Сначала напиши или надиктуй сценарий в редакторе слева.");return;}
+    setImproving(true);
+    try{
+      const improved=await improveScript(kind,content,icp);
+      if(improved){
+        setVersions(prev=>[{content,at:new Date().toISOString()},...prev].slice(0,20));
+        setContent(improved);
+      }
+    }catch(e){alert("Не удалось улучшить сценарий. Проверь API-ключ и попробуй ещё раз.");}
+    setImproving(false);
+  };
+
+  const sendChat=async()=>{
+    const msg=chatInput.trim();
+    if(!msg||chatting)return;
+    setChatInput("");
+    const uMsg={role:"user",content:msg,id:"u"+Date.now()};
+    setChat(prev=>[...prev,uMsg]);
+    setChatting(true);
+    try{
+      const sys=`Ты — AI-редактор видеосценариев (${kind==="short"?"короткие вирусные видео: Reels/TikTok/Shorts":"длинные экспертные видео"}). Помогаешь писать, улучшать и структурировать сценарий. Всегда держи в контексте текущий текст сценария из редактора.${icp?" Учитывай ICP аудитории.":""}`;
+      const ctx=`${icp?`ICP:\n${icp}\n\n`:""}Текущий сценарий в редакторе:\n"""\n${content||"(пусто)"}\n"""`;
+      const history=chat.slice(-8).map(m=>({role:m.role,content:m.content}));
+      const reply=await dsMessages([{role:"system",content:sys+"\n\n"+ctx},...history,{role:"user",content:msg}],1600,0.8);
+      setChat(prev=>[...prev,{role:"assistant",content:reply||"Не удалось ответить.",id:"a"+Date.now()}]);
+    }catch(e){setChat(prev=>[...prev,{role:"assistant",content:"Ошибка соединения. Попробуй ещё раз.",id:"e"+Date.now()}]);}
+    setChatting(false);
+  };
+
+  const applyToEditor=(text:string)=>{
+    if(confirm("Заменить текст сценария в редакторе этим ответом?")){
+      setVersions(prev=>[{content,at:new Date().toISOString()},...prev].slice(0,20));
+      setContent(text);
+    }
+  };
+
+  /* ---------- LIST ---------- */
+  if(view==="list")return(
+    <div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,marginBottom:20,flexWrap:"wrap" as const}}>
+        <div style={{fontSize:14,color:C.t2}}>Пишите сценарии для видео с AI-ассистентом. Всё сохраняется автоматически.</div>
+        {sorted.length>0&&<button onClick={()=>setPicker(true)} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 18px",borderRadius:11,border:"none",background:accent,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Создать сценарий
+        </button>}
+      </div>
+
+      {loading?(
+        <div style={{padding:50,textAlign:"center" as const,color:C.t2,fontSize:14}}>Загрузка…</div>
+      ):sorted.length===0?(
+        <div style={{background:cardBg,border:`1px dashed ${bd}`,borderRadius:18,padding:"60px 24px",textAlign:"center" as const}}>
+          <div style={{width:60,height:60,borderRadius:16,background:dark?"rgba(79,142,247,0.12)":"#EFF6FF",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 18px"}}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="1.5"><path d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+          </div>
+          <div style={{fontSize:19,fontWeight:800,color:C.t1,marginBottom:8}}>Пока нет сценариев</div>
+          <div style={{fontSize:14,color:C.t2,lineHeight:1.6,maxWidth:360,margin:"0 auto 22px"}}>Создайте первый сценарий — выберите формат, а дальше пишите вместе с AI.</div>
+          <button onClick={()=>setPicker(true)} style={{display:"inline-flex",alignItems:"center",gap:8,padding:"12px 24px",borderRadius:12,border:"none",background:accent,color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Создать сценарий</button>
+        </div>
+      ):(
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:14}}>
+          {sorted.map(s=>(
+            <div key={s.id} onClick={()=>openScript(s)} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:16,padding:18,cursor:"pointer",transition:"border-color 0.15s"}}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(79,142,247,0.4)";}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=bd;}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                <span style={{fontSize:11,fontWeight:700,color:accent,background:"rgba(79,142,247,0.12)",padding:"3px 10px",borderRadius:20}}>{s.kind==="long"?"Long Form":"Short Form"}</span>
+                <button onClick={e=>del(s.id,e)} title="Удалить" style={{width:26,height:26,borderRadius:7,border:"none",background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}
+                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color="#EF4444";}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.color=C.t2;}}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>
+                </button>
+              </div>
+              <div style={{fontSize:16,fontWeight:700,color:C.t1,lineHeight:1.35,marginBottom:8,overflow:"hidden",textOverflow:"ellipsis",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical" as const}}>{s.name||"Без названия"}</div>
+              <div style={{fontSize:12,color:C.t2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{(s.content||"Пустой сценарий").replace(/\n/g," ").slice(0,70)}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {picker&&<div onClick={()=>setPicker(false)} style={{position:"fixed" as const,inset:0,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(4px)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+        <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:520,background:dark?"#161616":"#fff",border:`1px solid ${bd}`,borderRadius:20,padding:26}}>
+          <div style={{fontSize:19,fontWeight:800,color:C.t1,marginBottom:6}}>Выберите тип сценария</div>
+          <div style={{fontSize:13,color:C.t2,marginBottom:20}}>От типа зависит логика улучшения от AI.</div>
+          <div style={{display:"flex",gap:12,flexDirection:isMobile?"column":"row"}}>
+            {([["short","Short Form Video","Reels, TikTok, Shorts — максимальная вирусность и удержание"],["long","Long Form Video","Экспертные видео — доверие, польза, глубина"]] as const).map(([k,t,d])=>(
+              <button key={k} onClick={()=>createScript(k)} style={{flex:1,textAlign:"left" as const,padding:18,borderRadius:14,border:`1px solid ${bd}`,background:inputBg,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                <div style={{fontSize:15,fontWeight:700,color:C.t1,marginBottom:6}}>{t}</div>
+                <div style={{fontSize:12.5,color:C.t2,lineHeight:1.5}}>{d}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>}
+    </div>
+  );
+
+  /* ---------- EDITOR ---------- */
+  const workH=isMobile?"auto":"calc(100vh - 230px)";
+  return(
+    <div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:16,flexWrap:"wrap" as const}}>
+        <button onClick={()=>setView("list")} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",color:C.t2,fontSize:13,fontWeight:500,padding:0}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Все сценарии
+        </button>
+        <span style={{fontSize:11,fontWeight:700,color:accent,background:"rgba(79,142,247,0.12)",padding:"4px 11px",borderRadius:20}}>{kind==="long"?"Long Form Video":"Short Form Video"}</span>
+      </div>
+
+      <div style={{display:"flex",gap:16,flexDirection:isMobile?"column":"row",alignItems:"stretch"}}>
+        {/* LEFT — editor */}
+        <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",height:workH,background:cardBg,border:`1px solid ${bd}`,borderRadius:16,padding:16}}>
+          <input value={name} onChange={e=>setName(e.target.value)} placeholder="Название сценария"
+            style={{border:"none",outline:"none",background:"transparent",fontSize:18,fontWeight:800,color:C.t1,marginBottom:10,fontFamily:"'Inter',sans-serif",letterSpacing:"-0.01em"}}/>
+          <textarea value={content} onChange={e=>setContent(e.target.value)} placeholder="Пишите сценарий здесь… или попросите AI справа написать его за вас."
+            style={{flex:1,minHeight:isMobile?300:200,width:"100%",border:`1px solid ${bd}`,borderRadius:12,padding:"14px 16px",fontSize:15,lineHeight:1.7,background:inputBg,color:C.t1,outline:"none",resize:"none" as const,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginTop:12,flexWrap:"wrap" as const}}>
+            <div style={{fontSize:11,color:C.t2}}>{content.length} симв.</div>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={()=>setShowHist(true)} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 13px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 106 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
+                История{versions.length?` (${versions.length})`:""}
+              </button>
+              <button onClick={()=>exportScriptPDF(name,content)} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 13px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                PDF
+              </button>
+            </div>
+          </div>
+          <button onClick={doImprove} disabled={improving}
+            style={{marginTop:12,width:"100%",padding:"14px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#4F8EF7,#3B82F6)",color:"#fff",fontSize:15,fontWeight:700,cursor:improving?"default":"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 4px 18px rgba(79,142,247,0.3)",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+            {improving?<><div style={{width:17,height:17,border:"2.5px solid rgba(255,255,255,0.4)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Улучшаю…</>:"✨ Улучшить сценарий"}
+          </button>
+        </div>
+
+        {/* RIGHT — AI assistant */}
+        <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",height:workH,background:cardBg,border:`1px solid ${bd}`,borderRadius:16,padding:16}}>
+          <div style={{fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8}}>ICP / Целевая аудитория</div>
+          <textarea value={icp} onChange={e=>setIcp(e.target.value)} placeholder="Опишите аудиторию: сегмент, уровень осведомлённости, боли, желания. AI учтёт это при генерации."
+            style={{width:"100%",minHeight:64,maxHeight:120,border:`1px solid ${bd}`,borderRadius:11,padding:"11px 13px",fontSize:13.5,lineHeight:1.55,background:inputBg,color:C.t1,outline:"none",resize:"vertical" as const,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const,marginBottom:14}}/>
+
+          <div style={{fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8}}>AI-ассистент</div>
+          <div style={{flex:1,minHeight:isMobile?260:120,overflowY:"auto" as const,display:"flex",flexDirection:"column",gap:10,paddingRight:4}}>
+            {chat.length===0&&<div style={{fontSize:13,color:C.t2,lineHeight:1.6,padding:"8px 0"}}>Попросите написать сценарий, усилить хук, добавить историю, сделать короче/длиннее. Контекст — ваш текст слева.</div>}
+            {chat.map(m=>(
+              <div key={m.id} style={{alignSelf:m.role==="user"?"flex-end":"flex-start",maxWidth:"88%"}}>
+                <div style={{padding:"10px 13px",borderRadius:m.role==="user"?"14px 14px 4px 14px":"4px 14px 14px 14px",background:m.role==="user"?"linear-gradient(135deg,#4F8EF7,#3B82F6)":(dark?"rgba(255,255,255,0.05)":"#F1F5F9"),color:m.role==="user"?"#fff":C.t1,fontSize:13.5,lineHeight:1.6,whiteSpace:"pre-wrap" as const}}>{m.content}</div>
+                {m.role==="assistant"&&<div style={{display:"flex",gap:8,marginTop:5}}>
+                  <button onClick={()=>navigator.clipboard.writeText(m.content)} style={{fontSize:11,color:C.t2,background:"none",border:"none",cursor:"pointer",padding:0,fontWeight:600}}>Копировать</button>
+                  <button onClick={()=>applyToEditor(m.content)} style={{fontSize:11,color:accent,background:"none",border:"none",cursor:"pointer",padding:0,fontWeight:600}}>Заменить сценарий</button>
+                </div>}
+              </div>
+            ))}
+            {chatting&&<div style={{alignSelf:"flex-start",padding:"10px 13px",borderRadius:"4px 14px 14px 14px",background:dark?"rgba(255,255,255,0.05)":"#F1F5F9",display:"flex",gap:4}}>
+              {[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:C.t2,animation:`sbounce 1.2s ease-in-out ${i*0.15}s infinite`}}/>)}
+              <style>{`@keyframes sbounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-5px)}}`}</style>
+            </div>}
+            <div ref={chatEnd}/>
+          </div>
+
+          <div style={{display:"flex",gap:8,alignItems:"flex-end",marginTop:12}}>
+            <textarea value={chatInput} onChange={e=>setChatInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendChat();}}}
+              placeholder="Напишите AI…" rows={1}
+              style={{flex:1,border:`1px solid ${bd}`,borderRadius:11,padding:"11px 13px",fontSize:13.5,lineHeight:1.5,background:inputBg,color:C.t1,outline:"none",resize:"none" as const,maxHeight:100,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
+            <button onClick={sendChat} disabled={!chatInput.trim()||chatting} style={{width:40,height:40,borderRadius:10,border:"none",background:chatInput.trim()?accent:inputBg,color:chatInput.trim()?"#fff":C.t2,cursor:chatInput.trim()?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* history modal */}
+      {showHist&&<div onClick={()=>setShowHist(false)} style={{position:"fixed" as const,inset:0,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(4px)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+        <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:560,maxHeight:"84vh",overflowY:"auto",background:dark?"#161616":"#fff",border:`1px solid ${bd}`,borderRadius:20,padding:22}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+            <div style={{fontSize:17,fontWeight:800,color:C.t1}}>История изменений</div>
+            <button onClick={()=>setShowHist(false)} style={{width:30,height:30,borderRadius:8,border:"none",background:"transparent",color:C.t2,cursor:"pointer"}}>✕</button>
+          </div>
+          {versions.length===0?<div style={{fontSize:13,color:C.t2,padding:"20px 0",textAlign:"center" as const}}>Пока нет сохранённых версий. Они появляются после «Улучшить сценарий».</div>:
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {versions.map((v,i)=>(
+              <div key={i} style={{border:`1px solid ${bd}`,borderRadius:12,padding:14}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                  <div style={{fontSize:12,color:C.t2}}>{new Date(v.at).toLocaleString("ru-RU")}</div>
+                  <button onClick={()=>{setVersions(prev=>[{content,at:new Date().toISOString()},...prev].slice(0,20));setContent(v.content);setShowHist(false);}} style={{fontSize:12,color:accent,background:"none",border:"none",cursor:"pointer",fontWeight:600}}>Восстановить</button>
+                </div>
+                <div style={{fontSize:12.5,color:C.t1,opacity:0.8,lineHeight:1.5,maxHeight:90,overflow:"hidden"}}>{(v.content||"").slice(0,240)}…</div>
+              </div>
+            ))}
+          </div>}
+        </div>
+      </div>}
+    </div>
+  );
 }
 
 /* ============ STORIES CAROUSEL ============ */
@@ -14139,6 +14423,191 @@ const TAG_COLORS:Record<string,string>={
   "Аудитория":"#06B6D4","Рассылка":"#84CC16","Соцсети":"#0EA5E9",
 };
 
+/* ============ COPY AI — BATCH 1 (варианты) ============ */
+const VARIANT_TAIL=(count:number,sem:string)=>`\n\nВерни строго JSON-массив из ${count} объектов: [{"title":"...","body":"...","note":"..."}]. ${sem} Без markdown и текста вокруг.`;
+
+const COPY_B_TOOLS:Record<string,{inputs:any[],build:(v:any)=>{system:string,user:string,count:number}}>={
+  "sales-master":{
+    inputs:[
+      {key:"offer",label:"Ваш оффер / продукт",type:"textarea",placeholder:"Что продаёте и ключевая выгода",req:true},
+      {key:"audience",label:"Целевая аудитория",type:"text",placeholder:"Кому продаёте"},
+      {key:"kind",label:"Что сгенерировать",type:"chips",options:["Слоганы","CTA","Сценарий продажи"],default:"Слоганы"},
+      {key:"pain",label:"Боль клиента (необязательно)",type:"text",placeholder:"Что болит у клиента"},
+    ],
+    build:(v)=>{
+      const kind=v.kind||"Слоганы";
+      const count=kind==="Сценарий продажи"?3:5;
+      const sem=kind==="Сценарий продажи"
+        ?'title — короткое название подхода, body — сам сценарий продажи (несколько строк), note — можно оставить пустым.'
+        :`title — угол/приём (боль, выгода, статус, срочность, соц.доказательство), body — сам ${kind==="CTA"?"призыв к действию":"слоган"}, note — можно оставить пустым.`;
+      const base=`Оффер/продукт: ${v.offer}\nАудитория: ${v.audience||"—"}${v.pain?`\nБоль клиента: ${v.pain}`:""}\n\nСгенерируй ${count} вариантов: ${kind}. Разные углы и приёмы, конкретно и убедительно, без клише и воды.`;
+      return{system:"Ты — сильный копирайтер-продажник. Пишешь конкретно, цепляюще, без воды и клише. Возвращаешь строго валидный JSON без markdown.",user:base+VARIANT_TAIL(count,sem),count};
+    },
+  },
+  "reels-master":{
+    inputs:[
+      {key:"theme",label:"Тема",type:"textarea",placeholder:"О чём контент",req:true},
+      {key:"format",label:"Формат",type:"chips",options:["Хуки","Пост","Цитата","Тред"],default:"Хуки"},
+      {key:"tone",label:"Тон",type:"chips",options:["Экспертный","Дерзкий","Дружелюбный","Провокационный"],default:"Экспертный"},
+    ],
+    build:(v)=>{
+      const fmt=v.format||"Хуки";
+      const count=fmt==="Тред"?3:5;
+      const sem=`title — короткий ярлык, body — сам текст в формате «${fmt}», note — можно оставить пустым.`;
+      const base=`Тема: ${v.theme}\nТон: ${v.tone||"Экспертный"}\n\nСгенерируй ${count} вариантов в формате «${fmt}» для коротких видео и сторис. Цепляющие, нативные для соцсетей, останавливают скролл с первой секунды.`;
+      return{system:"Ты — вирусный контент-мейкер для соцсетей. Пишешь тексты, которые останавливают скролл. Возвращаешь строго валидный JSON без markdown.",user:base+VARIANT_TAIL(count,sem),count};
+    },
+  },
+  "ad-master":{
+    inputs:[
+      {key:"product",label:"Продукт / услуга",type:"textarea",placeholder:"Что продвигаем",req:true},
+      {key:"audience",label:"Аудитория",type:"text",placeholder:"Кому"},
+      {key:"channel",label:"Канал",type:"chips",options:["Любой","Instagram","Telegram","YouTube","Наружка"],default:"Любой"},
+    ],
+    build:(v)=>{
+      const count=5;
+      const sem='title — название рекламного хода, body — идея, механика и пример креатива (несколько строк), note — почему это сработает.';
+      const base=`Продукт/услуга: ${v.product}\nАудитория: ${v.audience||"—"}\nКанал: ${v.channel||"Любой"}\n\nПредложи ${count} нестандартных, смелых рекламных ходов. Не банальщина: конкретная механика + пример креатива, который реально зацепит.`;
+      return{system:"Ты — креативный директор с насмотренностью на нестандартную, вирусную рекламу. Возвращаешь строго валидный JSON без markdown.",user:base+VARIANT_TAIL(count,sem),count};
+    },
+  },
+  "send-magnet":{
+    inputs:[
+      {key:"offer",label:"О чём письмо / оффер",type:"textarea",placeholder:"Что предлагаете",req:true},
+      {key:"audience",label:"Аудитория",type:"text",placeholder:"Кому"},
+      {key:"kind",label:"Что сгенерировать",type:"chips",options:["Темы писем","Полное письмо","Серия писем"],default:"Темы писем"},
+    ],
+    build:(v)=>{
+      const kind=v.kind||"Темы писем";
+      const count=kind==="Темы писем"?6:kind==="Серия писем"?5:2;
+      let sem,base;
+      if(kind==="Темы писем"){sem='title — приём (интрига, выгода, вопрос, цифра), body — сама тема письма, note — почему её откроют.';base=`Оффер/тема письма: ${v.offer}\nАудитория: ${v.audience||"—"}\n\nСгенерируй ${count} тем писем под высокую открываемость. Без спам-слов, каждая — интрига или конкретная выгода.`;}
+      else if(kind==="Серия писем"){sem='title — цель письма (напр. «Письмо 1 — знакомство»), body — текст письма, note — можно оставить пустым.';base=`Оффер: ${v.offer}\nАудитория: ${v.audience||"—"}\n\nСобери серию из ${count} писем (прогрев → продажа). Для каждого — цель и готовый текст.`;}
+      else{sem='title — угол письма, body — полный текст письма (в первой строке — тема), note — можно оставить пустым.';base=`Оффер: ${v.offer}\nАудитория: ${v.audience||"—"}\n\nНапиши ${count} варианта полного продающего письма разными углами. В первой строке каждого — тема письма.`;}
+      return{system:"Ты — email-маркетолог. Пишешь письма с высокой открываемостью и конверсией. Возвращаешь строго валидный JSON без markdown.",user:base+VARIANT_TAIL(count,sem),count};
+    },
+  },
+};
+
+async function copyGenVariants(system:string,user:string,count:number,avoid:string[]=[]):Promise<any[]>{
+  let u=user;
+  if(avoid.length)u+=`\n\nНе повторяй уже показанные варианты:\n${avoid.slice(0,8).map((a,i)=>`${i+1}. ${String(a).replace(/\n/g," ").slice(0,80)}`).join("\n")}`;
+  let arr:any=paParseJSON(await paChat(system,u,2400,0.85));
+  if(!Array.isArray(arr))arr=arr.variants||arr.items||arr.stories||[];
+  return (arr||[]).slice(0,count).map((x:any)=>typeof x==="string"?{title:"",body:x,note:""}:{title:x.title||"",body:x.body||x.text||"",note:x.note||""});
+}
+
+function CopyToolRunner({tool,dark}:{tool:any,dark:boolean}){
+  const cfg=COPY_B_TOOLS[tool.id];
+  const accent=TAG_COLORS[tool.tag]||"#8B5CF6";
+  const bd=C.bd;
+  const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
+  const inputBg=dark?"#1C1C1C":"#F8FAFC";
+
+  const[vals,setVals]=useState<any>(()=>{const o:any={};(cfg?.inputs||[]).forEach((f:any)=>o[f.key]=f.default||(f.type==="chips"?(f.options?.[0]||""):""));return o;});
+  const[variants,setVariants]=useState<any[]>([]);
+  const[loading,setLoading]=useState(false);
+  const[appending,setAppending]=useState(false);
+  const[regenIdx,setRegenIdx]=useState<number|null>(null);
+  const[copied,setCopied]=useState<number|null>(null);
+
+  useEffect(()=>{
+    try{const raw=localStorage.getItem("copyai_b_"+tool.id);if(raw){const d=JSON.parse(raw);if(d.vals)setVals((v:any)=>({...v,...d.vals}));if(Array.isArray(d.variants))setVariants(d.variants);}}catch{}
+  },[tool.id]);
+  useEffect(()=>{
+    try{localStorage.setItem("copyai_b_"+tool.id,JSON.stringify({vals,variants}));}catch{}
+  },[vals,variants,tool.id]);
+
+  if(!cfg)return(
+    <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:16,padding:24}}>
+      <div style={{fontSize:11,color:C.t2,fontWeight:600,marginBottom:16,letterSpacing:0.3,textTransform:"uppercase" as const}}>Инструмент</div>
+      <div style={{padding:40,border:`1px dashed ${bd}`,borderRadius:12,textAlign:"center" as const,color:C.t2}}>
+        <div style={{fontSize:13,fontWeight:500}}>Функционал в разработке</div>
+        <div style={{fontSize:12,marginTop:4,opacity:0.6}}>Скоро будет доступно</div>
+      </div>
+    </div>
+  );
+
+  const canGen=cfg.inputs.filter((f:any)=>f.req).every((f:any)=>(vals[f.key]||"").trim());
+
+  const run=async(append:boolean)=>{
+    if(!canGen)return;
+    append?setAppending(true):setLoading(true);
+    if(!append)setVariants([]);
+    try{
+      const{system,user,count}=cfg.build(vals);
+      const arr=await copyGenVariants(system,user,count,append?variants.map(x=>x.body):[]);
+      setVariants(prev=>append?[...prev,...arr]:arr);
+    }catch(e){alert("Не удалось сгенерировать. Проверь API-ключ и попробуй ещё раз.");}
+    append?setAppending(false):setLoading(false);
+  };
+
+  const regen=async(idx:number)=>{
+    setRegenIdx(idx);
+    try{
+      const{system,user}=cfg.build(vals);
+      const one=await copyGenVariants(system,user,1,variants.map(x=>x.body));
+      if(one[0])setVariants(prev=>prev.map((v,i)=>i===idx?one[0]:v));
+    }catch(e){}
+    setRegenIdx(null);
+  };
+
+  const copyBody=(text:string,idx:number)=>{navigator.clipboard.writeText(text);setCopied(idx);setTimeout(()=>setCopied(null),1500);};
+
+  const lbl:React.CSSProperties={fontSize:12,fontWeight:700,color:C.t2,letterSpacing:0.3,marginBottom:8,display:"block"};
+  const fld:React.CSSProperties={width:"100%",padding:"11px 13px",border:`1px solid ${bd}`,borderRadius:11,fontSize:14,background:inputBg,color:C.t1,outline:"none",lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const};
+
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:16}}>
+      {/* inputs */}
+      <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:16,padding:22,display:"flex",flexDirection:"column",gap:16}}>
+        {cfg.inputs.map((f:any)=>(
+          <div key={f.key}>
+            <label style={lbl}>{f.label}</label>
+            {f.type==="textarea"?(
+              <textarea value={vals[f.key]||""} onChange={e=>setVals((v:any)=>({...v,[f.key]:e.target.value}))} placeholder={f.placeholder} style={{...fld,minHeight:70,resize:"vertical" as const}}/>
+            ):f.type==="chips"?(
+              <div style={{display:"flex",gap:8,flexWrap:"wrap" as const}}>
+                {f.options.map((o:string)=><button key={o} onClick={()=>setVals((v:any)=>({...v,[f.key]:o}))} style={{padding:"8px 15px",borderRadius:20,border:`1px solid ${vals[f.key]===o?"transparent":bd}`,background:vals[f.key]===o?`${accent}22`:"transparent",color:vals[f.key]===o?accent:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>{o}</button>)}
+              </div>
+            ):(
+              <input value={vals[f.key]||""} onChange={e=>setVals((v:any)=>({...v,[f.key]:e.target.value}))} placeholder={f.placeholder} style={fld}/>
+            )}
+          </div>
+        ))}
+        <button onClick={()=>run(false)} disabled={!canGen||loading}
+          style={{padding:"13px",borderRadius:12,border:"none",background:canGen?accent:inputBg,color:canGen?"#fff":C.t2,fontSize:15,fontWeight:700,cursor:canGen&&!loading?"pointer":"default",fontFamily:"'Inter',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+          {loading?<><div style={{width:17,height:17,border:"2.5px solid rgba(255,255,255,0.4)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Генерирую…</>:variants.length?"Сгенерировать заново":"Сгенерировать"}
+        </button>
+      </div>
+
+      {/* results */}
+      {variants.length>0&&<div style={{display:"flex",flexDirection:"column",gap:12}}>
+        {variants.map((v,i)=>(
+          <div key={i} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:14,padding:18}}>
+            {v.title&&<div style={{fontSize:12,fontWeight:700,color:accent,marginBottom:7,textTransform:"uppercase" as const,letterSpacing:0.3}}>{v.title}</div>}
+            <div style={{fontSize:15,color:C.t1,lineHeight:1.65,whiteSpace:"pre-wrap" as const}}>{v.body}</div>
+            {v.note&&<div style={{fontSize:12.5,color:C.t2,marginTop:10,lineHeight:1.5,borderLeft:`2px solid ${bd}`,paddingLeft:10}}>{v.note}</div>}
+            <div style={{display:"flex",gap:8,marginTop:14}}>
+              <button onClick={()=>copyBody(v.body,i)} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:copied===i?"#10B981":C.t2,fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                {copied===i?<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Скопировано</>:<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Копировать</>}
+              </button>
+              <button onClick={()=>regen(i)} disabled={regenIdx===i} title="Перегенерировать вариант" style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:12.5,fontWeight:600,cursor:regenIdx===i?"default":"pointer",fontFamily:"'Inter',sans-serif"}}>
+                {regenIdx===i?<><div style={{width:12,height:12,border:"2px solid rgba(150,150,150,0.3)",borderTopColor:C.t2,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>Генерирую</>:<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Другой вариант</>}
+              </button>
+            </div>
+          </div>
+        ))}
+        <button onClick={()=>run(true)} disabled={appending}
+          style={{padding:"12px",borderRadius:12,border:`1px dashed ${bd}`,background:"transparent",color:C.t2,fontSize:14,fontWeight:600,cursor:appending?"default":"pointer",fontFamily:"'Inter',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+          {appending?<><div style={{width:15,height:15,border:"2px solid rgba(150,150,150,0.3)",borderTopColor:C.t2,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>Генерирую…</>:"Ещё варианты"}
+        </button>
+      </div>}
+    </div>
+  );
+}
+
+
 function CopyAIPage({userId}:{userId:string}){
   const{dark}=useTheme();
   const[search,setSearch]=useState("");
@@ -14187,13 +14656,7 @@ function CopyAIPage({userId}:{userId:string}){
         <div style={{fontSize:11,color:C.t2,fontWeight:600,marginBottom:8,letterSpacing:0.3,textTransform:"uppercase" as const}}>Описание</div>
         <div style={{fontSize:15,color:C.t1,lineHeight:1.7}}>{selected.desc}</div>
       </div>
-      <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:16,padding:24}}>
-        <div style={{fontSize:11,color:C.t2,fontWeight:600,marginBottom:16,letterSpacing:0.3,textTransform:"uppercase" as const}}>Инструмент</div>
-        <div style={{padding:40,border:`1px dashed ${bd}`,borderRadius:12,textAlign:"center" as const,color:C.t2}}>
-          <div style={{fontSize:13,fontWeight:500}}>Функционал в разработке</div>
-          <div style={{fontSize:12,marginTop:4,opacity:0.6}}>Скоро будет доступно</div>
-        </div>
-      </div>
+      <CopyToolRunner tool={selected} dark={dark}/>
     </div>
   );
 
