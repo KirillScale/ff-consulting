@@ -7735,7 +7735,8 @@ ${itemsHTML}
 
 /* ============ VIZZY STORIES AI ============ */
 type SImg={id:string,url:string};
-type SStory={id:string,text:string,imgUrl:string,gradientPosition:"top"|"bottom",fontId:string,textY:number,textAlign:"left"|"center"|"right",fontScale:number,grayscale:boolean};
+type OverlayEl={id:string,type:"arrow"|"line"|"image",x:number,y:number,rot:number,len?:number,thickness?:number,color?:string,w?:number,imgUrl?:string};
+type SStory={id:string,text:string,imgUrl:string,gradientPosition:"top"|"bottom",fontId:string,textY:number,textAlign:"left"|"center"|"right",fontScale:number,grayscale:boolean,overlays?:OverlayEl[]};
 
 const STORY_FONTS:{id:string,label:string,family:string,weight:number}[]=[
   {id:"mont-black",label:"Montserrat Чёрный",family:"Montserrat",weight:900},
@@ -7783,7 +7784,7 @@ function storyWrap(ctx:CanvasRenderingContext2D,text:string,maxW:number):string[
   return out.length?out:[""];
 }
 
-function drawStory(ctx:CanvasRenderingContext2D,W:number,H:number,o:SStory,img:HTMLImageElement|null){
+function drawStory(ctx:CanvasRenderingContext2D,W:number,H:number,o:SStory,img:HTMLImageElement|null,oimgs?:Record<string,HTMLImageElement>){
   ctx.clearRect(0,0,W,H);
   if(img){
     const ir=img.width/img.height,cr=W/H;let dw,dh,dx,dy;
@@ -7815,6 +7816,23 @@ function drawStory(ctx:CanvasRenderingContext2D,W:number,H:number,o:SStory,img:H
   let y=y0+size;
   for(const ln of lines){ctx.fillText(ln,x,y);y+=lineH;}
   ctx.shadowColor="transparent";ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+  if(o.overlays&&o.overlays.length){
+    for(const el of o.overlays){
+      ctx.save();
+      ctx.translate(el.x*W,el.y*H);
+      ctx.rotate((el.rot||0)*Math.PI/180);
+      if(el.type==="image"){
+        const im=oimgs?oimgs[el.imgUrl||""]:null;
+        if(im){const w=(el.w||0.4)*W;const h=w*(im.height/Math.max(1,im.width));ctx.drawImage(im,-w/2,-h/2,w,h);}
+      }else{
+        const len=(el.len||0.4)*W;const th=Math.max(2,(el.thickness||0.014)*W);
+        ctx.fillStyle=el.color||"#FFFFFF";
+        ctx.fillRect(-len/2,-th/2,len,th);
+        if(el.type==="arrow"){const ah=th*1.9;ctx.beginPath();ctx.moveTo(len/2+ah*0.7,0);ctx.lineTo(len/2-ah*0.4,-ah);ctx.lineTo(len/2-ah*0.4,ah);ctx.closePath();ctx.fill();}
+      }
+      ctx.restore();
+    }
+  }
 }
 
 function StoryCanvas({story,width,height,radius=0,rev=0}:{story:SStory,width:number,height:number,radius?:number,rev?:number}){
@@ -7823,13 +7841,15 @@ function StoryCanvas({story,width,height,radius=0,rev=0}:{story:SStory,width:num
     let alive=true;
     (async()=>{
       const img=story.imgUrl?await loadStoryImg(story.imgUrl).catch(()=>null):null;
+      const oimgs:Record<string,HTMLImageElement>={};
+      for(const el of story.overlays||[]){if(el.type==="image"&&el.imgUrl&&!oimgs[el.imgUrl]){try{oimgs[el.imgUrl]=await loadStoryImg(el.imgUrl);}catch{}}}
       if(!alive)return;
       const c=ref.current;if(!c)return;
       const ctx=c.getContext("2d");if(!ctx)return;
-      drawStory(ctx,width,height,story,img);
+      drawStory(ctx,width,height,story,img,oimgs);
     })();
     return ()=>{alive=false;};
-  },[story.imgUrl,story.text,story.gradientPosition,story.fontId,story.textY,story.textAlign,story.fontScale,story.grayscale,width,height,rev]);
+  },[story.imgUrl,story.text,story.gradientPosition,story.fontId,story.textY,story.textAlign,story.fontScale,story.grayscale,story.overlays,width,height,rev]);
   return <canvas ref={ref} width={width} height={height} style={{width,height,borderRadius:radius,display:"block"}}/>;
 }
 
@@ -7838,7 +7858,9 @@ async function exportStoryBlob(story:SStory):Promise<Blob>{
   const c=document.createElement("canvas");c.width=W;c.height=H;
   const ctx=c.getContext("2d")!;
   const img=story.imgUrl?await loadStoryImg(story.imgUrl).catch(()=>null):null;
-  drawStory(ctx,W,H,story,img);
+  const oimgs:Record<string,HTMLImageElement>={};
+  for(const el of story.overlays||[]){if(el.type==="image"&&el.imgUrl&&!oimgs[el.imgUrl]){try{oimgs[el.imgUrl]=await loadStoryImg(el.imgUrl);}catch{}}}
+  drawStory(ctx,W,H,story,img,oimgs);
   return await new Promise<Blob>((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(new Error("blob")),"image/png"));
 }
 
@@ -7893,6 +7915,133 @@ async function generateMoreStoryText(form:any,cur:string,idx:number,total:number
   return t.replace(/```/g,"").replace(/^["']|["']$/g,"").trim();
 }
 
+function StoryProEditor({story,dark,fontsRev,onClose,onSave}:{story:SStory,dark:boolean,fontsRev:number,onClose:()=>void,onSave:(ov:OverlayEl[])=>void}){
+  const[overlays,setOverlays]=useState<OverlayEl[]>(()=>JSON.parse(JSON.stringify(story.overlays||[])));
+  const[sel,setSel]=useState<string|null>(null);
+  const stageRef=useRef<HTMLDivElement>(null);
+  const dragRef=useRef<any>(null);
+  const Wp=300,Hp=Math.round(Wp*16/9);
+  const bd=C.bd;
+  const base:SStory={...story,overlays:[]};
+  const cur=overlays.find(o=>o.id===sel)||null;
+  const uid=()=>"o"+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+
+  useEffect(()=>{
+    const move=(e:PointerEvent)=>{
+      const d=dragRef.current;if(!d)return;
+      const nx=Math.min(1,Math.max(0,d.ox+(e.clientX-d.sx)/d.w));
+      const ny=Math.min(1,Math.max(0,d.oy+(e.clientY-d.sy)/d.h));
+      setOverlays(o=>o.map(x=>x.id===d.id?{...x,x:nx,y:ny}:x));
+    };
+    const up=()=>{dragRef.current=null;};
+    window.addEventListener("pointermove",move);window.addEventListener("pointerup",up);
+    return ()=>{window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up);};
+  },[]);
+
+  const onDown=(e:React.PointerEvent,el:OverlayEl)=>{
+    e.stopPropagation();setSel(el.id);
+    const r=stageRef.current?.getBoundingClientRect();if(!r)return;
+    dragRef.current={id:el.id,sx:e.clientX,sy:e.clientY,ox:el.x,oy:el.y,w:r.width,h:r.height};
+  };
+
+  const addArrow=()=>{const el:OverlayEl={id:uid(),type:"arrow",x:0.5,y:0.5,rot:0,len:0.45,thickness:0.014,color:"#FFFFFF"};setOverlays(o=>[...o,el]);setSel(el.id);};
+  const addLine=()=>{const el:OverlayEl={id:uid(),type:"line",x:0.5,y:0.55,rot:0,len:0.4,thickness:0.022,color:"#FDE047"};setOverlays(o=>[...o,el]);setSel(el.id);};
+  const addImage=(file:File)=>{
+    const img=new Image();const o=URL.createObjectURL(file);
+    img.onload=()=>{const MAX=900;const s=Math.min(1,MAX/Math.max(img.width,img.height));const w=Math.round(img.width*s),h=Math.round(img.height*s);const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d")!.drawImage(img,0,0,w,h);URL.revokeObjectURL(o);const url=c.toDataURL("image/png");const el:OverlayEl={id:uid(),type:"image",x:0.5,y:0.5,rot:0,w:0.4,imgUrl:url};setOverlays(ov=>[...ov,el]);setSel(el.id);};
+    img.src=o;
+  };
+  const patch=(p:Partial<OverlayEl>)=>{if(sel)setOverlays(o=>o.map(x=>x.id===sel?{...x,...p}:x));};
+  const delSel=()=>{if(sel){setOverlays(o=>o.filter(x=>x.id!==sel));setSel(null);}};
+
+  const tool:React.CSSProperties={display:"flex",alignItems:"center",gap:7,padding:"9px 14px",borderRadius:10,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"};
+  const lbl:React.CSSProperties={fontSize:11,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:6,display:"block"};
+
+  return(
+    <div onClick={onClose} style={{position:"fixed" as const,inset:0,background:"rgba(0,0,0,0.6)",backdropFilter:"blur(4px)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:16,overflowY:"auto" as const}}>
+      <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:720,background:dark?"#141414":"#fff",border:`1px solid ${bd}`,borderRadius:20,padding:22,boxShadow:"0 24px 60px rgba(0,0,0,0.5)"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+          <div style={{fontSize:17,fontWeight:800,color:C.t1}}>Pro-редактор истории</div>
+          <button onClick={onClose} style={{width:32,height:32,borderRadius:9,border:"none",background:"transparent",color:C.t2,cursor:"pointer"}}>✕</button>
+        </div>
+
+        <div style={{display:"flex",gap:22,flexDirection:"column",alignItems:"center"}}>
+          {/* stage */}
+          <div ref={stageRef} onPointerDown={()=>setSel(null)} style={{position:"relative" as const,width:Wp,height:Hp,borderRadius:16,overflow:"hidden",flexShrink:0,boxShadow:"0 10px 30px rgba(0,0,0,0.35)",touchAction:"none" as const}}>
+            <StoryCanvas story={base} width={Wp} height={Hp} rev={fontsRev}/>
+            {overlays.map(el=>{
+              const common:React.CSSProperties={position:"absolute" as const,left:el.x*Wp,top:el.y*Hp,transform:`translate(-50%,-50%) rotate(${el.rot||0}deg)`,cursor:"grab",boxShadow:sel===el.id?"0 0 0 2px #8B5CF6":"none"};
+              if(el.type==="image")return <img key={el.id} src={el.imgUrl} alt="" draggable={false} onPointerDown={e=>onDown(e,el)} style={{...common,width:(el.w||0.4)*Wp,borderRadius:4}}/>;
+              const w=(el.len||0.4)*Wp,th=Math.max(2,(el.thickness||0.014)*Wp);
+              return(
+                <div key={el.id} onPointerDown={e=>onDown(e,el)} style={{...common,width:w,height:th,background:el.color||"#fff",borderRadius:2}}>
+                  {el.type==="arrow"&&<div style={{position:"absolute" as const,right:-th*1.4,top:"50%",transform:"translateY(-50%)",width:0,height:0,borderTop:`${th*1.6}px solid transparent`,borderBottom:`${th*1.6}px solid transparent`,borderLeft:`${th*2.4}px solid ${el.color||"#fff"}`}}/>}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* tools + controls */}
+          <div style={{width:"100%",maxWidth:400,display:"flex",flexDirection:"column",gap:16}}>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap" as const,justifyContent:"center"}}>
+              <button onClick={addArrow} style={tool}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>Стрелка
+              </button>
+              <button onClick={addLine} style={tool}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="12" x2="20" y2="12"/></svg>Линия
+              </button>
+              <label style={{...tool}}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Фото
+                <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const f=e.target.files?.[0];if(f)addImage(f);e.currentTarget.value="";}}/>
+              </label>
+            </div>
+
+            {cur?(
+              <div style={{background:dark?"rgba(255,255,255,0.03)":"#F8FAFC",border:`1px solid ${bd}`,borderRadius:14,padding:16,display:"flex",flexDirection:"column",gap:14}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  <div style={{fontSize:13,fontWeight:700,color:C.t1}}>{cur.type==="image"?"Фото":cur.type==="arrow"?"Стрелка":"Линия"}</div>
+                  <button onClick={delSel} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:9,border:"none",background:"rgba(239,68,68,0.12)",color:"#EF4444",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>Удалить
+                  </button>
+                </div>
+                <div>
+                  <label style={lbl}>Поворот · {Math.round(cur.rot||0)}°</label>
+                  <input type="range" min={-180} max={180} value={cur.rot||0} onChange={e=>patch({rot:+e.target.value})} style={{width:"100%",accentColor:"#8B5CF6"}}/>
+                </div>
+                <div>
+                  <label style={lbl}>Размер</label>
+                  {cur.type==="image"
+                    ?<input type="range" min={10} max={90} value={Math.round((cur.w||0.4)*100)} onChange={e=>patch({w:+e.target.value/100})} style={{width:"100%",accentColor:"#8B5CF6"}}/>
+                    :<input type="range" min={10} max={90} value={Math.round((cur.len||0.4)*100)} onChange={e=>patch({len:+e.target.value/100})} style={{width:"100%",accentColor:"#8B5CF6"}}/>}
+                </div>
+                {cur.type!=="image"&&<>
+                  <div>
+                    <label style={lbl}>Толщина</label>
+                    <input type="range" min={5} max={40} value={Math.round((cur.thickness||0.014)*1000)} onChange={e=>patch({thickness:+e.target.value/1000})} style={{width:"100%",accentColor:"#8B5CF6"}}/>
+                  </div>
+                  <div>
+                    <label style={lbl}>Цвет</label>
+                    <div style={{display:"flex",gap:8}}>
+                      {["#FFFFFF","#000000","#EF4444","#FDE047","#8B5CF6"].map(col=><button key={col} onClick={()=>patch({color:col})} style={{width:28,height:28,borderRadius:8,border:cur.color===col?"2px solid #8B5CF6":`1px solid ${bd}`,background:col,cursor:"pointer"}}/>)}
+                    </div>
+                  </div>
+                </>}
+              </div>
+            ):(
+              <div style={{fontSize:13,color:C.t2,textAlign:"center" as const,lineHeight:1.6}}>Добавь стрелку, линию или фото поверх истории. Перетаскивай элементы пальцем/мышью, выбери элемент для настройки.</div>
+            )}
+
+            <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+              <button onClick={onClose} style={{padding:"11px 20px",borderRadius:11,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Отмена</button>
+              <button onClick={()=>onSave(overlays)} style={{padding:"11px 24px",borderRadius:11,border:"none",background:"linear-gradient(135deg,#8B5CF6,#6366F1)",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 4px 16px rgba(139,92,246,0.3)"}}>Сохранить</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StoriesAIPage({userId}:{userId:string}){
   const{dark}=useTheme();
   const isMobile=useIsMobile();
@@ -7902,12 +8051,14 @@ function StoriesAIPage({userId}:{userId:string}){
   const[uploading,setUploading]=useState(0);
   const[fontsRev,setFontsRev]=useState(0);
 
-  const[form,setForm]=useState<any>({goal:"Продажа",goalCustom:"",theme:"",audience:"",message:"",sell:6,value:5,count:6});
+  const[form,setForm]=useState<any>({goal:"Продажа",goalCustom:"",theme:"",audience:"",message:"",sell:6,value:5,count:8});
   const[stories,setStories]=useState<SStory[]>([]);
   const[sel,setSel]=useState(0);
   const[picker,setPicker]=useState(false);
   const[exporting,setExporting]=useState(false);
   const[moreBusyIdx,setMoreBusyIdx]=useState<number|null>(null);
+  const[delIdx,setDelIdx]=useState<number|null>(null);
+  const[proIdx,setProIdx]=useState<number|null>(null);
 
   const bd=C.bd;
   const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
@@ -8141,8 +8292,8 @@ function StoriesAIPage({userId}:{userId:string}){
           </div>
           <div>
             <label style={lbl}>Количество сторис <span style={{color:"#8B5CF6"}}>{form.count}</span></label>
-            <input type="range" min={3} max={15} value={form.count} onChange={e=>setForm((f:any)=>({...f,count:+e.target.value}))} style={{width:"100%",accentColor:"#8B5CF6"}}/>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:C.t2,marginTop:4}}><span>3</span><span>15</span></div>
+            <input type="range" min={5} max={20} value={form.count} onChange={e=>setForm((f:any)=>({...f,count:+e.target.value}))} style={{width:"100%",accentColor:"#8B5CF6"}}/>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:C.t2,marginTop:4}}><span>5</span><span>20</span></div>
           </div>
         </div>
 
@@ -8195,6 +8346,9 @@ function StoriesAIPage({userId}:{userId:string}){
             <div key={s.id} onClick={()=>setSel(i)} style={{position:"relative" as const,cursor:"pointer",borderRadius:10,overflow:"hidden",border:`2px solid ${i===sel?"#8B5CF6":"transparent"}`,flexShrink:0}}>
               <StoryCanvas story={s} width={72} height={128} radius={8} rev={fontsRev}/>
               <div style={{position:"absolute" as const,top:4,left:4,width:18,height:18,borderRadius:6,background:"rgba(0,0,0,0.6)",color:"#fff",fontSize:10,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>{i+1}</div>
+              <button onClick={e=>{e.stopPropagation();if(stories.length<=1){alert("Нельзя удалить последнюю историю.");return;}setDelIdx(i);}} title="Удалить историю" style={{position:"absolute" as const,top:4,right:4,width:20,height:20,borderRadius:6,border:"none",background:"rgba(0,0,0,0.6)",color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
             </div>
           ))}
         </div>
@@ -8207,6 +8361,10 @@ function StoriesAIPage({userId}:{userId:string}){
           {cur&&<button onClick={()=>downloadPNG(cur,sel)} style={{width:"100%",marginTop:12,padding:"11px",borderRadius:11,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
             Скачать PNG
+          </button>}
+          {cur&&<button onClick={()=>setProIdx(sel)} style={{width:"100%",marginTop:8,padding:"11px",borderRadius:11,border:"none",background:"linear-gradient(135deg,#8B5CF6,#6366F1)",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:"0 4px 16px rgba(139,92,246,0.3)"}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            Перейти в Pro-редактор
           </button>}
         </div>
 
@@ -8276,6 +8434,20 @@ function StoriesAIPage({userId}:{userId:string}){
           </div>
         </div>}
       </div>
+
+      {/* confirm delete */}
+      {delIdx!=null&&<div onClick={()=>setDelIdx(null)} style={{position:"fixed" as const,inset:0,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(4px)",zIndex:450,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+        <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:400,background:dark?"#161616":"#fff",border:`1px solid ${bd}`,borderRadius:18,padding:24,textAlign:"center" as const}}>
+          <div style={{fontSize:17,fontWeight:800,color:C.t1,marginBottom:8}}>Удалить историю?</div>
+          <div style={{fontSize:14,color:C.t2,lineHeight:1.6,marginBottom:22}}>Вы действительно хотите удалить историю {delIdx+1}? Действие необратимо.</div>
+          <div style={{display:"flex",gap:10,justifyContent:"center"}}>
+            <button onClick={()=>setDelIdx(null)} style={{flex:1,padding:"12px",borderRadius:11,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Отмена</button>
+            <button onClick={()=>{const d=delIdx;setStories(prev=>prev.filter((_,i)=>i!==d));setSel(s=>{let n=s;if(d<s)n=s-1;const max=stories.length-2;if(n>max)n=max;return Math.max(0,n);});setProIdx(null);setDelIdx(null);}} style={{flex:1,padding:"12px",borderRadius:11,border:"none",background:"#EF4444",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Да, удалить</button>
+          </div>
+        </div>
+      </div>}
+
+      {proIdx!=null&&stories[proIdx]&&<StoryProEditor story={stories[proIdx]} dark={dark} fontsRev={fontsRev} onClose={()=>setProIdx(null)} onSave={(ov)=>{patchStory(proIdx,{overlays:ov});setProIdx(null);}}/>}
 
       {/* image picker */}
       {picker&&<div onClick={()=>setPicker(false)} style={{position:"fixed" as const,inset:0,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(4px)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
