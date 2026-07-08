@@ -4913,6 +4913,7 @@ const PlatformIcon=({pid,size=16}:{pid:string,size?:number})=>{
   if(pid==="instagram") return <svg width={size} height={size} viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5" stroke="url(#igG)" strokeWidth="2"/><circle cx="12" cy="12" r="5" stroke="url(#igG)" strokeWidth="2"/><circle cx="17.5" cy="6.5" r="1.2" fill="#E1306C"/><defs><linearGradient id="igG" x1="2" y1="22" x2="22" y2="2" gradientUnits="userSpaceOnUse"><stop stopColor="#F58529"/><stop offset="0.5" stopColor="#DD2A7B"/><stop offset="1" stopColor="#8134AF"/></linearGradient></defs></svg>;
   if(pid==="youtube") return <svg width={size} height={size} viewBox="0 0 24 24"><rect width="24" height="24" rx="5" fill="#FF0000"/><path d="M19.59 7.35A2.5 2.5 0 0017.83 5.6C16.37 5.2 12 5.2 12 5.2s-4.37 0-5.83.4A2.5 2.5 0 004.41 7.35 26 26 0 004 12a26 26 0 00.41 4.65A2.5 2.5 0 006.17 18.4c1.46.4 5.83.4 5.83.4s4.37 0 5.83-.4a2.5 2.5 0 001.76-1.75A26 26 0 0020 12a26 26 0 00-.41-4.65z" fill="white"/><path d="M10 15.2l5.2-3.2-5.2-3.2v6.4z" fill="#FF0000"/></svg>;
   if(pid==="telegram") return <svg width={size} height={size} viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#29B6F6"/><path d="M5.5 11.8l11.5-4.4c.5-.2 1 .1.8.9l-2 9.2c-.1.6-.5.7-.9.5l-2.5-1.8-1.2 1.1c-.1.1-.3.2-.6.2l.2-2.6 4.8-4.3c.2-.2 0-.3-.3-.1L7.8 13.4 5.3 12.7c-.6-.2-.6-.6.2-.9z" fill="white"/></svg>;
+  if(pid==="tiktok") return <svg width={size} height={size} viewBox="0 0 24 24"><rect width="24" height="24" rx="5" fill="#010101"/><path d="M17 7.6a4.3 4.3 0 01-2.6-.9v5.9a3.9 3.9 0 11-3.9-3.9c.2 0 .4 0 .6.1v2a1.9 1.9 0 00-.6-.1 1.9 1.9 0 101.9 1.9V4h1.9a4.3 4.3 0 002.7 3.1z" fill="#25F4EE" opacity="0.9" transform="translate(-0.6 0.6)"/><path d="M17 7.6a4.3 4.3 0 01-2.6-.9v5.9a3.9 3.9 0 11-3.9-3.9c.2 0 .4 0 .6.1v2a1.9 1.9 0 00-.6-.1 1.9 1.9 0 101.9 1.9V4h1.9a4.3 4.3 0 002.7 3.1z" fill="#FE2C55" opacity="0.9" transform="translate(0.6 -0.2)"/><path d="M17 7.6a4.3 4.3 0 01-2.6-.9v5.9a3.9 3.9 0 11-3.9-3.9c.2 0 .4 0 .6.1v2a1.9 1.9 0 00-.6-.1 1.9 1.9 0 101.9 1.9V4h1.9a4.3 4.3 0 002.7 3.1z" fill="#fff"/></svg>;
   if(pid==="vk") return <svg width={size} height={size} viewBox="0 0 24 24"><rect width="24" height="24" rx="5" fill="#4C75A3"/><path d="M13.1 16.3h1.2s.4 0 .5-.3c.1-.2 0-.5 0-.5s-.1-1.3.6-1.5c.7-.2 1.5 1.3 2.4 1.8.7.4 1.2.3 1.2.3l2.4-.1s1.2-.1.7-.9c0-.1-.3-.6-1.4-1.6-1.2-1.1-1-1 .4-2.9.9-1.2 1.2-2 1.1-2.3-.1-.3-1.1-.2-1.1-.2h-2.7s-.2 0-.3.1c-.1.1-.2.3-.2.3s-.4 1.1-.9 2c-1.1 1.8-1.5 1.9-1.7 1.8-.4-.3-.3-1-.3-1.6V9.4c0-1.3-.3-1.8-1.1-1.8H10c-.5 0-.8.3-.8.3s-.3.3.2.3c.6.1.7.5.7.5V12c0 1.5-.3 1.7-.7 1.7-.7 0-1.6-1.3-2.3-2.8-.3-.7-.6-1.5-.6-1.5s-.1-.2-.2-.3c-.2-.1-.4-.1-.4-.1H3.5s-.5 0-.5.3c0 .3.2.9.9 2.1C5.1 13.9 6.8 16.4 9.1 16.4c1.3 0 1.3-.2 1.3-.2l1.2-.3s.1-.2.3-.1c.2.1.1.3.1.3l-.1.5s-.1.3.1.5c.1.1.3.1.3.1h2.1" fill="white"/></svg>;
   return <div style={{width:size,height:size,borderRadius:"50%",background:C.t2+"44",display:"flex",alignItems:"center",justifyContent:"center"}}><svg width={size*0.55} height={size*0.55} viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg></div>;
 };
@@ -5025,10 +5026,10 @@ function ContentPage({userId}:{userId:string}){
   };
 
   const CONTENT_STAGES=[
-    {id:"idea",label:"💡 Идея",color:"#8B5CF6",hint:"Концепции и темы ждут своей очереди"},
-    {id:"progress",label:"🎬 Разработка",color:"#F59E0B",hint:"Съёмка, написание текста, сбор материала"},
-    {id:"ready",label:"✂️ Реализация",color:"#3B82F6",hint:"Монтаж, дизайн, финальная правка"},
-    {id:"published",label:"🚀 Опубликовано",color:"#10B981",hint:"Вышло в свет — собирает реакции"},
+    {id:"idea",label:"Идея",color:C.t1,hint:"Концепции и темы ждут своей очереди"},
+    {id:"progress",label:"Разработка",color:C.t1,hint:"Съёмка, написание текста, сбор материала"},
+    {id:"ready",label:"Реализация",color:C.t1,hint:"Монтаж, дизайн, финальная правка"},
+    {id:"published",label:"Опубликовано",color:C.t1,hint:"Вышло в свет — собирает реакции"},
   ];
   const[kanbanDrag,setKanbanDrag]=useState<string|null>(null);
   const[kanbanOver,setKanbanOver]=useState<string|null>(null);
@@ -5106,19 +5107,21 @@ function ContentPage({userId}:{userId:string}){
             display:"flex",alignItems:"center",gap:6,
             padding:"6px 14px",borderRadius:10,border:"none",cursor:"pointer",
             fontSize:12,fontWeight:isActive?700:400,
-            background:isActive?C.a:C.ib,
-            color:isActive?"#fff":C.t2,
-            boxShadow:isActive?"0 0 14px "+C.a+"40":"none",
+            background:isActive?C.t1:C.ib,
+            color:isActive?C.bg:C.t2,
+            boxShadow:"none",
             transition:"all 0.18s",
           }}
           onMouseEnter={e=>{if(!isActive)(e.currentTarget as HTMLElement).style.background=C.bd;}}
           onMouseLeave={e=>{if(!isActive)(e.currentTarget as HTMLElement).style.background=C.ib;}}>
-          <span>{pf.icon}</span>
+          {pf.id==="all"?<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={isActive?C.bg:C.t2} strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            :pf.id==="other"?<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={isActive?C.bg:C.t2} strokeWidth="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/></svg>
+            :<PlatformIcon pid={pf.id} size={16}/>}
           {pf.label}
           {cnt>0&&<span style={{
-            background:isActive?"rgba(255,255,255,0.25)":C.a+"20",
-            color:isActive?"#fff":C.a,
-            borderRadius:10,padding:"0 7px",fontSize:11,fontWeight:700,
+            background:isActive?"rgba(255,255,255,0.22)":C.bd,
+            color:isActive?C.bg:C.t2,
+            borderRadius:6,padding:"0 7px",fontSize:11,fontWeight:700,
           }}>{cnt}</span>}
         </button>;
       })}
@@ -5131,14 +5134,14 @@ function ContentPage({userId}:{userId:string}){
         const total=filteredItems.length;
         const pct=total?Math.round(cnt/total*100):0;
         const isMax=cnt>0&&cnt===Math.max(...CONTENT_STAGES.map(s=>filteredItems.filter((x:any)=>x.status===s.id).length));
-        return<div key={stage.id} style={{background:C.w,borderRadius:10,padding:"16px 18px",border:"1px solid "+(isMax?stage.color+"40":C.bd),boxShadow:isMax?"0 0 20px "+stage.color+"15":"none",transition:"all 0.2s"}}>
+        return<div key={stage.id} style={{background:C.w,borderRadius:10,padding:"16px 18px",border:"1px solid "+(isMax?stage.color+"30":C.bd),boxShadow:"none",transition:"all 0.2s"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
             <span style={{fontSize:13,color:C.t2,fontWeight:500}}>{stage.label}</span>
-            {isMax&&cnt>0&&<span style={{fontSize:10,background:stage.color+"18",color:stage.color,borderRadius:10,padding:"2px 7px",fontWeight:600}}>больше всего</span>}
+            {isMax&&cnt>0&&<span style={{fontSize:10,background:C.bd,color:C.t2,borderRadius:6,padding:"2px 7px",fontWeight:600}}>больше всего</span>}
           </div>
           <div style={{fontSize:26,fontWeight:800,color:stage.color,marginBottom:6}}>{cnt}</div>
           <div style={{height:4,borderRadius:4,background:C.bd,overflow:"hidden"}}>
-            <div style={{height:"100%",width:pct+"%",background:"linear-gradient(90deg,"+stage.color+","+stage.color+"bb)",borderRadius:4,transition:"width 0.4s"}}/>
+            <div style={{height:"100%",width:pct+"%",background:stage.color,borderRadius:4,transition:"width 0.4s"}}/>
           </div>
           <div style={{fontSize:10,color:C.t2,marginTop:4}}>{pct}% от всех</div>
         </div>;
@@ -5146,8 +5149,8 @@ function ContentPage({userId}:{userId:string}){
     </div>
 
     {/* ── Tabs ── */}
-    <div style={{display:"flex",gap:4,marginBottom:20,borderBottom:"2px solid "+C.bd}}>
-      {[{id:"list",label:"📋 Канбан"},{id:"calendar",label:"Календарь"},{id:"stories",label:"📊 Карусели историй"},{id:"scripts",label:"🎬 Сценарии"}].map(t=><button key={t.id} onClick={()=>setTab(t.id as any)} style={{padding:"10px 20px",background:"none",border:"none",borderBottom:tab===t.id?"3px solid "+C.a:"3px solid transparent",color:tab===t.id?C.a:C.t2,fontSize:14,fontWeight:tab===t.id?600:400,cursor:"pointer",marginBottom:-2}}>{t.label}</button>)}
+    <div style={{display:"flex",gap:4,marginBottom:20,borderBottom:"1px solid "+C.bd}}>
+      {[{id:"list",label:"Канбан"},{id:"calendar",label:"Календарь"},{id:"stories",label:"Карусели историй"},{id:"scripts",label:"Сценарии"}].map(t=><button key={t.id} onClick={()=>setTab(t.id as any)} style={{padding:"10px 18px",background:"none",border:"none",borderBottom:tab===t.id?"2px solid "+C.t1:"2px solid transparent",color:tab===t.id?C.t1:C.t2,fontSize:14,fontWeight:tab===t.id?600:500,cursor:"pointer",marginBottom:-2,letterSpacing:"-0.01em"}}>{t.label}</button>)}
     </div>
 
     {/* ── KANBAN TAB ── */}
@@ -5159,9 +5162,9 @@ function ContentPage({userId}:{userId:string}){
           <div style={{fontSize:12,color:C.t2,marginTop:2}}>Перетаскивай карточки между этапами</div>
         </div>
         <button onClick={()=>{setShow(!show);setEditId(null);sF(emptyF());}}
-          style={{padding:"9px 18px",background:C.a,color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,boxShadow:"0 0 16px "+C.a+"30"}}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          + Контент
+          style={{padding:"9px 18px",background:C.t1,color:C.bg,border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,boxShadow:"none"}}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Контент
         </button>
       </div>
 
@@ -5228,7 +5231,7 @@ function ContentPage({userId}:{userId:string}){
       </Card>}
 
       {/* KANBAN BOARD */}
-      <div style={{display:"flex",gap:14,overflowX:"auto",alignItems:"flex-start",paddingBottom:16,scrollbarWidth:"none"}}>
+      <div style={{display:"flex",gap:14,alignItems:"stretch",paddingBottom:16,width:"100%",overflowX:"auto"}}>
         {CONTENT_STAGES.map(stage=>{
           const stageItems=filteredItems.filter((x:any)=>x.status===stage.id);
           const isOver=kanbanOver===stage.id;
@@ -5237,30 +5240,36 @@ function ContentPage({userId}:{userId:string}){
             onDrop={()=>onKanbanDrop(stage.id)}
             onDragLeave={()=>setKanbanOver(null)}
             style={{
-              minWidth:260,width:260,flexShrink:0,
-              background:isOver?C.a+"06":C.ib,
+              flex:1,minWidth:200,
+              background:isOver?(C.t1+"08"):C.ib,
               borderRadius:10,
-              border:"1px solid "+(isOver?stage.color+"50":C.bd),
-              boxShadow:isOver?"0 0 20px "+stage.color+"15":"none",
+              border:"1px solid "+(isOver?C.t1+"40":C.bd),
+              boxShadow:"none",
               transition:"all 0.2s",
               overflow:"hidden",
+              display:"flex",flexDirection:"column",
             }}>
             {/* Column header */}
             <div style={{padding:"14px 14px 10px",borderBottom:"1px solid "+C.bd}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
                 <div style={{display:"flex",alignItems:"center",gap:7}}>
-                  <div style={{width:8,height:8,borderRadius:"50%",background:stage.color,boxShadow:"0 0 6px "+stage.color+"80"}}/>
+                  <div style={{width:7,height:7,borderRadius:"50%",background:C.t1}}/>
                   <span style={{fontSize:13,fontWeight:700,color:C.t1}}>{stage.label}</span>
                 </div>
-                <span style={{fontSize:11,fontWeight:700,color:stage.color,background:stage.color+"15",borderRadius:10,padding:"2px 8px"}}>{stageItems.length}</span>
+                <span style={{fontSize:11,fontWeight:700,color:C.t2,background:C.bd,borderRadius:6,padding:"2px 8px"}}>{stageItems.length}</span>
               </div>
               <div style={{fontSize:10,color:C.t2,lineHeight:1.4}}>{stage.hint}</div>
             </div>
 
             {/* Cards */}
-            <div style={{padding:"10px 10px",display:"flex",flexDirection:"column",gap:8,minHeight:80}}>
+            <div style={{padding:"12px 12px",display:"flex",flexDirection:"column",gap:8,flex:1,minHeight:"48vh"}}>
               {stageItems.length===0&&!isOver&&(
-                <div style={{padding:"20px 0",textAlign:"center",color:C.t2,fontSize:11,opacity:0.4}}>Пусто</div>
+                <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,padding:"24px 12px",textAlign:"center" as const}}>
+                  <div style={{width:34,height:34,borderRadius:9,border:"1px dashed "+C.bd,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.6" style={{opacity:0.6}}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  </div>
+                  <div style={{fontSize:11.5,color:C.t2,lineHeight:1.5,maxWidth:150,opacity:0.7}}>Перетащите сюда карточку или добавьте новую</div>
+                </div>
               )}
               {stageItems.map((x:any)=>(
                 <div key={x.id}
@@ -5270,15 +5279,15 @@ function ContentPage({userId}:{userId:string}){
                   style={{
                     background:C.w,borderRadius:8,padding:"12px 12px",
                     border:"1px solid "+C.bd,
-                    borderLeft:"3px solid "+stage.color,
+                    borderLeft:"2px solid "+C.t1,
                     cursor:"grab",
                     opacity:kanbanDrag===x.id?0.4:1,
                     transition:"all 0.15s",
                     boxShadow:"0 1px 4px rgba(0,0,0,0.06)",
                     animation:"leadPulse 5s ease-in-out infinite",
                   }}
-                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 4px 16px "+stage.color+"20";(e.currentTarget as HTMLElement).style.borderColor=stage.color+"60";(e.currentTarget as HTMLElement).style.animationPlayState="paused";}}
-                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 1px 4px rgba(0,0,0,0.06)";(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.borderLeftColor=stage.color;(e.currentTarget as HTMLElement).style.animationPlayState="running";}}>
+                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 4px 14px rgba(0,0,0,0.10)";(e.currentTarget as HTMLElement).style.borderColor=C.t1+"40";(e.currentTarget as HTMLElement).style.animationPlayState="paused";}}
+                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 1px 4px rgba(0,0,0,0.06)";(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.borderLeftColor=C.t1;(e.currentTarget as HTMLElement).style.animationPlayState="running";}}>
 
                   {/* Card top: platform + type */}
                   <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:7}}>
@@ -5288,7 +5297,7 @@ function ContentPage({userId}:{userId:string}){
                     }
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:12,fontWeight:700,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{x.topic}</div>
-                      <div style={{fontSize:10,color:C.t2,marginTop:1}}>{x.type} · <span style={{color:pCol(x.platform)}}>{pLbl(x.platform)}</span></div>
+                      <div style={{fontSize:10,color:C.t2,marginTop:1}}>{x.type} · <span style={{color:C.t2}}>{pLbl(x.platform)}</span></div>
                     </div>
                   </div>
 
