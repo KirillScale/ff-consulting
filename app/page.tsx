@@ -8794,7 +8794,7 @@ function ProductAIPage({userId}:{userId:string}){
   /* ---------- GENERATING ---------- */
   if(view==="generating")return(
     <div style={{width:"100%",padding:"36px 44px",minHeight:"calc(100vh - 140px)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:24}}>
-      <img src="/icon-product.png" width={104} height={104} style={{objectFit:"contain" as const,animation:"vpBounce 1.05s ease-in-out infinite"}} alt="Vizzy Product AI"/>
+      <img src="/icon-product.png" width={104} height={104} style={{objectFit:"cover" as const,borderRadius:26,animation:"vpBounce 1.05s ease-in-out infinite"}} alt="Vizzy Product AI"/>
       <style>{`@keyframes vpBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-22px)}}`}</style>
       <div style={{textAlign:"center" as const}}>
         <div style={{fontSize:22,fontWeight:800,color:C.t1,letterSpacing:"-0.02em",marginBottom:8}}>Генерируем варианты продукта</div>
@@ -9300,7 +9300,7 @@ function ProductAIPage({userId}:{userId:string}){
         <div style={{padding:60,textAlign:"center" as const,color:C.t2,fontSize:14}}>Загрузка...</div>
       ):products.length===0?(
         <div style={{background:cardBg,border:`1px dashed ${bd}`,borderRadius:12,padding:"48px 24px",textAlign:"center" as const,minHeight:"calc(100vh - 220px)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-          <img src="/icon-product.png" width={84} height={84} style={{objectFit:"contain" as const,margin:"0 auto 22px",display:"block"}} alt="Vizzy Product AI"/>
+          <img src="/icon-product.png" width={84} height={84} style={{objectFit:"cover" as const,borderRadius:20,margin:"0 auto 22px",display:"block"}} alt="Vizzy Product AI"/>
           <div style={{fontSize:20,fontWeight:800,color:C.t1,marginBottom:8,letterSpacing:"-0.02em"}}>У вас пока нет продуктов</div>
           <div style={{fontSize:14,color:C.t2,lineHeight:1.6,maxWidth:360,margin:"0 auto 24px"}}>Создайте свой первый цифровой продукт за 15 минут — ответьте на 5 вопросов, остальное сделает AI.</div>
           <button onClick={openCreate} disabled={busy}
@@ -9319,7 +9319,7 @@ function ProductAIPage({userId}:{userId:string}){
                 onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(128,128,128,0.35)";}}
                 onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=bd;}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-                  <img src="/icon-product.png" width={40} height={40} style={{objectFit:"contain" as const,display:"block"}} alt=""/>
+                  <img src="/icon-product.png" width={40} height={40} style={{objectFit:"cover" as const,borderRadius:11,display:"block"}} alt=""/>
                   <button onClick={e=>deleteProduct(p.id,e)} title="Удалить"
                     style={{width:28,height:28,borderRadius:8,border:"none",background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}
                     onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color="#777777";}}
@@ -14689,6 +14689,7 @@ async function copyGenVariants(system:string,user:string,count:number,avoid:stri
 
 function CopyToolRunner({tool,dark}:{tool:any,dark:boolean}){
   const cfg=COPY_B_TOOLS[tool.id];
+  const isMobile=useIsMobile();
   const accent=TAG_COLORS[tool.tag]||"#7C7C7C";
   const bd=C.bd;
   const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
@@ -14747,8 +14748,9 @@ function CopyToolRunner({tool,dark}:{tool:any,dark:boolean}){
   const lbl:React.CSSProperties={fontSize:12,fontWeight:700,color:C.t2,letterSpacing:0.3,marginBottom:8,display:"block"};
   const fld:React.CSSProperties={width:"100%",padding:"11px 13px",border:`1px solid ${bd}`,borderRadius:8,fontSize:14,background:inputBg,color:C.t1,outline:"none",lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const};
 
+  const twoCol=!isMobile&&variants.length>0;
   return(
-    <div style={{display:"flex",flexDirection:"column",gap:16}}>
+    <div style={{display:"grid",gridTemplateColumns:twoCol?"minmax(340px,440px) 1fr":"1fr",gap:16,alignItems:"start"}}>
       {/* inputs */}
       <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:22,display:"flex",flexDirection:"column",gap:16}}>
         {cfg.inputs.map((f:any)=>(
@@ -14845,6 +14847,7 @@ async function copyRewrite(system:string,user:string):Promise<string>{
 
 function CopyRewriteRunner({tool,dark}:{tool:any,dark:boolean}){
   const cfg=COPY_A_TOOLS[tool.id];
+  const isMobile=useIsMobile();
   const accent=TAG_COLORS[tool.tag]||"#7C7C7C";
   const bd=C.bd;
   const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
@@ -14965,7 +14968,7 @@ function CopyAIPage({userId}:{userId:string}){
   const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
 
   if(selected)return(
-    <div style={{maxWidth:680,margin:"0 auto",padding:"36px 24px"}}>
+    <div style={{maxWidth:1240,margin:"0 auto",width:"100%",padding:"32px 44px"}}>
       <button onClick={()=>setSelected(null)} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",color:C.t2,fontSize:13,fontWeight:500,marginBottom:28,padding:0}}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         Назад к инструментам
@@ -14988,7 +14991,7 @@ function CopyAIPage({userId}:{userId:string}){
   );
 
   return(
-    <div style={{maxWidth:960,margin:"0 auto",padding:"36px 24px"}}>
+    <div style={{maxWidth:1360,margin:"0 auto",width:"100%",padding:"32px 44px"}}>
       {/* Header */}
       <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:28}}>
         <div>
