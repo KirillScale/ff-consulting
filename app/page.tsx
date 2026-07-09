@@ -8,11 +8,11 @@ const ThemeCtx=createContext<{dark:boolean;toggle:()=>void}>({dark:false,toggle:
 const useTheme=()=>useContext(ThemeCtx);
 
 const LIGHT={
-  bg:"#F5F7FA",w:"#FFFFFF",a:"#2563EB",ah:"#1D4ED8",
-  t1:"#111827",t2:"#6B7280",bd:"#E5E7EB",
-  g:"#10B981",r:"#EF4444",y:"#F59E0B",
+  bg:"#F5F7FA",w:"#FFFFFF",a:"#1A1A1A",ah:"#000000",
+  t1:"#181818",t2:"#727272",bd:"#E5E7EB",
+  g:"#808080",r:"#777777",y:"#A7A7A7",
   sh:"0 2px 12px rgba(0,0,0,0.06)",ib:"#F9FAFB",
-  pk:"#EC4899",lb:"#06B6D4",dk:"#1F1F1F",da:"#2F2F2F",
+  pk:"#828282",lb:"#858585",dk:"#1F1F1F",da:"#2F2F2F",
   glass:"rgba(255,255,255,0.8)",glassBd:"rgba(0,0,0,0.08)",
 };
 
@@ -20,15 +20,15 @@ const LIGHT={
 const DARK={
   bg:"#0A0A0A",         // чистый нейтральный чёрный фон (как ChatGPT)
   w:"#171717",          // нейтральные тёмно-серые карточки
-  a:"#4F8EF7",
-  ah:"#3B82F6",
+  a:"#3F3F46",
+  ah:"#52525B",
   t1:"#ECECEC",         // нейтральный светлый текст
   t2:"#8A8A8A",         // нейтральный серый вторичный текст
   bd:"rgba(255,255,255,0.08)",
-  g:"#10B981",r:"#EF4444",y:"#F59E0B",
+  g:"#808080",r:"#777777",y:"#A7A7A7",
   sh:"0 8px 32px rgba(0,0,0,0.6)",
   ib:"#1C1C1C",         // нейтральный инпут
-  pk:"#EC4899",lb:"#06B6D4",
+  pk:"#828282",lb:"#858585",
   dk:"#0A0A0A",
   da:"#141414",
   glass:"rgba(23,23,23,0.85)",
@@ -42,7 +42,7 @@ const applyTheme=(dark:boolean)=>{Object.assign(C,dark?DARK:LIGHT);};
 const PLATS=[{id:"instagram",label:"Instagram",color:C.pk},{id:"telegram",label:"Telegram",color:C.a},{id:"youtube",label:"YouTube",color:C.r},{id:"vk",label:"VK",color:C.lb},{id:"other",label:"Другое",color:C.t2}];
 const CTYPES=["Пост","Reels","Stories","Текст","Видео","Другое"];
 const CSTATS=[{id:"idea",label:"Идея",color:C.t2},{id:"progress",label:"В работе",color:C.y},{id:"ready",label:"Готово",color:C.a},{id:"published",label:"Опубликовано",color:C.g}];
-const STAGES_DEFAULT=[{id:"new",label:"Новый",color:C.a},{id:"contact",label:"Взаимодействовали",color:"#8B5CF6"},{id:"call",label:"Созвон",color:C.y},{id:"closed",label:"Закрыт",color:C.g},{id:"rejected",label:"Отказ",color:C.r}];
+const STAGES_DEFAULT=[{id:"new",label:"Новый",color:C.a},{id:"contact",label:"Взаимодействовали",color:"#7C7C7C"},{id:"call",label:"Созвон",color:C.y},{id:"closed",label:"Закрыт",color:C.g},{id:"rejected",label:"Отказ",color:C.r}];
 const SRCS=["Instagram","Telegram","YouTube","Сайт","Рекомендация","Реклама","Другое"];
 const TASK_STATUS=[{id:"todo",label:"Не начата",color:C.t2},{id:"inprogress",label:"В процессе",color:C.y},{id:"done",label:"Выполнена",color:C.g}];
 const CALL_GOALS=["Созвон с командой","Созвон с лидом","Созвон с клиентом","Своя цель"];
@@ -52,28 +52,28 @@ const NAV_GROUPS=[
     label:"MY BUSINESS",
     alwaysOpen:true,
     items:[
-      {id:"dashboard",label:"Dashboard",accent:"#4F8EF7",ic:"M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"},
-      {id:"strategy",label:"War Room",accent:"#4F8EF7",ic:"M13 10V3L4 14h7v7l9-11h-7z"},
-      {id:"crm",label:"CRM",accent:"#38BDF8",ic:"M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"},
-      {id:"content",label:"Content",accent:"#A855F7",ic:"M7 4v16M17 4v16M3 8h4m10 0h4M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"},
-      {id:"calls",label:"Calls",accent:"#38BDF8",ic:"M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"},
-      {id:"offer",label:"Positioning",accent:"#F59E0B",ic:"M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"},
+      {id:"dashboard",label:"Dashboard",accent:"#878787",ic:"M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"},
+      {id:"strategy",label:"War Room",accent:"#878787",ic:"M13 10V3L4 14h7v7l9-11h-7z"},
+      {id:"crm",label:"CRM",accent:"#9C9C9C",ic:"M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"},
+      {id:"content",label:"Content",accent:"#808080",ic:"M7 4v16M17 4v16M3 8h4m10 0h4M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"},
+      {id:"calls",label:"Calls",accent:"#9C9C9C",ic:"M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"},
+      {id:"offer",label:"Positioning",accent:"#A7A7A7",ic:"M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"},
     ]
   },
   {
     label:"AI TOOLS",
     items:[
-      {id:"ai",label:"Kirill Scales AI",ic:"M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z",accent:"#A78BFA"},
-      {id:"product",label:"Vizzy Product AI",ic:"M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4",accent:"#34D399"},
-      {id:"script",label:"Vizzy Copy AI",ic:"M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z",accent:"#FB923C"},
+      {id:"ai",label:"Kirill Scales AI",ic:"M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z",accent:"#A0A0A0"},
+      {id:"product",label:"Vizzy Product AI",ic:"M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4",accent:"#9D9D9D"},
+      {id:"script",label:"Vizzy Copy AI",ic:"M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z",accent:"#A8A8A8"},
       {id:"stories",label:"Vizzy Stories AI",ic:"M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z",accent:"gradient"},
     ]
   },
   {
     label:"OTHER",
     items:[
-      {id:"links",label:"Links",accent:"#94A3B8",ic:"M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"},
-      {id:"profile",label:"Settings",accent:"#94A3B8",ic:"M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2 M12 11a4 4 0 100-8 4 4 0 000 8z"},
+      {id:"links",label:"Links",accent:"#A1A1A1",ic:"M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"},
+      {id:"profile",label:"Settings",accent:"#A1A1A1",ic:"M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2 M12 11a4 4 0 100-8 4 4 0 000 8z"},
     ]
   },
 ];
@@ -133,14 +133,14 @@ const Btn = ({children,onClick,primary=true,style:sx,disabled}:{children:React.R
   return <button onClick={onClick} disabled={disabled} style={{
     padding:"10px 20px",
     background:primary
-      ?(dark?"linear-gradient(135deg,#1E3A8A,#2563EB)":C.a)
+      ?(dark?"linear-gradient(135deg,#3B3B3B,#606060)":C.a)
       :(dark?"rgba(255,255,255,0.05)":C.bg),
     color:primary?"#fff":(dark?"rgba(255,255,255,0.6)":C.t2),
     border:primary?"none":`1px solid ${C.bd}`,
     borderRadius:8,fontSize:14,fontWeight:600,
     cursor:disabled?"not-allowed":"pointer",
     opacity:disabled?0.5:1,
-    boxShadow:primary&&dark?"0 0 20px rgba(37,99,235,0.3),inset 0 1px 0 rgba(255,255,255,0.1)":"none",
+    boxShadow:primary&&dark?"0 0 20px rgba(96,96,96,0.3),inset 0 1px 0 rgba(255,255,255,0.1)":"none",
     transition:"all 0.2s ease",
     ...sx
   }}>{children}</button>;
@@ -175,14 +175,14 @@ const useColStyle=(isOver?:boolean):React.CSSProperties=>{
   const{dark}=useTheme();
   return{
     background:dark
-      ?(isOver?"rgba(79,142,247,0.08)":"#141414")
+      ?(isOver?"rgba(135,135,135,0.08)":"#141414")
       :(isOver?"#F0F6FF":"#F2F2F7"),
     border:dark
-      ?(isOver?"2px solid rgba(79,142,247,0.4)":"2px solid rgba(255,255,255,0.04)")
-      :(isOver?"2px solid #007AFF":"2px solid transparent"),
+      ?(isOver?"2px solid rgba(135,135,135,0.4)":"2px solid rgba(255,255,255,0.04)")
+      :(isOver?"2px solid #656565":"2px solid transparent"),
     boxShadow:dark
-      ?(isOver?"0 0 20px rgba(79,142,247,0.12)":"0 2px 12px rgba(0,0,0,0.3)")
-      :(isOver?"0 0 0 2px #007AFF,0 4px 20px rgba(0,122,255,0.15)":"0 1px 4px rgba(0,0,0,0.06)"),
+      ?(isOver?"0 0 20px rgba(135,135,135,0.12)":"0 2px 12px rgba(0,0,0,0.3)")
+      :(isOver?"0 0 0 2px #656565,0 4px 20px rgba(101,101,101,0.15)":"0 1px 4px rgba(0,0,0,0.06)"),
     borderRadius:12,
   };
 };
@@ -295,7 +295,7 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
 
   const renderItem=(n:any)=>{
     const isActive=active===n.id;
-    const accent=getAccent(n)||"#4F8EF7";
+    const accent=getAccent(n)||"#878787";
     const isGrad=n.accent==="gradient";
     const customIcon=AI_ICONS[n.id];
     // Parse accent to rgb for backgrounds
@@ -353,7 +353,7 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
           position:"absolute",left:0,top:"16%",bottom:"16%",width:3,
           borderRadius:"0 3px 3px 0",
           background:isGrad
-            ?"linear-gradient(180deg,#86EFAC,#A78BFA)"
+            ?"linear-gradient(180deg,#C8C8C8,#A0A0A0)"
             :"linear-gradient(180deg,rgba("+r+","+g2+","+b+",1),rgba("+r+","+g2+","+b+",0.4))",
           boxShadow:"0 0 12px rgba("+r+","+g2+","+b+",0.8), 0 0 24px rgba("+r+","+g2+","+b+",0.4)",
         }}/>}
@@ -384,7 +384,7 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
           background:customIcon?"transparent"
             :isActive
               ?isGrad
-                ?"linear-gradient(135deg,rgba(134,239,172,0.3),rgba(167,139,250,0.3))"
+                ?"linear-gradient(135deg,rgba(200,200,200,0.3),rgba(160,160,160,0.3))"
                 :"rgba("+r+","+g2+","+b+",0.2)"
               :`rgba(255,255,255,0.04)`,
           border:isActive
@@ -398,7 +398,7 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
           {customIcon
             ?<img src={customIcon} width={26} height={26} style={{borderRadius:8,objectFit:"cover",opacity:isActive?1:0.5}} alt={n.label}/>
             :<I path={n.ic} size={13}
-                color={isActive?(isGrad?"#c4f5d4":accent):"rgba(255,255,255,0.4)"}
+                color={isActive?(isGrad?"#E3E3E3":accent):"rgba(255,255,255,0.4)"}
                 sw={isActive?2:1.5}/>
           }
         </div>
@@ -406,7 +406,7 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
         {!collapsed&&<span style={{
           fontSize:12.5,fontWeight:isActive?600:400,flex:1,textAlign:"left",
           color:isActive
-            ?(isGrad?"#c4f5d4":accent==="gradient"?"#86EFAC":accent)
+            ?(isGrad?"#E3E3E3":accent==="gradient"?"#C8C8C8":accent)
             :"rgba(255,255,255,0.5)",
           overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
           transition:"color 0.2s",
@@ -417,7 +417,7 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
         {!collapsed&&isActive&&<div style={{
           width:5,height:5,borderRadius:"50%",flexShrink:0,
           background:isGrad
-            ?"linear-gradient(135deg,#86EFAC,#A78BFA)"
+            ?"linear-gradient(135deg,#C8C8C8,#A0A0A0)"
             :accent,
           boxShadow:"0 0 6px rgba("+r+","+g2+","+b+",0.8), 0 0 12px rgba("+r+","+g2+","+b+",0.5)",
         }}/>}
@@ -443,8 +443,8 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
           100%{background-position:200% center}
         }
         @keyframes borderGlow{
-          0%,100%{border-color:rgba(79,142,247,0.15)}
-          50%{border-color:rgba(79,142,247,0.4)}
+          0%,100%{border-color:rgba(135,135,135,0.15)}
+          50%{border-color:rgba(135,135,135,0.4)}
         }
         .sb-scroll::-webkit-scrollbar{width:2px}
         .sb-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.05);border-radius:2px}
@@ -498,7 +498,7 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
                     <span style={{
                       fontSize:9,fontWeight:700,
                       color:hasActiveItem
-                        ?((group.items.find(i=>i.id===active)?.accent||"rgba(79,142,247,0.7)")+"bb")
+                        ?((group.items.find(i=>i.id===active)?.accent||"rgba(135,135,135,0.7)")+"bb")
                         :"rgba(255,255,255,0.18)",
                       letterSpacing:1.8,textTransform:"uppercase",
                     }}>{group.label}</span>
@@ -516,7 +516,7 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
                     <span style={{
                       fontSize:9,fontWeight:700,
                       color:hasActiveItem
-                        ?((group.items.find(i=>i.id===active)?.accent||"rgba(79,142,247,0.7)")+"bb")
+                        ?((group.items.find(i=>i.id===active)?.accent||"rgba(135,135,135,0.7)")+"bb")
                         :"rgba(255,255,255,0.18)",
                       letterSpacing:1.8,textTransform:"uppercase",
                     }}>{group.label}</span>
@@ -563,11 +563,11 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
             style={{
               width:48,height:26,borderRadius:10,flexShrink:0,
               background:dark
-                ?"linear-gradient(90deg,#1E3A8A,#4F46E5)"
+                ?"linear-gradient(90deg,#3B3B3B,#5B5B5B)"
                 :"rgba(255,255,255,0.1)",
-              border:`1px solid ${dark?"rgba(79,142,247,0.4)":"rgba(255,255,255,0.1)"}`,
+              border:`1px solid ${dark?"rgba(135,135,135,0.4)":"rgba(255,255,255,0.1)"}`,
               cursor:"pointer",position:"relative",
-              boxShadow:dark?"0 0 12px rgba(79,142,247,0.25)":"none",
+              boxShadow:dark?"0 0 12px rgba(135,135,135,0.25)":"none",
               transition:"all 0.4s ease",
               outline:"none",
             }}>
@@ -575,11 +575,11 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
               position:"absolute",top:2,
               left:dark?24:2,
               width:20,height:20,borderRadius:"50%",
-              background:dark?"#E0EAFF":"rgba(255,255,255,0.7)",
+              background:dark?"#E9E9E9":"rgba(255,255,255,0.7)",
               transition:"left 0.35s cubic-bezier(0.4,0,0.2,1)",
               display:"flex",alignItems:"center",justifyContent:"center",
               fontSize:11,
-              boxShadow:dark?"0 0 8px rgba(79,142,247,0.6)":"0 1px 4px rgba(0,0,0,0.2)",
+              boxShadow:dark?"0 0 8px rgba(135,135,135,0.6)":"0 1px 4px rgba(0,0,0,0.2)",
             }}>
               {dark?"🌙":"☀️"}
             </div>
@@ -614,7 +614,7 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
             background:"transparent",color:"rgba(255,255,255,0.2)",
             fontSize:12,transition:"all 0.15s",outline:"none",
           }}
-          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(239,68,68,0.08)";(e.currentTarget as HTMLElement).style.color="#EF4444";}}
+          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(119,119,119,0.08)";(e.currentTarget as HTMLElement).style.color="#777777";}}
           onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";(e.currentTarget as HTMLElement).style.color="rgba(255,255,255,0.2)";}}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
@@ -673,9 +673,9 @@ function MobileNav({active,onNav,onLogout}:{active:string,onNav:(id:string)=>voi
           </button>;
         })}
         <button onClick={()=>{onLogout();setDrawerOpen(false);}}
-          style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",border:"none",borderRadius:8,background:"rgba(239,68,68,0.15)",cursor:"pointer",gridColumn:"span 2"}}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="1.5"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          <span style={{fontSize:13,color:"#EF4444",fontWeight:500}}>Выйти</span>
+          style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",border:"none",borderRadius:8,background:"rgba(119,119,119,0.15)",cursor:"pointer",gridColumn:"span 2"}}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#777777" strokeWidth="1.5"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span style={{fontSize:13,color:"#777777",fontWeight:500}}>Выйти</span>
         </button>
       </div>
     </div>
@@ -822,9 +822,9 @@ class PageErrorBoundary extends React.Component<{children:React.ReactNode,name:s
     if(this.state.err)return(
       <div style={{padding:40,textAlign:"center"}}>
         <div style={{fontSize:32,marginBottom:12}}>⚠️</div>
-        <div style={{fontSize:18,fontWeight:700,marginBottom:8,color:"#EF4444"}}>Ошибка в разделе {this.props.name}</div>
-        <div style={{fontSize:12,color:"#64748B",marginBottom:20,fontFamily:"monospace",maxWidth:600,margin:"0 auto 20px"}}>{this.state.err.message}</div>
-        <button onClick={()=>this.setState({err:null})} style={{padding:"10px 20px",background:"#2563EB",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontSize:14,fontWeight:600}}>Обновить раздел</button>
+        <div style={{fontSize:18,fontWeight:700,marginBottom:8,color:"#777777"}}>Ошибка в разделе {this.props.name}</div>
+        <div style={{fontSize:12,color:"#727272",marginBottom:20,fontFamily:"monospace",maxWidth:600,margin:"0 auto 20px"}}>{this.state.err.message}</div>
+        <button onClick={()=>this.setState({err:null})} style={{padding:"10px 20px",background:"#606060",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontSize:14,fontWeight:600}}>Обновить раздел</button>
       </div>
     );
     return this.props.children;
@@ -879,16 +879,16 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
-        @keyframes burningGlow{0%,100%{box-shadow:0 0 12px rgba(239,68,68,0.2)}50%{box-shadow:0 0 24px rgba(239,68,68,0.4)}}
-        @keyframes deferrableGlow{0%,100%{box-shadow:0 0 8px rgba(245,158,11,0.12)}50%{box-shadow:0 0 16px rgba(245,158,11,0.28)}}
-        @keyframes glowPulse{0%,100%{box-shadow:0 0 8px 2px rgba(74,222,128,0.3)}50%{box-shadow:0 0 20px 6px rgba(74,222,128,0.6)}}
+        @keyframes burningGlow{0%,100%{box-shadow:0 0 12px rgba(119,119,119,0.2)}50%{box-shadow:0 0 24px rgba(119,119,119,0.4)}}
+        @keyframes deferrableGlow{0%,100%{box-shadow:0 0 8px rgba(167,167,167,0.12)}50%{box-shadow:0 0 16px rgba(167,167,167,0.28)}}
+        @keyframes glowPulse{0%,100%{box-shadow:0 0 8px 2px rgba(167,167,167,0.3)}50%{box-shadow:0 0 20px 6px rgba(167,167,167,0.6)}}
         @keyframes stickerBounce{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
         @keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(120px) rotate(720deg);opacity:0}}
         @keyframes progressGlow{0%,100%{opacity:0.6}50%{opacity:1}}
         @keyframes accentPulse{0%,100%{opacity:0.6;transform:scale(1)}50%{opacity:1;transform:scale(1.05)}}
         @keyframes floatUp{0%{transform:translateY(4px);opacity:0}100%{transform:translateY(0);opacity:1}}
         @keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
-        @keyframes borderGlow{0%,100%{border-color:rgba(79,142,247,0.2)}50%{border-color:rgba(79,142,247,0.5)}}
+        @keyframes borderGlow{0%,100%{border-color:rgba(135,135,135,0.2)}50%{border-color:rgba(135,135,135,0.5)}}
         *{box-sizing:border-box;}
         body{overflow-x:hidden;margin:0;}
         *{transition:background-color 0.35s ease,border-color 0.35s ease,color 0.35s ease,box-shadow 0.35s ease;}
@@ -900,16 +900,16 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
         /* ── DESIGN SYSTEM POLISH (unified premium layer) ── */
         html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;}
         body{letter-spacing:-0.006em;}
-        ::selection{background:rgba(99,102,241,0.22);}
+        ::selection{background:rgba(117,117,117,0.22);}
         button{letter-spacing:-0.005em;}
         button:active{transform:translateY(0.5px);}
         input:focus,textarea:focus,select:focus{
-          border-color:rgba(99,102,241,0.55)!important;
-          box-shadow:0 0 0 3px rgba(99,102,241,0.12)!important;
+          border-color:rgba(117,117,117,0.55)!important;
+          box-shadow:0 0 0 3px rgba(117,117,117,0.12)!important;
         }
         body.dark input:focus,body.dark textarea:focus,body.dark select:focus{
-          border-color:rgba(129,140,248,0.6)!important;
-          box-shadow:0 0 0 3px rgba(129,140,248,0.14)!important;
+          border-color:rgba(149,149,149,0.6)!important;
+          box-shadow:0 0 0 3px rgba(149,149,149,0.14)!important;
         }
 
         /* ── DARK MODE GLOBAL OVERRIDES ── */
@@ -1037,9 +1037,9 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
       {/* Kirill Scales AI — global tab visible on all MY BUSINESS pages */}
       {!isMobile&&["dashboard","strategy","crm","content","calls","offer","prices"].includes(page)&&(
         <div onClick={()=>setPage("ai")} title="Kirill Scales AI"
-          style={{position:"fixed",right:0,top:"40%",transform:"translateY(-50%)",background:"linear-gradient(180deg,#1D4ED8 0%,#06B6D4 100%)",width:32,height:130,borderRadius:"12px 0 0 12px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:7,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",zIndex:200,transition:"box-shadow 0.2s"}}
-          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="-6px 0 32px rgba(6,182,212,0.55)";}}
-          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="-4px 0 24px rgba(6,182,212,0.35)";}}>
+          style={{position:"fixed",right:0,top:"40%",transform:"translateY(-50%)",background:"linear-gradient(180deg,#4F4F4F 0%,#858585 100%)",width:32,height:130,borderRadius:"12px 0 0 12px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:7,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",zIndex:200,transition:"box-shadow 0.2s"}}
+          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="-6px 0 32px rgba(133,133,133,0.55)";}}
+          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="-4px 0 24px rgba(133,133,133,0.35)";}}>
           <img src="/icon-ai.png" width={18} height={18} style={{borderRadius:4,objectFit:"cover" as const}} alt=""/>
           <div style={{writingMode:"vertical-rl" as const,textOrientation:"mixed" as const,transform:"rotate(180deg)",fontSize:10,fontWeight:700,color:"#fff",letterSpacing:1.5}}>KS AI</div>
         </div>
@@ -1495,7 +1495,7 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
   const[resizingId,setResizingId]=useState<string|null>(null);
 
   const YEARS=[currentYear, currentYear+1, currentYear+2];
-  const COLORS=[C.a,"#8B5CF6",C.g,C.r,C.y,C.pk,"#06B6D4","#F97316"];
+  const COLORS=[C.a,"#7C7C7C",C.g,C.r,C.y,C.pk,"#858585","#909090"];
   const PERIODS:Array<[number,string]>=[[1,"1 мес"],[3,"3 мес"],[6,"6 мес"],[12,"Год"]];
 
   const visibleGoals=useMemo(()=>{
@@ -1580,11 +1580,11 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
 
   // Progress-based bar color: 0%=red, 50%=orange/yellow, 100%=green
   const progressColor=(pct:number,achieved:boolean)=>{
-    if(achieved||pct>=100)return{bg:"linear-gradient(90deg,#4ADE80,#16A34A)",shadow:"0 3px 14px rgba(74,222,128,0.5)"};
-    if(pct>=75)return{bg:"linear-gradient(90deg,#86EFAC,#22C55E)",shadow:"0 3px 12px rgba(34,197,94,0.35)"};
-    if(pct>=50)return{bg:"linear-gradient(90deg,#FDE68A,#F59E0B)",shadow:"0 3px 12px rgba(245,158,11,0.35)"};
-    if(pct>=25)return{bg:"linear-gradient(90deg,#FCA5A5,#F97316)",shadow:"0 3px 12px rgba(249,115,22,0.35)"};
-    return{bg:"linear-gradient(90deg,#FCA5A5,#EF4444)",shadow:"0 3px 12px rgba(239,68,68,0.35)"};
+    if(achieved||pct>=100)return{bg:"linear-gradient(90deg,#A7A7A7,#6F6F6F)",shadow:"0 3px 14px rgba(167,167,167,0.5)"};
+    if(pct>=75)return{bg:"linear-gradient(90deg,#C8C8C8,#898989)",shadow:"0 3px 12px rgba(137,137,137,0.35)"};
+    if(pct>=50)return{bg:"linear-gradient(90deg,#E2E2E2,#A7A7A7)",shadow:"0 3px 12px rgba(167,167,167,0.35)"};
+    if(pct>=25)return{bg:"linear-gradient(90deg,#BFBFBF,#909090)",shadow:"0 3px 12px rgba(144,144,144,0.35)"};
+    return{bg:"linear-gradient(90deg,#BFBFBF,#777777)",shadow:"0 3px 12px rgba(119,119,119,0.35)"};
   };
 
   const goalProgress=(gid:string)=>{
@@ -1749,8 +1749,8 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
               <div style={{flexShrink:0,color:C.t2,opacity:0.3,fontSize:12,cursor:"grab"}}>⠿</div>
               {/* Progress dot — color matches bar */}
               <div style={{width:9,height:9,borderRadius:"50%",flexShrink:0,
-                background:gAchieved?"#16A34A":pct>=75?"#22C55E":pct>=50?"#F59E0B":pct>=25?"#F97316":"#EF4444",
-                boxShadow:gAchieved?"0 0 6px rgba(22,163,74,0.6)":"none",
+                background:gAchieved?"#6F6F6F":pct>=75?"#898989":pct>=50?"#A7A7A7":pct>=25?"#909090":"#777777",
+                boxShadow:gAchieved?"0 0 6px rgba(111,111,111,0.6)":"none",
                 transition:"background 0.4s",
               }}/>
               <div style={{flex:1,minWidth:0}}>
@@ -1760,7 +1760,7 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
                 )}
                 {/* Progress bar mini */}
                 <div style={{height:2,borderRadius:2,background:C.bd,marginTop:4,overflow:"hidden"}}>
-                  <div style={{height:"100%",width:pct+"%",background:gAchieved?"#16A34A":pct>=50?"#F59E0B":"#EF4444",borderRadius:2,transition:"width 0.4s,background 0.4s"}}/>
+                  <div style={{height:"100%",width:pct+"%",background:gAchieved?"#6F6F6F":pct>=50?"#A7A7A7":"#777777",borderRadius:2,transition:"width 0.4s,background 0.4s"}}/>
                 </div>
               </div>
               <span style={{fontSize:10,fontWeight:600,color:C.t2,flexShrink:0}}>{pct}%</span>
@@ -1773,7 +1773,7 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
               {visibleMonths.map((_,i)=>(
                 <div key={i} style={{position:"absolute",left:`${i*(100/period)}%`,top:0,bottom:0,width:1,background:C.bd,opacity:0.35}}/>
               ))}
-              {todayCol>=0&&<div style={{position:"absolute",left:`${todayCol}%`,top:0,bottom:0,width:2,background:"#EF4444",zIndex:3,borderRadius:1,opacity:0.7}}/>}
+              {todayCol>=0&&<div style={{position:"absolute",left:`${todayCol}%`,top:0,bottom:0,width:2,background:"#777777",zIndex:3,borderRadius:1,opacity:0.7}}/>}
 
               {bar
                 ?<div style={{
@@ -1852,7 +1852,7 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
       {visibleGoals.length>0&&todayCol>=0&&<div style={{display:"flex",borderTop:"1px solid "+C.bd+"44"}}>
         <div style={{width:200,flexShrink:0}}/>
         <div style={{flex:1,position:"relative",height:18}}>
-          <div style={{position:"absolute",left:`${todayCol}%`,transform:"translateX(-50%)",top:2,fontSize:9,fontWeight:700,color:"#EF4444",whiteSpace:"nowrap"}}>▲ Сегодня</div>
+          <div style={{position:"absolute",left:`${todayCol}%`,transform:"translateX(-50%)",top:2,fontSize:9,fontWeight:700,color:"#777777",whiteSpace:"nowrap"}}>▲ Сегодня</div>
         </div>
       </div>}
     </div>
@@ -1861,9 +1861,9 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
 /* ============ GOALS BLOCK ============ */
 // Priority system helpers
 const PRIORITIES={
-  urgent:{id:"urgent",label:"Горит",color:"#EF4444",icon:"🔥"},
-  medium:{id:"medium",label:"Ещё терпимо",color:"#F59E0B",icon:"⏳"},
-  low:{id:"low",label:"Можно отложить",color:"#10B981",icon:"📌"},
+  urgent:{id:"urgent",label:"Горит",color:"#777777",icon:"🔥"},
+  medium:{id:"medium",label:"Ещё терпимо",color:"#A7A7A7",icon:"⏳"},
+  low:{id:"low",label:"Можно отложить",color:"#808080",icon:"📌"},
 };
 
 const calcAutoPriority=(endDate:string|null):{p:"urgent"|"medium"|"low",days:number|null,overdue:boolean}=>{
@@ -1994,7 +1994,7 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
     </div>;
   },[showGTF,goalTasks,TYPES]);
 
-  const COLORS=[C.a,"#8B5CF6",C.g,C.r,C.y,C.pk,"#06B6D4","#F97316"];
+  const COLORS=[C.a,"#7C7C7C",C.g,C.r,C.y,C.pk,"#858585","#909090"];
 
   const showToast=(msg:string)=>{setToast(msg);setTimeout(()=>setToast(null),3500);};
 
@@ -2089,13 +2089,13 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
     if(!tasks.length)return 0;
     return Math.round(tasks.filter((t:any)=>t.status==="done"||t.done).length/tasks.length*100);
   };
-  const prgColor=(p:number)=>p===100?"#16A34A":p>=75?"#84CC16":p>=50?C.y:p>=25?"#F97316":C.r;
+  const prgColor=(p:number)=>p===100?"#6F6F6F":p>=75?"#A2A2A2":p>=50?C.y:p>=25?"#909090":C.r;
   const prgGradient=(p:number)=>p===100
-    ?"linear-gradient(90deg,#4ADE80,#16A34A,#4ADE80)"
-    :p>=75?"linear-gradient(90deg,#BEF264,#84CC16)"
-    :p>=50?"linear-gradient(90deg,#FDE68A,#EAB308)"
-    :p>=25?"linear-gradient(90deg,#FED7AA,#F97316)"
-    :"linear-gradient(90deg,#FCA5A5,#EF4444)";
+    ?"linear-gradient(90deg,#A7A7A7,#6F6F6F,#A7A7A7)"
+    :p>=75?"linear-gradient(90deg,#D2D2D2,#A2A2A2)"
+    :p>=50?"linear-gradient(90deg,#E2E2E2,#B0B0B0)"
+    :p>=25?"linear-gradient(90deg,#DEDEDE,#909090)"
+    :"linear-gradient(90deg,#BFBFBF,#777777)";
   const prgSticker=(p:number)=>p===100?"🏆":p>=80?"🔥":p>=60?"💪":p>=40?"📈":p>=20?"🌱":"🎯";
   const prgStickerLabel=(p:number)=>p===100?"Цель достигнута!":p>=80?"Почти готово!":p>=60?"Хороший темп":p>=40?"В процессе":p>=20?"Начало положено":"Старт";
 
@@ -2105,7 +2105,7 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
   const ConfettiBurst=()=>(
     <div style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden",borderRadius:10,zIndex:10}}>
       {Array.from({length:18},(_,i)=>{
-        const colors=["#FFD700","#FF6B6B","#4ADE80","#60A5FA","#F472B6","#A78BFA"];
+        const colors=["#CACACA","#979797","#A7A7A7","#9A9A9A","#A1A1A1","#A0A0A0"];
         const color=colors[i%colors.length];
         const left=5+Math.random()*90;
         const delay=Math.random()*0.8;
@@ -2120,7 +2120,7 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
       })}
       <style>{`
         @keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(120px) rotate(720deg);opacity:0}}
-        @keyframes glowPulse{0%,100%{box-shadow:0 0 8px 2px rgba(74,222,128,0.4)}50%{box-shadow:0 0 20px 6px rgba(74,222,128,0.7)}}
+        @keyframes glowPulse{0%,100%{box-shadow:0 0 8px 2px rgba(167,167,167,0.4)}50%{box-shadow:0 0 20px 6px rgba(167,167,167,0.7)}}
         @keyframes progressGlow{0%,100%{opacity:0.6}50%{opacity:1}}
         @keyframes stickerBounce{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
       `}</style>
@@ -2139,13 +2139,13 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
     const sticker=prgSticker(p);
     const doneTasks=gTasks.filter((t:any)=>t.status==="done"||t.done).length;
 
-    const borderColor=isAchieved?"#4ADE80":(g.color||C.a);
-    const cardBg=isAchieved?"linear-gradient(135deg,#F0FDF4,#DCFCE7)":C.w;
+    const borderColor=isAchieved?"#A7A7A7":(g.color||C.a);
+    const cardBg=isAchieved?"linear-gradient(135deg,#F0FDF4,#F0F0F0)":C.w;
 
-    return <div style={{background:isAchieved?"#F0FDF4":C.bg,borderRadius:10,overflow:"hidden",border:"1px solid "+(isAchieved?"#BBF7D0":C.bd),
+    return <div style={{background:isAchieved?"#F0FDF4":C.bg,borderRadius:10,overflow:"hidden",border:"1px solid "+(isAchieved?"#E1E1E1":C.bd),
       transition:"transform 0.2s,box-shadow 0.2s",borderLeft:`4px solid ${borderColor}`,
       position:"relative",
-      boxShadow:isAchieved?"0 0 0 1px #BBF7D0, 0 4px 16px rgba(74,222,128,0.12)":"none",
+      boxShadow:isAchieved?"0 0 0 1px #E1E1E1, 0 4px 16px rgba(167,167,167,0.12)":"none",
       animation:isAchieved?"glowPulse 3s ease-in-out infinite":"none",
     }}>
       {isAchieved&&<ConfettiBurst/>}
@@ -2165,8 +2165,8 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
       <div style={{padding:"14px 18px",display:"flex",alignItems:"flex-start",gap:12,background:isAchieved?"transparent":C.w,cursor:"pointer"}} onClick={()=>setOpenGoal(isOpen?null:g.id)}>
         <div style={{flex:1,minWidth:0}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,flexWrap:"wrap"}}>
-            <span style={{fontSize:14,fontWeight:700,color:isAchieved?"#15803D":C.t1}}>{g.name}</span>
-            {isAchieved&&<span style={{fontSize:10,fontWeight:700,background:"#4ADE8022",color:"#16A34A",borderRadius:10,padding:"2px 10px",border:"1px solid #4ADE8040"}}>✓ Достигнута</span>}
+            <span style={{fontSize:14,fontWeight:700,color:isAchieved?"#585858":C.t1}}>{g.name}</span>
+            {isAchieved&&<span style={{fontSize:10,fontWeight:700,background:"#4ADE8022",color:"#6F6F6F",borderRadius:10,padding:"2px 10px",border:"1px solid #4ADE8040"}}>✓ Достигнута</span>}
             {!isAchieved&&overdue&&<span style={{fontSize:10,fontWeight:700,background:C.r+"18",color:C.r,borderRadius:10,padding:"2px 8px"}}>Просрочена на {Math.abs(days||0)} дн.</span>}
             {!isAchieved&&!overdue&&days!==null&&days<=14&&<span style={{fontSize:10,color:pr.color,fontWeight:600}}>осталось {days} дн.</span>}
           </div>
@@ -2175,7 +2175,7 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
           {/* ── STYLED PROGRESS BAR ── */}
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             {/* Sticker */}
-            <div style={{fontSize:20,flexShrink:0,animation:"stickerBounce 2s ease-in-out infinite",filter:isAchieved?"drop-shadow(0 0 6px rgba(74,222,128,0.8))":"none"}}
+            <div style={{fontSize:20,flexShrink:0,animation:"stickerBounce 2s ease-in-out infinite",filter:isAchieved?"drop-shadow(0 0 6px rgba(167,167,167,0.8))":"none"}}
               title={prgStickerLabel(p)}>{sticker}</div>
 
             {/* Bar container */}
@@ -2209,7 +2209,7 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
             <div style={{
               flexShrink:0,minWidth:52,textAlign:"center",
               padding:"3px 10px",borderRadius:10,
-              background:isAchieved?"linear-gradient(135deg,#4ADE80,#16A34A)":prgGradient(p),
+              background:isAchieved?"linear-gradient(135deg,#A7A7A7,#6F6F6F)":prgGradient(p),
               boxShadow:"0 2px 8px "+prgColor(p)+"44",
               transition:"all 0.4s",
             }}>
@@ -2387,8 +2387,8 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
   return <div className="yearmap-table" style={{background:C.w,borderRadius:10,boxShadow:"0 4px 24px rgba(0,0,0,0.07)",border:"1px solid "+C.bd,overflow:"hidden"}}>
     <style>{`
       @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
-      @keyframes burningGlow{0%,100%{box-shadow:0 0 12px rgba(239,68,68,0.18),0 0 0 1px rgba(239,68,68,0.12)}50%{box-shadow:0 0 22px rgba(239,68,68,0.32),0 0 0 1px rgba(239,68,68,0.22)}}
-      @keyframes deferrableGlow{0%,100%{box-shadow:0 0 8px rgba(245,158,11,0.12)}50%{box-shadow:0 0 16px rgba(245,158,11,0.24)}}
+      @keyframes burningGlow{0%,100%{box-shadow:0 0 12px rgba(119,119,119,0.18),0 0 0 1px rgba(119,119,119,0.12)}50%{box-shadow:0 0 22px rgba(119,119,119,0.32),0 0 0 1px rgba(119,119,119,0.22)}}
+      @keyframes deferrableGlow{0%,100%{box-shadow:0 0 8px rgba(167,167,167,0.12)}50%{box-shadow:0 0 16px rgba(167,167,167,0.24)}}
     `}</style>
     {/* Toast */}
     {toast&&<div style={{position:"fixed",bottom:isMobile?72:24,left:"50%",transform:"translateX(-50%)",background:C.dk,color:"#fff",padding:"12px 20px",borderRadius:8,fontSize:13,fontWeight:500,zIndex:1000,boxShadow:"0 8px 24px rgba(0,0,0,0.2)",maxWidth:360,textAlign:"center"}}>{toast}</div>}
@@ -2443,8 +2443,8 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
         <div style={{marginTop:8}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
             <span style={{fontSize:18}}>🏆</span>
-            <span style={{fontSize:13,fontWeight:700,color:"#16A34A",textTransform:"uppercase",letterSpacing:0.5}}>Достигнутые</span>
-            <span style={{fontSize:11,background:"#4ADE8020",color:"#16A34A",borderRadius:10,padding:"1px 8px",fontWeight:600}}>
+            <span style={{fontSize:13,fontWeight:700,color:"#6F6F6F",textTransform:"uppercase",letterSpacing:0.5}}>Достигнутые</span>
+            <span style={{fontSize:11,background:"#4ADE8020",color:"#6F6F6F",borderRadius:10,padding:"1px 8px",fontWeight:600}}>
               {childGoals.filter((g:any)=>goalProgress(g.id)===100).length}
             </span>
             <div style={{flex:1,height:1,background:"#4ADE8030"}}/>
@@ -2794,7 +2794,7 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
     return<div id="cal-grid-outer" style={{display:"flex",flexDirection:"column",background:C.w,borderRadius:10,border:"1px solid "+C.bd,overflow:"hidden",userSelect:"none"}}>
       {/* Early hours toggle */}
       <button onClick={()=>setCalShowEarly(v=>!v)}
-        style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"6px 0",background:calShowEarly?"rgba(37,99,235,0.04)":C.bg,border:"none",borderBottom:"1px solid "+C.bd,cursor:"pointer",fontSize:11,color:C.t2,fontWeight:600,transition:"background 0.2s"}}>
+        style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"6px 0",background:calShowEarly?"rgba(96,96,96,0.04)":C.bg,border:"none",borderBottom:"1px solid "+C.bd,cursor:"pointer",fontSize:11,color:C.t2,fontWeight:600,transition:"background 0.2s"}}>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points={calShowEarly?"18 15 12 9 6 15":"6 9 12 15 18 9"}/></svg>
         {calShowEarly?"Скрыть 00:00 – 07:00":"Показать 00:00 – 07:00"}
       </button>
@@ -2814,7 +2814,7 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
               {Array.from({length:CAL_EARLY},(_,i)=>(
                 <div key={i} onClick={()=>!dragTaskId&&!resizing&&openCalNew(dateStr,i)}
                   style={{height:SLOT_H,borderBottom:"1px solid rgba(0,0,0,0.04)",cursor:"pointer"}}
-                  onMouseEnter={e=>{if(!dragTaskId&&!resizing)(e.currentTarget as HTMLElement).style.background="rgba(37,99,235,0.03)";}}
+                  onMouseEnter={e=>{if(!dragTaskId&&!resizing)(e.currentTarget as HTMLElement).style.background="rgba(96,96,96,0.03)";}}
                   onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}/>
               ))}
               {earlyTasks.map((t:any,ti:number)=>{
@@ -2823,7 +2823,7 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
                 const topPx=Math.max(0,st/60*SLOT_H);
                 const heightPx=Math.max(20,(et-st)/60*SLOT_H-2);
                 const isDone=t.status==="done"||t.done;
-                const color=isDone?"#22C55E":(t._src==="goal"?(goals.data.find((g:any)=>g.id===t.goal_id)?.color||C.a):typeColor(t.type||"biz"));
+                const color=isDone?"#898989":(t._src==="goal"?(goals.data.find((g:any)=>g.id===t.goal_id)?.color||C.a):typeColor(t.type||"biz"));
                 return<div key={t.id} style={{position:"absolute",top:topPx,left:"2px",width:"94%",height:heightPx,background:color+"14",border:"1.5px solid "+color+"40",borderLeft:"3px solid "+color,borderRadius:7,padding:"3px 6px 3px 8px",overflow:"hidden",zIndex:ti+2,fontSize:10,color:color}}>
                   {t.text||t.title}
                 </div>;
@@ -2848,9 +2848,9 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
           const dt=new Date(dateStr+"T12:00:00");
           const dayTasks=tasksOnDay(dateStr);
           const isDrop=dropPreview?.dateStr===dateStr;
-          return<div key={dateStr} style={{borderRight:"1px solid "+C.bd,position:"relative",background:isDrop?"rgba(37,99,235,0.02)":"transparent"}}>
+          return<div key={dateStr} style={{borderRight:"1px solid "+C.bd,position:"relative",background:isDrop?"rgba(96,96,96,0.02)":"transparent"}}>
             {/* Header */}
-            <div style={{height:48,borderBottom:"1px solid "+C.bd,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",position:"sticky",top:0,zIndex:5,background:isToday?"rgba(37,99,235,0.04)":C.w}}>
+            <div style={{height:48,borderBottom:"1px solid "+C.bd,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",position:"sticky",top:0,zIndex:5,background:isToday?"rgba(96,96,96,0.04)":C.w}}>
               <span style={{fontSize:10,color:isToday?C.a:C.t2,fontWeight:600,textTransform:"uppercase"}}>
                 {["Вс","Пн","Вт","Ср","Чт","Пт","Сб"][dt.getDay()]}
               </span>
@@ -2863,7 +2863,7 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
               {Array.from({length:CAL_HOURS},(_,i)=>(
                 <div key={i} onClick={()=>!dragTaskId&&!resizing&&openCalNew(dateStr,i+CAL_START)}
                   style={{height:SLOT_H,borderBottom:"1px solid rgba(0,0,0,0.04)",cursor:"pointer"}}
-                  onMouseEnter={e=>{if(!dragTaskId&&!resizing)(e.currentTarget as HTMLElement).style.background="rgba(37,99,235,0.03)";}}
+                  onMouseEnter={e=>{if(!dragTaskId&&!resizing)(e.currentTarget as HTMLElement).style.background="rgba(96,96,96,0.03)";}}
                   onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}/>
               ))}
               {/* Drop preview line */}
@@ -2883,7 +2883,7 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
                 const heightPx=Math.max(24,(et-st)/60*SLOT_H-2);
                 const isDone=t.status==="done"||t.done;
                 const isAuto=t.auto_placed&&!t.manually_placed;
-                const color=isDone?"#22C55E":(t._src==="goal"?(goals.data.find((g:any)=>g.id===t.goal_id)?.color||C.a):typeColor(t.type||"biz"));
+                const color=isDone?"#898989":(t._src==="goal"?(goals.data.find((g:any)=>g.id===t.goal_id)?.color||C.a):typeColor(t.type||"biz"));
                 const dur=et-st;
                 // Overlap offset
                 const prev=dayTasks.filter((_:any,j:number)=>j<ti&&timeToMin(dayTasks[j].start_time||"09:00")<et&&timeToMin(dayTasks[j].end_time||"10:00")>st);
@@ -2895,14 +2895,14 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
                     top:topPx,left:off?(off*10)+"px":"2px",
                     width:off?"calc(90% - "+(off*10)+"px)":"94%",
                     height:heightPx,
-                    background:isDone?"rgba(34,197,94,0.08)":color+"14",
+                    background:isDone?"rgba(137,137,137,0.08)":color+"14",
                     border:isAuto?"1.5px dashed "+color+"55":"1.5px solid "+color+"40",
                     borderLeft:`3px solid ${color}`,
                     borderRadius:7,padding:"4px 6px 4px 8px",
                     cursor:"grab",overflow:"hidden",zIndex:ti+2,
                     opacity:dragTaskId===t.id?0.4:1,
                     transition:"box-shadow 0.15s",
-                    boxShadow:isDone?"0 0 8px rgba(34,197,94,0.12)":"0 1px 3px rgba(0,0,0,0.07)",
+                    boxShadow:isDone?"0 0 8px rgba(137,137,137,0.12)":"0 1px 3px rgba(0,0,0,0.07)",
                   }}
                   onMouseDown={e=>{
                     if((e.target as HTMLElement).classList.contains("cal-resize"))return;
@@ -2917,7 +2917,7 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
                   }}
                   onClick={e=>{if(!dragTaskId&&Math.abs(e.movementX)<3)setCalModal(t);}}
                   onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 2px 14px "+color+"40";(e.currentTarget as HTMLElement).style.zIndex="50";}}
-                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow=isDone?"0 0 8px rgba(34,197,94,0.12)":"0 1px 3px rgba(0,0,0,0.07)";(e.currentTarget as HTMLElement).style.zIndex=String(ti+2);}}>
+                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow=isDone?"0 0 8px rgba(137,137,137,0.12)":"0 1px 3px rgba(0,0,0,0.07)";(e.currentTarget as HTMLElement).style.zIndex=String(ti+2);}}>
                   {/* Checkbox */}
                   <div style={{display:"flex",alignItems:"flex-start",gap:5}}>
                     <button onMouseDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();
@@ -2925,7 +2925,7 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
                       if(t._src==="kanban")kanban.update(t.id,{status:done?"done":"todo",done});
                       else if(t._src==="goal")goalTasks.update(t.id,{status:done?"done":"todo",done});
                       else calTasks.update(t.id,{status:done?"done":"todo",done});}}
-                      style={{width:13,height:13,minWidth:13,borderRadius:3,border:"1.5px solid "+(isDone?"#22C55E":color),background:isDone?"#22C55E":"transparent",cursor:"pointer",marginTop:1,display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s"}}>
+                      style={{width:13,height:13,minWidth:13,borderRadius:3,border:"1.5px solid "+(isDone?"#898989":color),background:isDone?"#898989":"transparent",cursor:"pointer",marginTop:1,display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s"}}>
                       {isDone&&<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5"><polyline points="20 6 9 17 4 12"/></svg>}
                     </button>
                     <div style={{flex:1,fontSize:11,fontWeight:700,color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:isDone?"line-through":"none",lineHeight:1.3}}>{t.text}</div>
@@ -2969,9 +2969,9 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
             const dayT=allCalTasks.filter((t:any)=>(t.date||t.start_date)===d);
             const isToday=d===tdStr;
             return<div key={d} onClick={()=>openCalNew(d)}
-              style={{minHeight:90,borderRight:"1px solid "+C.bd+"44",borderBottom:"1px solid "+C.bd+"44",padding:"6px 4px",cursor:"pointer",background:isToday?"rgba(37,99,235,0.03)":"transparent",transition:"background 0.1s"}}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=isToday?"rgba(37,99,235,0.06)":C.ib;}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=isToday?"rgba(37,99,235,0.03)":"transparent";}}>
+              style={{minHeight:90,borderRight:"1px solid "+C.bd+"44",borderBottom:"1px solid "+C.bd+"44",padding:"6px 4px",cursor:"pointer",background:isToday?"rgba(96,96,96,0.03)":"transparent",transition:"background 0.1s"}}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=isToday?"rgba(96,96,96,0.06)":C.ib;}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=isToday?"rgba(96,96,96,0.03)":"transparent";}}>
               <div style={{display:"flex",justifyContent:"center",marginBottom:3}}>
                 <div style={{width:24,height:24,borderRadius:"50%",background:isToday?C.a:"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>
                   <span style={{fontSize:12,fontWeight:isToday?700:400,color:isToday?"#fff":C.t1}}>{parseInt(d.split("-")[2])}</span>
@@ -2980,10 +2980,10 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
               {dayT.slice(0,3).map((t:any)=>{
                 const isDone=t.status==="done"||t.done;
                 const isAuto=t.auto_placed&&!t.manually_placed;
-                const color=isDone?"#22C55E":(t._src==="goal"?(goals.data.find((g:any)=>g.id===t.goal_id)?.color||C.a):typeColor(t.type||"biz"));
+                const color=isDone?"#898989":(t._src==="goal"?(goals.data.find((g:any)=>g.id===t.goal_id)?.color||C.a):typeColor(t.type||"biz"));
                 return<div key={t.id} onClick={e=>{e.stopPropagation();setCalModal(t);}}
                   style={{fontSize:10,padding:"2px 5px",borderRadius:4,marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
-                    background:isDone?"rgba(34,197,94,0.08)":color+"14",color,
+                    background:isDone?"rgba(137,137,137,0.08)":color+"14",color,
                     border:isAuto?"1px dashed "+color+"40":"1px solid "+color+"25",
                     borderLeft:`2px solid ${color}`,textDecoration:isDone?"line-through":"none"}}>
                   {t.start_time&&<span style={{opacity:0.6,fontSize:9}}>{t.start_time} </span>}{t.text}
@@ -3019,7 +3019,7 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
     const isDone=t&&(t.status==="done"||t.done);
 
     if(isView&&t){
-      const color=isDone?"#22C55E":(t._src==="goal"?(goals.data.find((g:any)=>g.id===t.goal_id)?.color||C.a):typeColor(t.type||"biz"));
+      const color=isDone?"#898989":(t._src==="goal"?(goals.data.find((g:any)=>g.id===t.goal_id)?.color||C.a):typeColor(t.type||"biz"));
       return<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setCalModal(null)}>
         <div style={{background:C.w,borderRadius:12,padding:28,width:"100%",maxWidth:420,border:"1px solid "+C.bd,boxShadow:"0 24px 60px rgba(0,0,0,0.35)"}} onClick={e=>e.stopPropagation()}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
@@ -3154,7 +3154,7 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
     if(!tasks.length)return 0;
     return Math.round(tasks.filter((t:any)=>t.status==="done"||t.done).length/tasks.length*100);
   };
-  const prgColor=(p:number)=>p<30?C.r:p<50?"#F97316":p<70?C.y:p<90?"#84CC16":"#16A34A";
+  const prgColor=(p:number)=>p<30?C.r:p<50?"#909090":p<70?C.y:p<90?"#A2A2A2":"#6F6F6F";
 
   // ── Task urgency (shared in StrategyPage) ──
   const taskUrgency=(t:any):{kind:"burning"|"deferrable"|"normal",daysLeft:number|null}=>{
@@ -3228,7 +3228,7 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
         <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap"}}>
           <span style={{fontSize:12,fontWeight:500,textDecoration:isDone?"line-through":"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.text}</span>
         </div>
-        <div style={{display:"flex",gap:6,marginTop:2}}><span style={{fontSize:10,color:C.t2}}>{t.mins}м</span>{t.fromGoal&&<span style={{fontSize:10,color:t.goalColor}}>★</span>}{showDate&&t.date&&<span style={{fontSize:10,color:taskUrgency(t).kind==="burning"?"#EF4444":C.t2,fontWeight:taskUrgency(t).kind==="burning"?700:400}}>{t.date.substring(5)}</span>}</div>
+        <div style={{display:"flex",gap:6,marginTop:2}}><span style={{fontSize:10,color:C.t2}}>{t.mins}м</span>{t.fromGoal&&<span style={{fontSize:10,color:t.goalColor}}>★</span>}{showDate&&t.date&&<span style={{fontSize:10,color:taskUrgency(t).kind==="burning"?"#777777":C.t2,fontWeight:taskUrgency(t).kind==="burning"?700:400}}>{t.date.substring(5)}</span>}</div>
       </div>
       <button onClick={()=>startEdit(t)} style={{width:16,height:16,border:"none",background:"transparent",cursor:"pointer",color:C.t2,fontSize:10,opacity:0.6}}>✏️</button>
       {!t.fromGoal&&<button onClick={()=>setDeleteConfirm(t.id)} style={{width:16,height:16,border:"none",background:"transparent",cursor:"pointer",color:C.r,fontSize:11}}>×</button>}
@@ -3316,7 +3316,7 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
           {visibleDays.map(d=>{const st=dayStats(d);const isT=d===td;const isPast=d<td;const dt=new Date(d);
             const bc=isT?C.a:st.allDone?C.g:isPast&&!st.allDone&&st.tasks.length>0?C.r:"transparent";
             return<div key={d} style={{background:C.w,borderRadius:10,boxShadow:C.sh,border:"2px solid "+bc,display:"flex",flexDirection:"column",minHeight:isMobile?200:300}}>
-              <div style={{padding:"14px 16px",borderBottom:"1px solid "+C.bd,display:"flex",justifyContent:"space-between",background:isT?"rgba(37,99,235,0.04)":"transparent"}}>
+              <div style={{padding:"14px 16px",borderBottom:"1px solid "+C.bd,display:"flex",justifyContent:"space-between",background:isT?"rgba(96,96,96,0.04)":"transparent"}}>
                 <div><div style={{fontSize:20,fontWeight:700,color:isT?C.a:C.t1}}>{dt.getDate()}</div><div style={{fontSize:11,color:C.t2}}>{WDS[dt.getDay()]}, {MR[dt.getMonth()].substring(0,3)}</div></div>
                 {st.overload&&<span style={{fontSize:10,color:C.r,fontWeight:600}}>⚠️ Перегруз</span>}
               </div>
@@ -3345,13 +3345,13 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
                   <div style={{display:"flex",gap:6}}>
                     <button onClick={()=>addTask(d)} style={{flex:1,padding:"6px",background:C.a,color:"#fff",border:"none",borderRadius:6,fontSize:12,cursor:"pointer"}}>+</button>
                     <button onClick={()=>{setShowTF(null);setRecurModal({dayStr:d});setRecurForm(f=>({...f,from:d,to:d}));}} title="Повторять задачу"
-                      style={{padding:"6px 10px",background:"#7C3AED10",border:"1px solid #7C3AED30",borderRadius:6,fontSize:12,cursor:"pointer",color:"#7C3AED",fontWeight:600}}>🔁</button>
+                      style={{padding:"6px 10px",background:"#7C3AED10",border:"1px solid #7C3AED30",borderRadius:6,fontSize:12,cursor:"pointer",color:"#626262",fontWeight:600}}>🔁</button>
                     <button onClick={()=>setShowTF(null)} style={{padding:"6px 10px",background:C.bg,border:"1px solid "+C.bd,borderRadius:6,fontSize:12,cursor:"pointer"}}>×</button>
                   </div>
                 </div>:<div style={{display:"flex",gap:6,marginTop:6}}>
                   <button onClick={()=>setShowTF(d)} style={{flex:1,padding:"6px",background:C.bg,border:"1px dashed "+C.bd,borderRadius:8,fontSize:12,color:C.t2,cursor:"pointer"}}>+ Задача</button>
                   <button onClick={()=>{setRecurModal({dayStr:d});setRecurForm(f=>({...f,from:d,to:d}));}} title="Повторять задачу"
-                    style={{padding:"6px 10px",background:"#7C3AED10",border:"1px dashed #7C3AED40",borderRadius:8,fontSize:12,color:"#7C3AED",cursor:"pointer"}}>🔁</button>
+                    style={{padding:"6px 10px",background:"#7C3AED10",border:"1px dashed #7C3AED40",borderRadius:8,fontSize:12,color:"#626262",cursor:"pointer"}}>🔁</button>
                 </div>}
               </div>
               {(()=>{
@@ -3360,8 +3360,8 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
                 const total=nonDel.length;
                 const pct=total>0?Math.round(done/total*100):0;
                 const allDone=total>0&&done===total;
-                const barColor=pct===100?"#16A34A":pct>=60?"#22C55E":pct>=30?"#F59E0B":"#EF4444";
-                const gradient=pct===100?"linear-gradient(90deg,#4ADE80,#16A34A)":pct>=60?"linear-gradient(90deg,#86EFAC,#22C55E)":pct>=30?"linear-gradient(90deg,#FDE68A,#F59E0B)":"linear-gradient(90deg,#FCA5A5,#EF4444)";
+                const barColor=pct===100?"#6F6F6F":pct>=60?"#898989":pct>=30?"#A7A7A7":"#777777";
+                const gradient=pct===100?"linear-gradient(90deg,#A7A7A7,#6F6F6F)":pct>=60?"linear-gradient(90deg,#C8C8C8,#898989)":pct>=30?"linear-gradient(90deg,#E2E2E2,#A7A7A7)":"linear-gradient(90deg,#BFBFBF,#777777)";
                 if(total===0)return null;
                 return <div style={{padding:"10px 14px",borderTop:"1px solid "+C.bd,background:allDone?"#F0FDF4":C.w,transition:"background 0.4s"}}>
                   <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -3395,7 +3395,7 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
     {recurModal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:20,backdropFilter:"blur(6px)"}} onClick={()=>setRecurModal(null)}>
       <div style={{width:"min(480px,100%)",background:C.w,borderRadius:10,overflow:"hidden",boxShadow:"0 24px 60px rgba(0,0,0,0.25)",border:"1px solid "+C.bd}} onClick={e=>e.stopPropagation()}>
         {/* Header */}
-        <div style={{padding:"18px 22px",background:"linear-gradient(135deg,#7C3AED,#4F8EF7)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div style={{padding:"18px 22px",background:"linear-gradient(135deg,#626262,#878787)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div>
             <div style={{fontSize:16,fontWeight:700,color:"#fff"}}>🔁 Повторяющаяся задача</div>
             <div style={{fontSize:11,color:"rgba(255,255,255,0.7)",marginTop:2}}>Создаст задачу на каждый день периода</div>
@@ -3430,7 +3430,7 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
             <div style={{display:"flex",gap:8}}>
               {([["daily","Каждый день"],["weekdays","Будни"],["weekly","Раз в неделю"]] as [string,string][]).map(([val,lbl])=>(
                 <button key={val} onClick={()=>setRecurForm({...recurForm,freq:val})}
-                  style={{flex:1,padding:"8px 4px",borderRadius:8,border:"1px solid "+(recurForm.freq===val?"#7C3AED":""+C.bd),background:recurForm.freq===val?"#7C3AED10":"transparent",color:recurForm.freq===val?"#7C3AED":C.t2,fontSize:12,fontWeight:recurForm.freq===val?700:400,cursor:"pointer",transition:"all 0.15s"}}>
+                  style={{flex:1,padding:"8px 4px",borderRadius:8,border:"1px solid "+(recurForm.freq===val?"#626262":""+C.bd),background:recurForm.freq===val?"#7C3AED10":"transparent",color:recurForm.freq===val?"#626262":C.t2,fontSize:12,fontWeight:recurForm.freq===val?700:400,cursor:"pointer",transition:"all 0.15s"}}>
                   {lbl}
                 </button>
               ))}
@@ -3447,7 +3447,7 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
               if(recurForm.freq==="daily"||recurForm.freq==="weekdays")cur.setDate(cur.getDate()+1);
               else cur.setDate(cur.getDate()+7);
             }
-            return <div style={{padding:"10px 14px",background:"#7C3AED10",borderRadius:8,border:"1px solid #7C3AED20",fontSize:12,color:"#7C3AED",fontWeight:500}}>
+            return <div style={{padding:"10px 14px",background:"#7C3AED10",borderRadius:8,border:"1px solid #7C3AED20",fontSize:12,color:"#626262",fontWeight:500}}>
               Будет создано <b>{count}</b> {count===1?"задача":count<5?"задачи":"задач"} · {recurForm.mins} мин каждая
             </div>;
           })()}
@@ -3457,7 +3457,7 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
         <div style={{padding:"14px 22px",borderTop:"1px solid "+C.bd,display:"flex",gap:10,justifyContent:"flex-end"}}>
           <button onClick={()=>setRecurModal(null)} style={{padding:"10px 18px",background:C.bg,border:"1px solid "+C.bd,borderRadius:8,fontSize:13,cursor:"pointer",color:C.t2}}>Отмена</button>
           <button onClick={addRecurringTask} disabled={recurLoading}
-            style={{padding:"10px 20px",background:recurLoading?"#9CA3AF":"linear-gradient(135deg,#7C3AED,#4F8EF7)",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:recurLoading?"default":"pointer",display:"flex",alignItems:"center",gap:8}}>
+            style={{padding:"10px 20px",background:recurLoading?"#9CA3AF":"linear-gradient(135deg,#626262,#878787)",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:recurLoading?"default":"pointer",display:"flex",alignItems:"center",gap:8}}>
             {recurLoading?<><div style={{width:14,height:14,border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/> Создаю...</>:"🔁 Запустить повтор"}
           </button>
         </div>
@@ -3469,13 +3469,13 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
 
 /* ============ CRM ============ */
 const CRM_DEFAULT_STAGES=[
-  {id:"new",label:"Новый",color:"#007AFF"},
-  {id:"contact",label:"Взаимодействовали",color:"#AF52DE"},
-  {id:"call",label:"Созвон",color:"#FF9500"},
-  {id:"closed",label:"Закрыт",color:"#34C759"},
-  {id:"rejected",label:"Отказ",color:"#FF3B30"},
+  {id:"new",label:"Новый",color:"#656565"},
+  {id:"contact",label:"Взаимодействовали",color:"#7E7E7E"},
+  {id:"call",label:"Созвон",color:"#A4A4A4"},
+  {id:"closed",label:"Закрыт",color:"#8F8F8F"},
+  {id:"rejected",label:"Отказ",color:"#747474"},
 ];
-const FUNNEL_COLORS=["#007AFF","#AF52DE","#FF9500","#34C759","#FF2D55","#5AC8FA","#FF3B30","#4CD964"];
+const FUNNEL_COLORS=["#656565","#7E7E7E","#A4A4A4","#8F8F8F","#707070","#ADADAD","#747474","#A2A2A2"];
 
 function CrmPage({userId}:{userId:string}){
   const isMobile=useIsMobile();
@@ -3775,12 +3775,12 @@ function CrmPage({userId}:{userId:string}){
 
   const tabSt=(active:boolean):React.CSSProperties=>({
     flex:1,padding:"8px 0",border:"none",borderRadius:8,
-    background:active?(isDark?"rgba(79,142,247,0.15)":"#fff"):"transparent",
-    color:active?(isDark?"#4F8EF7":C.t1):C.t2,
+    background:active?(isDark?"rgba(135,135,135,0.15)":"#fff"):"transparent",
+    color:active?(isDark?"#878787":C.t1):C.t2,
     fontSize:13,fontWeight:active?600:400,cursor:"pointer",
-    boxShadow:active?(isDark?`0 0 16px rgba(79,142,247,0.2)`:"0 1px 4px rgba(0,0,0,0.12)"):"none",
+    boxShadow:active?(isDark?`0 0 16px rgba(135,135,135,0.2)`:"0 1px 4px rgba(0,0,0,0.12)"):"none",
     transition:"all 0.2s",
-    borderBottom:active?(isDark?"2px solid #4F8EF7":"2px solid transparent"):"2px solid transparent",
+    borderBottom:active?(isDark?"2px solid #878787":"2px solid transparent"):"2px solid transparent",
   });
 
   // Edit lead state
@@ -3921,7 +3921,7 @@ function CrmPage({userId}:{userId:string}){
             <div style={{display:"flex",gap:10,marginTop:22,justifyContent:"center"}}>
               <button onClick={()=>setDeleteConfirmId(null)} style={{padding:"10px 20px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:8,fontSize:13,fontWeight:500,cursor:"pointer"}}>Отмена</button>
               <button onClick={()=>{allLeads.remove(l.id);setDeleteConfirmId(null);setOpenLead(null);}}
-                style={{padding:"10px 22px",background:"linear-gradient(135deg,#FF6B9D,#E91E8C)",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 0 20px rgba(233,30,140,0.4)"}}>
+                style={{padding:"10px 22px",background:"linear-gradient(135deg,#9D9D9D,#676767)",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 0 20px rgba(103,103,103,0.4)"}}>
                 🗑 Удалить навсегда
               </button>
             </div>
@@ -3977,7 +3977,7 @@ function CrmPage({userId}:{userId:string}){
           {/* Clean: only 3 action buttons */}
           <div style={{display:"flex",gap:6,alignItems:"stretch"}} onClick={e=>e.stopPropagation()}>
             <button onClick={()=>{setWorkPanelLead(l);setWorkPanelTab("profile");setTouchGenResult("");setTouchGenGoal("");}}
-              style={{flex:1,padding:"9px 10px",background:"linear-gradient(135deg,#7C3AED,#4F8EF7)",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
+              style={{flex:1,padding:"9px 10px",background:"linear-gradient(135deg,#626262,#878787)",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
               Работать с лидом
             </button>
             <button onClick={()=>openEditLead(l)}
@@ -3985,7 +3985,7 @@ function CrmPage({userId}:{userId:string}){
               ✏️
             </button>
             <button onClick={()=>setDeleteConfirmId(l.id)}
-              style={{padding:"9px 14px",background:"#FFF1F2",color:"#E91E8C",border:"1px solid #FECDD3",borderRadius:8,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              style={{padding:"9px 14px",background:"#FFF1F2",color:"#676767",border:"1px solid #DCDCDC",borderRadius:8,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
               🗑
             </button>
           </div>
@@ -4041,13 +4041,13 @@ function CrmPage({userId}:{userId:string}){
             <div style={{flex:1,minWidth:0}}>
               <div style={{fontSize:17,fontWeight:800,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.name}</div>
               {(l.contact||l.phone||l.email)&&<div style={{fontSize:12,color:C.t2,marginTop:2}}>{l.contact||l.phone||l.email}</div>}
-              {l.deal&&<div style={{fontSize:12,fontWeight:700,color:"#16A34A",marginTop:2}}>{fmt$(l.deal)} ₽</div>}
+              {l.deal&&<div style={{fontSize:12,fontWeight:700,color:"#6F6F6F",marginTop:2}}>{fmt$(l.deal)} ₽</div>}
             </div>
             <button onClick={()=>setWorkPanelLead(null)} style={{width:32,height:32,borderRadius:8,border:"1px solid "+C.bd,background:C.bg,cursor:"pointer",fontSize:18,color:C.t2,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>×</button>
           </div>
           <div style={{display:"flex",gap:8}}>
             {writeUrl&&<a href={writeUrl} target="_blank" rel="noreferrer"
-              style={{flex:1,padding:"9px 12px",background:"linear-gradient(135deg,#22C55E,#16A34A)",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,textDecoration:"none"}}>
+              style={{flex:1,padding:"9px 12px",background:"linear-gradient(135deg,#898989,#6F6F6F)",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,textDecoration:"none"}}>
               ✉ Написать лиду
             </a>}
             <button onClick={()=>{openTouchModal(l.id);}}
@@ -4101,32 +4101,32 @@ function CrmPage({userId}:{userId:string}){
             <div style={{borderTop:"1px solid "+C.bd,paddingTop:14}}>
               <button disabled={aiReportLoading===l.id}
                 onClick={async()=>{await generateAiReport(l);setWorkPanelLead((prev:any)=>prev?{...prev,...allLeads.data.find((x:any)=>x.id===l.id)}:prev);}}
-                style={{width:"100%",padding:"11px 14px",background:aiReportLoading===l.id?"#6D28D9":"linear-gradient(135deg,#7C3AED,#4F8EF7)",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:aiReportLoading===l.id?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
+                style={{width:"100%",padding:"11px 14px",background:aiReportLoading===l.id?"#515151":"linear-gradient(135deg,#626262,#878787)",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:aiReportLoading===l.id?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
                 {aiReportLoading===l.id?<><div style={{width:14,height:14,border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/> Формирую отчёт...</>:"Сформировать отчёт через ИИ"}
               </button>
 
               {l.ai_report&&(()=>{
                 const r=parseReport(l.ai_report);
                 return<div style={{marginTop:12,display:"flex",flexDirection:"column",gap:10}}>
-                  {r.portrait&&<div style={{padding:"12px 14px",background:"#EFF6FF",border:"1px solid #93C5FD",borderRadius:8,borderLeft:"3px solid #3B82F6"}}>
-                    <div style={{fontSize:10,fontWeight:800,color:"#1D4ED8",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Портрет лида</div>
-                    <div style={{fontSize:12,color:"#1E3A5F",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.portrait}</div>
+                  {r.portrait&&<div style={{padding:"12px 14px",background:"#EFF6FF",border:"1px solid #BCBCBC",borderRadius:8,borderLeft:"3px solid #7A7A7A"}}>
+                    <div style={{fontSize:10,fontWeight:800,color:"#4F4F4F",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Портрет лида</div>
+                    <div style={{fontSize:12,color:"#363636",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.portrait}</div>
                   </div>}
-                  {r.emotions&&<div style={{padding:"12px 14px",background:"#FFF7ED",border:"1px solid #FED7AA",borderRadius:8,borderLeft:"3px solid #F97316"}}>
-                    <div style={{fontSize:10,fontWeight:800,color:"#C2410C",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Эмоциональное состояние</div>
-                    <div style={{fontSize:12,color:"#7C2D12",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.emotions}</div>
+                  {r.emotions&&<div style={{padding:"12px 14px",background:"#FFF7ED",border:"1px solid #DEDEDE",borderRadius:8,borderLeft:"3px solid #909090"}}>
+                    <div style={{fontSize:10,fontWeight:800,color:"#626262",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Эмоциональное состояние</div>
+                    <div style={{fontSize:12,color:"#424242",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.emotions}</div>
                   </div>}
-                  {r.probability&&<div style={{padding:"12px 14px",background:"#F0F9FF",border:"1px solid #7DD3FC",borderRadius:8,borderLeft:"3px solid #0EA5E9"}}>
-                    <div style={{fontSize:10,fontWeight:800,color:"#0369A1",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Вероятность покупки</div>
-                    <div style={{fontSize:12,color:"#0C4A6E",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.probability}</div>
+                  {r.probability&&<div style={{padding:"12px 14px",background:"#F0F9FF",border:"1px solid #BEBEBE",borderRadius:8,borderLeft:"3px solid #808080"}}>
+                    <div style={{fontSize:10,fontWeight:800,color:"#515151",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Вероятность покупки</div>
+                    <div style={{fontSize:12,color:"#3C3C3C",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.probability}</div>
                   </div>}
-                  {r.risks&&<div style={{padding:"12px 14px",background:"#FFF1F2",border:"1px solid #FECDD3",borderRadius:8,borderLeft:"3px solid #F43F5E"}}>
-                    <div style={{fontSize:10,fontWeight:800,color:"#BE123C",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Риски потери лида</div>
-                    <div style={{fontSize:12,color:"#881337",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.risks}</div>
+                  {r.risks&&<div style={{padding:"12px 14px",background:"#FFF1F2",border:"1px solid #DCDCDC",borderRadius:8,borderLeft:"3px solid #797979"}}>
+                    <div style={{fontSize:10,fontWeight:800,color:"#4A4A4A",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Риски потери лида</div>
+                    <div style={{fontSize:12,color:"#3A3A3A",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.risks}</div>
                   </div>}
-                  {r.steps&&<div style={{padding:"12px 14px",background:"#FAF5FF",border:"1px solid #D8B4FE",borderRadius:8,borderLeft:"3px solid #7C3AED"}}>
-                    <div style={{fontSize:10,fontWeight:800,color:"#6D28D9",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Оптимальный следующий шаг</div>
-                    <div style={{fontSize:12,color:"#4C1D95",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.steps}</div>
+                  {r.steps&&<div style={{padding:"12px 14px",background:"#FAF5FF",border:"1px solid #C7C7C7",borderRadius:8,borderLeft:"3px solid #626262"}}>
+                    <div style={{fontSize:10,fontWeight:800,color:"#515151",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Оптимальный следующий шаг</div>
+                    <div style={{fontSize:12,color:"#393939",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.steps}</div>
                   </div>}
                 </div>;
               })()}
@@ -4135,7 +4135,7 @@ function CrmPage({userId}:{userId:string}){
 
           {/* ── TOUCHES TAB ── */}
           {workPanelTab==="touches"&&<>
-            {!hasReport&&<div style={{padding:"14px 16px",background:"#FFF7ED",border:"1px solid #FED7AA",borderRadius:8,fontSize:12,color:"#C2410C",lineHeight:1.7}}>
+            {!hasReport&&<div style={{padding:"14px 16px",background:"#FFF7ED",border:"1px solid #DEDEDE",borderRadius:8,fontSize:12,color:"#626262",lineHeight:1.7}}>
               Для генерации касания нужен отчёт ИИ. Перейди во вкладку Профиль и сначала сформируй его.
             </div>}
             <div>
@@ -4146,16 +4146,16 @@ function CrmPage({userId}:{userId:string}){
             </div>
             <button disabled={touchGenLoading||!hasReport}
               onClick={()=>generateTouchpoint(workPanelLead)}
-              style={{width:"100%",padding:"11px 14px",background:!hasReport?"#9CA3AF":touchGenLoading?"#6D28D9":"linear-gradient(135deg,#7C3AED,#4F8EF7)",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:(!hasReport||touchGenLoading)?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+              style={{width:"100%",padding:"11px 14px",background:!hasReport?"#9CA3AF":touchGenLoading?"#515151":"linear-gradient(135deg,#626262,#878787)",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:(!hasReport||touchGenLoading)?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
               {touchGenLoading?<><div style={{width:14,height:14,border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/> Генерирую касания...</>:"Сгенерировать касание"}
             </button>
 
             {touchGenResult&&touchGenResult!=="__no_report__"&&(()=>{
               const touches=parseTouches(touchGenResult);
               const colors=[
-                {bg:"#EFF6FF",border:"#93C5FD",accent:"#1D4ED8"},
-                {bg:"#FAF5FF",border:"#D8B4FE",accent:"#6D28D9"},
-                {bg:"#F0FDF4",border:"#86EFAC",accent:"#15803D"},
+                {bg:"#EFF6FF",border:"#BCBCBC",accent:"#4F4F4F"},
+                {bg:"#FAF5FF",border:"#C7C7C7",accent:"#515151"},
+                {bg:"#F0FDF4",border:"#C8C8C8",accent:"#585858"},
               ];
               return<div style={{display:"flex",flexDirection:"column",gap:12}}>
                 {touches.map((t:any,i:number)=>{
@@ -4179,7 +4179,7 @@ function CrmPage({userId}:{userId:string}){
                 })}
               </div>;
             })()}
-            {touchGenResult==="__no_report__"&&<div style={{padding:"14px 16px",background:"#FFF7ED",border:"1px solid #FED7AA",borderRadius:8,fontSize:12,color:"#C2410C"}}>
+            {touchGenResult==="__no_report__"&&<div style={{padding:"14px 16px",background:"#FFF7ED",border:"1px solid #DEDEDE",borderRadius:8,fontSize:12,color:"#626262"}}>
               Сначала сформируй отчёт ИИ во вкладке Профиль.
             </div>}
           </>}
@@ -4196,7 +4196,7 @@ function CrmPage({userId}:{userId:string}){
           <div style={{fontSize:13,color:C.t2,marginTop:2}}>Выбери воронку продаж или создай новую</div>
         </div>
         <button onClick={()=>setNewFunnelModal(true)}
-          style={{padding:"10px 20px",background:"#007AFF",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
+          style={{padding:"10px 20px",background:"#656565",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Новая воронка
         </button>
@@ -4369,7 +4369,7 @@ function CrmPage({userId}:{userId:string}){
             </div>
             <div style={{display:"flex",gap:10,marginTop:24,justifyContent:"flex-end"}}>
               <button onClick={()=>setNewFunnelModal(false)} style={{padding:"10px 18px",background:"#F2F2F7",color:"#8E8E93",border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer"}}>Отмена</button>
-              <button onClick={createFunnel} disabled={!newFunnelName.trim()} style={{padding:"10px 20px",background:newFunnelName.trim()?"#007AFF":"#C6C6C8",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:newFunnelName.trim()?"pointer":"default"}}>Создать</button>
+              <button onClick={createFunnel} disabled={!newFunnelName.trim()} style={{padding:"10px 20px",background:newFunnelName.trim()?"#656565":"#C6C6C8",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:newFunnelName.trim()?"pointer":"default"}}>Создать</button>
             </div>
           </div>
         </div>
@@ -4385,7 +4385,7 @@ function CrmPage({userId}:{userId:string}){
               style={iS()}/>
             <div style={{display:"flex",gap:8,marginTop:16,justifyContent:"flex-end"}}>
               <button onClick={()=>setEditFunnelId(null)} style={{padding:"9px 16px",background:"#F2F2F7",color:"#8E8E93",border:"none",borderRadius:8,fontSize:13,cursor:"pointer"}}>Отмена</button>
-              <button onClick={()=>{funnels.update(editFunnelId,{name:editFunnelName});setEditFunnelId(null);}} style={{padding:"9px 18px",background:"#007AFF",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer"}}>Сохранить</button>
+              <button onClick={()=>{funnels.update(editFunnelId,{name:editFunnelName});setEditFunnelId(null);}} style={{padding:"9px 18px",background:"#656565",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer"}}>Сохранить</button>
             </div>
           </div>
         </div>
@@ -4400,7 +4400,7 @@ function CrmPage({userId}:{userId:string}){
             <div style={{fontSize:13,color:C.t2,marginBottom:20}}>Все лиды в этой воронке тоже будут удалены. Отменить нельзя.</div>
             <div style={{display:"flex",gap:10,justifyContent:"center"}}>
               <button onClick={()=>setDeleteFunnelId(null)} style={{padding:"10px 20px",background:"#F2F2F7",color:"#8E8E93",border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer"}}>Отмена</button>
-              <button onClick={deleteFunnel} style={{padding:"10px 20px",background:"#FF3B30",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer"}}>Удалить</button>
+              <button onClick={deleteFunnel} style={{padding:"10px 20px",background:"#747474",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer"}}>Удалить</button>
             </div>
           </div>
         </div>
@@ -4411,14 +4411,14 @@ function CrmPage({userId}:{userId:string}){
   // ── SCREEN: FUNNEL INNER ─────────────────────────────────────────
   return <>
     <WorkPanel/>
-    {crmToast&&<div style={{position:"fixed",bottom:28,right:28,background:"#16A34A",color:"#fff",padding:"13px 20px",borderRadius:10,fontSize:13,fontWeight:600,zIndex:600,boxShadow:"0 8px 28px rgba(22,163,74,0.35)",display:"flex",alignItems:"center",gap:10,maxWidth:340,lineHeight:1.5}}>✓ {crmToast}</div>}
+    {crmToast&&<div style={{position:"fixed",bottom:28,right:28,background:"#6F6F6F",color:"#fff",padding:"13px 20px",borderRadius:10,fontSize:13,fontWeight:600,zIndex:600,boxShadow:"0 8px 28px rgba(111,111,111,0.35)",display:"flex",alignItems:"center",gap:10,maxWidth:340,lineHeight:1.5}}>✓ {crmToast}</div>}
     {touchModalLead&&touchModalLeadId&&(
       <div style={{position:"fixed",inset:0,background:"rgba(5,8,15,0.62)",zIndex:320,display:"flex",alignItems:"center",justifyContent:"center",padding:isMobile?12:24,backdropFilter:"blur(8px)"}} onClick={closeTouchModal}>
         <div style={{width:"100%",maxWidth:860,maxHeight:"88dvh",background:C.w,border:"1px solid "+C.bd,borderRadius:12,boxShadow:"0 28px 80px rgba(0,0,0,0.36)",overflow:"hidden",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
-          <div style={{padding:isMobile?18:24,borderBottom:"1px solid "+C.bd,background:"linear-gradient(135deg, rgba(79,70,229,0.10), rgba(124,58,237,0.08), transparent)",position:"relative"}}>
+          <div style={{padding:isMobile?18:24,borderBottom:"1px solid "+C.bd,background:"linear-gradient(135deg, rgba(91,91,91,0.10), rgba(98,98,98,0.08), transparent)",position:"relative"}}>
             <button onClick={closeTouchModal} style={{position:"absolute",right:16,top:16,width:34,height:34,borderRadius:8,border:"1px solid "+C.bd,background:C.w,color:C.t2,cursor:"pointer",fontSize:18,lineHeight:1}}>×</button>
             <div style={{display:"flex",alignItems:"center",gap:14,paddingRight:42}}>
-              <div style={{width:48,height:48,borderRadius:10,background:"linear-gradient(135deg,#4F46E5,#7C3AED)",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:22}}>✨</div>
+              <div style={{width:48,height:48,borderRadius:10,background:"linear-gradient(135deg,#5B5B5B,#626262)",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:22}}>✨</div>
               <div style={{minWidth:0}}>
                 <div style={{fontSize:isMobile?20:24,fontWeight:900,color:C.t1,lineHeight:1.15}}>Касания</div>
                 <div style={{fontSize:13,color:C.t2,marginTop:5,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{touchModalLead.name||"Лид"} · {activeFunnel?.name||"CRM"}</div>
@@ -4432,23 +4432,23 @@ function CrmPage({userId}:{userId:string}){
                 <div style={{fontSize:14,fontWeight:800,color:C.t1}}>План касаний по лиду</div>
                 <div style={{fontSize:12,color:C.t2,marginTop:4,lineHeight:1.5}}>Открывай нужное касание, прописывай сообщение, дату и время отправки. Все касания не раскрываются сразу, чтобы карточка оставалась чистой.</div>
               </div>
-              {touchSavedLeadId===touchModalLeadId&&<div style={{fontSize:12,fontWeight:800,color:"#16A34A",padding:"8px 12px",borderRadius:999,background:"#22C55E10",border:"1px solid #22C55E25",whiteSpace:"nowrap"}}>Сохранено</div>}
+              {touchSavedLeadId===touchModalLeadId&&<div style={{fontSize:12,fontWeight:800,color:"#6F6F6F",padding:"8px 12px",borderRadius:999,background:"#22C55E10",border:"1px solid #22C55E25",whiteSpace:"nowrap"}}>Сохранено</div>}
             </div>
 
             {touchModalRows.map((touch:any,index:number)=>{
               const isOpen=openTouchItemId===touch.id;
               const isFilled=String(touch.message||"").trim().length>0;
-              return <div key={touch.id} style={{background:C.w,border:"1px solid "+(isOpen?"rgba(124,58,237,0.36)":C.bd),borderRadius:12,overflow:"hidden",boxShadow:isOpen?"0 14px 36px rgba(124,58,237,0.10)":"none"}}>
-                <button onClick={()=>setOpenTouchItemId(isOpen?null:touch.id)} style={{width:"100%",padding:isMobile?14:16,background:isOpen?"linear-gradient(135deg, rgba(79,70,229,0.08), rgba(124,58,237,0.06))":"transparent",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,textAlign:"left"}}>
+              return <div key={touch.id} style={{background:C.w,border:"1px solid "+(isOpen?"rgba(98,98,98,0.36)":C.bd),borderRadius:12,overflow:"hidden",boxShadow:isOpen?"0 14px 36px rgba(98,98,98,0.10)":"none"}}>
+                <button onClick={()=>setOpenTouchItemId(isOpen?null:touch.id)} style={{width:"100%",padding:isMobile?14:16,background:isOpen?"linear-gradient(135deg, rgba(91,91,91,0.08), rgba(98,98,98,0.06))":"transparent",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,textAlign:"left"}}>
                   <div style={{display:"flex",alignItems:"center",gap:12,minWidth:0}}>
-                    <div style={{width:34,height:34,borderRadius:8,background:isFilled?"linear-gradient(135deg,#4F46E5,#7C3AED)":"rgba(124,58,237,0.10)",color:isFilled?"#fff":"#6D48F7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:900,flexShrink:0}}>{index+1}</div>
+                    <div style={{width:34,height:34,borderRadius:8,background:isFilled?"linear-gradient(135deg,#5B5B5B,#626262)":"rgba(98,98,98,0.10)",color:isFilled?"#fff":"#676767",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:900,flexShrink:0}}>{index+1}</div>
                     <div style={{minWidth:0}}>
                       <div style={{fontSize:14,fontWeight:900,color:C.t1}}>{`Касание ${index+1}`}</div>
                       <div style={{fontSize:12,color:C.t2,marginTop:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:isMobile?220:520}}>{isFilled?touch.message:"Сообщение ещё не заполнено"}</div>
                     </div>
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-                    {(touch.date||touch.time)&&<span style={{fontSize:11,fontWeight:800,color:touch.sent?"#16A34A":"#6D48F7",padding:"6px 9px",borderRadius:999,background:touch.sent?"#22C55E10":"rgba(124,58,237,0.08)",border:"1px solid "+(touch.sent?"#22C55E25":"rgba(124,58,237,0.16)"),display:isMobile?"none":"inline-block"}}>{touch.sent?"Отправлено":"Запланировано"}</span>}
+                    {(touch.date||touch.time)&&<span style={{fontSize:11,fontWeight:800,color:touch.sent?"#6F6F6F":"#676767",padding:"6px 9px",borderRadius:999,background:touch.sent?"#22C55E10":"rgba(98,98,98,0.08)",border:"1px solid "+(touch.sent?"#22C55E25":"rgba(98,98,98,0.16)"),display:isMobile?"none":"inline-block"}}>{touch.sent?"Отправлено":"Запланировано"}</span>}
                     <span style={{fontSize:18,color:C.t2,transform:isOpen?"rotate(180deg)":"rotate(0deg)",transition:"transform 0.15s"}}>⌄</span>
                   </div>
                 </button>
@@ -4472,12 +4472,12 @@ function CrmPage({userId}:{userId:string}){
 
                   {isFilled&&<div style={{display:"grid",gap:8}}>
                     <div style={{fontSize:12,fontWeight:800,color:C.t2}}>Предпросмотр</div>
-                    <div style={{maxWidth:"100%",padding:"12px 15px",borderRadius:"18px 18px 18px 6px",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",fontSize:14,lineHeight:1.55,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",whiteSpace:"pre-wrap",wordBreak:"break-word",opacity:touch.sent?0.72:1,boxSizing:"border-box" as const}}>{touch.message}</div>
+                    <div style={{maxWidth:"100%",padding:"12px 15px",borderRadius:"18px 18px 18px 6px",background:"linear-gradient(135deg,#5B5B5B,#626262)",color:"#fff",fontSize:14,lineHeight:1.55,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",whiteSpace:"pre-wrap",wordBreak:"break-word",opacity:touch.sent?0.72:1,boxSizing:"border-box" as const}}>{touch.message}</div>
                   </div>}
 
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
-                    <button onClick={()=>updateTouch(touchModalLeadId!,touch.id,{sent:!touch.sent})} style={{padding:"10px 13px",borderRadius:8,border:"1px solid "+(touch.sent?"#22C55E35":"rgba(124,58,237,0.20)"),background:touch.sent?"#22C55E10":"rgba(124,58,237,0.08)",color:touch.sent?"#16A34A":"#6D48F7",fontSize:12,fontWeight:900,cursor:"pointer"}}>{touch.sent?"✓ Отправлено":"Отметить отправленным"}</button>
-                    {touchModalRows.length>1&&<button onClick={()=>removeTouchRow(touchModalLeadId!,touch.id)} style={{padding:"10px 13px",borderRadius:8,border:"1px solid rgba(239,68,68,0.22)",background:"rgba(239,68,68,0.08)",color:"#EF4444",fontSize:12,fontWeight:800,cursor:"pointer"}}>Удалить касание</button>}
+                    <button onClick={()=>updateTouch(touchModalLeadId!,touch.id,{sent:!touch.sent})} style={{padding:"10px 13px",borderRadius:8,border:"1px solid "+(touch.sent?"#22C55E35":"rgba(98,98,98,0.20)"),background:touch.sent?"#22C55E10":"rgba(98,98,98,0.08)",color:touch.sent?"#6F6F6F":"#676767",fontSize:12,fontWeight:900,cursor:"pointer"}}>{touch.sent?"✓ Отправлено":"Отметить отправленным"}</button>
+                    {touchModalRows.length>1&&<button onClick={()=>removeTouchRow(touchModalLeadId!,touch.id)} style={{padding:"10px 13px",borderRadius:8,border:"1px solid rgba(119,119,119,0.22)",background:"rgba(119,119,119,0.08)",color:"#777777",fontSize:12,fontWeight:800,cursor:"pointer"}}>Удалить касание</button>}
                   </div>
                 </div>}
               </div>
@@ -4485,10 +4485,10 @@ function CrmPage({userId}:{userId:string}){
           </div>
 
           <div style={{padding:isMobile?14:18,borderTop:"1px solid "+C.bd,background:C.w,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
-            <button onClick={()=>{const newTouch={id:`touch_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,message:"",date:"",time:"",sent:false};setTouchesByLead(prev=>({...prev,[touchModalLeadId!]:[...(prev[touchModalLeadId!]||[]),newTouch]}));setOpenTouchItemId(newTouch.id);}} style={{padding:"11px 14px",background:"transparent",color:"#6D48F7",border:"1px dashed rgba(124,58,237,0.30)",borderRadius:10,fontSize:13,fontWeight:900,cursor:"pointer"}}>+ Добавить касание</button>
+            <button onClick={()=>{const newTouch={id:`touch_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,message:"",date:"",time:"",sent:false};setTouchesByLead(prev=>({...prev,[touchModalLeadId!]:[...(prev[touchModalLeadId!]||[]),newTouch]}));setOpenTouchItemId(newTouch.id);}} style={{padding:"11px 14px",background:"transparent",color:"#676767",border:"1px dashed rgba(98,98,98,0.30)",borderRadius:10,fontSize:13,fontWeight:900,cursor:"pointer"}}>+ Добавить касание</button>
             <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
               <button onClick={closeTouchModal} style={{padding:"11px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:10,fontSize:13,fontWeight:800,cursor:"pointer"}}>Закрыть</button>
-              <button onClick={()=>saveTouchRows(touchModalLeadId!)} style={{padding:"11px 18px",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:900,cursor:"pointer",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>Сохранить касания</button>
+              <button onClick={()=>saveTouchRows(touchModalLeadId!)} style={{padding:"11px 18px",background:"linear-gradient(135deg,#5B5B5B,#626262)",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:900,cursor:"pointer",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>Сохранить касания</button>
             </div>
           </div>
         </div>
@@ -4620,18 +4620,18 @@ function CrmPage({userId}:{userId:string}){
 
     {/* Today agenda */}
     <div style={{background:C.w,borderRadius:12,padding:isMobile?16:18,border:"1px solid "+C.bd,marginBottom:18,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",position:"relative",overflow:"hidden"}}>
-      <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg, rgba(79,70,229,0.06), rgba(124,58,237,0.02) 45%, transparent 70%)",pointerEvents:"none"}}/>
+      <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg, rgba(91,91,91,0.06), rgba(98,98,98,0.02) 45%, transparent 70%)",pointerEvents:"none"}}/>
       <div style={{display:"flex",alignItems:isMobile?"flex-start":"center",justifyContent:"space-between",gap:12,marginBottom:todayTouchAgenda.length?14:0,flexDirection:isMobile?"column":"row",position:"relative"}}>
         <div>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
-            <div style={{width:34,height:34,borderRadius:8,background:"linear-gradient(135deg,#4F46E5,#7C3AED)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",color:"#fff",fontSize:16}}>✉️</div>
+            <div style={{width:34,height:34,borderRadius:8,background:"linear-gradient(135deg,#5B5B5B,#626262)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",color:"#fff",fontSize:16}}>✉️</div>
             <div>
               <div style={{fontSize:16,fontWeight:800,color:C.t1}}>Кому сегодня, что нужно отправить</div>
               <div style={{fontSize:12,color:C.t2,marginTop:2}}>{activeFunnel?.name?`Воронка: ${activeFunnel.name}`:"Текущая воронка"}</div>
             </div>
           </div>
         </div>
-        <div style={{padding:"7px 12px",borderRadius:999,background:"linear-gradient(135deg, rgba(79,70,229,0.12), rgba(124,58,237,0.12))",border:"1px solid rgba(124,58,237,0.18)",fontSize:12,fontWeight:700,color:"#5B46F5",whiteSpace:"nowrap"}}>
+        <div style={{padding:"7px 12px",borderRadius:999,background:"linear-gradient(135deg, rgba(91,91,91,0.12), rgba(98,98,98,0.12))",border:"1px solid rgba(98,98,98,0.18)",fontSize:12,fontWeight:700,color:"#606060",whiteSpace:"nowrap"}}>
           {todayTouchAgenda.length?`${todayTouchAgenda.length} задач на сегодня`:"На сегодня касаний нет"}
         </div>
       </div>
@@ -4639,18 +4639,18 @@ function CrmPage({userId}:{userId:string}){
       {todayTouchAgenda.length>0
         ?<div style={{display:"grid",gap:10,position:"relative"}}>
           {todayTouchAgenda.slice(0,8).map((item:any,idx:number)=>{
-            const accent=item.overdue?"#EF4444":"#7C3AED";
+            const accent=item.overdue?"#777777":"#626262";
             return <div key={item.touch.id} style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"minmax(0,1.2fr) minmax(0,2fr) auto",gap:10,alignItems:"center",padding:"12px 14px",background:C.ib,borderRadius:10,border:"1px solid "+accent+"22"}}>
               <div style={{minWidth:0}}>
                 <div style={{fontSize:13,fontWeight:800,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.lead.name||`Лид ${idx+1}`}</div>
                 <div style={{fontSize:11,color:C.t2,marginTop:3}}>{item.lead.source||"Без источника"} · {`Касание ${item.touchIndex}`}</div>
               </div>
               <div style={{minWidth:0}}>
-                <div style={{display:"inline-block",maxWidth:"100%",padding:"9px 12px",borderRadius:"16px 16px 16px 6px",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",fontSize:12,lineHeight:1.45,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.touch.message}</div>
+                <div style={{display:"inline-block",maxWidth:"100%",padding:"9px 12px",borderRadius:"16px 16px 16px 6px",background:"linear-gradient(135deg,#5B5B5B,#626262)",color:"#fff",fontSize:12,lineHeight:1.45,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.touch.message}</div>
               </div>
               <div style={{display:"flex",alignItems:isMobile?"stretch":"center",gap:8,justifyContent:isMobile?"flex-start":"flex-end",flexWrap:"wrap"}}>
                 <div style={{fontSize:11,fontWeight:700,color:accent,padding:"7px 10px",borderRadius:999,background:accent+"10",border:"1px solid "+accent+"25"}}>{item.overdue?"Просрочено":"Сегодня"}{item.touch.time?` · ${item.touch.time}`:""}</div>
-                <button onClick={()=>updateTouch(item.lead.id,item.touch.id,{sent:true})} style={{padding:"7px 10px",border:"1px solid #22C55E30",borderRadius:999,background:"#22C55E10",color:"#16A34A",fontSize:11,fontWeight:800,cursor:"pointer"}}>Отметить отправленным</button>
+                <button onClick={()=>updateTouch(item.lead.id,item.touch.id,{sent:true})} style={{padding:"7px 10px",border:"1px solid #22C55E30",borderRadius:999,background:"#22C55E10",color:"#6F6F6F",fontSize:11,fontWeight:800,cursor:"pointer"}}>Отметить отправленным</button>
               </div>
             </div>
           })}
@@ -4845,9 +4845,9 @@ function CrmPage({userId}:{userId:string}){
                 <span style={{fontSize:10,fontWeight:600,padding:"2px 9px",borderRadius:10,background:stCol(l.status)+"14",color:stCol(l.status),border:"1px solid "+stCol(l.status)+"25"}}>{stLbl(l.status)}</span>
                 {/* Написать */}
                 {getWriteUrl(l)&&<a href={getWriteUrl(l)!} target="_blank" rel="noreferrer"
-                  style={{padding:"5px 12px",background:"linear-gradient(135deg,#22C55E14,#16A34A10)",color:"#16A34A",border:"1px solid #22C55E30",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",textDecoration:"none",transition:"all 0.15s",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:4}}
-                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#22C55E,#16A34A)";(e.currentTarget as HTMLElement).style.color="#fff";}}
-                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#22C55E14,#16A34A10)";(e.currentTarget as HTMLElement).style.color="#16A34A";}}>
+                  style={{padding:"5px 12px",background:"linear-gradient(135deg,#22C55E14,#16A34A10)",color:"#6F6F6F",border:"1px solid #22C55E30",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",textDecoration:"none",transition:"all 0.15s",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:4}}
+                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#898989,#6F6F6F)";(e.currentTarget as HTMLElement).style.color="#fff";}}
+                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#22C55E14,#16A34A10)";(e.currentTarget as HTMLElement).style.color="#6F6F6F";}}>
                   ✉️ Написать
                 </a>}
                 {/* Edit */}
@@ -4896,7 +4896,7 @@ function CrmPage({userId}:{userId:string}){
           </div>
           <div style={{display:"flex",gap:10,marginTop:24,justifyContent:"flex-end"}}>
             <button onClick={()=>setNewFunnelModal(false)} style={{padding:"10px 18px",background:"#F2F2F7",color:"#8E8E93",border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer"}}>Отмена</button>
-            <button onClick={createFunnel} disabled={!newFunnelName.trim()} style={{padding:"10px 20px",background:newFunnelName.trim()?"#007AFF":"#C6C6C8",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:newFunnelName.trim()?"pointer":"default"}}>Создать</button>
+            <button onClick={createFunnel} disabled={!newFunnelName.trim()} style={{padding:"10px 20px",background:newFunnelName.trim()?"#656565":"#C6C6C8",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:newFunnelName.trim()?"pointer":"default"}}>Создать</button>
           </div>
         </div>
       </div>
@@ -4966,7 +4966,7 @@ function ContentPage({userId}:{userId:string}){
       +"<style>body{font-family:Arial,sans-serif;max-width:800px;margin:40px auto;padding:0 24px;color:#1a1a2e;line-height:1.6;}"
       +"h1{font-size:26px;font-weight:800;margin-bottom:8px;}"
       +".meta{font-size:13px;color:#666;margin-bottom:24px;}"
-      +".badge{background:#f0f4ff;color:#2563eb;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:600;margin-right:8px;}"
+      +".badge{background:#f0f4ff;color:#606060;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:600;margin-right:8px;}"
       +".content{background:#f8f9fa;border-radius:8px;padding:16px;font-size:14px;white-space:pre-wrap;line-height:1.8;}"
       +"img{max-width:100%;border-radius:8px;margin-bottom:16px;max-height:360px;object-fit:cover;width:100%;}"
       +"</style></head><body>"
@@ -5223,7 +5223,7 @@ function ContentPage({userId}:{userId:string}){
         <div style={{display:"flex",gap:10,marginTop:16,flexWrap:"wrap"}}>
           <Btn onClick={sub}>{editId?"Сохранить":"Добавить"}</Btn>
           {editId&&f.scenario&&<button onClick={()=>downloadPDF({...f,id:editId})}
-            style={{padding:"9px 16px",background:"linear-gradient(135deg,#16A34A,#15803D)",color:"#fff",border:"none",borderRadius:9,fontSize:12,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,boxShadow:"0 0 12px rgba(22,163,74,0.3)"}}>
+            style={{padding:"9px 16px",background:"linear-gradient(135deg,#6F6F6F,#585858)",color:"#fff",border:"none",borderRadius:9,fontSize:12,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,boxShadow:"0 0 12px rgba(111,111,111,0.3)"}}>
             📄 Скачать PDF
           </button>}
           <Btn primary={false} onClick={()=>{setShow(false);setEditId(null);}}>Отмена</Btn>
@@ -5316,7 +5316,7 @@ function ContentPage({userId}:{userId:string}){
                       {x.scenario&&<button onClick={e=>{e.stopPropagation();downloadPDF(x);}}
                         title="Скачать PDF"
                         style={{width:24,height:24,borderRadius:6,border:"none",background:"#16A34A12",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#6F6F6F" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
                       </button>}
                       <button onClick={e=>{e.stopPropagation();startEdit(x);}}
                         style={{width:24,height:24,borderRadius:6,border:"none",background:C.ib,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -5405,15 +5405,15 @@ function ContentPage({userId}:{userId:string}){
                 minHeight:110,padding:"6px",
                 borderRight:i%7!==6?"1px solid "+C.bd+"66":"none",
                 borderBottom:"1px solid "+C.bd+"66",
-                background:isDragOver?"rgba(37,99,235,0.08)":(isT?"rgba(37,99,235,0.03)":"transparent"),
+                background:isDragOver?"rgba(96,96,96,0.08)":(isT?"rgba(96,96,96,0.03)":"transparent"),
                 cursor:d?"pointer":"default",
                 transition:"background 0.15s",
                 outline:isDragOver?"2px dashed "+C.a:"none",
                 outlineOffset:-2,
                 position:"relative",
               }}
-              onMouseEnter={e=>{if(d&&!calDragId)(e.currentTarget as HTMLElement).style.background=isT?"rgba(37,99,235,0.06)":C.ib;}}
-              onMouseLeave={e=>{if(!isDragOver)(e.currentTarget as HTMLElement).style.background=isT?"rgba(37,99,235,0.03)":"transparent";}}>
+              onMouseEnter={e=>{if(d&&!calDragId)(e.currentTarget as HTMLElement).style.background=isT?"rgba(96,96,96,0.06)":C.ib;}}
+              onMouseLeave={e=>{if(!isDragOver)(e.currentTarget as HTMLElement).style.background=isT?"rgba(96,96,96,0.03)":"transparent";}}>
 
               {/* Drop indicator */}
               {isDragOver&&<div style={{position:"absolute",inset:2,borderRadius:6,border:"2px dashed "+C.a,background:C.a+"06",pointerEvents:"none",zIndex:10,display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -5499,7 +5499,7 @@ function exportScriptPDF(name:string,content:string){
   const paras=String(content||"").split(/\n{2,}/).map(p=>`<p>${esc(p).replace(/\n/g,"<br>")}</p>`).join("");
   const html=`<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>${esc(name||"Сценарий")}</title>
 <style>@page{size:A4;margin:22mm 20mm}body{font-family:-apple-system,'Segoe UI',Inter,Arial,sans-serif;color:#111;line-height:1.7;margin:0}
-h1{font-size:24px;font-weight:800;letter-spacing:-.02em;margin:0 0 6px}.rule{height:2px;background:linear-gradient(90deg,#4F8EF7,#3B82F6);width:70px;border-radius:2px;margin:14px 0 26px}
+h1{font-size:24px;font-weight:800;letter-spacing:-.02em;margin:0 0 6px}.rule{height:2px;background:linear-gradient(90deg,#878787,#7A7A7A);width:70px;border-radius:2px;margin:14px 0 26px}
 p{font-size:14px;margin:0 0 14px;white-space:pre-wrap}.foot{margin-top:32px;padding-top:14px;border-top:1px solid #E5E7EB;font-size:11px;color:#9CA3AF;text-align:center}</style></head>
 <body><h1>${esc(name||"Сценарий")}</h1><div class="rule"></div>${paras}<div class="foot">Vizzy · Сценарии</div></body></html>`;
   const w=window.open("","_blank");if(!w){alert("Разреши всплывающие окна, чтобы скачать PDF.");return;}
@@ -5531,7 +5531,7 @@ function ScriptsTab({userId}:{userId:string}){
   const bd=C.bd;
   const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
   const inputBg=dark?"#1C1C1C":"#F8FAFC";
-  const accent="#4F8EF7";
+  const accent="#878787";
 
   const sorted=[...scripts].sort((a,b)=>String(b.updated_at||b.created_at||"").localeCompare(String(a.updated_at||a.created_at||"")));
 
@@ -5613,7 +5613,7 @@ function ScriptsTab({userId}:{userId:string}){
         <div style={{padding:50,textAlign:"center" as const,color:C.t2,fontSize:14}}>Загрузка…</div>
       ):sorted.length===0?(
         <div style={{background:cardBg,border:`1px dashed ${bd}`,borderRadius:12,padding:"60px 24px",textAlign:"center" as const}}>
-          <div style={{width:60,height:60,borderRadius:10,background:dark?"rgba(79,142,247,0.12)":"#EFF6FF",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 18px"}}>
+          <div style={{width:60,height:60,borderRadius:10,background:dark?"rgba(135,135,135,0.12)":"#EFF6FF",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 18px"}}>
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="1.5"><path d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
           </div>
           <div style={{fontSize:19,fontWeight:800,color:C.t1,marginBottom:8}}>Пока нет сценариев</div>
@@ -5624,12 +5624,12 @@ function ScriptsTab({userId}:{userId:string}){
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:14}}>
           {sorted.map(s=>(
             <div key={s.id} onClick={()=>openScript(s)} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:18,cursor:"pointer",transition:"border-color 0.15s"}}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(79,142,247,0.4)";}}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(135,135,135,0.4)";}}
               onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=bd;}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-                <span style={{fontSize:11,fontWeight:700,color:accent,background:"rgba(79,142,247,0.12)",padding:"3px 10px",borderRadius:10}}>{s.kind==="long"?"Long Form":"Short Form"}</span>
+                <span style={{fontSize:11,fontWeight:700,color:accent,background:"rgba(135,135,135,0.12)",padding:"3px 10px",borderRadius:10}}>{s.kind==="long"?"Long Form":"Short Form"}</span>
                 <button onClick={e=>del(s.id,e)} title="Удалить" style={{width:26,height:26,borderRadius:7,border:"none",background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}
-                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color="#EF4444";}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.color=C.t2;}}>
+                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color="#777777";}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.color=C.t2;}}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>
                 </button>
               </div>
@@ -5666,7 +5666,7 @@ function ScriptsTab({userId}:{userId:string}){
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
           Все сценарии
         </button>
-        <span style={{fontSize:11,fontWeight:700,color:accent,background:"rgba(79,142,247,0.12)",padding:"4px 11px",borderRadius:10}}>{kind==="long"?"Long Form Video":"Short Form Video"}</span>
+        <span style={{fontSize:11,fontWeight:700,color:accent,background:"rgba(135,135,135,0.12)",padding:"4px 11px",borderRadius:10}}>{kind==="long"?"Long Form Video":"Short Form Video"}</span>
       </div>
 
       <div style={{display:"flex",gap:16,flexDirection:isMobile?"column":"row",alignItems:"stretch"}}>
@@ -5690,7 +5690,7 @@ function ScriptsTab({userId}:{userId:string}){
             </div>
           </div>
           <button onClick={doImprove} disabled={improving}
-            style={{marginTop:12,width:"100%",padding:"14px",borderRadius:8,border:"none",background:"#3B82F6",color:"#fff",fontSize:15,fontWeight:700,cursor:improving?"default":"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+            style={{marginTop:12,width:"100%",padding:"14px",borderRadius:8,border:"none",background:"#7A7A7A",color:"#fff",fontSize:15,fontWeight:700,cursor:improving?"default":"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
             {improving?<><div style={{width:17,height:17,border:"2.5px solid rgba(255,255,255,0.4)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Улучшаю…</>:"✨ Улучшить сценарий"}
           </button>
         </div>
@@ -5706,7 +5706,7 @@ function ScriptsTab({userId}:{userId:string}){
             {chat.length===0&&<div style={{fontSize:13,color:C.t2,lineHeight:1.6,padding:"8px 0"}}>Попросите написать сценарий, усилить хук, добавить историю, сделать короче/длиннее. Контекст — ваш текст слева.</div>}
             {chat.map(m=>(
               <div key={m.id} style={{alignSelf:m.role==="user"?"flex-end":"flex-start",maxWidth:"88%"}}>
-                <div style={{padding:"10px 13px",borderRadius:m.role==="user"?"14px 14px 4px 14px":"4px 14px 14px 14px",background:m.role==="user"?"#3B82F6":(dark?"rgba(255,255,255,0.05)":"#F1F5F9"),color:m.role==="user"?"#fff":C.t1,fontSize:13.5,lineHeight:1.6,whiteSpace:"pre-wrap" as const}}>{m.content}</div>
+                <div style={{padding:"10px 13px",borderRadius:m.role==="user"?"14px 14px 4px 14px":"4px 14px 14px 14px",background:m.role==="user"?"#7A7A7A":(dark?"rgba(255,255,255,0.05)":"#F1F5F9"),color:m.role==="user"?"#fff":C.t1,fontSize:13.5,lineHeight:1.6,whiteSpace:"pre-wrap" as const}}>{m.content}</div>
                 {m.role==="assistant"&&<div style={{display:"flex",gap:8,marginTop:5}}>
                   <button onClick={()=>navigator.clipboard.writeText(m.content)} style={{fontSize:11,color:C.t2,background:"none",border:"none",cursor:"pointer",padding:0,fontWeight:600}}>Копировать</button>
                   <button onClick={()=>applyToEditor(m.content)} style={{fontSize:11,color:accent,background:"none",border:"none",cursor:"pointer",padding:0,fontWeight:600}}>Заменить сценарий</button>
@@ -5852,7 +5852,7 @@ function StoriesCarouselTab({userId}:{userId:string}){
   };
 
   const IG_COLOR="#E1306C";
-  const TG_COLOR="#0088CC";
+  const TG_COLOR="#676767";
 
   const RetentionRing=({pct,color,size=80}:{pct:number,color:string,size?:number})=>{
     const r=size*0.4;
@@ -6366,7 +6366,7 @@ function CallsPage({userId}:{userId:string}){
   const td=today();
   const HOURS=Array.from({length:17},(_,i)=>i+7);
   const SLOT_H=64;
-  const COLORS_CALL=[C.a,"#8B5CF6",C.g,C.r,C.y,C.pk];
+  const COLORS_CALL=[C.a,"#7C7C7C",C.g,C.r,C.y,C.pk];
 
   const openCreate=(date:string,hour?:number)=>{
     const ts=hour!==undefined?String(hour).padStart(2,"0")+":00":"10:00";
@@ -6545,7 +6545,7 @@ function CallsPage({userId}:{userId:string}){
   return <>
     {/* Stats bar */}
     <div style={{display:"grid",gridTemplateColumns:isMobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:isMobile?10:12,marginBottom:isMobile?12:20}}>
-      {[{l:"Всего",v:stats.total,c:C.a},{l:"Сегодня",v:stats.today,c:C.y},{l:"Выполнено",v:stats.done,c:C.g},{l:"Предстоит",v:stats.upcoming,c:"#8B5CF6"}].map((s,i)=><div key={i} style={{background:C.w,borderRadius:10,padding:"14px 18px",boxShadow:C.sh}}>
+      {[{l:"Всего",v:stats.total,c:C.a},{l:"Сегодня",v:stats.today,c:C.y},{l:"Выполнено",v:stats.done,c:C.g},{l:"Предстоит",v:stats.upcoming,c:"#7C7C7C"}].map((s,i)=><div key={i} style={{background:C.w,borderRadius:10,padding:"14px 18px",boxShadow:C.sh}}>
         <div style={{fontSize:22,fontWeight:700,color:s.c}}>{s.v}</div>
         <div style={{fontSize:12,color:C.t2,marginTop:2}}>{s.l}</div>
       </div>)}
@@ -6703,7 +6703,7 @@ function LinksPage({userId}:{userId:string}){
   const[activeCategory,setActiveCategory]=useState("Все");
   const[f,sF]=useState({title:"",url:"",description:"",category:"Общее",color:C.a});
 
-  const LINK_COLORS=[C.a,"#8B5CF6","#10B981","#EF4444","#F59E0B","#EC4899","#06B6D4","#F97316","#1F1F1F"];
+  const LINK_COLORS=[C.a,"#7C7C7C","#808080","#777777","#A7A7A7","#828282","#858585","#909090","#1F1F1F"];
   const DEFAULT_CATS=["Общее","Работа","Соцсети","Инструменты","Обучение"];
 
   const allCategories=useMemo(()=>{
@@ -6872,15 +6872,15 @@ function FilesPage({userId}:{userId:string}){
   const[search,setSearch]=useState("");
 
   const FILE_ICONS:Record<string,{color:string,label:string}>={
-    pdf:{color:"#EF4444",label:"PDF"},
-    doc:{color:"#2563EB",label:"DOC"},docx:{color:"#2563EB",label:"DOC"},
-    xls:{color:"#10B981",label:"XLS"},xlsx:{color:"#10B981",label:"XLS"},
-    ppt:{color:"#F59E0B",label:"PPT"},pptx:{color:"#F59E0B",label:"PPT"},
-    jpg:{color:"#EC4899",label:"IMG"},jpeg:{color:"#EC4899",label:"IMG"},png:{color:"#EC4899",label:"IMG"},
-    gif:{color:"#8B5CF6",label:"GIF"},webp:{color:"#EC4899",label:"IMG"},
-    mp4:{color:"#06B6D4",label:"MP4"},mov:{color:"#06B6D4",label:"VID"},
-    zip:{color:"#6B7280",label:"ZIP"},rar:{color:"#6B7280",label:"RAR"},
-    txt:{color:"#9CA3AF",label:"TXT"},csv:{color:"#10B981",label:"CSV"},
+    pdf:{color:"#777777",label:"PDF"},
+    doc:{color:"#606060",label:"DOC"},docx:{color:"#606060",label:"DOC"},
+    xls:{color:"#808080",label:"XLS"},xlsx:{color:"#808080",label:"XLS"},
+    ppt:{color:"#A7A7A7",label:"PPT"},pptx:{color:"#A7A7A7",label:"PPT"},
+    jpg:{color:"#828282",label:"IMG"},jpeg:{color:"#828282",label:"IMG"},png:{color:"#828282",label:"IMG"},
+    gif:{color:"#7C7C7C",label:"GIF"},webp:{color:"#828282",label:"IMG"},
+    mp4:{color:"#858585",label:"MP4"},mov:{color:"#858585",label:"VID"},
+    zip:{color:"#727272",label:"ZIP"},rar:{color:"#727272",label:"RAR"},
+    txt:{color:"#9CA3AF",label:"TXT"},csv:{color:"#808080",label:"CSV"},
   };
 
   const getExt=(name:string)=>name.split(".").pop()?.toLowerCase()||"";
@@ -7033,44 +7033,44 @@ interface AIChatTheme{
 
 const AI_THEMES:Record<string,AIChatTheme>={
   ai:{
-    bg:"#0A0E1A",sbBg:"#080D18",sbActiveBg:"#111827",sbActiveBorder:"#00C2FF",
-    headerBg:"linear-gradient(180deg,#0D1533,#0A0E1A)",headerGlow:"0 4px 30px rgba(0,194,255,0.15)",headerBorderColor:"rgba(0,194,255,0.15)",
-    avatarBorder:"#00C2FF",avatarGlow:"0 0 16px rgba(0,194,255,0.5)",
-    userMsgBg:"#1A2744",userMsgBorder:"rgba(0,194,255,0.3)",userMsgText:"#E8F4FF",userMsgGlow:"0 2px 12px rgba(0,194,255,0.12)",
-    aiMsgBg:"#0F1628",aiMsgBorder:"rgba(0,194,255,0.15)",aiMsgGlow:"0 2px 20px rgba(0,194,255,0.08)",
-    inputBg:"#111827",inputBorderFocus:"#00C2FF",inputGlow:"0 0 12px rgba(0,194,255,0.25)",
-    btnBg:"linear-gradient(135deg,#0066FF,#00C2FF)",btnGlow:"0 4px 16px rgba(0,194,255,0.4)",
-    dotColor:"#00C2FF",accentColor:"#00C2FF",textColor:"#fff",onlineDot:"#00C2FF",
+    bg:"#0A0E1A",sbBg:"#080D18",sbActiveBg:"#181818",sbActiveBorder:"#8F8F8F",
+    headerBg:"linear-gradient(180deg,#161616,#0A0E1A)",headerGlow:"0 4px 30px rgba(143,143,143,0.15)",headerBorderColor:"rgba(143,143,143,0.15)",
+    avatarBorder:"#8F8F8F",avatarGlow:"0 0 16px rgba(143,143,143,0.5)",
+    userMsgBg:"#262626",userMsgBorder:"rgba(143,143,143,0.3)",userMsgText:"#F2F2F2",userMsgGlow:"0 2px 12px rgba(143,143,143,0.12)",
+    aiMsgBg:"#161616",aiMsgBorder:"rgba(143,143,143,0.15)",aiMsgGlow:"0 2px 20px rgba(143,143,143,0.08)",
+    inputBg:"#181818",inputBorderFocus:"#8F8F8F",inputGlow:"0 0 12px rgba(143,143,143,0.25)",
+    btnBg:"linear-gradient(135deg,#595959,#8F8F8F)",btnGlow:"0 4px 16px rgba(143,143,143,0.4)",
+    dotColor:"#8F8F8F",accentColor:"#8F8F8F",textColor:"#fff",onlineDot:"#8F8F8F",
   },
   script:{
-    bg:"#130A00",sbBg:"#0A0500",sbActiveBg:"#1A0D00",sbActiveBorder:"#FF8C00",
-    headerBg:"linear-gradient(180deg,#1F0F00,#130A00)",headerGlow:"0 4px 30px rgba(255,100,0,0.2)",headerBorderColor:"rgba(255,140,0,0.2)",
-    avatarBorder:"#FF8C00",avatarGlow:"0 0 16px rgba(255,140,0,0.5)",
-    userMsgBg:"linear-gradient(135deg,#2A1500,#1F1000)",userMsgBorder:"rgba(255,140,0,0.35)",userMsgText:"#FFE8CC",userMsgGlow:"0 2px 15px rgba(255,100,0,0.15)",
-    aiMsgBg:"#1A0D00",aiMsgBorder:"rgba(255,140,0,0.15)",aiMsgGlow:"0 2px 12px rgba(255,100,0,0.08)",
-    inputBg:"#0F0800",inputBorderFocus:"#FF8C00",inputGlow:"0 0 12px rgba(255,140,0,0.3)",
-    btnBg:"linear-gradient(135deg,#FF8C00,#FF5500)",btnGlow:"0 4px 16px rgba(255,100,0,0.4)",
-    dotColor:"#FF8C00",accentColor:"#FF8C00",textColor:"#fff",onlineDot:"#FF8C00",
+    bg:"#130A00",sbBg:"#0A0500",sbActiveBg:"#0F0F0F",sbActiveBorder:"#9E9E9E",
+    headerBg:"linear-gradient(180deg,#121212,#130A00)",headerGlow:"0 4px 30px rgba(135,135,135,0.2)",headerBorderColor:"rgba(158,158,158,0.2)",
+    avatarBorder:"#9E9E9E",avatarGlow:"0 0 16px rgba(158,158,158,0.5)",
+    userMsgBg:"linear-gradient(135deg,#191919,#131313)",userMsgBorder:"rgba(158,158,158,0.35)",userMsgText:"#ECECEC",userMsgGlow:"0 2px 15px rgba(135,135,135,0.15)",
+    aiMsgBg:"#0F0F0F",aiMsgBorder:"rgba(158,158,158,0.15)",aiMsgGlow:"0 2px 12px rgba(135,135,135,0.08)",
+    inputBg:"#0F0800",inputBorderFocus:"#9E9E9E",inputGlow:"0 0 12px rgba(158,158,158,0.3)",
+    btnBg:"linear-gradient(135deg,#9E9E9E,#7E7E7E)",btnGlow:"0 4px 16px rgba(135,135,135,0.4)",
+    dotColor:"#9E9E9E",accentColor:"#9E9E9E",textColor:"#fff",onlineDot:"#9E9E9E",
   },
   product:{
-    bg:"#0C0A1A",sbBg:"#08061A",sbActiveBg:"#13103A",sbActiveBorder:"#7B61FF",
-    headerBg:"linear-gradient(180deg,#130F2A,#0C0A1A)",headerGlow:"0 4px 30px rgba(123,97,255,0.2)",headerBorderColor:"rgba(123,97,255,0.2)",
-    avatarBorder:"#7B61FF",avatarGlow:"0 0 16px rgba(168,255,0,0.3), 0 0 32px rgba(123,97,255,0.3)",
-    userMsgBg:"linear-gradient(135deg,#1A1535,#0F1A10)",userMsgBorder:"rgba(123,97,255,0.4)",userMsgText:"#EEE8FF",userMsgGlow:"0 2px 16px rgba(123,97,255,0.15)",
-    aiMsgBg:"#100E20",aiMsgBorder:"rgba(168,255,0,0.15)",aiMsgGlow:"0 2px 12px rgba(168,255,0,0.08)",
-    inputBg:"#0A0818",inputBorderFocus:"#7B61FF",inputGlow:"0 0 12px rgba(123,97,255,0.3)",
-    btnBg:"linear-gradient(135deg,#7B61FF,#A8FF00)",btnGlow:"0 4px 16px rgba(123,97,255,0.4)",
-    dotColor:"#7B61FF",accentColor:"#A8FF00",textColor:"#fff",onlineDot:"#A8FF00",
+    bg:"#0C0A1A",sbBg:"#08061A",sbActiveBg:"#161616",sbActiveBorder:"#7B7B7B",
+    headerBg:"linear-gradient(180deg,#131313,#0C0A1A)",headerGlow:"0 4px 30px rgba(123,123,123,0.2)",headerBorderColor:"rgba(123,123,123,0.2)",
+    avatarBorder:"#7B7B7B",avatarGlow:"0 0 16px rgba(200,200,200,0.3), 0 0 32px rgba(123,123,123,0.3)",
+    userMsgBg:"linear-gradient(135deg,#1A1A1A,#0F1A10)",userMsgBorder:"rgba(123,123,123,0.4)",userMsgText:"#ECECEC",userMsgGlow:"0 2px 16px rgba(123,123,123,0.15)",
+    aiMsgBg:"#100E20",aiMsgBorder:"rgba(200,200,200,0.15)",aiMsgGlow:"0 2px 12px rgba(200,200,200,0.08)",
+    inputBg:"#0A0818",inputBorderFocus:"#7B7B7B",inputGlow:"0 0 12px rgba(123,123,123,0.3)",
+    btnBg:"linear-gradient(135deg,#7B7B7B,#C8C8C8)",btnGlow:"0 4px 16px rgba(123,123,123,0.4)",
+    dotColor:"#7B7B7B",accentColor:"#C8C8C8",textColor:"#fff",onlineDot:"#C8C8C8",
   },
   stories:{
-    bg:"#120018",sbBg:"#0A0010",sbActiveBg:"#1A0025",sbActiveBorder:"#CC00FF",
-    headerBg:"linear-gradient(180deg,#200030,#120018)",headerGlow:"0 4px 40px rgba(204,0,255,0.25)",headerBorderColor:"rgba(204,0,255,0.2)",
-    avatarBorder:"#CC00FF",avatarGlow:"0 0 20px rgba(204,0,255,0.6)",
-    userMsgBg:"linear-gradient(135deg,#2A0040,#1A0030)",userMsgBorder:"rgba(204,0,255,0.4)",userMsgText:"#F5CCFF",userMsgGlow:"0 2px 20px rgba(204,0,255,0.2)",
-    aiMsgBg:"#180025",aiMsgBorder:"rgba(255,68,204,0.2)",aiMsgGlow:"0 2px 16px rgba(204,0,255,0.1)",
-    inputBg:"#0E0018",inputBorderFocus:"#CC00FF",inputGlow:"0 0 16px rgba(204,0,255,0.35)",
-    btnBg:"linear-gradient(135deg,#CC00FF,#FF44CC)",btnGlow:"0 4px 16px rgba(204,0,255,0.5)",
-    dotColor:"#CC00FF",accentColor:"#FF44CC",textColor:"#fff",onlineDot:"#CC00FF",
+    bg:"#080808",sbBg:"#0A0010",sbActiveBg:"#0C0C0C",sbActiveBorder:"#5A5A5A",
+    headerBg:"linear-gradient(180deg,#0F0F0F,#080808)",headerGlow:"0 4px 40px rgba(90,90,90,0.25)",headerBorderColor:"rgba(90,90,90,0.2)",
+    avatarBorder:"#5A5A5A",avatarGlow:"0 0 20px rgba(90,90,90,0.6)",
+    userMsgBg:"linear-gradient(135deg,#141414,#0D0D0D)",userMsgBorder:"rgba(90,90,90,0.4)",userMsgText:"#DEDEDE",userMsgGlow:"0 2px 20px rgba(90,90,90,0.2)",
+    aiMsgBg:"#0B0B0B",aiMsgBorder:"rgba(139,139,139,0.2)",aiMsgGlow:"0 2px 16px rgba(90,90,90,0.1)",
+    inputBg:"#070707",inputBorderFocus:"#5A5A5A",inputGlow:"0 0 16px rgba(90,90,90,0.35)",
+    btnBg:"linear-gradient(135deg,#5A5A5A,#8B8B8B)",btnGlow:"0 4px 16px rgba(90,90,90,0.5)",
+    dotColor:"#5A5A5A",accentColor:"#8B8B8B",textColor:"#fff",onlineDot:"#5A5A5A",
   },
 };
 
@@ -7090,7 +7090,7 @@ const AI_CONFIG:{[k:string]:{name:string,avatar:string,storageKey:string,welcome
 
 const AI_BETA_WARNING="AI-функции работают только при открытом окне. Они всё ещё в beta-версии, поэтому ответы могут глючить, теряться или работать нестабильно.";
 
-function AiBetaNotice({theme}:{theme:AIChatTheme}){return <div style={{margin:"10px 16px 0",padding:"10px 12px",borderRadius:8,background:"rgba(245,158,11,0.10)",border:"1px solid rgba(245,158,11,0.25)",color:"#FBBF24",fontSize:11,lineHeight:1.45,fontWeight:500}}>
+function AiBetaNotice({theme}:{theme:AIChatTheme}){return <div style={{margin:"10px 16px 0",padding:"10px 12px",borderRadius:8,background:"rgba(167,167,167,0.10)",border:"1px solid rgba(167,167,167,0.25)",color:"#BFBFBF",fontSize:11,lineHeight:1.45,fontWeight:500}}>
   ⚠️ {AI_BETA_WARNING}
 </div>;}
 
@@ -7227,8 +7227,8 @@ function AIChatBase({pageId,system}:{pageId:string,system?:string}){
             <div style={{fontSize:9,color:"rgba(255,255,255,0.25)",marginTop:1}}>{chat.msgs.length} сообщ.</div>
           </div>
           <button className="ai-delete-btn" onClick={e=>deleteChat(chat.id,e)}
-            style={{width:18,height:18,border:"none",background:"rgba(255,59,48,0.15)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:0,flexShrink:0,borderRadius:4,transition:"opacity 0.15s"}}>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#FF3B30" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            style={{width:18,height:18,border:"none",background:"rgba(116,116,116,0.15)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:0,flexShrink:0,borderRadius:4,transition:"opacity 0.15s"}}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#747474" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
           </button>
         </div>)}
       </div>
@@ -7320,7 +7320,7 @@ function AIChatBase({pageId,system}:{pageId:string,system?:string}){
           </div>
         </div>}
 
-        {err&&<div style={{padding:"10px 14px",background:"rgba(255,59,48,0.1)",borderRadius:8,fontSize:12,color:"#FF3B30",border:"1px solid rgba(255,59,48,0.2)"}}>{err}</div>}
+        {err&&<div style={{padding:"10px 14px",background:"rgba(116,116,116,0.1)",borderRadius:8,fontSize:12,color:"#747474",border:"1px solid rgba(116,116,116,0.2)"}}>{err}</div>}
         <div ref={bottomRef}/>
       </div>
 
@@ -7506,7 +7506,7 @@ function CourseLessonEditor({lesson,index,total,dark,busy,onSave,onRegen,onClose
       <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:660,maxHeight:"88vh",overflowY:"auto",background:dark?"#161616":"#fff",border:`1px solid ${bd}`,borderRadius:10,padding:26,boxShadow:"0 24px 60px rgba(0,0,0,0.5)"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:22}}>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
-            <div style={{width:34,height:34,borderRadius:8,background:"#059669",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:14,fontWeight:800}}>{index+1}</div>
+            <div style={{width:34,height:34,borderRadius:8,background:"#666666",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:14,fontWeight:800}}>{index+1}</div>
             <div style={{fontSize:12,fontWeight:600,color:C.t2}}>{unitLabel} {index+1} из {total}</div>
           </div>
           <button onClick={onClose} style={{width:32,height:32,borderRadius:9,border:"none",background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -7539,7 +7539,7 @@ function CourseLessonEditor({lesson,index,total,dark,busy,onSave,onRegen,onClose
         <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
           <button onClick={onClose} style={{padding:"11px 20px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Отмена</button>
           <button onClick={()=>onSave({title,description,scenario})} disabled={busy}
-            style={{padding:"11px 24px",borderRadius:8,border:"none",background:"#059669",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>Сохранить</button>
+            style={{padding:"11px 24px",borderRadius:8,border:"none",background:"#666666",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>Сохранить</button>
         </div>
       </div>
     </div>
@@ -7613,7 +7613,7 @@ function SectionEditor({title,text,dark,busy,onSave,onRegen,onClose}:{title:stri
         <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
           <button onClick={onClose} style={{padding:"11px 20px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Отмена</button>
           <button onClick={()=>onSave(val)} disabled={busy}
-            style={{padding:"11px 24px",borderRadius:8,border:"none",background:"#059669",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>Сохранить</button>
+            style={{padding:"11px 24px",borderRadius:8,border:"none",background:"#666666",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>Сохранить</button>
         </div>
       </div>
     </div>
@@ -7724,21 +7724,21 @@ function exportProductPDF(product:any){
 @page{size:A4;margin:20mm 18mm}
 *{box-sizing:border-box}
 body{font-family:-apple-system,'Segoe UI',Inter,Roboto,Arial,sans-serif;color:#111;line-height:1.6;margin:0}
-.tag{display:inline-block;font-size:11px;font-weight:700;color:#059669;background:#ECFDF5;padding:4px 12px;border-radius:20px;letter-spacing:.3px}
+.tag{display:inline-block;font-size:11px;font-weight:700;color:#666666;background:#ECFDF5;padding:4px 12px;border-radius:20px;letter-spacing:.3px}
 h1{font-size:26px;font-weight:800;letter-spacing:-.02em;margin:14px 0 8px}
-.lead{font-size:14px;color:#374151;margin:0 0 6px;max-width:640px}
-.rule{height:2px;background:linear-gradient(90deg,#10B981,#059669);border-radius:2px;margin:18px 0 26px;width:70px}
-h2{font-size:16px;font-weight:800;letter-spacing:-.01em;margin:0 0 8px;color:#065F46}
+.lead{font-size:14px;color:#404040;margin:0 0 6px;max-width:640px}
+.rule{height:2px;background:linear-gradient(90deg,#808080,#666666);border-radius:2px;margin:18px 0 26px;width:70px}
+h2{font-size:16px;font-weight:800;letter-spacing:-.01em;margin:0 0 8px;color:#424242}
 h2.group{margin:34px 0 14px;padding-bottom:8px;border-bottom:1px solid #E5E7EB}
 .block{margin-bottom:20px}
-.block p{margin:0;font-size:13.5px;color:#1F2937;white-space:pre-wrap}
+.block p{margin:0;font-size:13.5px;color:#282828;white-space:pre-wrap}
 .item{border:1px solid #E5E7EB;border-radius:12px;padding:16px 18px;margin-bottom:12px;page-break-inside:avoid}
 .ihead{display:flex;align-items:center;gap:10px;margin-bottom:6px}
-.num{font-size:11px;font-weight:800;color:#059669;background:#ECFDF5;padding:3px 10px;border-radius:20px}
-.fmt{font-size:10px;font-weight:700;color:#6B7280;background:#F3F4F6;padding:2px 8px;border-radius:12px;text-transform:uppercase;letter-spacing:.3px}
+.num{font-size:11px;font-weight:800;color:#666666;background:#ECFDF5;padding:3px 10px;border-radius:20px}
+.fmt{font-size:10px;font-weight:700;color:#727272;background:#F3F4F6;padding:2px 8px;border-radius:12px;text-transform:uppercase;letter-spacing:.3px}
 .item h3{font-size:15px;font-weight:700;margin:0 0 5px}
-.desc{font-size:13px;color:#4B5563;margin:0 0 8px}
-.scn{font-size:12.5px;color:#374151;margin:0;white-space:pre-wrap}
+.desc{font-size:13px;color:#545454;margin:0 0 8px}
+.scn{font-size:12.5px;color:#404040;margin:0;white-space:pre-wrap}
 .foot{margin-top:32px;padding-top:14px;border-top:1px solid #E5E7EB;font-size:11px;color:#9CA3AF;text-align:center}
 </style></head><body>
 <span class="tag">${esc(product.format||"Продукт")}</span>
@@ -7969,7 +7969,7 @@ function StoryProEditor({story,dark,fontsRev,onClose,onSave}:{story:SStory,dark:
   };
 
   const addArrow=()=>{const el:OverlayEl={id:uid(),type:"arrow",x:0.5,y:0.5,rot:0,len:0.45,thickness:0.014,color:"#FFFFFF"};setOverlays(o=>[...o,el]);setSel(el.id);};
-  const addLine=()=>{const el:OverlayEl={id:uid(),type:"line",x:0.5,y:0.55,rot:0,len:0.4,thickness:0.022,color:"#FDE047"};setOverlays(o=>[...o,el]);setSel(el.id);};
+  const addLine=()=>{const el:OverlayEl={id:uid(),type:"line",x:0.5,y:0.55,rot:0,len:0.4,thickness:0.022,color:"#D7D7D7"};setOverlays(o=>[...o,el]);setSel(el.id);};
   const addImage=(file:File)=>{
     const img=new Image();const o=URL.createObjectURL(file);
     img.onload=()=>{const MAX=900;const s=Math.min(1,MAX/Math.max(img.width,img.height));const w=Math.round(img.width*s),h=Math.round(img.height*s);const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d")!.drawImage(img,0,0,w,h);URL.revokeObjectURL(o);const url=c.toDataURL("image/png");const el:OverlayEl={id:uid(),type:"image",x:0.5,y:0.5,rot:0,w:0.4,imgUrl:url};setOverlays(ov=>[...ov,el]);setSel(el.id);};
@@ -7994,7 +7994,7 @@ function StoryProEditor({story,dark,fontsRev,onClose,onSave}:{story:SStory,dark:
           <div ref={stageRef} onPointerDown={()=>setSel(null)} style={{position:"relative" as const,width:Wp,height:Hp,borderRadius:10,overflow:"hidden",flexShrink:0,boxShadow:"0 10px 30px rgba(0,0,0,0.35)",touchAction:"none" as const}}>
             <StoryCanvas story={base} width={Wp} height={Hp} rev={fontsRev}/>
             {overlays.map(el=>{
-              const common:React.CSSProperties={position:"absolute" as const,left:el.x*Wp,top:el.y*Hp,transform:`translate(-50%,-50%) rotate(${el.rot||0}deg)`,cursor:"grab",boxShadow:sel===el.id?"0 0 0 2px #8B5CF6":"none"};
+              const common:React.CSSProperties={position:"absolute" as const,left:el.x*Wp,top:el.y*Hp,transform:`translate(-50%,-50%) rotate(${el.rot||0}deg)`,cursor:"grab",boxShadow:sel===el.id?"0 0 0 2px #7C7C7C":"none"};
               if(el.type==="image")return <img key={el.id} src={el.imgUrl} alt="" draggable={false} onPointerDown={e=>onDown(e,el)} style={{...common,width:(el.w||0.4)*Wp,borderRadius:4}}/>;
               const w=(el.len||0.4)*Wp,th=Math.max(2,(el.thickness||0.014)*Wp);
               return(
@@ -8024,29 +8024,29 @@ function StoryProEditor({story,dark,fontsRev,onClose,onSave}:{story:SStory,dark:
               <div style={{background:dark?"rgba(255,255,255,0.03)":"#F8FAFC",border:`1px solid ${bd}`,borderRadius:10,padding:16,display:"flex",flexDirection:"column",gap:14}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                   <div style={{fontSize:13,fontWeight:700,color:C.t1}}>{cur.type==="image"?"Фото":cur.type==="arrow"?"Стрелка":"Линия"}</div>
-                  <button onClick={delSel} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:9,border:"none",background:"rgba(239,68,68,0.12)",color:"#EF4444",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                  <button onClick={delSel} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:9,border:"none",background:"rgba(119,119,119,0.12)",color:"#777777",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>Удалить
                   </button>
                 </div>
                 <div>
                   <label style={lbl}>Поворот · {Math.round(cur.rot||0)}°</label>
-                  <input type="range" min={-180} max={180} value={cur.rot||0} onChange={e=>patch({rot:+e.target.value})} style={{width:"100%",accentColor:"#8B5CF6"}}/>
+                  <input type="range" min={-180} max={180} value={cur.rot||0} onChange={e=>patch({rot:+e.target.value})} style={{width:"100%",accentColor:"#7C7C7C"}}/>
                 </div>
                 <div>
                   <label style={lbl}>Размер</label>
                   {cur.type==="image"
-                    ?<input type="range" min={10} max={90} value={Math.round((cur.w||0.4)*100)} onChange={e=>patch({w:+e.target.value/100})} style={{width:"100%",accentColor:"#8B5CF6"}}/>
-                    :<input type="range" min={10} max={90} value={Math.round((cur.len||0.4)*100)} onChange={e=>patch({len:+e.target.value/100})} style={{width:"100%",accentColor:"#8B5CF6"}}/>}
+                    ?<input type="range" min={10} max={90} value={Math.round((cur.w||0.4)*100)} onChange={e=>patch({w:+e.target.value/100})} style={{width:"100%",accentColor:"#7C7C7C"}}/>
+                    :<input type="range" min={10} max={90} value={Math.round((cur.len||0.4)*100)} onChange={e=>patch({len:+e.target.value/100})} style={{width:"100%",accentColor:"#7C7C7C"}}/>}
                 </div>
                 {cur.type!=="image"&&<>
                   <div>
                     <label style={lbl}>Толщина</label>
-                    <input type="range" min={5} max={40} value={Math.round((cur.thickness||0.014)*1000)} onChange={e=>patch({thickness:+e.target.value/1000})} style={{width:"100%",accentColor:"#8B5CF6"}}/>
+                    <input type="range" min={5} max={40} value={Math.round((cur.thickness||0.014)*1000)} onChange={e=>patch({thickness:+e.target.value/1000})} style={{width:"100%",accentColor:"#7C7C7C"}}/>
                   </div>
                   <div>
                     <label style={lbl}>Цвет</label>
                     <div style={{display:"flex",gap:8}}>
-                      {["#FFFFFF","#000000","#EF4444","#FDE047","#8B5CF6"].map(col=><button key={col} onClick={()=>patch({color:col})} style={{width:28,height:28,borderRadius:8,border:cur.color===col?"2px solid #8B5CF6":`1px solid ${bd}`,background:col,cursor:"pointer"}}/>)}
+                      {["#FFFFFF","#000000","#777777","#D7D7D7","#7C7C7C"].map(col=><button key={col} onClick={()=>patch({color:col})} style={{width:28,height:28,borderRadius:8,border:cur.color===col?"2px solid #7C7C7C":`1px solid ${bd}`,background:col,cursor:"pointer"}}/>)}
                     </div>
                   </div>
                 </>}
@@ -8057,7 +8057,7 @@ function StoryProEditor({story,dark,fontsRev,onClose,onSave}:{story:SStory,dark:
 
             <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
               <button onClick={onClose} style={{padding:"11px 20px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Отмена</button>
-              <button onClick={()=>onSave(overlays)} style={{padding:"11px 24px",borderRadius:8,border:"none",background:"#6366F1",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>Сохранить</button>
+              <button onClick={()=>onSave(overlays)} style={{padding:"11px 24px",borderRadius:8,border:"none",background:"#757575",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>Сохранить</button>
             </div>
           </div>
         </div>
@@ -8087,7 +8087,7 @@ function StoriesAIPage({userId}:{userId:string}){
   const bd=C.bd;
   const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
   const inputBg=dark?"#1C1C1C":"#F8FAFC";
-  const GRAD="#6366F1";
+  const GRAD="#757575";
 
   // load fonts for canvas
   useEffect(()=>{
@@ -8222,7 +8222,7 @@ function StoriesAIPage({userId}:{userId:string}){
     setExporting(false);
   };
 
-  const segBtn=(active:boolean)=>({padding:"8px 14px",borderRadius:9,border:`1px solid ${active?"transparent":bd}`,background:active?"rgba(139,92,246,0.16)":"transparent",color:active?"#8B5CF6":C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"} as React.CSSProperties);
+  const segBtn=(active:boolean)=>({padding:"8px 14px",borderRadius:9,border:`1px solid ${active?"transparent":bd}`,background:active?"rgba(124,124,124,0.16)":"transparent",color:active?"#7C7C7C":C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"} as React.CSSProperties);
 
   /* ---------- LIBRARY ---------- */
   if(view==="library")return(
@@ -8241,21 +8241,21 @@ function StoriesAIPage({userId}:{userId:string}){
             <input type="file" accept="image/jpeg,image/png,image/webp" multiple style={{display:"none"}} onChange={e=>{onUpload(e.target.files);e.currentTarget.value="";}}/>
           </label>
           <button onClick={()=>setView("wizard")} disabled={images.length<5}
-            style={{display:"flex",alignItems:"center",gap:8,padding:"10px 20px",borderRadius:8,border:"none",background:images.length>=5?GRAD:inputBg,color:images.length>=5?"#fff":C.t2,fontSize:14,fontWeight:700,cursor:images.length>=5?"pointer":"default",fontFamily:"'Inter',sans-serif",boxShadow:images.length>=5?"0 4px 20px rgba(139,92,246,0.3)":"none"}}>
+            style={{display:"flex",alignItems:"center",gap:8,padding:"10px 20px",borderRadius:8,border:"none",background:images.length>=5?GRAD:inputBg,color:images.length>=5?"#fff":C.t2,fontSize:14,fontWeight:700,cursor:images.length>=5?"pointer":"default",fontFamily:"'Inter',sans-serif",boxShadow:images.length>=5?"0 4px 20px rgba(124,124,124,0.3)":"none"}}>
             Создать карусель Stories
           </button>
         </div>
       </div>
 
-      {uploading>0&&<div style={{fontSize:13,color:"#8B5CF6",marginBottom:12}}>Загрузка… осталось {uploading}</div>}
+      {uploading>0&&<div style={{fontSize:13,color:"#7C7C7C",marginBottom:12}}>Загрузка… осталось {uploading}</div>}
       {images.length<5&&<div style={{fontSize:13,color:C.t2,marginBottom:16}}>Загрузите минимум 5 фото, чтобы начать (JPG, PNG, WEBP).</div>}
 
       {libLoading?(
         <div style={{padding:60,textAlign:"center" as const,color:C.t2,fontSize:14}}>Загрузка библиотеки…</div>
       ):images.length===0?(
         <label style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:14,background:cardBg,border:`1px dashed ${bd}`,borderRadius:10,padding:"64px 24px",cursor:"pointer",textAlign:"center" as const}}>
-          <div style={{width:60,height:60,borderRadius:10,background:dark?"rgba(139,92,246,0.12)":"#F5F3FF",display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          <div style={{width:60,height:60,borderRadius:10,background:dark?"rgba(124,124,124,0.12)":"#F5F3FF",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7C7C7C" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
           </div>
           <div>
             <div style={{fontSize:17,fontWeight:700,color:C.t1,marginBottom:4}}>Загрузите фотографии</div>
@@ -8295,7 +8295,7 @@ function StoriesAIPage({userId}:{userId:string}){
           <div>
             <label style={lbl}>Какая цель сторис?</label>
             <div style={{display:"flex",flexWrap:"wrap" as const,gap:8}}>
-              {STORY_GOALS.map(g=><button key={g} onClick={()=>setForm((f:any)=>({...f,goal:g}))} style={{padding:"8px 15px",borderRadius:10,border:`1px solid ${form.goal===g?"transparent":bd}`,background:form.goal===g?"rgba(139,92,246,0.16)":"transparent",color:form.goal===g?"#8B5CF6":C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>{g}</button>)}
+              {STORY_GOALS.map(g=><button key={g} onClick={()=>setForm((f:any)=>({...f,goal:g}))} style={{padding:"8px 15px",borderRadius:10,border:`1px solid ${form.goal===g?"transparent":bd}`,background:form.goal===g?"rgba(124,124,124,0.16)":"transparent",color:form.goal===g?"#7C7C7C":C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>{g}</button>)}
             </div>
             {form.goal==="Свой вариант"&&<input value={form.goalCustom} onChange={e=>setForm((f:any)=>({...f,goalCustom:e.target.value}))} placeholder="Ваша цель" style={{...fld,marginTop:10}}/>}
           </div>
@@ -8305,24 +8305,24 @@ function StoriesAIPage({userId}:{userId:string}){
           <div><label style={lbl}>Главный посыл</label><textarea value={form.message} onChange={e=>setForm((f:any)=>({...f,message:e.target.value}))} placeholder="Напр.: бизнесы теряют деньги из-за отсутствия системы продаж" style={{...fld,minHeight:70}}/></div>
 
           <div>
-            <label style={lbl}>Уровень продажности <span style={{color:"#8B5CF6"}}>{form.sell}</span></label>
-            <input type="range" min={1} max={10} value={form.sell} onChange={e=>setForm((f:any)=>({...f,sell:+e.target.value}))} style={{width:"100%",accentColor:"#8B5CF6"}}/>
+            <label style={lbl}>Уровень продажности <span style={{color:"#7C7C7C"}}>{form.sell}</span></label>
+            <input type="range" min={1} max={10} value={form.sell} onChange={e=>setForm((f:any)=>({...f,sell:+e.target.value}))} style={{width:"100%",accentColor:"#7C7C7C"}}/>
             <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:C.t2,marginTop:4}}><span>чистый контент</span><span>жёсткая продажа</span></div>
           </div>
           <div>
-            <label style={lbl}>Уровень пользы <span style={{color:"#8B5CF6"}}>{form.value}</span></label>
-            <input type="range" min={1} max={10} value={form.value} onChange={e=>setForm((f:any)=>({...f,value:+e.target.value}))} style={{width:"100%",accentColor:"#8B5CF6"}}/>
+            <label style={lbl}>Уровень пользы <span style={{color:"#7C7C7C"}}>{form.value}</span></label>
+            <input type="range" min={1} max={10} value={form.value} onChange={e=>setForm((f:any)=>({...f,value:+e.target.value}))} style={{width:"100%",accentColor:"#7C7C7C"}}/>
             <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:C.t2,marginTop:4}}><span>эмоции</span><span>обучение</span></div>
           </div>
           <div>
-            <label style={lbl}>Количество сторис <span style={{color:"#8B5CF6"}}>{form.count}</span></label>
-            <input type="range" min={5} max={20} value={form.count} onChange={e=>setForm((f:any)=>({...f,count:+e.target.value}))} style={{width:"100%",accentColor:"#8B5CF6"}}/>
+            <label style={lbl}>Количество сторис <span style={{color:"#7C7C7C"}}>{form.count}</span></label>
+            <input type="range" min={5} max={20} value={form.count} onChange={e=>setForm((f:any)=>({...f,count:+e.target.value}))} style={{width:"100%",accentColor:"#7C7C7C"}}/>
             <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:C.t2,marginTop:4}}><span>5</span><span>20</span></div>
           </div>
         </div>
 
         <button onClick={runGenerate} disabled={!canGen}
-          style={{width:"100%",marginTop:26,padding:"15px",borderRadius:10,border:"none",background:canGen?GRAD:inputBg,color:canGen?"#fff":C.t2,fontSize:15,fontWeight:700,cursor:canGen?"pointer":"default",fontFamily:"'Inter',sans-serif",boxShadow:canGen?"0 4px 20px rgba(139,92,246,0.3)":"none"}}>
+          style={{width:"100%",marginTop:26,padding:"15px",borderRadius:10,border:"none",background:canGen?GRAD:inputBg,color:canGen?"#fff":C.t2,fontSize:15,fontWeight:700,cursor:canGen?"pointer":"default",fontFamily:"'Inter',sans-serif",boxShadow:canGen?"0 4px 20px rgba(124,124,124,0.3)":"none"}}>
           Сгенерировать сценарий
         </button>
       </div>
@@ -8367,7 +8367,7 @@ function StoriesAIPage({userId}:{userId:string}){
         {/* thumbnails */}
         <div style={{display:"flex",flexDirection:isMobile?"row":"column",gap:10,overflowX:isMobile?"auto":"visible",maxHeight:isMobile?"none":600,overflowY:isMobile?"visible":"auto",paddingRight:4,flexShrink:0}}>
           {stories.map((s,i)=>(
-            <div key={s.id} onClick={()=>setSel(i)} style={{position:"relative" as const,cursor:"pointer",borderRadius:8,overflow:"hidden",border:`2px solid ${i===sel?"#8B5CF6":"transparent"}`,flexShrink:0}}>
+            <div key={s.id} onClick={()=>setSel(i)} style={{position:"relative" as const,cursor:"pointer",borderRadius:8,overflow:"hidden",border:`2px solid ${i===sel?"#7C7C7C":"transparent"}`,flexShrink:0}}>
               <StoryCanvas story={s} width={72} height={128} radius={8} rev={fontsRev}/>
               <div style={{position:"absolute" as const,top:4,left:4,width:18,height:18,borderRadius:6,background:"rgba(0,0,0,0.6)",color:"#fff",fontSize:10,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>{i+1}</div>
               <button onClick={e=>{e.stopPropagation();if(stories.length<=1){alert("Нельзя удалить последнюю историю.");return;}setDelIdx(i);}} title="Удалить историю" style={{position:"absolute" as const,top:4,right:4,width:20,height:20,borderRadius:6,border:"none",background:"rgba(0,0,0,0.6)",color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -8386,7 +8386,7 @@ function StoriesAIPage({userId}:{userId:string}){
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
             Скачать PNG
           </button>}
-          {cur&&<button onClick={()=>setProIdx(sel)} style={{width:"100%",marginTop:8,padding:"11px",borderRadius:8,border:"none",background:"#6366F1",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
+          {cur&&<button onClick={()=>setProIdx(sel)} style={{width:"100%",marginTop:8,padding:"11px",borderRadius:8,border:"none",background:"#757575",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
             Перейти в Pro-редактор
           </button>}
@@ -8397,10 +8397,10 @@ function StoriesAIPage({userId}:{userId:string}){
           <div>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:8}}>
               <div style={{fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3}}>Текст сторис {sel+1}</div>
-              <button onClick={()=>moreText(sel)} disabled={moreBusyIdx===sel} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:"#8B5CF6",fontSize:12,fontWeight:600,cursor:moreBusyIdx===sel?"default":"pointer",fontFamily:"'Inter',sans-serif"}}>
+              <button onClick={()=>moreText(sel)} disabled={moreBusyIdx===sel} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:"#7C7C7C",fontSize:12,fontWeight:600,cursor:moreBusyIdx===sel?"default":"pointer",fontFamily:"'Inter',sans-serif"}}>
                 <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
                 {moreBusyIdx===sel
-                  ?<><div style={{width:12,height:12,border:"2px solid rgba(139,92,246,0.3)",borderTopColor:"#8B5CF6",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>Генерирую</>
+                  ?<><div style={{width:12,height:12,border:"2px solid rgba(124,124,124,0.3)",borderTopColor:"#7C7C7C",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>Генерирую</>
                   :<><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Больше текста</>}
               </button>
             </div>
@@ -8466,7 +8466,7 @@ function StoriesAIPage({userId}:{userId:string}){
           <div style={{fontSize:14,color:C.t2,lineHeight:1.6,marginBottom:22}}>Вы действительно хотите удалить историю {delIdx+1}? Действие необратимо.</div>
           <div style={{display:"flex",gap:10,justifyContent:"center"}}>
             <button onClick={()=>setDelIdx(null)} style={{flex:1,padding:"12px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Отмена</button>
-            <button onClick={()=>{const d=delIdx;setStories(prev=>prev.filter((_,i)=>i!==d));setSel(s=>{let n=s;if(d<s)n=s-1;const max=stories.length-2;if(n>max)n=max;return Math.max(0,n);});setProIdx(null);setDelIdx(null);}} style={{flex:1,padding:"12px",borderRadius:8,border:"none",background:"#EF4444",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Да, удалить</button>
+            <button onClick={()=>{const d=delIdx;setStories(prev=>prev.filter((_,i)=>i!==d));setSel(s=>{let n=s;if(d<s)n=s-1;const max=stories.length-2;if(n>max)n=max;return Math.max(0,n);});setProIdx(null);setDelIdx(null);}} style={{flex:1,padding:"12px",borderRadius:8,border:"none",background:"#777777",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Да, удалить</button>
           </div>
         </div>
       </div>}
@@ -8482,7 +8482,7 @@ function StoriesAIPage({userId}:{userId:string}){
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(90px,1fr))",gap:8}}>
             {images.map(im=>(
-              <div key={im.id} onClick={()=>{patchStory(sel,{imgUrl:im.url});setPicker(false);}} style={{aspectRatio:"9/16",borderRadius:8,overflow:"hidden",cursor:"pointer",border:`2px solid ${cur&&cur.imgUrl===im.url?"#8B5CF6":"transparent"}`}}>
+              <div key={im.id} onClick={()=>{patchStory(sel,{imgUrl:im.url});setPicker(false);}} style={{aspectRatio:"9/16",borderRadius:8,overflow:"hidden",cursor:"pointer",border:`2px solid ${cur&&cur.imgUrl===im.url?"#7C7C7C":"transparent"}`}}>
                 <img src={im.url} alt="" style={{width:"100%",height:"100%",objectFit:"cover" as const,display:"block"}}/>
               </div>
             ))}
@@ -8516,7 +8516,7 @@ function ProductAIPage({userId}:{userId:string}){
   const bd=C.bd;
   const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
   const inputBg=dark?"#1C1C1C":"#F8FAFC";
-  const GRAD="#059669";
+  const GRAD="#666666";
 
   const allAnswered=PA_QUESTIONS.every(q=>(answers[q.id]||"").trim().length>0);
 
@@ -8526,8 +8526,8 @@ function ProductAIPage({userId}:{userId:string}){
   };
 
   const statusMeta=(s:string)=>{
-    if(s==="variants")return{label:"Готовы варианты",color:"#F59E0B"};
-    if(s==="building")return{label:"В сборке",color:"#10B981"};
+    if(s==="variants")return{label:"Готовы варианты",color:"#A7A7A7"};
+    if(s==="building")return{label:"В сборке",color:"#808080"};
     return{label:"Черновик",color:C.t2};
   };
 
@@ -8774,7 +8774,7 @@ function ProductAIPage({userId}:{userId:string}){
                   Прикрепить файл
                   <input type="file" style={{display:"none"}} onChange={e=>{const f=e.target.files?.[0];if(f)attachFile(q.id,f);e.currentTarget.value="";}}/>
                 </label>
-                {files[q.id]&&<span style={{fontSize:12,color:"#10B981",display:"inline-flex",alignItems:"center",gap:5}}>
+                {files[q.id]&&<span style={{fontSize:12,color:"#808080",display:"inline-flex",alignItems:"center",gap:5}}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                   {files[q.id]}
                 </span>}
@@ -8785,7 +8785,7 @@ function ProductAIPage({userId}:{userId:string}){
       </div>
 
       <button onClick={generate} disabled={!allAnswered||busy}
-        style={{width:"100%",marginTop:24,padding:"15px",borderRadius:10,border:"none",background:allAnswered?GRAD:inputBg,color:allAnswered?"#fff":C.t2,fontSize:15,fontWeight:700,cursor:allAnswered?"pointer":"default",fontFamily:"'Inter',sans-serif",boxShadow:allAnswered?"0 4px 20px rgba(16,185,129,0.3)":"none",transition:"all 0.2s"}}>
+        style={{width:"100%",marginTop:24,padding:"15px",borderRadius:10,border:"none",background:allAnswered?GRAD:inputBg,color:allAnswered?"#fff":C.t2,fontSize:15,fontWeight:700,cursor:allAnswered?"pointer":"default",fontFamily:"'Inter',sans-serif",boxShadow:allAnswered?"0 4px 20px rgba(128,128,128,0.3)":"none",transition:"all 0.2s"}}>
         {allAnswered?"Сгенерировать продукт":`Заполните все вопросы (${PA_QUESTIONS.filter(q=>(answers[q.id]||"").trim()).length}/5)`}
       </button>
     </div>
@@ -8817,17 +8817,17 @@ function ProductAIPage({userId}:{userId:string}){
         <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.025em",marginBottom:6}}>Выберите продукт</div>
         <div style={{fontSize:14,color:C.t2,lineHeight:1.6,marginBottom:28}}>AI предложил 10 вариантов на основе ваших ответов. Выберите тот, который хотите создать.</div>
 
-        {genError&&<div style={{background:dark?"rgba(239,68,68,0.1)":"#FEF2F2",border:"1px solid rgba(239,68,68,0.3)",borderRadius:10,padding:"16px 18px",marginBottom:20,display:"flex",alignItems:"center",justifyContent:"space-between",gap:16}}>
-          <span style={{fontSize:14,color:"#EF4444"}}>{genError}</span>
-          <button onClick={generate} style={{padding:"8px 16px",borderRadius:9,border:"none",background:"#EF4444",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",flexShrink:0}}>Повторить</button>
+        {genError&&<div style={{background:dark?"rgba(119,119,119,0.1)":"#FEF2F2",border:"1px solid rgba(119,119,119,0.3)",borderRadius:10,padding:"16px 18px",marginBottom:20,display:"flex",alignItems:"center",justifyContent:"space-between",gap:16}}>
+          <span style={{fontSize:14,color:"#777777"}}>{genError}</span>
+          <button onClick={generate} style={{padding:"8px 16px",borderRadius:9,border:"none",background:"#777777",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",flexShrink:0}}>Повторить</button>
         </div>}
 
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:16}}>
           {variants.map((v,i)=>(
             <div key={i} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:12,padding:22,display:"flex",flexDirection:"column",gap:12,transition:"all 0.2s"}}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(16,185,129,0.4)";(e.currentTarget as HTMLElement).style.transform="translateY(-2px)";}}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(128,128,128,0.4)";(e.currentTarget as HTMLElement).style.transform="translateY(-2px)";}}
               onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=bd;(e.currentTarget as HTMLElement).style.transform="translateY(0)";}}>
-              <span style={{alignSelf:"flex-start",fontSize:11,fontWeight:700,color:"#10B981",background:"rgba(16,185,129,0.12)",padding:"4px 10px",borderRadius:10}}>{v.format}</span>
+              <span style={{alignSelf:"flex-start",fontSize:11,fontWeight:700,color:"#808080",background:"rgba(128,128,128,0.12)",padding:"4px 10px",borderRadius:10}}>{v.format}</span>
               <div style={{fontSize:17,fontWeight:800,color:C.t1,letterSpacing:"-0.01em",lineHeight:1.3}}>{v.title}</div>
               <div style={{fontSize:13,color:C.t1,lineHeight:1.6,opacity:0.85}}>{v.description}</div>
               {v.why&&<div style={{fontSize:12,color:C.t2,lineHeight:1.55,borderLeft:`2px solid ${bd}`,paddingLeft:10}}>{v.why}</div>}
@@ -8868,7 +8868,7 @@ function ProductAIPage({userId}:{userId:string}){
     );
     const ProductHead=v?(
       <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:12,padding:20,marginBottom:20}}>
-        <span style={{fontSize:11,fontWeight:700,color:"#10B981",background:"rgba(16,185,129,0.12)",padding:"4px 10px",borderRadius:10}}>{v.format}</span>
+        <span style={{fontSize:11,fontWeight:700,color:"#808080",background:"rgba(128,128,128,0.12)",padding:"4px 10px",borderRadius:10}}>{v.format}</span>
         <div style={{fontSize:22,fontWeight:800,color:C.t1,letterSpacing:"-0.02em",margin:"12px 0 8px"}}>{v.title}</div>
         <div style={{fontSize:14,color:C.t1,lineHeight:1.6,opacity:0.85}}>{v.description}</div>
       </div>
@@ -8879,7 +8879,7 @@ function ProductAIPage({userId}:{userId:string}){
       <div style={{maxWidth:720,margin:"0 auto",padding:"36px 24px"}}>
         {Back}{ProductHead}
         <div style={{background:cardBg,border:`1px dashed ${bd}`,borderRadius:12,padding:"48px 24px",textAlign:"center" as const}}>
-          <div style={{width:56,height:56,borderRadius:10,background:"#059669",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",opacity:0.9}}>
+          <div style={{width:56,height:56,borderRadius:10,background:"#666666",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",opacity:0.9}}>
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7.4L12 17l-6.3 4.4L8 14 2 9.4h7.6z"/></svg>
           </div>
           <div style={{fontSize:17,fontWeight:700,color:C.t1,marginBottom:6}}>Сборка для этого типа — скоро</div>
@@ -8905,10 +8905,10 @@ function ProductAIPage({userId}:{userId:string}){
           </div>
           <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:28,flexWrap:"wrap" as const}}>
             {[5,8,10,12].map(n=>(
-              <button key={n} onClick={()=>setLessonCount(n)} style={{padding:"7px 16px",borderRadius:10,border:`1px solid ${lessonCount===n?"transparent":bd}`,background:lessonCount===n?"rgba(16,185,129,0.14)":"transparent",color:lessonCount===n?"#10B981":C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>{n}</button>
+              <button key={n} onClick={()=>setLessonCount(n)} style={{padding:"7px 16px",borderRadius:10,border:`1px solid ${lessonCount===n?"transparent":bd}`,background:lessonCount===n?"rgba(128,128,128,0.14)":"transparent",color:lessonCount===n?"#808080":C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>{n}</button>
             ))}
           </div>
-          <button onClick={()=>buildCourse(lessonCount)} disabled={courseBusy} style={{width:"100%",padding:"15px",borderRadius:10,border:"none",background:"#059669",color:"#fff",fontSize:15,fontWeight:700,cursor:courseBusy?"default":"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+          <button onClick={()=>buildCourse(lessonCount)} disabled={courseBusy} style={{width:"100%",padding:"15px",borderRadius:10,border:"none",background:"#666666",color:"#fff",fontSize:15,fontWeight:700,cursor:courseBusy?"default":"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
             {courseBusy?<><div style={{width:18,height:18,border:"2.5px solid rgba(255,255,255,0.35)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Составляю программу…</>:"Сгенерировать программу курса"}
           </button>
         </div>
@@ -8923,7 +8923,7 @@ function ProductAIPage({userId}:{userId:string}){
           {Back}
           <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16,marginBottom:8,flexWrap:"wrap" as const}}>
             <div>
-              <span style={{fontSize:11,fontWeight:700,color:"#10B981",background:"rgba(16,185,129,0.12)",padding:"4px 10px",borderRadius:10}}>{v.format}</span>
+              <span style={{fontSize:11,fontWeight:700,color:"#808080",background:"rgba(128,128,128,0.12)",padding:"4px 10px",borderRadius:10}}>{v.format}</span>
               <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.025em",margin:"12px 0 4px"}}>{v.title}</div>
               <div style={{fontSize:14,color:C.t2}}>Программа курса · {lessons.length} уроков</div>
             </div>
@@ -8941,9 +8941,9 @@ function ProductAIPage({userId}:{userId:string}){
           <div style={{display:"flex",flexDirection:"column",gap:12,marginTop:24}}>
             {lessons.map((l,i)=>(
               <div key={l.id||i} onClick={()=>setEditIdx(i)} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:18,cursor:"pointer",display:"flex",gap:16,alignItems:"flex-start",transition:"all 0.15s"}}
-                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(16,185,129,0.35)";}}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(128,128,128,0.35)";}}
                 onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=bd;}}>
-                <div style={{width:36,height:36,borderRadius:8,background:dark?"rgba(16,185,129,0.12)":"#F0FDF4",color:"#10B981",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:800,flexShrink:0}}>{i+1}</div>
+                <div style={{width:36,height:36,borderRadius:8,background:dark?"rgba(128,128,128,0.12)":"#F0FDF4",color:"#808080",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:800,flexShrink:0}}>{i+1}</div>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:16,fontWeight:700,color:C.t1,lineHeight:1.35,marginBottom:5}}>{l.title}</div>
                   <div style={{fontSize:13,color:C.t2,lineHeight:1.55}}>{l.description}</div>
@@ -8975,10 +8975,10 @@ function ProductAIPage({userId}:{userId:string}){
           </div>
           <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:28,flexWrap:"wrap" as const}}>
             {[3,4,6,8].map(n=>(
-              <button key={n} onClick={()=>setMmCount(n)} style={{padding:"7px 16px",borderRadius:10,border:`1px solid ${mmCount===n?"transparent":bd}`,background:mmCount===n?"rgba(16,185,129,0.14)":"transparent",color:mmCount===n?"#10B981":C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>{n}</button>
+              <button key={n} onClick={()=>setMmCount(n)} style={{padding:"7px 16px",borderRadius:10,border:`1px solid ${mmCount===n?"transparent":bd}`,background:mmCount===n?"rgba(128,128,128,0.14)":"transparent",color:mmCount===n?"#808080":C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>{n}</button>
             ))}
           </div>
-          <button onClick={()=>buildMastermind(mmCount)} disabled={courseBusy} style={{width:"100%",padding:"15px",borderRadius:10,border:"none",background:"#059669",color:"#fff",fontSize:15,fontWeight:700,cursor:courseBusy?"default":"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+          <button onClick={()=>buildMastermind(mmCount)} disabled={courseBusy} style={{width:"100%",padding:"15px",borderRadius:10,border:"none",background:"#666666",color:"#fff",fontSize:15,fontWeight:700,cursor:courseBusy?"default":"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
             {courseBusy?<><div style={{width:18,height:18,border:"2.5px solid rgba(255,255,255,0.35)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Проектирую мастермайнд…</>:"Сгенерировать мастермайнд"}
           </button>
         </div>
@@ -8999,7 +8999,7 @@ function ProductAIPage({userId}:{userId:string}){
           {Back}
           <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16,marginBottom:8,flexWrap:"wrap" as const}}>
             <div>
-              <span style={{fontSize:11,fontWeight:700,color:"#10B981",background:"rgba(16,185,129,0.12)",padding:"4px 10px",borderRadius:10}}>{v.format}</span>
+              <span style={{fontSize:11,fontWeight:700,color:"#808080",background:"rgba(128,128,128,0.12)",padding:"4px 10px",borderRadius:10}}>{v.format}</span>
               <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.025em",margin:"12px 0 4px"}}>{v.title}</div>
               <div style={{fontSize:14,color:C.t2}}>Офлайн-мастермайнд · {sessions.length} встреч</div>
             </div>
@@ -9021,8 +9021,8 @@ function ProductAIPage({userId}:{userId:string}){
               <div key={sec.key} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:20}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
                   <div style={{display:"flex",alignItems:"center",gap:10}}>
-                    <div style={{width:32,height:32,borderRadius:9,background:dark?"rgba(16,185,129,0.12)":"#F0FDF4",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="1.7"><path d={sec.ic}/></svg>
+                    <div style={{width:32,height:32,borderRadius:9,background:dark?"rgba(128,128,128,0.12)":"#F0FDF4",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#808080" strokeWidth="1.7"><path d={sec.ic}/></svg>
                     </div>
                     <div style={{fontSize:15,fontWeight:700,color:C.t1}}>{sec.label}</div>
                   </div>
@@ -9042,9 +9042,9 @@ function ProductAIPage({userId}:{userId:string}){
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
             {sessions.map((s,i)=>(
               <div key={s.id||i} onClick={()=>setEditIdx(i)} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:18,cursor:"pointer",display:"flex",gap:16,alignItems:"flex-start",transition:"all 0.15s"}}
-                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(16,185,129,0.35)";}}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(128,128,128,0.35)";}}
                 onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=bd;}}>
-                <div style={{width:36,height:36,borderRadius:8,background:dark?"rgba(16,185,129,0.12)":"#F0FDF4",color:"#10B981",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:800,flexShrink:0}}>{i+1}</div>
+                <div style={{width:36,height:36,borderRadius:8,background:dark?"rgba(128,128,128,0.12)":"#F0FDF4",color:"#808080",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:800,flexShrink:0}}>{i+1}</div>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:16,fontWeight:700,color:C.t1,lineHeight:1.35,marginBottom:5}}>{s.title}</div>
                   <div style={{fontSize:13,color:C.t2,lineHeight:1.55}}>{s.description}</div>
@@ -9079,10 +9079,10 @@ function ProductAIPage({userId}:{userId:string}){
           </div>
           <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:28,flexWrap:"wrap" as const}}>
             {[7,14,30].map(n=>(
-              <button key={n} onClick={()=>setCommDays(n)} style={{padding:"7px 16px",borderRadius:10,border:`1px solid ${commDays===n?"transparent":bd}`,background:commDays===n?"rgba(16,185,129,0.14)":"transparent",color:commDays===n?"#10B981":C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>{n}</button>
+              <button key={n} onClick={()=>setCommDays(n)} style={{padding:"7px 16px",borderRadius:10,border:`1px solid ${commDays===n?"transparent":bd}`,background:commDays===n?"rgba(128,128,128,0.14)":"transparent",color:commDays===n?"#808080":C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>{n}</button>
             ))}
           </div>
-          <button onClick={()=>buildCommunity(commDays)} disabled={courseBusy} style={{width:"100%",padding:"15px",borderRadius:10,border:"none",background:"#059669",color:"#fff",fontSize:15,fontWeight:700,cursor:courseBusy?"default":"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+          <button onClick={()=>buildCommunity(commDays)} disabled={courseBusy} style={{width:"100%",padding:"15px",borderRadius:10,border:"none",background:"#666666",color:"#fff",fontSize:15,fontWeight:700,cursor:courseBusy?"default":"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
             {courseBusy?<><div style={{width:18,height:18,border:"2.5px solid rgba(255,255,255,0.35)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Оформляю сообщество…</>:"Сгенерировать сообщество"}
           </button>
         </div>
@@ -9104,7 +9104,7 @@ function ProductAIPage({userId}:{userId:string}){
           {Back}
           <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16,marginBottom:8,flexWrap:"wrap" as const}}>
             <div>
-              <span style={{fontSize:11,fontWeight:700,color:"#10B981",background:"rgba(16,185,129,0.12)",padding:"4px 10px",borderRadius:10}}>{v.format}</span>
+              <span style={{fontSize:11,fontWeight:700,color:"#808080",background:"rgba(128,128,128,0.12)",padding:"4px 10px",borderRadius:10}}>{v.format}</span>
               <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.025em",margin:"12px 0 4px"}}>{v.title}</div>
               <div style={{fontSize:14,color:C.t2}}>Закрытое сообщество · контент-план на {plan.length} дней</div>
             </div>
@@ -9126,8 +9126,8 @@ function ProductAIPage({userId}:{userId:string}){
               <div key={sec.key} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:20}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
                   <div style={{display:"flex",alignItems:"center",gap:10}}>
-                    <div style={{width:32,height:32,borderRadius:9,background:dark?"rgba(16,185,129,0.12)":"#F0FDF4",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="1.7"><path d={sec.ic}/></svg>
+                    <div style={{width:32,height:32,borderRadius:9,background:dark?"rgba(128,128,128,0.12)":"#F0FDF4",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#808080" strokeWidth="1.7"><path d={sec.ic}/></svg>
                     </div>
                     <div style={{fontSize:15,fontWeight:700,color:C.t1}}>{sec.label}</div>
                   </div>
@@ -9147,9 +9147,9 @@ function ProductAIPage({userId}:{userId:string}){
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
             {plan.map((p,i)=>(
               <div key={p.id||i} onClick={()=>setEditIdx(i)} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:16,cursor:"pointer",display:"flex",gap:14,alignItems:"flex-start",transition:"all 0.15s"}}
-                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(16,185,129,0.35)";}}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(128,128,128,0.35)";}}
                 onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=bd;}}>
-                <div style={{width:44,height:44,borderRadius:8,background:dark?"rgba(16,185,129,0.12)":"#F0FDF4",color:"#10B981",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0,lineHeight:1}}>
+                <div style={{width:44,height:44,borderRadius:8,background:dark?"rgba(128,128,128,0.12)":"#F0FDF4",color:"#808080",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0,lineHeight:1}}>
                   <span style={{fontSize:9,fontWeight:600,opacity:0.7}}>ДЕНЬ</span>
                   <span style={{fontSize:16,fontWeight:800}}>{p.day}</span>
                 </div>
@@ -9190,10 +9190,10 @@ function ProductAIPage({userId}:{userId:string}){
           </div>
           <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:28,flexWrap:"wrap" as const}}>
             {[3,6,9,12].map(n=>(
-              <button key={n} onClick={()=>setMonthsCount(n)} style={{padding:"7px 16px",borderRadius:10,border:`1px solid ${monthsCount===n?"transparent":bd}`,background:monthsCount===n?"rgba(16,185,129,0.14)":"transparent",color:monthsCount===n?"#10B981":C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>{n}</button>
+              <button key={n} onClick={()=>setMonthsCount(n)} style={{padding:"7px 16px",borderRadius:10,border:`1px solid ${monthsCount===n?"transparent":bd}`,background:monthsCount===n?"rgba(128,128,128,0.14)":"transparent",color:monthsCount===n?"#808080":C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>{n}</button>
             ))}
           </div>
-          <button onClick={()=>buildProgram(kind,monthsCount)} disabled={courseBusy} style={{width:"100%",padding:"15px",borderRadius:10,border:"none",background:"#059669",color:"#fff",fontSize:15,fontWeight:700,cursor:courseBusy?"default":"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+          <button onClick={()=>buildProgram(kind,monthsCount)} disabled={courseBusy} style={{width:"100%",padding:"15px",borderRadius:10,border:"none",background:"#666666",color:"#fff",fontSize:15,fontWeight:700,cursor:courseBusy?"default":"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
             {courseBusy?<><div style={{width:18,height:18,border:"2.5px solid rgba(255,255,255,0.35)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Проектирую программу…</>:"Сгенерировать программу"}
           </button>
         </div>
@@ -9213,7 +9213,7 @@ function ProductAIPage({userId}:{userId:string}){
           {Back}
           <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16,marginBottom:8,flexWrap:"wrap" as const}}>
             <div>
-              <span style={{fontSize:11,fontWeight:700,color:"#10B981",background:"rgba(16,185,129,0.12)",padding:"4px 10px",borderRadius:10}}>{v.format}</span>
+              <span style={{fontSize:11,fontWeight:700,color:"#808080",background:"rgba(128,128,128,0.12)",padding:"4px 10px",borderRadius:10}}>{v.format}</span>
               <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.025em",margin:"12px 0 4px"}}>{v.title}</div>
               <div style={{fontSize:14,color:C.t2}}>{v.format} · программа на {program.length} мес.</div>
             </div>
@@ -9235,8 +9235,8 @@ function ProductAIPage({userId}:{userId:string}){
               <div key={sec.key} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:20}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
                   <div style={{display:"flex",alignItems:"center",gap:10}}>
-                    <div style={{width:32,height:32,borderRadius:9,background:dark?"rgba(16,185,129,0.12)":"#F0FDF4",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="1.7"><path d={sec.ic}/></svg>
+                    <div style={{width:32,height:32,borderRadius:9,background:dark?"rgba(128,128,128,0.12)":"#F0FDF4",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#808080" strokeWidth="1.7"><path d={sec.ic}/></svg>
                     </div>
                     <div style={{fontSize:15,fontWeight:700,color:C.t1}}>{sec.label}</div>
                   </div>
@@ -9256,9 +9256,9 @@ function ProductAIPage({userId}:{userId:string}){
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
             {program.map((m,i)=>(
               <div key={m.id||i} onClick={()=>setEditIdx(i)} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:18,cursor:"pointer",display:"flex",gap:16,alignItems:"flex-start",transition:"all 0.15s"}}
-                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(16,185,129,0.35)";}}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(128,128,128,0.35)";}}
                 onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=bd;}}>
-                <div style={{width:52,height:44,borderRadius:8,background:dark?"rgba(16,185,129,0.12)":"#F0FDF4",color:"#10B981",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0,lineHeight:1}}>
+                <div style={{width:52,height:44,borderRadius:8,background:dark?"rgba(128,128,128,0.12)":"#F0FDF4",color:"#808080",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0,lineHeight:1}}>
                   <span style={{fontSize:9,fontWeight:600,opacity:0.7}}>МЕСЯЦ</span>
                   <span style={{fontSize:16,fontWeight:800}}>{m.month}</span>
                 </div>
@@ -9303,7 +9303,7 @@ function ProductAIPage({userId}:{userId:string}){
       ):products.length===0?(
         <div style={{background:cardBg,border:`1px dashed ${bd}`,borderRadius:10,padding:"64px 24px",textAlign:"center" as const}}>
           <div style={{width:64,height:64,borderRadius:12,background:dark?"rgba(255,255,255,0.05)":"#F0FDF4",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px"}}>
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="1.5"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#808080" strokeWidth="1.5"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
           </div>
           <div style={{fontSize:20,fontWeight:800,color:C.t1,marginBottom:8,letterSpacing:"-0.02em"}}>У вас пока нет продуктов</div>
           <div style={{fontSize:14,color:C.t2,lineHeight:1.6,maxWidth:360,margin:"0 auto 24px"}}>Создайте свой первый цифровой продукт за 15 минут — ответьте на 5 вопросов, остальное сделает AI.</div>
@@ -9320,15 +9320,15 @@ function ProductAIPage({userId}:{userId:string}){
             return(
               <div key={p.id} onClick={()=>openExisting(p)}
                 style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:12,padding:20,cursor:"pointer",transition:"all 0.2s",position:"relative" as const}}
-                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(16,185,129,0.35)";}}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(128,128,128,0.35)";}}
                 onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=bd;}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
                   <div style={{width:40,height:40,borderRadius:8,background:dark?"rgba(255,255,255,0.05)":"#F0FDF4",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="1.6"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#808080" strokeWidth="1.6"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                   </div>
                   <button onClick={e=>deleteProduct(p.id,e)} title="Удалить"
                     style={{width:28,height:28,borderRadius:8,border:"none",background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}
-                    onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color="#EF4444";}}
+                    onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color="#777777";}}
                     onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.color=C.t2;}}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
                   </button>
@@ -9392,7 +9392,7 @@ const STORIES_QUESTIONS=[
 function StoriesAILegacy(){
   const isMobile=useIsMobile();
   const theme=AI_THEMES.stories;
-  const ac="#CC00FF";
+  const ac="#5A5A5A";
 
   const[step,setStep]=useState<"form"|"chat">("form");
   const[form,setForm]=useState<Record<string,string>>({slides:"7"});
@@ -9502,22 +9502,22 @@ function StoriesAILegacy(){
     return <span key={i} style={isLabel?{color:ac,fontWeight:600}:isBold?{color:ac}:{}}>{parts}{i<arr.length-1&&<br/>}</span>;
   });
 
-  const GRAD="linear-gradient(135deg,#200030,#120018)";
+  const GRAD="linear-gradient(135deg,#0F0F0F,#080808)";
 
-  return <div style={{display:"flex",height:isMobile?"calc(100vh - 136px)":"calc(100vh - 120px)",overflow:"hidden",borderRadius:10,border:"1px solid rgba(204,0,255,0.15)",background:theme.bg,boxShadow:"0 8px 40px rgba(0,0,0,0.4)"}}>
-    <style>{`.stories-input:focus{border-color:${ac}!important;box-shadow:0 0 12px rgba(204,0,255,0.3)!important;}.stories-send:hover{transform:scale(1.05);}.stories-chat-item:hover .stories-del{opacity:1!important;}.stories-opt:hover{border-color:${ac}!important;background:rgba(204,0,255,0.1)!important;}`}</style>
+  return <div style={{display:"flex",height:isMobile?"calc(100vh - 136px)":"calc(100vh - 120px)",overflow:"hidden",borderRadius:10,border:"1px solid rgba(90,90,90,0.15)",background:theme.bg,boxShadow:"0 8px 40px rgba(0,0,0,0.4)"}}>
+    <style>{`.stories-input:focus{border-color:${ac}!important;box-shadow:0 0 12px rgba(90,90,90,0.3)!important;}.stories-send:hover{transform:scale(1.05);}.stories-chat-item:hover .stories-del{opacity:1!important;}.stories-opt:hover{border-color:${ac}!important;background:rgba(90,90,90,0.1)!important;}`}</style>
 
     {/* Sidebar */}
     {(sidebarOpen||!isMobile)&&<div style={{width:isMobile?"100%":220,flexShrink:0,background:theme.sbBg,borderRight:"1px solid rgba(255,255,255,0.06)",display:"flex",flexDirection:"column",overflow:"hidden"}}>
       <div style={{padding:"14px 12px 10px",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-          <img src="/icon-stories.png" style={{width:30,height:30,borderRadius:8,objectFit:"cover",border:"1.5px solid "+ac,boxShadow:"0 0 12px rgba(204,0,255,0.4)"}} alt=""/>
+          <img src="/icon-stories.png" style={{width:30,height:30,borderRadius:8,objectFit:"cover",border:"1.5px solid "+ac,boxShadow:"0 0 12px rgba(90,90,90,0.4)"}} alt=""/>
           <div>
             <div style={{fontSize:12,fontWeight:700,color:"#fff"}}>Vizzy Stories AI</div>
             <div style={{fontSize:9,color:"rgba(255,255,255,0.35)"}}>Сценарии сторис</div>
           </div>
         </div>
-        <button onClick={newScenario} style={{width:"100%",padding:"8px",background:"linear-gradient(135deg,#CC00FF,#FF44CC)",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,boxShadow:"0 4px 16px rgba(204,0,255,0.4)"}}>
+        <button onClick={newScenario} style={{width:"100%",padding:"8px",background:"linear-gradient(135deg,#5A5A5A,#8B8B8B)",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,boxShadow:"0 4px 16px rgba(90,90,90,0.4)"}}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Новый сценарий
         </button>
@@ -9535,8 +9535,8 @@ function StoriesAILegacy(){
             <div style={{fontSize:9,color:"rgba(255,255,255,0.25)",marginTop:1}}>{chat.msgs.length} сообщ.</div>
           </div>
           <button className="stories-del" onClick={e=>{e.stopPropagation();setChats(prev=>prev.filter(c=>c.id!==chat.id));if(activeChatId===chat.id){setActiveChatId(null);setStep("form");}}}
-            style={{width:18,height:18,border:"none",background:"rgba(255,59,48,0.15)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:0,flexShrink:0,borderRadius:4,transition:"opacity 0.15s"}}>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#FF3B30" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            style={{width:18,height:18,border:"none",background:"rgba(116,116,116,0.15)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:0,flexShrink:0,borderRadius:4,transition:"opacity 0.15s"}}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#747474" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
           </button>
         </div>)}
       </div>
@@ -9545,12 +9545,12 @@ function StoriesAILegacy(){
     {/* Main */}
     {(!isMobile||!sidebarOpen)&&<div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",background:theme.bg}}>
       {/* Header */}
-      <div style={{padding:"12px 16px",background:GRAD,borderBottom:"1px solid rgba(204,0,255,0.15)",display:"flex",alignItems:"center",gap:10,flexShrink:0,boxShadow:"0 4px 40px rgba(204,0,255,0.25)"}}>
+      <div style={{padding:"12px 16px",background:GRAD,borderBottom:"1px solid rgba(90,90,90,0.15)",display:"flex",alignItems:"center",gap:10,flexShrink:0,boxShadow:"0 4px 40px rgba(90,90,90,0.25)"}}>
         {isMobile&&<button onClick={()=>setSidebarOpen(true)} style={{width:30,height:30,border:"1px solid rgba(255,255,255,0.1)",borderRadius:7,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>}
         <div style={{position:"relative",flexShrink:0}}>
-          <img src="/icon-stories.png" style={{width:36,height:36,borderRadius:8,objectFit:"cover",border:"2px solid "+ac,boxShadow:"0 0 20px rgba(204,0,255,0.6)",animation:"avatarPulse 2s ease-in-out infinite"}} alt=""/>
+          <img src="/icon-stories.png" style={{width:36,height:36,borderRadius:8,objectFit:"cover",border:"2px solid "+ac,boxShadow:"0 0 20px rgba(90,90,90,0.6)",animation:"avatarPulse 2s ease-in-out infinite"}} alt=""/>
           <div style={{position:"absolute",bottom:0,right:0,width:9,height:9,borderRadius:"50%",background:ac,border:"2px solid "+theme.bg,animation:"dotBlink 2s ease-in-out infinite"}}/>
         </div>
         <div style={{flex:1}}>
@@ -9560,7 +9560,7 @@ function StoriesAILegacy(){
           </div>
         </div>
         {step==="chat"&&lastScript&&<div style={{display:"flex",gap:6}}>
-          <button onClick={copy} style={{padding:"5px 10px",background:copied?"rgba(16,185,129,0.2)":"rgba(255,255,255,0.06)",color:copied?"#10B981":"rgba(255,255,255,0.6)",border:"1px solid "+(copied?"rgba(16,185,129,0.3)":"rgba(255,255,255,0.1)"),borderRadius:7,fontSize:10,cursor:"pointer",fontWeight:500}}>{copied?"✓ Скопировано":"Скопировать"}</button>
+          <button onClick={copy} style={{padding:"5px 10px",background:copied?"rgba(128,128,128,0.2)":"rgba(255,255,255,0.06)",color:copied?"#808080":"rgba(255,255,255,0.6)",border:"1px solid "+(copied?"rgba(128,128,128,0.3)":"rgba(255,255,255,0.1)"),borderRadius:7,fontSize:10,cursor:"pointer",fontWeight:500}}>{copied?"✓ Скопировано":"Скопировать"}</button>
           {!isMobile&&<button onClick={download} style={{padding:"5px 10px",background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.5)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:7,fontSize:10,cursor:"pointer"}}>Скачать</button>}
         </div>}
       </div>
@@ -9571,7 +9571,7 @@ function StoriesAILegacy(){
         ? <div style={{flex:1,overflowY:"auto",padding:"20px"}}>
             <div style={{maxWidth:560,margin:"0 auto"}}>
               <div style={{textAlign:"center",marginBottom:24}}>
-                <img src="/icon-stories.png" style={{width:56,height:56,borderRadius:10,objectFit:"cover",border:"2px solid "+ac,boxShadow:"0 0 20px rgba(204,0,255,0.5)",marginBottom:12}} alt=""/>
+                <img src="/icon-stories.png" style={{width:56,height:56,borderRadius:10,objectFit:"cover",border:"2px solid "+ac,boxShadow:"0 0 20px rgba(90,90,90,0.5)",marginBottom:12}} alt=""/>
                 <div style={{fontSize:18,fontWeight:800,color:"#fff",marginBottom:4}}>Визzy Stories AI</div>
                 <div style={{fontSize:12,color:"rgba(255,255,255,0.4)"}}>Заполни форму — получи готовый сценарий по слайдам</div>
               </div>
@@ -9581,7 +9581,7 @@ function StoriesAILegacy(){
                 {q.options
                   ? <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                       {q.options.map(opt=><button key={opt} className="stories-opt" onClick={()=>setForm(f=>({...f,[q.id]:opt}))}
-                        style={{padding:"7px 14px",background:form[q.id]===opt?"rgba(204,0,255,0.2)":"rgba(255,255,255,0.04)",border:"1px solid "+(form[q.id]===opt?ac:"rgba(255,255,255,0.1)"),borderRadius:10,fontSize:12,color:form[q.id]===opt?ac:"rgba(255,255,255,0.6)",cursor:"pointer",transition:"all 0.15s",fontFamily:"'Inter',sans-serif",fontWeight:form[q.id]===opt?600:400}}>
+                        style={{padding:"7px 14px",background:form[q.id]===opt?"rgba(90,90,90,0.2)":"rgba(255,255,255,0.04)",border:"1px solid "+(form[q.id]===opt?ac:"rgba(255,255,255,0.1)"),borderRadius:10,fontSize:12,color:form[q.id]===opt?ac:"rgba(255,255,255,0.6)",cursor:"pointer",transition:"all 0.15s",fontFamily:"'Inter',sans-serif",fontWeight:form[q.id]===opt?600:400}}>
                         {opt}
                       </button>)}
                     </div>
@@ -9591,10 +9591,10 @@ function StoriesAILegacy(){
                 }
               </div>)}
 
-              {err&&<div style={{padding:"10px 14px",background:"rgba(255,59,48,0.1)",borderRadius:8,fontSize:12,color:"#FF3B30",border:"1px solid rgba(255,59,48,0.2)",marginBottom:12}}>{err}</div>}
+              {err&&<div style={{padding:"10px 14px",background:"rgba(116,116,116,0.1)",borderRadius:8,fontSize:12,color:"#747474",border:"1px solid rgba(116,116,116,0.2)",marginBottom:12}}>{err}</div>}
 
               <button onClick={startGeneration} disabled={loading||!form.topic?.trim()}
-                style={{width:"100%",padding:"14px",background:"linear-gradient(135deg,#CC00FF,#FF44CC)",color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 8px 24px rgba(204,0,255,0.4)",transition:"all 0.15s",opacity:loading||!form.topic?.trim()?0.5:1}}>
+                style={{width:"100%",padding:"14px",background:"linear-gradient(135deg,#5A5A5A,#8B8B8B)",color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 8px 24px rgba(90,90,90,0.4)",transition:"all 0.15s",opacity:loading||!form.topic?.trim()?0.5:1}}>
                 {loading?"Генерирую сценарий...":"✨ Сгенерировать сценарий"}
               </button>
             </div>
@@ -9605,14 +9605,14 @@ function StoriesAILegacy(){
               {m.role==="assistant"&&<img src="/icon-stories.png" style={{width:26,height:26,borderRadius:7,objectFit:"cover",flexShrink:0,marginTop:2,border:"1.5px solid "+ac}} alt=""/>}
               <div style={{maxWidth:"82%",padding:"11px 14px",
                 borderRadius:m.role==="user"?"18px 18px 4px 18px":"18px 18px 18px 4px",
-                background:m.role==="user"?"linear-gradient(135deg,#2A0040,#1A0030)":theme.aiMsgBg,
-                border:"1px solid "+(m.role==="user"?"rgba(204,0,255,0.4)":theme.aiMsgBorder),
-                color:m.role==="user"?"#F5CCFF":"#fff",fontSize:13,lineHeight:1.7,wordBreak:"break-word",
-                boxShadow:m.role==="user"?"0 2px 20px rgba(204,0,255,0.2)":theme.aiMsgGlow,
+                background:m.role==="user"?"linear-gradient(135deg,#141414,#0D0D0D)":theme.aiMsgBg,
+                border:"1px solid "+(m.role==="user"?"rgba(90,90,90,0.4)":theme.aiMsgBorder),
+                color:m.role==="user"?"#DEDEDE":"#fff",fontSize:13,lineHeight:1.7,wordBreak:"break-word",
+                boxShadow:m.role==="user"?"0 2px 20px rgba(90,90,90,0.2)":theme.aiMsgGlow,
               }}>
                 {m.role==="assistant"?formatMsg(m.content):m.content}
               </div>
-              {m.role==="user"&&<div style={{width:26,height:26,borderRadius:7,background:"rgba(204,0,255,0.15)",border:"1.5px solid rgba(204,0,255,0.3)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>
+              {m.role==="user"&&<div style={{width:26,height:26,borderRadius:7,background:"rgba(90,90,90,0.15)",border:"1.5px solid rgba(90,90,90,0.3)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={ac} strokeWidth="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               </div>}
             </div>)}
@@ -9623,20 +9623,20 @@ function StoriesAILegacy(){
                 {[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:ac,animation:`pulse 1.2s ease-in-out ${i*0.15}s infinite`}}/>)}
               </div>
             </div>}
-            {err&&<div style={{padding:"10px 14px",background:"rgba(255,59,48,0.1)",borderRadius:8,fontSize:12,color:"#FF3B30",border:"1px solid rgba(255,59,48,0.2)"}}>{err}</div>}
+            {err&&<div style={{padding:"10px 14px",background:"rgba(116,116,116,0.1)",borderRadius:8,fontSize:12,color:"#747474",border:"1px solid rgba(116,116,116,0.2)"}}>{err}</div>}
             <div ref={bottomRef}/>
           </div>
 
           {/* Quick actions */}
           {lastScript&&!loading&&<div style={{padding:"8px 12px",borderTop:"1px solid rgba(255,255,255,0.06)",display:"flex",gap:6,flexWrap:"wrap",background:"rgba(255,255,255,0.02)"}}>
             {["Перепиши хук","Другой CTA","Добавь интерактив","Измени тон"].map(a=><button key={a} onClick={()=>{setInput(a);}}
-              style={{padding:"5px 12px",background:"rgba(204,0,255,0.1)",border:"1px solid rgba(204,0,255,0.25)",borderRadius:10,fontSize:11,color:ac,cursor:"pointer",fontWeight:500}}>
+              style={{padding:"5px 12px",background:"rgba(90,90,90,0.1)",border:"1px solid rgba(90,90,90,0.25)",borderRadius:10,fontSize:11,color:ac,cursor:"pointer",fontWeight:500}}>
               {a}
             </button>)}
           </div>}
 
           {/* Input */}
-          <div style={{padding:"10px 12px",borderTop:"1px solid rgba(255,255,255,0.06)",background:"linear-gradient(180deg,#200030,#120018)",flexShrink:0}}>
+          <div style={{padding:"10px 12px",borderTop:"1px solid rgba(255,255,255,0.06)",background:"linear-gradient(180deg,#0F0F0F,#080808)",flexShrink:0}}>
             <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
               <textarea value={input} onChange={e=>setInput(e.target.value)}
                 onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}}
@@ -9646,7 +9646,7 @@ function StoriesAILegacy(){
                 onInput={e=>{const t=e.currentTarget;t.style.height="auto";t.style.height=Math.min(t.scrollHeight,100)+"px";}}
               />
               <button className="stories-send" onClick={send} disabled={!input.trim()||loading}
-                style={{width:34,height:34,borderRadius:8,border:"none",background:input.trim()&&!loading?"linear-gradient(135deg,#CC00FF,#FF44CC)":"rgba(255,255,255,0.08)",cursor:input.trim()&&!loading?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.15s"}}>
+                style={{width:34,height:34,borderRadius:8,border:"none",background:input.trim()&&!loading?"linear-gradient(135deg,#5A5A5A,#8B8B8B)":"rgba(255,255,255,0.08)",cursor:input.trim()&&!loading?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.15s"}}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
               </button>
             </div>
@@ -9661,8 +9661,8 @@ function StoriesAILegacy(){
 const MAILING_GOALS_AI=["Знакомство с новым лидом","Презентация продукта/услуги","Реактивация «уснувшего» клиента","Специальное предложение/акция","Напоминание о событии/вебинаре","Запрос обратной связи"];
 const MAILING_TONES=["Дружелюбный","Официальный","Продающий","Информационный","Нейтральный"];
 const MAILING_CHANNELS=["Личные сообщения (Соцсети)","Email"];
-const MAILING_STATUSES=[{id:"planned",label:"Запланирована",color:"#F59E0B"},{id:"sent",label:"Отправлена",color:"#10B981"}];
-const msCol=(s:string)=>(MAILING_STATUSES.find(x=>x.id===s)||{color:"#6B7280"}).color;
+const MAILING_STATUSES=[{id:"planned",label:"Запланирована",color:"#A7A7A7"},{id:"sent",label:"Отправлена",color:"#808080"}];
+const msCol=(s:string)=>(MAILING_STATUSES.find(x=>x.id===s)||{color:"#727272"}).color;
 const msLbl=(s:string)=>(MAILING_STATUSES.find(x=>x.id===s)||{label:s}).label;
 const EMPTY_MAILING={recipient:"",goal:"",scheduled_at:"",status:"planned",chat_url:"",content:""};
 
@@ -9680,7 +9680,7 @@ function MailingsPage({userId}:{userId:string}){
   const[aiLoading,setAiLoading]=useState(false);
   const[aiResult,setAiResult]=useState<string[]>([]);
   const[copied,setCopied]=useState<number|null>(null);
-  const AI_ACCENT="#A78BFA";
+  const AI_ACCENT="#A0A0A0";
 
   const openNew=(prefill?:any)=>{setForm(prefill||{...EMPTY_MAILING});setModal("new");};
   const openEdit=(m:any)=>{setForm({...m,scheduled_at:m.scheduled_at?m.scheduled_at.slice(0,16):""});setModal(m);};
@@ -9804,27 +9804,27 @@ function MailingsPage({userId}:{userId:string}){
       </div>
 
       {/* AI TAB */}
-      <div onClick={()=>setAiOpen(!aiOpen)} style={{position:"fixed",right:aiOpen?360:0,top:"50%",transform:"translateY(-50%)",background:`linear-gradient(135deg,${AI_ACCENT},#7C3AED)`,width:32,height:120,borderRadius:"12px 0 0 12px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",zIndex:110,transition:"right 0.3s ease"}}>
+      <div onClick={()=>setAiOpen(!aiOpen)} style={{position:"fixed",right:aiOpen?360:0,top:"50%",transform:"translateY(-50%)",background:`linear-gradient(135deg,${AI_ACCENT},#626262)`,width:32,height:120,borderRadius:"12px 0 0 12px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",zIndex:110,transition:"right 0.3s ease"}}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
         <div style={{writingMode:"vertical-rl",textOrientation:"mixed",transform:"rotate(180deg)",fontSize:10,fontWeight:700,color:"#fff",letterSpacing:1}}>VIZZY AI</div>
       </div>
 
       {/* AI PANEL */}
-      <div style={{position:"fixed",right:0,top:0,bottom:0,width:360,background:"#1A1030",borderLeft:"1px solid rgba(167,139,250,0.2)",transform:aiOpen?"translateX(0)":"translateX(100%)",transition:"transform 0.3s ease",zIndex:105,display:"flex",flexDirection:"column",fontFamily:"'Inter',sans-serif",overflowY:"auto"}}>
-        <div style={{padding:"20px 20px 16px",borderBottom:"1px solid rgba(167,139,250,0.15)",flexShrink:0}}>
+      <div style={{position:"fixed",right:0,top:0,bottom:0,width:360,background:"#171717",borderLeft:"1px solid rgba(160,160,160,0.2)",transform:aiOpen?"translateX(0)":"translateX(100%)",transition:"transform 0.3s ease",zIndex:105,display:"flex",flexDirection:"column",fontFamily:"'Inter',sans-serif",overflowY:"auto"}}>
+        <div style={{padding:"20px 20px 16px",borderBottom:"1px solid rgba(160,160,160,0.15)",flexShrink:0}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <div style={{width:32,height:32,borderRadius:8,background:"linear-gradient(135deg,#A78BFA,#7C3AED)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <div style={{width:32,height:32,borderRadius:8,background:"linear-gradient(135deg,#A0A0A0,#626262)",display:"flex",alignItems:"center",justifyContent:"center"}}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
               </div>
               <div>
                 <div style={{fontSize:14,fontWeight:700,color:"#fff"}}>Vizzy AI</div>
-                <div style={{fontSize:11,color:"rgba(167,139,250,0.7)"}}>Генератор рассылок</div>
+                <div style={{fontSize:11,color:"rgba(160,160,160,0.7)"}}>Генератор рассылок</div>
               </div>
             </div>
             <button onClick={()=>setAiOpen(false)} style={{width:28,height:28,borderRadius:7,border:"none",background:"rgba(255,255,255,0.07)",cursor:"pointer",color:"rgba(255,255,255,0.5)",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
           </div>
-          <div style={{marginTop:10,padding:"10px 14px",background:"rgba(167,139,250,0.1)",borderRadius:8,fontSize:13,color:"rgba(255,255,255,0.75)",lineHeight:1.5}}>
+          <div style={{marginTop:10,padding:"10px 14px",background:"rgba(160,160,160,0.1)",borderRadius:8,fontSize:13,color:"rgba(255,255,255,0.75)",lineHeight:1.5}}>
             👋 Я помогу сделать рассылку! Заполни параметры и нажми «Сгенерировать».
           </div>
         </div>
@@ -9833,9 +9833,9 @@ function MailingsPage({userId}:{userId:string}){
           {/* Goal */}
           <div>
             <label style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.5)",letterSpacing:0.5,textTransform:"uppercase",display:"block",marginBottom:6}}>Цель рассылки *</label>
-            <select value={aiGoal} onChange={e=>setAiGoal(e.target.value)} style={{width:"100%",padding:"10px 12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(167,139,250,0.25)",borderRadius:8,fontSize:13,color:aiGoal?"#fff":"rgba(255,255,255,0.4)",outline:"none",fontFamily:"'Inter',sans-serif"}}>
-              <option value="" style={{background:"#1A1030"}}>Выберите цель...</option>
-              {MAILING_GOALS_AI.map(g=><option key={g} value={g} style={{background:"#1A1030"}}>{g}</option>)}
+            <select value={aiGoal} onChange={e=>setAiGoal(e.target.value)} style={{width:"100%",padding:"10px 12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(160,160,160,0.25)",borderRadius:8,fontSize:13,color:aiGoal?"#fff":"rgba(255,255,255,0.4)",outline:"none",fontFamily:"'Inter',sans-serif"}}>
+              <option value="" style={{background:"#171717"}}>Выберите цель...</option>
+              {MAILING_GOALS_AI.map(g=><option key={g} value={g} style={{background:"#171717"}}>{g}</option>)}
             </select>
           </div>
           {/* Channel */}
@@ -9855,9 +9855,9 @@ function MailingsPage({userId}:{userId:string}){
           {/* Tone */}
           <div>
             <label style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.5)",letterSpacing:0.5,textTransform:"uppercase",display:"block",marginBottom:6}}>Тон рассылки *</label>
-            <select value={aiTone} onChange={e=>setAiTone(e.target.value)} style={{width:"100%",padding:"10px 12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(167,139,250,0.25)",borderRadius:8,fontSize:13,color:aiTone?"#fff":"rgba(255,255,255,0.4)",outline:"none",fontFamily:"'Inter',sans-serif"}}>
-              <option value="" style={{background:"#1A1030"}}>Выберите тон...</option>
-              {MAILING_TONES.map(t=><option key={t} value={t} style={{background:"#1A1030"}}>{t}</option>)}
+            <select value={aiTone} onChange={e=>setAiTone(e.target.value)} style={{width:"100%",padding:"10px 12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(160,160,160,0.25)",borderRadius:8,fontSize:13,color:aiTone?"#fff":"rgba(255,255,255,0.4)",outline:"none",fontFamily:"'Inter',sans-serif"}}>
+              <option value="" style={{background:"#171717"}}>Выберите тон...</option>
+              {MAILING_TONES.map(t=><option key={t} value={t} style={{background:"#171717"}}>{t}</option>)}
             </select>
           </div>
           {/* Count */}
@@ -9865,7 +9865,7 @@ function MailingsPage({userId}:{userId:string}){
             <label style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.5)",letterSpacing:0.5,textTransform:"uppercase",display:"block",marginBottom:8}}>Кол-во сообщений: <span style={{color:AI_ACCENT}}>{aiCount}</span></label>
             <div style={{display:"flex",gap:8}}>
               {[1,2,3,4,5].map(n=>(
-                <button key={n} onClick={()=>setAiCount(n)} style={{flex:1,padding:"8px 0",borderRadius:8,border:"2px solid "+(aiCount===n?AI_ACCENT:"rgba(255,255,255,0.12)"),background:aiCount===n?"rgba(167,139,250,0.2)":"transparent",color:aiCount===n?AI_ACCENT:"rgba(255,255,255,0.5)",fontWeight:700,fontSize:14,cursor:"pointer",transition:"all 0.15s"}}>{n}</button>
+                <button key={n} onClick={()=>setAiCount(n)} style={{flex:1,padding:"8px 0",borderRadius:8,border:"2px solid "+(aiCount===n?AI_ACCENT:"rgba(255,255,255,0.12)"),background:aiCount===n?"rgba(160,160,160,0.2)":"transparent",color:aiCount===n?AI_ACCENT:"rgba(255,255,255,0.5)",fontWeight:700,fontSize:14,cursor:"pointer",transition:"all 0.15s"}}>{n}</button>
               ))}
             </div>
           </div>
@@ -9874,11 +9874,11 @@ function MailingsPage({userId}:{userId:string}){
             <label style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.5)",letterSpacing:0.5,textTransform:"uppercase",display:"block",marginBottom:6}}>Доп. информация</label>
             <textarea value={aiExtra} onChange={e=>setAiExtra(e.target.value)} rows={3}
               placeholder="Имя клиента, название продукта, условия акции..."
-              style={{width:"100%",padding:"10px 12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(167,139,250,0.2)",borderRadius:8,fontSize:12,color:"#fff",outline:"none",resize:"vertical",fontFamily:"'Inter',sans-serif",lineHeight:1.5}}/>
+              style={{width:"100%",padding:"10px 12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(160,160,160,0.2)",borderRadius:8,fontSize:12,color:"#fff",outline:"none",resize:"vertical",fontFamily:"'Inter',sans-serif",lineHeight:1.5}}/>
           </div>
 
           <button onClick={generateAI} disabled={!aiGoal||!aiTone||aiLoading}
-            style={{padding:"12px 0",background:(!aiGoal||!aiTone||aiLoading)?"rgba(167,139,250,0.2)":`linear-gradient(135deg,${AI_ACCENT},#7C3AED)`,border:"none",borderRadius:8,fontSize:14,fontWeight:700,color:(!aiGoal||!aiTone||aiLoading)?"rgba(255,255,255,0.4)":"#fff",cursor:(!aiGoal||!aiTone||aiLoading)?"not-allowed":"pointer",transition:"all 0.2s"}}>
+            style={{padding:"12px 0",background:(!aiGoal||!aiTone||aiLoading)?"rgba(160,160,160,0.2)":`linear-gradient(135deg,${AI_ACCENT},#626262)`,border:"none",borderRadius:8,fontSize:14,fontWeight:700,color:(!aiGoal||!aiTone||aiLoading)?"rgba(255,255,255,0.4)":"#fff",cursor:(!aiGoal||!aiTone||aiLoading)?"not-allowed":"pointer",transition:"all 0.2s"}}>
             {aiLoading
               ?<span style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{animation:"spin 0.8s linear infinite"}}><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
@@ -9892,11 +9892,11 @@ function MailingsPage({userId}:{userId:string}){
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               <div style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:0.5}}>Результат</div>
               {aiResult.map((txt,i)=>(
-                <div key={i} style={{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(167,139,250,0.2)",borderRadius:8,padding:"14px 14px 10px"}}>
+                <div key={i} style={{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(160,160,160,0.2)",borderRadius:8,padding:"14px 14px 10px"}}>
                   {aiResult.length>1&&<div style={{fontSize:11,fontWeight:700,color:AI_ACCENT,marginBottom:8,textTransform:"uppercase",letterSpacing:0.5}}>Сообщение {i+1}</div>}
                   <div style={{fontSize:13,color:"rgba(255,255,255,0.85)",lineHeight:1.7,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{txt}</div>
                   <button onClick={()=>copyText(i)}
-                    style={{marginTop:10,display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:"rgba(167,139,250,0.12)",border:"1px solid rgba(167,139,250,0.2)",borderRadius:7,fontSize:11,color:copied===i?"#10B981":AI_ACCENT,cursor:"pointer",fontWeight:500}}>
+                    style={{marginTop:10,display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:"rgba(160,160,160,0.12)",border:"1px solid rgba(160,160,160,0.2)",borderRadius:7,fontSize:11,color:copied===i?"#808080":AI_ACCENT,cursor:"pointer",fontWeight:500}}>
                     {copied===i
                       ?<><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Скопировано</>
                       :<><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Копировать</>
@@ -9905,7 +9905,7 @@ function MailingsPage({userId}:{userId:string}){
                 </div>
               ))}
               <button onClick={useGeneratedForNew}
-                style={{padding:"11px 0",background:"rgba(16,185,129,0.15)",border:"1px solid rgba(16,185,129,0.3)",borderRadius:8,fontSize:13,fontWeight:600,color:"#10B981",cursor:"pointer",marginTop:4}}>
+                style={{padding:"11px 0",background:"rgba(128,128,128,0.15)",border:"1px solid rgba(128,128,128,0.3)",borderRadius:8,fontSize:13,fontWeight:600,color:"#808080",cursor:"pointer",marginTop:4}}>
                 📋 Создать рассылку на основе этого
               </button>
             </div>
@@ -9981,11 +9981,11 @@ const VISITEXT_MAX_DOCS=30;
 const VISITEXT_MAX_PAGES=500;
 const VISITEXT_A4_HEIGHT=1123;
 const VISITEXT_HIGHLIGHTS=[
-  {name:"Лимон",color:"#FEF3C7"},
-  {name:"Мята",color:"#D1FAE5"},
-  {name:"Небо",color:"#DBEAFE"},
-  {name:"Роза",color:"#FCE7F3"},
-  {name:"Лаванда",color:"#EDE9FE"},
+  {name:"Лимон",color:"#F1F1F1"},
+  {name:"Мята",color:"#EBEBEB"},
+  {name:"Небо",color:"#E8E8E8"},
+  {name:"Роза",color:"#EFEFEF"},
+  {name:"Лаванда",color:"#EDEDED"},
 ];
 
 const visitextContent=(doc:Partial<VisiTextDoc>)=>JSON.stringify({
@@ -10142,7 +10142,7 @@ function VisiTextPage({userId}:{userId:string}){
     const reader=new FileReader();
     reader.onload=()=>{
       const src=String(reader.result||"");
-      const html=`<p><img src="${src}" style="max-width:100%;height:auto;border-radius:10px;display:block;margin:18px auto;box-shadow:0 8px 24px rgba(15,23,42,0.12);" /></p><p><br></p>`;
+      const html=`<p><img src="${src}" style="max-width:100%;height:auto;border-radius:10px;display:block;margin:18px auto;box-shadow:0 8px 24px rgba(23,23,23,0.12);" /></p><p><br></p>`;
       runCmd("insertHTML",html);
       requestAnimationFrame(()=>persistContent(true));
     };
@@ -10176,7 +10176,7 @@ function VisiTextPage({userId}:{userId:string}){
       <div style={{maxHeight:isMobile?220:"calc(100vh - 260px)",overflowY:"auto",padding:10}}>
         {docs.map(d=>{
           const isAct=d.id===activeDoc?.id;
-          return <button key={d.id} onClick={()=>setActiveId(d.id)} style={{width:"100%",textAlign:"left",border:"1px solid "+(isAct?C.a:C.bd),background:isAct?(dark?"rgba(79,142,247,0.16)":"#EFF6FF"):(dark?"rgba(255,255,255,0.025)":"#fff"),borderRadius:8,padding:12,marginBottom:8,cursor:"pointer"}}>
+          return <button key={d.id} onClick={()=>setActiveId(d.id)} style={{width:"100%",textAlign:"left",border:"1px solid "+(isAct?C.a:C.bd),background:isAct?(dark?"rgba(135,135,135,0.16)":"#EFF6FF"):(dark?"rgba(255,255,255,0.025)":"#fff"),borderRadius:8,padding:12,marginBottom:8,cursor:"pointer"}}>
             <div style={{display:"flex",gap:10,alignItems:"center"}}>
               <div style={{width:34,height:44,borderRadius:5,background:"#fff",border:"1px solid #E5E7EB",boxShadow:"0 2px 6px rgba(0,0,0,0.08)",flexShrink:0}}/>
               <div style={{minWidth:0,flex:1}}>
@@ -10235,9 +10235,9 @@ function VisiTextPage({userId}:{userId:string}){
               if(img){e.preventDefault();insertImage(img);return;}
             }}
             style={{
-              width:isMobile?"min(794px, calc(100vw - 48px))":794,minHeight:isMobile?Math.round(VISITEXT_A4_HEIGHT*0.72):VISITEXT_A4_HEIGHT,background:"#fff",color:"#111827",
+              width:isMobile?"min(794px, calc(100vw - 48px))":794,minHeight:isMobile?Math.round(VISITEXT_A4_HEIGHT*0.72):VISITEXT_A4_HEIGHT,background:"#fff",color:"#181818",
               padding:isMobile?"36px":"72px",outline:"none",borderRadius:2,
-              boxShadow:dark?"0 24px 80px rgba(0,0,0,0.55)":"0 20px 70px rgba(15,23,42,0.18)",
+              boxShadow:dark?"0 24px 80px rgba(0,0,0,0.55)":"0 20px 70px rgba(23,23,23,0.18)",
               border:"1px solid #E5E7EB",fontFamily:"'Inter',Arial,sans-serif",
               fontSize:activeDoc?.fontSize||16,lineHeight:activeDoc?.lineHeight||"1.5",
               overflowWrap:"break-word",wordBreak:"break-word",caretColor:C.a,
@@ -10693,10 +10693,10 @@ function SheetsPage({userId}:{userId:string}){
   const surfBg=dark?"#141414":"#FFFFFF";
   const hdrBg=dark?"#141414":"#F1F5F9";
   const cellBd=dark?"rgba(255,255,255,0.05)":"#E2E8F0";
-  const hdrBd=dark?"rgba(255,255,255,0.08)":"#CBD5E1";
-  const selBg=dark?"rgba(79,142,247,0.18)":"rgba(37,99,235,0.1)";
-  const selBd=dark?"#4F8EF7":"#2563EB";
-  const rangeBg=dark?"rgba(79,142,247,0.08)":"rgba(37,99,235,0.04)";
+  const hdrBd=dark?"rgba(255,255,255,0.08)":"#D3D3D3";
+  const selBg=dark?"rgba(135,135,135,0.18)":"rgba(96,96,96,0.1)";
+  const selBd=dark?"#878787":"#606060";
+  const rangeBg=dark?"rgba(135,135,135,0.08)":"rgba(96,96,96,0.04)";
   const formulaBarVal=editing?(editVal):(data[shKey(sel.r,sel.c)]?.f||data[shKey(sel.r,sel.c)]?.v||"");
   const selCell=getCell(sel.r,sel.c);
 
@@ -10736,7 +10736,7 @@ function SheetsPage({userId}:{userId:string}){
           <div style={{fontSize:13,color:C.t2,marginTop:2}}>{wbs.length}/{SH_MAX_WB} таблиц · Excel-совместимые с формулами</div>
         </div>
         <button onClick={()=>setNewWbModal(true)} disabled={wbs.length>=SH_MAX_WB}
-          style={{padding:"10px 20px",background:wbs.length>=SH_MAX_WB?"#374151":C.a,color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:wbs.length>=SH_MAX_WB?"not-allowed":"pointer",display:"flex",alignItems:"center",gap:8}}>
+          style={{padding:"10px 20px",background:wbs.length>=SH_MAX_WB?"#404040":C.a,color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:wbs.length>=SH_MAX_WB?"not-allowed":"pointer",display:"flex",alignItems:"center",gap:8}}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Новая таблица
         </button>
@@ -10754,14 +10754,14 @@ function SheetsPage({userId}:{userId:string}){
           {wbs.map(w=>(
             <div key={w.id} onClick={()=>setActiveWbId(w.id)}
               style={{background:surfBg,borderRadius:10,overflow:"hidden",border:"1px solid "+C.bd,cursor:"pointer",transition:"all 0.2s",boxShadow:dark?"0 4px 20px rgba(0,0,0,0.4)":C.sh}}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(-2px)";(e.currentTarget as HTMLElement).style.boxShadow=dark?"0 8px 32px rgba(79,142,247,0.12)":"0 8px 28px rgba(0,0,0,0.12)";}}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(-2px)";(e.currentTarget as HTMLElement).style.boxShadow=dark?"0 8px 32px rgba(135,135,135,0.12)":"0 8px 28px rgba(0,0,0,0.12)";}}
               onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform="none";(e.currentTarget as HTMLElement).style.boxShadow=dark?"0 4px 20px rgba(0,0,0,0.4)":C.sh;}}>
               <div style={{height:100,background:dark?"#141414":"#F0FDF4",padding:"10px",display:"flex",flexDirection:"column",gap:3,overflow:"hidden",borderBottom:"1px solid "+C.bd}}>
                 {[0,1,2,3].map(r=><div key={r} style={{display:"flex",gap:2}}>
                   {[0,1,2,3,4].map(c=>{
                     const cell=w.sheets[0]?.data[shKey(r,c)];
                     const val=cell?(cell.f?shCalc(cell.f,w.sheets[0].data):cell.v):"";
-                    return <div key={c} style={{flex:1,height:14,borderRadius:2,border:"0.5px solid "+cellBd,background:val?(dark?"rgba(79,142,247,0.07)":"rgba(37,99,235,0.04)"):"transparent",fontSize:8,overflow:"hidden",padding:"0 2px",lineHeight:"14px",color:C.t2,fontFamily:"monospace"}}>{val}</div>;
+                    return <div key={c} style={{flex:1,height:14,borderRadius:2,border:"0.5px solid "+cellBd,background:val?(dark?"rgba(135,135,135,0.07)":"rgba(96,96,96,0.04)"):"transparent",fontSize:8,overflow:"hidden",padding:"0 2px",lineHeight:"14px",color:C.t2,fontFamily:"monospace"}}>{val}</div>;
                   })}
                 </div>)}
               </div>
@@ -10791,7 +10791,7 @@ function SheetsPage({userId}:{userId:string}){
         </div>
       </div>}
 
-      {toast&&<div style={{position:"fixed",bottom:24,right:24,background:dark?"#1C1C1C":"#1F2937",color:"#fff",padding:"10px 18px",borderRadius:8,fontSize:13,fontWeight:500,zIndex:500,boxShadow:"0 4px 20px rgba(0,0,0,0.3)"}}>{toast}</div>}
+      {toast&&<div style={{position:"fixed",bottom:24,right:24,background:dark?"#1C1C1C":"#282828",color:"#fff",padding:"10px 18px",borderRadius:8,fontSize:13,fontWeight:500,zIndex:500,boxShadow:"0 4px 20px rgba(0,0,0,0.3)"}}>{toast}</div>}
     </div>;
   }
 
@@ -10804,7 +10804,7 @@ function SheetsPage({userId}:{userId:string}){
     }}>
 
     <style>{`
-      @keyframes excelGlow{0%,100%{box-shadow:0 0 14px rgba(22,163,74,0.4)}50%{box-shadow:0 0 24px rgba(22,163,74,0.7)}}
+      @keyframes excelGlow{0%,100%{box-shadow:0 0 14px rgba(111,111,111,0.4)}50%{box-shadow:0 0 24px rgba(111,111,111,0.7)}}
       @keyframes formulaDash{to{stroke-dashoffset:-12}}
       .fill-cursor{cursor:crosshair!important;}
       .resize-col-cursor{cursor:col-resize!important;}
@@ -10854,7 +10854,7 @@ function SheetsPage({userId}:{userId:string}){
       {/* Cell bg */}
       <div style={{display:"flex",gap:3,alignItems:"center",flexShrink:0}}>
         <span style={{fontSize:10,color:C.t2}}>Фон:</span>
-        {(["","#FEF08A","#BBF7D0","#BFDBFE","#FED7AA","#FECACA","#E9D5FF"] as string[]).map(c=>(
+        {(["","#E9E9E9","#E1E1E1","#D7D7D7","#DEDEDE","#DADADA","#E0E0E0"] as string[]).map(c=>(
           <button key={c} onClick={()=>fmt("bg",c||undefined)}
             style={{width:16,height:16,borderRadius:3,background:c||"transparent",border:selCell.fmt.bg===c?"2px solid "+C.a:"1px solid "+C.bd,cursor:"pointer",flexShrink:0}}/>
         ))}
@@ -10877,8 +10877,8 @@ function SheetsPage({userId}:{userId:string}){
 
       {/* Export Excel — glowing green */}
       <button onClick={exportExcel}
-        style={{display:"flex",alignItems:"center",gap:7,padding:"0 14px",height:32,borderRadius:8,border:"none",background:"linear-gradient(135deg,#16A34A,#15803D)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",animation:"excelGlow 2.5s ease-in-out infinite",whiteSpace:"nowrap",flexShrink:0}}
-        onMouseEnter={e=>{const el=e.currentTarget as HTMLElement;el.style.transform="translateY(-1px)";el.style.animationPlayState="paused";el.style.boxShadow="0 0 24px rgba(22,163,74,0.7)";}}
+        style={{display:"flex",alignItems:"center",gap:7,padding:"0 14px",height:32,borderRadius:8,border:"none",background:"linear-gradient(135deg,#6F6F6F,#585858)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",animation:"excelGlow 2.5s ease-in-out infinite",whiteSpace:"nowrap",flexShrink:0}}
+        onMouseEnter={e=>{const el=e.currentTarget as HTMLElement;el.style.transform="translateY(-1px)";el.style.animationPlayState="paused";el.style.boxShadow="0 0 24px rgba(111,111,111,0.7)";}}
         onMouseLeave={e=>{const el=e.currentTarget as HTMLElement;el.style.transform="none";el.style.animationPlayState="running";el.style.boxShadow="";}}>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Выгрузить в Excel
@@ -11019,10 +11019,10 @@ function SheetsPage({userId}:{userId:string}){
                     return <div key={c}
                       style={{
                         width:cw(c),height:rh(r),flexShrink:0,
-                        border:"1px solid "+(isFormulaRef?"#3B82F6":cellBd),
+                        border:"1px solid "+(isFormulaRef?"#7A7A7A":cellBd),
                         borderLeft:c===visC0?"1px solid "+cellBd:"none",
                         borderTop:"none",
-                        background:isFormulaRef?"rgba(59,130,246,0.1)":isSel2?selBg:inRange?rangeBg:inFillPreview?"rgba(180,180,180,0.15)":(cell.fmt.bg||"transparent"),
+                        background:isFormulaRef?"rgba(122,122,122,0.1)":isSel2?selBg:inRange?rangeBg:inFillPreview?"rgba(180,180,180,0.15)":(cell.fmt.bg||"transparent"),
                         outline:isSel2?`2px solid ${selBd}`:"none",
                         outlineOffset:-1,
                         position:"relative",
@@ -11066,7 +11066,7 @@ function SheetsPage({userId}:{userId:string}){
                               e.stopPropagation();
                             }}
                             style={{position:"absolute",inset:0,width:"100%",height:"100%",border:"none",outline:"none",background:dark?"#1C1C1C":"#fff",fontFamily:"monospace",fontSize:12,padding:"0 4px",color:C.t1,zIndex:10,fontWeight:cell.fmt.bold?700:400,fontStyle:cell.fmt.italic?"italic":"normal",textAlign:cell.fmt.align||"left"}}/>
-                        :<div style={{padding:"0 4px",fontSize:12,lineHeight:rh(r)+"px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontWeight:cell.fmt.bold?700:400,fontStyle:cell.fmt.italic?"italic":"normal",textAlign:cell.fmt.align||(val&&!isNaN(Number(val))?"right":"left"),color:isErr?"#EF4444":(cell.fmt.color||C.t1),fontFamily:"monospace"}}>
+                        :<div style={{padding:"0 4px",fontSize:12,lineHeight:rh(r)+"px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontWeight:cell.fmt.bold?700:400,fontStyle:cell.fmt.italic?"italic":"normal",textAlign:cell.fmt.align||(val&&!isNaN(Number(val))?"right":"left"),color:isErr?"#777777":(cell.fmt.color||C.t1),fontFamily:"monospace"}}>
                             {val}
                           </div>
                       }
@@ -11078,7 +11078,7 @@ function SheetsPage({userId}:{userId:string}){
 
                       {/* Formula ref animated border */}
                       {isFormulaRef&&<svg style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none"}} xmlns="http://www.w3.org/2000/svg">
-                        <rect x="1" y="1" width="calc(100% - 2)" height="calc(100% - 2)" fill="none" stroke="#3B82F6" strokeWidth="2" strokeDasharray="6 3" style={{animation:"formulaDash 0.5s linear infinite"}}/>
+                        <rect x="1" y="1" width="calc(100% - 2)" height="calc(100% - 2)" fill="none" stroke="#7A7A7A" strokeWidth="2" strokeDasharray="6 3" style={{animation:"formulaDash 0.5s linear infinite"}}/>
                       </svg>}
                     </div>;
                   })}
@@ -11094,7 +11094,7 @@ function SheetsPage({userId}:{userId:string}){
     <div style={{height:34,background:surfBg,borderTop:"1px solid "+C.bd,display:"flex",alignItems:"center",overflowX:"auto",flexShrink:0}}>
       {wb.sheets.map((s,i)=>(
         <div key={s.id}
-          style={{display:"flex",alignItems:"center",gap:5,padding:"0 14px",height:"100%",fontSize:12,fontWeight:wb.si===i?600:400,color:wb.si===i?C.a:C.t2,borderRight:"1px solid "+C.bd,borderBottom:wb.si===i?"2px solid "+C.a:"2px solid transparent",cursor:"pointer",userSelect:"none",whiteSpace:"nowrap",background:wb.si===i?(dark?"rgba(79,142,247,0.08)":"rgba(37,99,235,0.05)"):"transparent",flexShrink:0}}
+          style={{display:"flex",alignItems:"center",gap:5,padding:"0 14px",height:"100%",fontSize:12,fontWeight:wb.si===i?600:400,color:wb.si===i?C.a:C.t2,borderRight:"1px solid "+C.bd,borderBottom:wb.si===i?"2px solid "+C.a:"2px solid transparent",cursor:"pointer",userSelect:"none",whiteSpace:"nowrap",background:wb.si===i?(dark?"rgba(135,135,135,0.08)":"rgba(96,96,96,0.05)"):"transparent",flexShrink:0}}
           onClick={()=>switchSheet(i)}
           onDoubleClick={()=>{const n=prompt("Переименовать:",s.name);if(n)updWbs(ws=>ws.map(w=>w.id===activeWbId?{...w,sheets:w.sheets.map((sh,j)=>j===i?{...sh,name:n}:sh)}:w));}}>
           {s.name}
@@ -11111,7 +11111,7 @@ function SheetsPage({userId}:{userId:string}){
       </div>
     </div>
 
-    {toast&&<div style={{position:"fixed",bottom:24,right:24,background:dark?"#1C1C1C":"#1F2937",color:"#fff",padding:"10px 18px",borderRadius:8,fontSize:13,fontWeight:500,zIndex:500,boxShadow:"0 4px 20px rgba(0,0,0,0.4)"}}>{toast}</div>}
+    {toast&&<div style={{position:"fixed",bottom:24,right:24,background:dark?"#1C1C1C":"#282828",color:"#fff",padding:"10px 18px",borderRadius:8,fontSize:13,fontWeight:500,zIndex:500,boxShadow:"0 4px 20px rgba(0,0,0,0.4)"}}>{toast}</div>}
   </div>;
 }
 
@@ -11171,7 +11171,7 @@ function ToolsPage(){
         </div>
       </div>
       <div style={{display:"flex",gap:10,justifyContent:"center"}}>
-        <button onClick={()=>setRunning(!running)} disabled={running&&false} style={{padding:"14px 40px",background:running?"rgba(239,68,68,0.25)":C.a,color:running?"#fca5a5":"#fff",border:"none",borderRadius:10,fontSize:16,fontWeight:700,cursor:"pointer"}}>{running?"Пауза":"Старт"}</button>
+        <button onClick={()=>setRunning(!running)} disabled={running&&false} style={{padding:"14px 40px",background:running?"rgba(119,119,119,0.25)":C.a,color:running?"#BFBFBF":"#fff",border:"none",borderRadius:10,fontSize:16,fontWeight:700,cursor:"pointer"}}>{running?"Пауза":"Старт"}</button>
         <button onClick={resetTimer} disabled={running} style={{padding:"14px 24px",background:"rgba(255,255,255,0.1)",color:running?"rgba(255,255,255,0.3)":"rgba(255,255,255,0.6)",border:"none",borderRadius:10,fontSize:16,cursor:running?"not-allowed":"pointer"}}>Сброс</button>
       </div>
     </div>
@@ -11192,9 +11192,9 @@ function ToolsPage(){
 }
 
 /* ============ BOARD (MIRO-style v2) ============ */
-const BOARD_STICKY_PALETTE=["#FEF9A6","#FFE568","#FDBA74","#FB8B8F","#F5B7E6","#ED78D1","#A7C7F7","#9B8CF5","#89D9F0","#76A7EA","#6EDBD2","#54D37D","#C8EB8D","#A8E64F","#F8FAFC","#1F2937"];
-const BOARD_DRAW_COLORS=["#EF4444","#2563EB","#111827","#22C55E","#06B6D4","#FACC15","#7C3AED"];
-const BOARD_PALETTE=["#FEF08A","#BBF7D0","#BFDBFE","#FED7AA","#F9A8D4","#E9D5FF","#FECACA","#A7F3D0","#ffffff","#F1F5F9","#1E293B","#7C3AED","#2563EB","#DC2626","#16A34A","#D97706"];
+const BOARD_STICKY_PALETTE=["#F1F1F1","#DFDFDF","#C6C6C6","#ADADAD","#CFCFCF","#A5A5A5","#C3C3C3","#9C9C9C","#C4C4C4","#A0A0A0","#B9B9B9","#A3A3A3","#D6D6D6","#C2C2C2","#F8FAFC","#282828"];
+const BOARD_DRAW_COLORS=["#777777","#606060","#181818","#898989","#858585","#C5C5C5","#626262"];
+const BOARD_PALETTE=["#E9E9E9","#E1E1E1","#D7D7D7","#DEDEDE","#C5C5C5","#E0E0E0","#DADADA","#D8D8D8","#ffffff","#F1F5F9","#282828","#626262","#606060","#5C5C5C","#6F6F6F","#878787"];
 const BOARD_FONTS=[
   {id:"Inter",label:"Inter"},
   {id:"Inter, sans-serif",label:"Inter"},
@@ -11309,7 +11309,7 @@ const normalizeBoardLines=(raw:any[],validItemIds?:Set<string>):BLine[]=>{
       id:String(ln.id),
       fromId:String(ln.fromId),
       toId:String(ln.toId),
-      color:ln.color||"#64748B",
+      color:ln.color||"#727272",
       thickness:Math.max(1,safeNum(ln.thickness,2)),
       style:ln.style||"solid",
       arrow:ln.arrow||"arrow",
@@ -11334,7 +11334,7 @@ function externalCardPayload(it:BItem){
     subtitle:it.externalSubtitle||"",
     meta:it.externalMeta||"",
     status:it.externalStatus||"",
-    color:it.color||"#7C3AED",
+    color:it.color||"#626262",
     platform:it.externalPlatform||"",
   });
 }
@@ -11358,20 +11358,20 @@ function boardIconPayload(it:BItem){
 
 const BOARD_EMOJI_ICONS=[
   ["smile","Улыбка","😀","улыбка smile happy"],["joy","Радость","😃","радость joy happy"],["grin","Сильная радость","😄","радость grin happy"],["beaming","Довольный","😁","довольный beaming grin"],["laugh","Смех","😆","смех laugh"],["tears","Смех до слёз","😂","смех слез tears laugh"],["rofl","Ржёт","🤣","ржёт rofl laugh"],["blush","Милая улыбка","😊","милая улыбка blush"],["angel","Ангел","😇","ангел angel"],["slight","Спокойная улыбка","🙂","спокойная улыбка slight"],["upside","Ирония","🙃","ирония upside down"],["wink","Подмигивание","😉","подмигивание wink"],["relieved","Спокойствие","😌","спокойствие calm relieved"],["heart-eyes","Влюблённость","😍","влюблённость love heart eyes"],["loving","Любовь","🥰","любовь loving hearts"],["kiss","Поцелуй","😘","поцелуй kiss"],["cool","Крутой","😎","крутой cool"],["star-struck","Восторг","🤩","восторг star struck"],["party","Праздник","🥳","праздник party"],["smirk","Самодовольный","😏","самодовольный smirk"],["neutral","Нейтральный","😐","нейтральный neutral"],["expressionless","Без эмоций","😑","без эмоций expressionless"],["silent","Молчание","😶","молчание silence"],["thinking","Думает","🤔","думает thinking"],["salute","Салют","🫡","салют salute"],["raised-brow","Сомнение","🤨","сомнение raised brow"],["grimace","Неловкость","😬","неловкость grimace"],["roll-eyes","Закатил глаза","🙄","закатил глаза roll eyes"],["surprised","Удивление","😮","удивление surprised"],["hushed","Шок","😯","шок hushed"],["astonished","Сильное удивление","😲","сильное удивление astonished"],["flushed","Смущение","😳","смущение flushed"],["pleading","Просьба","🥺","просьба pleading"],["cry","Грусть","😢","грусть cry sad"],["sob","Плач","😭","плач sob cry"],["triumph","Злость","😤","злость angry"],["angry","Гнев","😡","гнев angry"],["mindblown","Взрыв мозга","🤯","взрыв мозга mind blown"],["sleep","Сон","😴","сон sleep"],["sick","Болезнь","🤒","болезнь sick"],["thumbsup","Лайк","👍","лайк like thumbs up"],["thumbsdown","Дизлайк","👎","дизлайк thumbs down"],["clap","Аплодисменты","👏","аплодисменты clap"],["hooray","Ура","🙌","ура hooray"],["handshake","Рукопожатие","🤝","рукопожатие handshake"],["muscle","Сила","💪","сила muscle"],["peace","Мир","✌️","мир peace"],["crossed","Надежда","🤞","надежда crossed fingers"],["ok","Окей","👌","окей ok"],["pinched","Акцент","🤌","акцент pinched fingers"],["call","Позвони","🤙","позвони call me"],["wave","Привет","👋","привет wave"],["point-right","Указание вправо","👉","вправо point right"],["point-left","Указание влево","👈","влево point left"],["up","Важно","☝️","важно up"],["down","Вниз","👇","вниз down"],["pray","Спасибо / просьба","🙏","спасибо просьба pray"],["heart-hands","Сердце руками","🫶","сердце руками heart hands"],["stop","Стоп","🖐️","стоп hand"],["write","Пишу","✍️","пишу write"],["heart-red","Сердце","❤️","сердце red heart"],["heart-orange","Оранжевое сердце","🧡","оранжевое сердце orange heart"],["heart-yellow","Жёлтое сердце","💛","желтое сердце yellow heart"],["heart-green","Зелёное сердце","💚","зеленое сердце green heart"],["heart-blue","Синее сердце","💙","синее сердце blue heart"],["heart-purple","Фиолетовое сердце","💜","фиолетовое сердце purple heart"],["heart-black","Чёрное сердце","🖤","черное сердце black heart"],["heart-white","Белое сердце","🤍","белое сердце white heart"],["heart-broken","Разбитое сердце","💔","разбитое сердце broken heart"],["fire","Огонь","🔥","огонь fire hot"],["sparkles","Искра","✨","искра sparkles"],["star","Звезда","⭐","звезда star"],["dizzy","Сияние","💫","сияние dizzy"],["zap","Молния","⚡","молния lightning"],["boom","Взрыв","💥","взрыв boom"],["hundred","Сто процентов","💯","сто процентов hundred"],["check","Готово","✅","готово check"],["cross","Ошибка","❌","ошибка cross"],["bang","Важно","❗","важно exclamation"],["question","Вопрос","❓","вопрос question"],["idea","Идея","💡","идея lightbulb"],["brain","Мозг","🧠","мозг brain"],["eyes","Внимание","👀","внимание eyes"],["target","Цель","🎯","цель target"],["rocket","Рост / запуск","🚀","рост запуск rocket"],["trophy","Победа","🏆","победа trophy"],["gold","Первое место","🥇","первое место gold"],["pin","Закрепить","📌","закрепить pin"],["location","Метка","📍","метка location"],["note","Заметка","📝","заметка note"],["document","Документ","📄","документ file"],["chart","График","📊","график chart"],["trend-up","Рост","📈","рост chart up"],["trend-down","Падение","📉","падение chart down"],["money","Деньги","💰","деньги money"],["diamond","Премиум","💎","премиум diamond"],["tools","Инструменты","🛠️","инструменты tools"],["settings","Настройки","⚙️","настройки settings"],["puzzle","Элемент","🧩","элемент puzzle"],["image","Изображение","🖼️","изображение image picture"]
-].map(([key,label,glyph,search])=>({key:`emoji-${key}`,label,glyph,search,category:"emoji" as const,style:"emoji" as const,defaultColor:"#111827"}));
+].map(([key,label,glyph,search])=>({key:`emoji-${key}`,label,glyph,search,category:"emoji" as const,style:"emoji" as const,defaultColor:"#181818"}));
 
 const BOARD_SOCIAL_ICONS=[
-  ["instagram","Instagram","IG","instagram инстаграм", "#111827"],["tiktok","TikTok","TT","tiktok тикток", "#111827"],["youtube","YouTube","YT","youtube ютуб", "#111827"],["telegram","Telegram","TG","telegram телеграм", "#111827"],["whatsapp","WhatsApp","WA","whatsapp ватсап", "#111827"],["facebook","Facebook","f","facebook фейсбук", "#111827"],["x","X / Twitter","X","x twitter твиттер", "#111827"],["linkedin","LinkedIn","in","linkedin линкедин", "#111827"],["vk","VK","VK","vk вконтакте", "#111827"],["discord","Discord","DS","discord дискорд", "#111827"],["twitch","Twitch","TW","twitch твич", "#111827"],["snapchat","Snapchat","SC","snapchat снапчат", "#111827"],["pinterest","Pinterest","P","pinterest пинтерест", "#111827"],["reddit","Reddit","R","reddit реддит", "#111827"],["threads","Threads","@","threads тредс", "#111827"],["behance","Behance","Be","behance беханс", "#111827"],["dribbble","Dribbble","Dr","dribbble дрибббл", "#111827"],["github","GitHub","GH","github гитхаб", "#111827"],["medium","Medium","M","medium медиум", "#111827"],["spotify","Spotify","SP","spotify спотифай", "#111827"]
+  ["instagram","Instagram","IG","instagram инстаграм", "#181818"],["tiktok","TikTok","TT","tiktok тикток", "#181818"],["youtube","YouTube","YT","youtube ютуб", "#181818"],["telegram","Telegram","TG","telegram телеграм", "#181818"],["whatsapp","WhatsApp","WA","whatsapp ватсап", "#181818"],["facebook","Facebook","f","facebook фейсбук", "#181818"],["x","X / Twitter","X","x twitter твиттер", "#181818"],["linkedin","LinkedIn","in","linkedin линкедин", "#181818"],["vk","VK","VK","vk вконтакте", "#181818"],["discord","Discord","DS","discord дискорд", "#181818"],["twitch","Twitch","TW","twitch твич", "#181818"],["snapchat","Snapchat","SC","snapchat снапчат", "#181818"],["pinterest","Pinterest","P","pinterest пинтерест", "#181818"],["reddit","Reddit","R","reddit реддит", "#181818"],["threads","Threads","@","threads тредс", "#181818"],["behance","Behance","Be","behance беханс", "#181818"],["dribbble","Dribbble","Dr","dribbble дрибббл", "#181818"],["github","GitHub","GH","github гитхаб", "#181818"],["medium","Medium","M","medium медиум", "#181818"],["spotify","Spotify","SP","spotify спотифай", "#181818"]
 ].map(([key,label,glyph,search,defaultColor])=>({key:`social-${key}`,label,glyph,search,category:"social" as const,style:"outline" as const,defaultColor}));
 
 const BOARD_BUSINESS_ICONS=[
   ["document","Документ","📄","документ file"],["table","Таблица","▦","таблица table grid"],["presentation","Презентация","▣","презентация slides"],["folder","Папка","🗂","папка folder"],["file","Файл","◫","файл file"],["note","Заметка","📝","заметка note"],["checklist","Чеклист","☑","чеклист checklist"],["calendar","Календарь","🗓","календарь calendar"],["clock","Часы","◷","часы clock time"],["bookmark","Закладка","🔖","закладка bookmark"],["money","Деньги","₽","деньги money ruble"],["card","Карта оплаты","💳","карта оплаты card"],["growth","График роста","↗","рост growth chart"],["decline","График падения","↘","падение decline chart"],["funnel","Воронка продаж","⏷","воронка funnel"],["target","Цель","◎","цель target"],["cup","Кубок","🏆","кубок trophy"],["diamond","Бриллиант","◆","бриллиант diamond"],["rocket","Ракета","🚀","ракета rocket"],["magnet","Магнит","🧲","магнит magnet"],["message","Сообщение","✉","сообщение message"],["chat","Чат","💬","чат chat"],["comment","Комментарий","🗨","комментарий comment"],["notification","Уведомление","🔔","уведомление notification bell"],["mail","Почта","✉️","почта mail"],["phone","Телефон","☎","телефон phone"],["microphone","Микрофон","🎤","микрофон microphone"],["camera","Камера","📷","камера camera"],["video","Видеозвонок","🎥","видеозвонок video"],["volume","Громкость","🔊","громкость volume"],["plus","Плюс","＋","плюс plus"],["minus","Минус","－","минус minus"],["check","Галочка","✓","галочка check"],["cross","Крестик","✕","крестик cross"],["arrow-right","Стрелка вправо","→","стрелка вправо arrow right"],["arrow-up","Стрелка вверх","↑","стрелка вверх arrow up"],["link","Ссылка","🔗","ссылка link"],["lock","Замок","🔒","замок lock"],["settings","Настройки","⚙","настройки settings"],["search","Поиск","⌕","поиск search"]
-].map(([key,label,glyph,search])=>({key:`business-${key}`,label,glyph,search,category:"business" as const,style:"glyph" as const,defaultColor:"#2563EB"}));
+].map(([key,label,glyph,search])=>({key:`business-${key}`,label,glyph,search,category:"business" as const,style:"glyph" as const,defaultColor:"#606060"}));
 
 const BOARD_ICON_LIBRARY=[...BOARD_EMOJI_ICONS,...BOARD_SOCIAL_ICONS,...BOARD_BUSINESS_ICONS];
 
 function renderBoardLibraryIcon(icon:{glyph?:string;label?:string;category?:"emoji"|"social"|"business";style?:"emoji"|"outline"|"glyph";defaultColor?:string},color?:string,size=28){
-  const col=color||icon.defaultColor||"#111827";
+  const col=color||icon.defaultColor||"#181818";
   if(icon.category==="emoji"||icon.style==="emoji"){
     return <span style={{fontSize:size,lineHeight:1,display:"inline-flex",alignItems:"center",justifyContent:"center"}}>{icon.glyph||"✨"}</span>;
   }
@@ -11410,7 +11410,7 @@ function BoardPage({userId}:{userId:string}){
   const[tool,setTool]=useState<"select"|"pan"|"sticky"|"text"|"image"|"link"|"shape"|"line"|"draw">("select");
   const[toolPanel,setToolPanel]=useState<null|"create"|"sticky"|"icons"|"shape"|"draw">(null);
   const[shapeKind,setShapeKind]=useState<"rect"|"circle"|"diamond"|"triangle"|"parallelogram"|"square"|"cloud"|"pentagon">("rect");
-  const[drawColor,setDrawColor]=useState("#2563EB");
+  const[drawColor,setDrawColor]=useState("#606060");
   const[drawThickness,setDrawThickness]=useState(3);
   const[drawMode,setDrawMode]=useState<DrawMode>("pen");
   const drawingRef=useRef<{path:string;startX:number;startY:number;pointCount:number}|null>(null);
@@ -11430,7 +11430,7 @@ function BoardPage({userId}:{userId:string}){
 
   // Custom color picker for sticky
   const[stickyColorPick,setStickyColorPick]=useState<string|null>(null);
-  const[customColorInput,setCustomColorInput]=useState("#FEF08A");
+  const[customColorInput,setCustomColorInput]=useState("#E9E9E9");
 
   // Selection
   const[selectedIds,setSelectedIds]=useState<Set<string>>(new Set());
@@ -11529,7 +11529,7 @@ function BoardPage({userId}:{userId:string}){
       const mappedItemIds=new Set(mappedItems.map(i=>i.id));
       const mappedLines=normalizeBoardLines((lns||[]).map((d:any):BLine=>({
         id:d?.id,fromId:d?.from_id,toId:d?.to_id,
-        color:d?.color||"#64748B",thickness:d?.thickness||2,
+        color:d?.color||"#727272",thickness:d?.thickness||2,
         style:d?.style||"solid",arrow:d?.arrow||"arrow",
       })),mappedItemIds);
       setItems(mappedItems);
@@ -11563,7 +11563,7 @@ function BoardPage({userId}:{userId:string}){
         const lineRows=cleanLines.map(ln=>({
           id:ln.id,board_id:activeBoardId,user_id:userId,
           from_id:ln.fromId,to_id:ln.toId,
-          color:ln.color||"#64748B",thickness:ln.thickness||2,style:ln.style||"solid",arrow:ln.arrow||"arrow",
+          color:ln.color||"#727272",thickness:ln.thickness||2,style:ln.style||"solid",arrow:ln.arrow||"arrow",
         }));
         // Fetch current IDs to find deleted ones
         const[{data:dbIt},{data:dbLn}]=await Promise.all([
@@ -11696,11 +11696,11 @@ function BoardPage({userId}:{userId:string}){
   const toggleFavoriteIcon=(key:string)=>setFavoriteIconKeys(prev=>prev.includes(key)?prev.filter(x=>x!==key):[key,...prev].slice(0,24));
   const addBoardIcon=(icon:any,cx=360,cy=260)=>{
     rememberRecentIcon(icon.key);
-    return addItem({type:"icon",text:icon.label,color:icon.defaultColor||"#111827",w:icon.category==="emoji"?92:96,h:icon.category==="emoji"?92:110,fontSize:icon.category==="emoji"?46:18,fontBold:true,iconKey:icon.key,iconLabel:icon.label,iconGlyph:icon.glyph,iconCategory:icon.category,iconStyle:icon.style},cx,cy);
+    return addItem({type:"icon",text:icon.label,color:icon.defaultColor||"#181818",w:icon.category==="emoji"?92:96,h:icon.category==="emoji"?92:110,fontSize:icon.category==="emoji"?46:18,fontBold:true,iconKey:icon.key,iconLabel:icon.label,iconGlyph:icon.glyph,iconCategory:icon.category,iconStyle:icon.style},cx,cy);
   };
   const addShapeFromMenu=(kind:BItem["shapeKind"],cx=400,cy=300)=>{
-    if(kind==="parallelogram"){return addItem({type:"shape",shapeKind:"parallelogram",color:"#60A5FA",w:190,h:95,text:""},cx,cy);}
-    return addItem({type:"shape",shapeKind:kind||"rect",color:"#60A5FA",w:kind==="circle"?130:kind==="triangle"?140:170,h:kind==="circle"?130:kind==="triangle"?120:100,text:""},cx,cy);
+    if(kind==="parallelogram"){return addItem({type:"shape",shapeKind:"parallelogram",color:"#9A9A9A",w:190,h:95,text:""},cx,cy);}
+    return addItem({type:"shape",shapeKind:kind||"rect",color:"#9A9A9A",w:kind==="circle"?130:kind==="triangle"?140:170,h:kind==="circle"?130:kind==="triangle"?120:100,text:""},cx,cy);
   };
 
   const updateSelectedShapeColor=(nextColor:string)=>{
@@ -11720,7 +11720,7 @@ function BoardPage({userId}:{userId:string}){
     if(p.includes("youtube"))return "#FF0000";
     if(p.includes("telegram"))return "#29B6F6";
     if(p.includes("vk"))return "#4C75A3";
-    return "#64748B";
+    return "#727272";
   };
 
   const externalCards=useMemo(()=>{
@@ -11737,7 +11737,7 @@ function BoardPage({userId}:{userId:string}){
           subtitle:lead.contact||lead.phone||lead.email||"CRM-лид",
           meta:[lead.source,lead.deal?`${lead.deal} ₽`:""].filter(Boolean).join(" · "),
           status:lead.status||"",
-          color:"#38BDF8",
+          color:"#9C9C9C",
           imageUrl:lead.avatar_url||lead.photo_url||lead.image_url||"",
           platform:"crm",
           raw:lead,
@@ -11753,7 +11753,7 @@ function BoardPage({userId}:{userId:string}){
         subtitle:[item.platform,item.type].filter(Boolean).join(" · ")||"Контент-карточка",
         meta:[item.status,item.date||item.publish_date].filter(Boolean).join(" · "),
         status:item.status||"",
-        color:platformColor(getContentPlatform(item))||"#A855F7",
+        color:platformColor(getContentPlatform(item))||"#808080",
         imageUrl:getContentImage(item),
         platform:getContentPlatform(item),
         raw:item,
@@ -11765,7 +11765,7 @@ function BoardPage({userId}:{userId:string}){
     const it=addItem({
       type:"external_card",
       w:card.imageUrl?286:260,h:card.imageUrl?176:138,
-      color:card.color||"#7C3AED",
+      color:card.color||"#626262",
       text:card.title,
       imageUrl:card.imageUrl||"",
       externalSource:card.source,
@@ -11815,10 +11815,10 @@ function BoardPage({userId}:{userId:string}){
       const it=addItem({type:"sticky",text:"",color:BOARD_PALETTE[0],w:200,h:180,fontFamily:"Inter"},x,y);
       if(it)setTimeout(()=>{setEditingId(it.id);setEditText("");},60);
     } else if(tool==="text"){
-      const it=addItem({type:"text",text:"Текст",color:"#1E293B",w:180,h:50,fontSize:16,fontFamily:"Inter"},x,y);
+      const it=addItem({type:"text",text:"Текст",color:"#282828",w:180,h:50,fontSize:16,fontFamily:"Inter"},x,y);
       if(it)setTimeout(()=>{setEditingId(it.id);setEditText("Текст");},60);
     } else if(tool==="shape"){
-      const it=addItem({type:"shape",shapeKind,color:"#3B82F6",w:160,h:110,text:"",shapeText:"",fontFamily:"Inter",fontSize:14},x,y);
+      const it=addItem({type:"shape",shapeKind,color:"#7A7A7A",w:160,h:110,text:"",shapeText:"",fontFamily:"Inter",fontSize:14},x,y);
       if(it)setTimeout(()=>{setEditingId(it.id);setEditText("");},60);
     } else if(tool==="link"){
       setLinkClickPos({x,y});setLinkModal(true);
@@ -11836,7 +11836,7 @@ function BoardPage({userId}:{userId:string}){
     if(tool==="line"){
       if(!lineFrom){setLineFrom(id);return;}
       if(lineFrom===id){setLineFrom(null);return;}
-      const nl:BLine={id:bid(),fromId:lineFrom,toId:id,color:"#64748B",thickness:2,style:"solid",arrow:"arrow"};
+      const nl:BLine={id:bid(),fromId:lineFrom,toId:id,color:"#727272",thickness:2,style:"solid",arrow:"arrow"};
       updLines([...lines,nl]);
       setLineFrom(null);setTool("select");
       return;
@@ -11966,7 +11966,7 @@ function BoardPage({userId}:{userId:string}){
         const maxX=Math.max(0,...xs),maxY=Math.max(0,...ys);
         const w=Math.max(40,maxX-minX),h=Math.max(40,maxY-minY);
         const base=normalizeBoardItems(itemsRef.current as any[]);
-        const it:BItem={id:bid(),type:"draw",x:startX+minX,y:startY+minY,w,h,drawPath:drawPreview.slice(0,MAX_DRAW_PATH_CHARS),drawColor:drawMode==="pencil"?"rgba(30,41,59,0.75)":drawColor,drawThickness:drawMode==="pencil"?Math.max(1,drawThickness-1):drawThickness,zIndex:base.length};
+        const it:BItem={id:bid(),type:"draw",x:startX+minX,y:startY+minY,w,h,drawPath:drawPreview.slice(0,MAX_DRAW_PATH_CHARS),drawColor:drawMode==="pencil"?"rgba(40,40,40,0.75)":drawColor,drawThickness:drawMode==="pencil"?Math.max(1,drawThickness-1):drawThickness,zIndex:base.length};
         updItems([...base,it]);
       }
     }
@@ -11983,7 +11983,7 @@ function BoardPage({userId}:{userId:string}){
       });
       if(best!==null){
         const b=best as AnchorHit;
-        const nl:BLine={id:bid(),fromId,toId:b.id,fromAnchor,toAnchor:b.side,color:"#64748B",thickness:2,style:"solid",arrow:"arrow"};
+        const nl:BLine={id:bid(),fromId,toId:b.id,fromAnchor,toAnchor:b.side,color:"#727272",thickness:2,style:"solid",arrow:"arrow"};
         updLines([...lines,nl]);
       }
       setConnectorDrag(null);
@@ -12192,7 +12192,7 @@ function BoardPage({userId}:{userId:string}){
       // Use anchor points if defined, else centers
       const a=ln.fromAnchor?anchorPos(from,ln.fromAnchor):itemCenter(from);
       const b=ln.toAnchor?anchorPos(to,ln.toAnchor):itemCenter(to);
-      const col=ln.color||"#64748B";
+      const col=ln.color||"#727272";
       const thick=ln.thickness||2;
       const dashArr=ln.style==="dashed"?`${thick*4} ${thick*3}`:ln.style==="dotted"?`${thick} ${thick*3}`:"none";
       const markerId=`arr-${ln.id}`;
@@ -12203,7 +12203,7 @@ function BoardPage({userId}:{userId:string}){
           {(ln.arrow==="arrow"||ln.arrow==="double")&&<defs><marker id={markerId} markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill={col}/></marker>{ln.arrow==="double"&&<marker id={markerStartId} markerWidth="10" markerHeight="7" refX="1" refY="3.5" orient="auto-start-reverse"><polygon points="10 0, 0 3.5, 10 7" fill={col}/></marker>}</defs>}
           {/* Hit area */}
           <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="transparent" strokeWidth={16} style={{cursor:"pointer"}} onClick={e=>{e.stopPropagation();setSelectedLineId(ln.id);setSelectedIds(new Set());}}/>
-          <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={isSel?"#2563EB":col} strokeWidth={isSel?thick+2:thick} strokeDasharray={dashArr} markerStart={ln.arrow==="double"?`url(#${markerStartId})`:"none"} markerEnd={(ln.arrow==="arrow"||ln.arrow==="double")?`url(#${markerId})`:"none"} strokeLinecap="round" style={{pointerEvents:"none"}}/>
+          <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={isSel?"#606060":col} strokeWidth={isSel?thick+2:thick} strokeDasharray={dashArr} markerStart={ln.arrow==="double"?`url(#${markerStartId})`:"none"} markerEnd={(ln.arrow==="arrow"||ln.arrow==="double")?`url(#${markerId})`:"none"} strokeLinecap="round" style={{pointerEvents:"none"}}/>
         </g>
       );
     });
@@ -12211,7 +12211,7 @@ function BoardPage({userId}:{userId:string}){
 
   // ── Render shape ──
   const renderShapeFill=(it:BItem)=>{
-    const c=it.color||"#3B82F6";
+    const c=it.color||"#7A7A7A";
     const textStyle:React.CSSProperties={
       position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",
       fontFamily:it.fontFamily||"Inter",fontSize:it.fontSize||13,fontWeight:it.fontBold?800:600,fontStyle:it.fontItalic?"italic":"normal",color:"#fff",
@@ -12307,7 +12307,7 @@ function BoardPage({userId}:{userId:string}){
             <div style={{fontSize:13,color:C.t2,marginTop:2}}>{boards.length}/{MAX_BOARDS} досок использовано</div>
           </div>
           <button onClick={()=>boards.length>=MAX_BOARDS?alert(`Максимум ${MAX_BOARDS} досок`):setNewBoardModal(true)}
-            style={{padding:"10px 20px",background:boards.length>=MAX_BOARDS?"#E2E8F0":"#2563EB",color:boards.length>=MAX_BOARDS?C.t2:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:boards.length>=MAX_BOARDS?"not-allowed":"pointer",display:"flex",alignItems:"center",gap:8}}>
+            style={{padding:"10px 20px",background:boards.length>=MAX_BOARDS?"#E2E8F0":"#606060",color:boards.length>=MAX_BOARDS?C.t2:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:boards.length>=MAX_BOARDS?"not-allowed":"pointer",display:"flex",alignItems:"center",gap:8}}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Новая доска
           </button>
@@ -12320,7 +12320,7 @@ function BoardPage({userId}:{userId:string}){
               <div style={{fontSize:48,marginBottom:12}}>🎨</div>
               <div style={{fontSize:18,fontWeight:700,color:C.t1,marginBottom:8}}>Досок пока нет</div>
               <div style={{fontSize:14,color:C.t2,marginBottom:24}}>Создай первую доску для мозговых штурмов и планирования</div>
-              <button onClick={()=>setNewBoardModal(true)} style={{padding:"12px 24px",background:"#2563EB",color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:700,cursor:"pointer"}}>+ Создать доску</button>
+              <button onClick={()=>setNewBoardModal(true)} style={{padding:"12px 24px",background:"#606060",color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:700,cursor:"pointer"}}>+ Создать доску</button>
             </div>
           :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:16}}>
               {boards.map(b=>(
@@ -12330,7 +12330,7 @@ function BoardPage({userId}:{userId:string}){
                   onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 8px 28px rgba(0,0,0,0.13)";(e.currentTarget as HTMLElement).style.transform="translateY(-2px)";}}
                   onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 2px 12px rgba(0,0,0,0.07)";(e.currentTarget as HTMLElement).style.transform="translateY(0)";}}>
                   {/* Preview area */}
-                  <div style={{height:140,background:"linear-gradient(135deg,#F0F9FF,#E0F2FE)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:40}}>🎨</div>
+                  <div style={{height:140,background:"linear-gradient(135deg,#F0F9FF,#EEEEEE)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:40}}>🎨</div>
                   <div style={{padding:"14px 16px"}}>
                     {renamingId===b.id
                       ?<input autoFocus value={renameVal} onChange={e=>setRenameVal(e.target.value)}
@@ -12344,16 +12344,16 @@ function BoardPage({userId}:{userId:string}){
                       <button onClick={()=>{setRenamingId(b.id);setRenameVal(b.name);}}
                         style={{flex:1,padding:"7px 0",fontSize:12,fontWeight:600,background:"#F1F5F9",color:C.t2,border:"none",borderRadius:8,cursor:"pointer"}}>✎ Переим.</button>
                       <button onClick={()=>setDeletingId(b.id)}
-                        style={{padding:"7px 10px",fontSize:12,background:"#FFF1F1",color:"#EF4444",border:"1px solid #FCA5A5",borderRadius:8,cursor:"pointer"}}>🗑</button>
+                        style={{padding:"7px 10px",fontSize:12,background:"#FFF1F1",color:"#777777",border:"1px solid #BFBFBF",borderRadius:8,cursor:"pointer"}}>🗑</button>
                     </div>
                   </div>
                 </div>
               ))}
               {/* Add tile */}
               {boards.length<MAX_BOARDS&&<div onClick={()=>setNewBoardModal(true)}
-                style={{background:"transparent",borderRadius:10,border:"2px dashed #CBD5E1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,minHeight:240,cursor:"pointer",transition:"border-color 0.15s,background 0.15s"}}
-                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="#2563EB";(e.currentTarget as HTMLElement).style.background="#F0F6FF";}}
-                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor="#CBD5E1";(e.currentTarget as HTMLElement).style.background="transparent";}}>
+                style={{background:"transparent",borderRadius:10,border:"2px dashed #D3D3D3",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,minHeight:240,cursor:"pointer",transition:"border-color 0.15s,background 0.15s"}}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="#606060";(e.currentTarget as HTMLElement).style.background="#F0F6FF";}}
+                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor="#D3D3D3";(e.currentTarget as HTMLElement).style.background="transparent";}}>
                 <div style={{width:44,height:44,borderRadius:10,background:"#F1F5F9",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>+</div>
                 <div style={{fontSize:13,fontWeight:600,color:C.t2}}>Новая доска</div>
               </div>}
@@ -12385,7 +12385,7 @@ function BoardPage({userId}:{userId:string}){
               <div style={{fontSize:13,color:C.t2,marginBottom:20}}>Все элементы будут удалены навсегда.</div>
               <div style={{display:"flex",gap:10,justifyContent:"center"}}>
                 <Btn onClick={()=>setDeletingId(null)} primary={false}>Отмена</Btn>
-                <Btn onClick={deleteBoard} style={{background:"#EF4444"}}>Удалить</Btn>
+                <Btn onClick={deleteBoard} style={{background:"#777777"}}>Удалить</Btn>
               </div>
             </div>
           </div>
@@ -12410,7 +12410,7 @@ function BoardPage({userId}:{userId:string}){
         <div style={{fontSize:14,fontWeight:700,color:C.t1,flex:1}}>{activeBoard.name}</div>
 
         <button onClick={()=>setExternalPanel(true)}
-          style={{display:"flex",alignItems:"center",gap:7,padding:"8px 12px",border:"1px solid #DDD6FE",background:"linear-gradient(135deg,#F5F3FF,#EEF2FF)",color:"#6D28D9",borderRadius:8,fontSize:12,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
+          style={{display:"flex",alignItems:"center",gap:7,padding:"8px 12px",border:"1px solid #DDDDDD",background:"linear-gradient(135deg,#F5F3FF,#EEF2FF)",color:"#515151",borderRadius:8,fontSize:12,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
           ＋ Добавить карточку
         </button>
         <button onClick={refreshExternalCards} title="Обновить данные внешних карточек"
@@ -12423,7 +12423,7 @@ function BoardPage({userId}:{userId:string}){
         {tool==="draw"&&(
           <div style={{display:"flex",gap:6,alignItems:"center",background:"#F1F5F9",borderRadius:8,padding:"4px 8px"}}>
             {([{id:"pen",label:"Ручка",icon:"🖊"},{id:"pencil",label:"Карандаш",icon:"✏️"},{id:"pointer",label:"Указка",icon:"☄️"}] as {id:DrawMode;label:string;icon:string}[]).map(m=>(
-              <button key={m.id} onClick={()=>setDrawMode(m.id)} title={m.label} style={{height:28,padding:"0 8px",borderRadius:7,border:"1px solid "+(drawMode===m.id?"#2563EB":"#E2E8F0"),background:drawMode===m.id?"#EFF6FF":"#fff",fontSize:12,fontWeight:700,color:drawMode===m.id?"#2563EB":C.t2,cursor:"pointer"}}>{m.icon}</button>
+              <button key={m.id} onClick={()=>setDrawMode(m.id)} title={m.label} style={{height:28,padding:"0 8px",borderRadius:7,border:"1px solid "+(drawMode===m.id?"#606060":"#E2E8F0"),background:drawMode===m.id?"#EFF6FF":"#fff",fontSize:12,fontWeight:700,color:drawMode===m.id?"#606060":C.t2,cursor:"pointer"}}>{m.icon}</button>
             ))}
             {/* Color swatch → opens picker */}
             <div style={{position:"relative"}}>
@@ -12433,7 +12433,7 @@ function BoardPage({userId}:{userId:string}){
                 <div style={{position:"absolute",top:"calc(100%+6px)",left:0,background:"#fff",borderRadius:8,padding:10,boxShadow:"0 8px 24px rgba(0,0,0,0.15)",zIndex:300,width:160,border:"1px solid #E2E8F0"}}>
                   <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:8}}>
                     {BOARD_PALETTE.map(c=><button key={c} onClick={()=>{setDrawColor(c);setStickyColorPick(null);}}
-                      style={{width:22,height:22,borderRadius:5,background:c,border:drawColor===c?"2px solid #2563EB":"1px solid #E2E8F0",cursor:"pointer"}}/>)}
+                      style={{width:22,height:22,borderRadius:5,background:c,border:drawColor===c?"2px solid #606060":"1px solid #E2E8F0",cursor:"pointer"}}/>)}
                   </div>
                   <input type="color" value={drawColor} onChange={e=>setDrawColor(e.target.value)} style={{width:"100%",height:26,border:"none",cursor:"pointer",borderRadius:5}}/>
                 </div>
@@ -12442,8 +12442,8 @@ function BoardPage({userId}:{userId:string}){
             <span style={{fontSize:10,color:C.t2}}>Толщина:</span>
             {([{v:2,label:"Тонкая"},{v:4,label:"Средняя"},{v:8,label:"Толстая"}] as {v:number,label:string}[]).map(t=>(
               <button key={t.v} onClick={()=>setDrawThickness(t.v)} title={t.label}
-                style={{width:30,height:28,borderRadius:7,border:"1px solid "+(drawThickness===t.v?"#2563EB":"#E2E8F0"),background:drawThickness===t.v?"#EFF6FF":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                <div style={{width:16,height:t.v,background:drawThickness===t.v?"#2563EB":"#64748B",borderRadius:t.v,transition:"all 0.15s"}}/>
+                style={{width:30,height:28,borderRadius:7,border:"1px solid "+(drawThickness===t.v?"#606060":"#E2E8F0"),background:drawThickness===t.v?"#EFF6FF":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <div style={{width:16,height:t.v,background:drawThickness===t.v?"#606060":"#727272",borderRadius:t.v,transition:"all 0.15s"}}/>
               </button>
             ))}
           </div>
@@ -12462,7 +12462,7 @@ function BoardPage({userId}:{userId:string}){
         )}
 
         {/* Line tool: show source hint */}
-        {tool==="line"&&<span style={{fontSize:12,color:"#2563EB",fontWeight:600}}>{lineFrom?"Клик по второму элементу":"Клик по первому элементу"}</span>}
+        {tool==="line"&&<span style={{fontSize:12,color:"#606060",fontWeight:600}}>{lineFrom?"Клик по второму элементу":"Клик по первому элементу"}</span>}
 
         {/* Zoom */}
         <div style={{display:"flex",alignItems:"center",gap:4,background:"#F1F5F9",borderRadius:9,padding:"3px 8px"}}>
@@ -12474,12 +12474,12 @@ function BoardPage({userId}:{userId:string}){
 
         {/* Save indicator */}
         <div style={{display:"flex",alignItems:"center",gap:8,fontSize:11,color:C.t2}}>
-          {imgUploading&&<div style={{display:"flex",alignItems:"center",gap:5,color:"#F59E0B"}}>
-            <div style={{width:12,height:12,border:"2px solid #F59E0B",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/>
+          {imgUploading&&<div style={{display:"flex",alignItems:"center",gap:5,color:"#A7A7A7"}}>
+            <div style={{width:12,height:12,border:"2px solid #A7A7A7",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/>
             Загрузка фото...
           </div>}
           {!imgUploading&&<>
-            <div style={{width:6,height:6,borderRadius:"50%",background:saved?"#10B981":"#F59E0B",transition:"background 0.3s"}}/>
+            <div style={{width:6,height:6,borderRadius:"50%",background:saved?"#808080":"#A7A7A7",transition:"background 0.3s"}}/>
             {saved?"Сохранено":"Сохранение..."}
           </>}
         </div>
@@ -12487,8 +12487,8 @@ function BoardPage({userId}:{userId:string}){
 
       {/* ── LEFT MIRO-STYLE TOOLBAR ── */}
       <div style={{position:"absolute",left:14,top:86,zIndex:130,display:"flex",flexDirection:"column",gap:10,alignItems:"center"}}>
-        <div style={{width:58,height:58,borderRadius:12,background:"linear-gradient(135deg,#4F46E5,#A855F7)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:24,boxShadow:"0 18px 36px rgba(79,70,229,0.28)",border:"1px solid rgba(255,255,255,0.7)"}}>✦</div>
-        <div style={{width:54,background:"rgba(255,255,255,0.96)",border:"1px solid rgba(15,23,42,0.08)",boxShadow:"0 14px 34px rgba(15,23,42,0.12)",borderRadius:10,padding:6,display:"flex",flexDirection:"column",gap:5,alignItems:"center"}}>
+        <div style={{width:58,height:58,borderRadius:12,background:"linear-gradient(135deg,#5B5B5B,#808080)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:24,boxShadow:"0 18px 36px rgba(91,91,91,0.28)",border:"1px solid rgba(255,255,255,0.7)"}}>✦</div>
+        <div style={{width:54,background:"rgba(255,255,255,0.96)",border:"1px solid rgba(23,23,23,0.08)",boxShadow:"0 14px 34px rgba(23,23,23,0.12)",borderRadius:10,padding:6,display:"flex",flexDirection:"column",gap:5,alignItems:"center"}}>
           {[
             {id:"select",label:"Курсор",icon:"➤",on:()=>{setTool("select");setToolPanel(null);}},
             {id:"create",label:"Документ / таблица",icon:"▣+",on:()=>{setTool("select");setToolPanel(toolPanel==="create"?null:"create");}},
@@ -12498,61 +12498,61 @@ function BoardPage({userId}:{userId:string}){
             {id:"shape",label:"Фигуры и стрелки",icon:"▧↗",on:()=>{setTool("shape");setToolPanel(toolPanel==="shape"?null:"shape");}},
             {id:"draw",label:"Рисование",icon:"✎",on:()=>{setTool("draw");setToolPanel(toolPanel==="draw"?null:"draw");}},
             {id:"image",label:"Изображение",icon:"＋",on:()=>{setTool("image");setToolPanel(null);setImgClickPos({x:400,y:300});imgInputRef.current?.click();}},
-          ].map((b:any)=><button key={b.id} title={b.label} onClick={b.on} style={{width:42,height:42,borderRadius:8,border:"none",background:(tool===b.id||toolPanel===b.id)?"#E8EDFF":"transparent",color:(tool===b.id||toolPanel===b.id)?"#3155E7":"#1F2937",cursor:"pointer",fontSize:b.id==="text"?27:20,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .12s"}}>{b.icon}</button>)}
+          ].map((b:any)=><button key={b.id} title={b.label} onClick={b.on} style={{width:42,height:42,borderRadius:8,border:"none",background:(tool===b.id||toolPanel===b.id)?"#EEEEEE":"transparent",color:(tool===b.id||toolPanel===b.id)?"#5B5B5B":"#282828",cursor:"pointer",fontSize:b.id==="text"?27:20,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .12s"}}>{b.icon}</button>)}
           <div style={{width:34,height:1,background:"#E5E7EB",margin:"4px 0"}}/>
-          <button title="Добавить внешнюю карточку" onClick={()=>setExternalPanel(true)} style={{width:42,height:42,borderRadius:8,border:"none",background:"#111827",color:"#fff",cursor:"pointer",fontSize:22,fontWeight:900}}>+</button>
+          <button title="Добавить внешнюю карточку" onClick={()=>setExternalPanel(true)} style={{width:42,height:42,borderRadius:8,border:"none",background:"#181818",color:"#fff",cursor:"pointer",fontSize:22,fontWeight:900}}>+</button>
         </div>
-        <div style={{width:54,background:"rgba(255,255,255,0.96)",border:"1px solid rgba(15,23,42,0.08)",boxShadow:"0 14px 34px rgba(15,23,42,0.12)",borderRadius:10,padding:6,display:"flex",flexDirection:"column",gap:5,alignItems:"center"}}>
-          <button title="Назад на 1 шаг" onClick={undoBoard} style={{width:42,height:42,borderRadius:8,border:"none",background:"transparent",cursor:"pointer",fontSize:24,color:historyPast.current.length?"#111827":"#A3AAB8"}}>↶</button>
-          <button title="Вперёд на 1 шаг" onClick={redoBoard} style={{width:42,height:42,borderRadius:8,border:"none",background:"transparent",cursor:"pointer",fontSize:24,color:historyFuture.current.length?"#111827":"#A3AAB8"}}>↷</button>
+        <div style={{width:54,background:"rgba(255,255,255,0.96)",border:"1px solid rgba(23,23,23,0.08)",boxShadow:"0 14px 34px rgba(23,23,23,0.12)",borderRadius:10,padding:6,display:"flex",flexDirection:"column",gap:5,alignItems:"center"}}>
+          <button title="Назад на 1 шаг" onClick={undoBoard} style={{width:42,height:42,borderRadius:8,border:"none",background:"transparent",cursor:"pointer",fontSize:24,color:historyPast.current.length?"#181818":"#AAAAAA"}}>↶</button>
+          <button title="Вперёд на 1 шаг" onClick={redoBoard} style={{width:42,height:42,borderRadius:8,border:"none",background:"transparent",cursor:"pointer",fontSize:24,color:historyFuture.current.length?"#181818":"#AAAAAA"}}>↷</button>
         </div>
       </div>
 
-      {toolPanel==="create"&&<div style={{position:"absolute",left:86,top:184,zIndex:135,width:250,background:"#fff",borderRadius:12,padding:14,boxShadow:"0 22px 55px rgba(15,23,42,.16)",border:"1px solid #E5E7EB"}}>
-        <button onClick={()=>{addBoardDoc();setToolPanel(null);}} style={{width:"100%",padding:"14px 14px",border:"none",borderRadius:10,background:"#EEF2FF",fontSize:14,fontWeight:800,color:"#3730A3",cursor:"pointer",marginBottom:10,textAlign:"left"}}>📄 Создать документ Docs</button>
-        <button onClick={()=>{addBoardTable();setToolPanel(null);}} style={{width:"100%",padding:"14px 14px",border:"none",borderRadius:10,background:"#ECFDF5",fontSize:14,fontWeight:800,color:"#047857",cursor:"pointer",textAlign:"left"}}>▦ Создать таблицу</button>
+      {toolPanel==="create"&&<div style={{position:"absolute",left:86,top:184,zIndex:135,width:250,background:"#fff",borderRadius:12,padding:14,boxShadow:"0 22px 55px rgba(23,23,23,.16)",border:"1px solid #E5E7EB"}}>
+        <button onClick={()=>{addBoardDoc();setToolPanel(null);}} style={{width:"100%",padding:"14px 14px",border:"none",borderRadius:10,background:"#EEF2FF",fontSize:14,fontWeight:800,color:"#3F3F3F",cursor:"pointer",marginBottom:10,textAlign:"left"}}>📄 Создать документ Docs</button>
+        <button onClick={()=>{addBoardTable();setToolPanel(null);}} style={{width:"100%",padding:"14px 14px",border:"none",borderRadius:10,background:"#ECFDF5",fontSize:14,fontWeight:800,color:"#525252",cursor:"pointer",textAlign:"left"}}>▦ Создать таблицу</button>
         <div style={{fontSize:11,color:C.t2,marginTop:10,lineHeight:1.45}}>Эти элементы появляются на доске как быстрые карточки и дальше могут быть связаны с Vizzy Text / Vizzy Tables.</div>
       </div>}
 
-      {toolPanel==="sticky"&&<div style={{position:"absolute",left:86,top:238,zIndex:135,width:216,background:"#fff",borderRadius:12,padding:14,boxShadow:"0 22px 55px rgba(15,23,42,.16)",border:"1px solid #E5E7EB"}}>
+      {toolPanel==="sticky"&&<div style={{position:"absolute",left:86,top:238,zIndex:135,width:216,background:"#fff",borderRadius:12,padding:14,boxShadow:"0 22px 55px rgba(23,23,23,.16)",border:"1px solid #E5E7EB"}}>
         <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:12}}>
-          {BOARD_STICKY_PALETTE.map(c=><button key={c} draggable onDragStart={e=>e.dataTransfer.setData("vizzy/sticky-color",c)} onClick={()=>addStickyWithColor(c)} title="Клик — добавить, перетащи — разместить" style={{height:72,borderRadius:2,background:c,border:"1px solid rgba(15,23,42,.18)",boxShadow:"0 7px 18px rgba(15,23,42,.12)",cursor:"grab"}}/>)}
+          {BOARD_STICKY_PALETTE.map(c=><button key={c} draggable onDragStart={e=>e.dataTransfer.setData("vizzy/sticky-color",c)} onClick={()=>addStickyWithColor(c)} title="Клик — добавить, перетащи — разместить" style={{height:72,borderRadius:2,background:c,border:"1px solid rgba(23,23,23,.18)",boxShadow:"0 7px 18px rgba(23,23,23,.12)",cursor:"grab"}}/>)}
         </div>
         <button onClick={()=>addStickyWithColor(BOARD_STICKY_PALETTE[0])} style={{marginTop:12,width:"100%",height:42,border:"none",borderRadius:8,background:"#E5E7EB",fontSize:14,fontWeight:800,cursor:"pointer"}}>✦ Generate</button>
         <button onClick={()=>addStickyWithColor(BOARD_STICKY_PALETTE[1])} style={{marginTop:8,width:"100%",height:42,border:"none",borderRadius:8,background:"#E5E7EB",fontSize:14,fontWeight:800,cursor:"pointer"}}>▱ Stack</button>
       </div>}
 
-      {toolPanel==="icons"&&<div style={{position:"absolute",left:86,top:292,zIndex:135,width:392,maxHeight:"72vh",overflow:"hidden",background:"#fff",borderRadius:10,padding:14,boxShadow:"0 22px 55px rgba(15,23,42,.16)",border:"1px solid #E5E7EB",display:"flex",flexDirection:"column",gap:12}}>
+      {toolPanel==="icons"&&<div style={{position:"absolute",left:86,top:292,zIndex:135,width:392,maxHeight:"72vh",overflow:"hidden",background:"#fff",borderRadius:10,padding:14,boxShadow:"0 22px 55px rgba(23,23,23,.16)",border:"1px solid #E5E7EB",display:"flex",flexDirection:"column",gap:12}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
           <div>
             <div style={{fontSize:16,fontWeight:900,color:C.t1}}>Иконки</div>
             <div style={{fontSize:11,color:C.t2,marginTop:3}}>Эмодзи, соцсети и бизнес-иконки. Клик — добавить, drag & drop — разместить.</div>
           </div>
-          <div style={{fontSize:11,fontWeight:800,color:"#6366F1",padding:"6px 10px",borderRadius:999,background:"#EEF2FF"}}>{filteredLibraryIcons.length}</div>
+          <div style={{fontSize:11,fontWeight:800,color:"#757575",padding:"6px 10px",borderRadius:999,background:"#EEF2FF"}}>{filteredLibraryIcons.length}</div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
-          {([{id:"emoji",label:"Эмодзи"},{id:"social",label:"Соцсети"},{id:"business",label:"Бизнес"}] as const).map(tab=><button key={tab.id} onClick={()=>setIconTab(tab.id)} style={{height:38,borderRadius:8,border:"1px solid "+(iconTab===tab.id?"#C7D2FE":"#E5E7EB"),background:iconTab===tab.id?"#EEF2FF":"#fff",color:iconTab===tab.id?"#3730A3":"#475569",fontSize:13,fontWeight:800,cursor:"pointer"}}>{tab.label}</button>)}
+          {([{id:"emoji",label:"Эмодзи"},{id:"social",label:"Соцсети"},{id:"business",label:"Бизнес"}] as const).map(tab=><button key={tab.id} onClick={()=>setIconTab(tab.id)} style={{height:38,borderRadius:8,border:"1px solid "+(iconTab===tab.id?"#D4D4D4":"#E5E7EB"),background:iconTab===tab.id?"#EEF2FF":"#fff",color:iconTab===tab.id?"#3F3F3F":"#535353",fontSize:13,fontWeight:800,cursor:"pointer"}}>{tab.label}</button>)}
         </div>
         <input value={iconSearch} onChange={e=>setIconSearch(e.target.value)} placeholder="Поиск по названию..." style={{width:"100%",height:40,border:"1px solid #E2E8F0",borderRadius:8,padding:"0 12px",fontSize:13,outline:"none"}}/>
         <div style={{overflowY:"auto",paddingRight:4,display:"flex",flexDirection:"column",gap:12}}>
           {favoriteIcons.filter((icon:any)=>icon.category===iconTab).length>0&&<div>
-            <div style={{fontSize:11,fontWeight:900,color:"#64748B",textTransform:"uppercase",letterSpacing:.7,marginBottom:8}}>Избранные</div>
+            <div style={{fontSize:11,fontWeight:900,color:"#727272",textTransform:"uppercase",letterSpacing:.7,marginBottom:8}}>Избранные</div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(6,minmax(0,1fr))",gap:8}}>
-              {favoriteIcons.filter((icon:any)=>icon.category===iconTab).map((icon:any)=><button key={icon.key} draggable onDragStart={e=>e.dataTransfer.setData("application/x-vizzy-icon",JSON.stringify(icon))} onClick={()=>addBoardIcon(icon)} style={{height:52,borderRadius:8,border:"1px solid #E5E7EB",background:"#FFFBEB",display:"flex",alignItems:"center",justifyContent:"center",cursor:"grab",position:"relative"}} title={icon.label}><div style={{position:"absolute",top:4,right:5,fontSize:11,color:"#F59E0B"}}>★</div>{renderBoardLibraryIcon(icon,undefined,icon.category==="emoji"?28:26)}</button>)}
+              {favoriteIcons.filter((icon:any)=>icon.category===iconTab).map((icon:any)=><button key={icon.key} draggable onDragStart={e=>e.dataTransfer.setData("application/x-vizzy-icon",JSON.stringify(icon))} onClick={()=>addBoardIcon(icon)} style={{height:52,borderRadius:8,border:"1px solid #E5E7EB",background:"#FFFBEB",display:"flex",alignItems:"center",justifyContent:"center",cursor:"grab",position:"relative"}} title={icon.label}><div style={{position:"absolute",top:4,right:5,fontSize:11,color:"#A7A7A7"}}>★</div>{renderBoardLibraryIcon(icon,undefined,icon.category==="emoji"?28:26)}</button>)}
             </div>
           </div>}
 
           {recentIcons.filter((icon:any)=>icon.category===iconTab).length>0&&<div>
-            <div style={{fontSize:11,fontWeight:900,color:"#64748B",textTransform:"uppercase",letterSpacing:.7,marginBottom:8}}>Недавние</div>
+            <div style={{fontSize:11,fontWeight:900,color:"#727272",textTransform:"uppercase",letterSpacing:.7,marginBottom:8}}>Недавние</div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(6,minmax(0,1fr))",gap:8}}>
-              {recentIcons.filter((icon:any)=>icon.category===iconTab).map((icon:any)=><button key={icon.key} draggable onDragStart={e=>e.dataTransfer.setData("application/x-vizzy-icon",JSON.stringify(icon))} onClick={()=>addBoardIcon(icon)} style={{height:52,borderRadius:8,border:"1px solid #E5E7EB",background:"#F8FAFC",display:"flex",alignItems:"center",justifyContent:"center",cursor:"grab",position:"relative"}} title={icon.label}><button onClick={e=>{e.stopPropagation();toggleFavoriteIcon(icon.key);}} style={{position:"absolute",top:4,right:4,width:16,height:16,border:"none",background:"transparent",cursor:"pointer",fontSize:11,color:favoriteIconKeys.includes(icon.key)?"#F59E0B":"#CBD5E1",padding:0}}>★</button>{renderBoardLibraryIcon(icon,undefined,icon.category==="emoji"?28:26)}</button>)}
+              {recentIcons.filter((icon:any)=>icon.category===iconTab).map((icon:any)=><button key={icon.key} draggable onDragStart={e=>e.dataTransfer.setData("application/x-vizzy-icon",JSON.stringify(icon))} onClick={()=>addBoardIcon(icon)} style={{height:52,borderRadius:8,border:"1px solid #E5E7EB",background:"#F8FAFC",display:"flex",alignItems:"center",justifyContent:"center",cursor:"grab",position:"relative"}} title={icon.label}><button onClick={e=>{e.stopPropagation();toggleFavoriteIcon(icon.key);}} style={{position:"absolute",top:4,right:4,width:16,height:16,border:"none",background:"transparent",cursor:"pointer",fontSize:11,color:favoriteIconKeys.includes(icon.key)?"#A7A7A7":"#D3D3D3",padding:0}}>★</button>{renderBoardLibraryIcon(icon,undefined,icon.category==="emoji"?28:26)}</button>)}
             </div>
           </div>}
 
           <div>
-            <div style={{fontSize:11,fontWeight:900,color:"#64748B",textTransform:"uppercase",letterSpacing:.7,marginBottom:8}}>{iconTab==="emoji"?"Эмодзи":iconTab==="social"?"Соцсети":"Бизнес"}</div>
+            <div style={{fontSize:11,fontWeight:900,color:"#727272",textTransform:"uppercase",letterSpacing:.7,marginBottom:8}}>{iconTab==="emoji"?"Эмодзи":iconTab==="social"?"Соцсети":"Бизнес"}</div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(6,minmax(0,1fr))",gap:8}}>
-              {filteredLibraryIcons.map((icon:any)=><button key={icon.key} draggable onDragStart={e=>e.dataTransfer.setData("application/x-vizzy-icon",JSON.stringify(icon))} onClick={()=>addBoardIcon(icon)} style={{height:56,borderRadius:10,border:"1px solid #E5E7EB",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",cursor:"grab",position:"relative",boxShadow:"0 2px 8px rgba(15,23,42,0.04)"}} title={icon.label}><button onClick={e=>{e.stopPropagation();toggleFavoriteIcon(icon.key);}} style={{position:"absolute",top:4,right:4,width:16,height:16,border:"none",background:"transparent",cursor:"pointer",fontSize:11,color:favoriteIconKeys.includes(icon.key)?"#F59E0B":"#CBD5E1",padding:0}}>★</button>{renderBoardLibraryIcon(icon,undefined,icon.category==="emoji"?30:28)}</button>)}
+              {filteredLibraryIcons.map((icon:any)=><button key={icon.key} draggable onDragStart={e=>e.dataTransfer.setData("application/x-vizzy-icon",JSON.stringify(icon))} onClick={()=>addBoardIcon(icon)} style={{height:56,borderRadius:10,border:"1px solid #E5E7EB",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",cursor:"grab",position:"relative",boxShadow:"0 2px 8px rgba(23,23,23,0.04)"}} title={icon.label}><button onClick={e=>{e.stopPropagation();toggleFavoriteIcon(icon.key);}} style={{position:"absolute",top:4,right:4,width:16,height:16,border:"none",background:"transparent",cursor:"pointer",fontSize:11,color:favoriteIconKeys.includes(icon.key)?"#A7A7A7":"#D3D3D3",padding:0}}>★</button>{renderBoardLibraryIcon(icon,undefined,icon.category==="emoji"?30:28)}</button>)}
             </div>
           </div>
 
@@ -12561,7 +12561,7 @@ function BoardPage({userId}:{userId:string}){
       </div>}
 
 
-      {toolPanel==="shape"&&<div style={{position:"absolute",left:86,top:346,zIndex:135,width:284,background:"#fff",borderRadius:12,padding:12,boxShadow:"0 22px 55px rgba(15,23,42,.16)",border:"1px solid #E5E7EB"}}>
+      {toolPanel==="shape"&&<div style={{position:"absolute",left:86,top:346,zIndex:135,width:284,background:"#fff",borderRadius:12,padding:12,boxShadow:"0 22px 55px rgba(23,23,23,.16)",border:"1px solid #E5E7EB"}}>
         {[
           {label:"Line",icon:"╱",act:()=>{setTool("line");setShapeKind("rect");setToolPanel(null);}},
           {label:"Arrow",icon:"↗",act:()=>{setTool("line");setShapeKind("rect");setToolPanel(null);}},
@@ -12571,13 +12571,13 @@ function BoardPage({userId}:{userId:string}){
           {label:"Triangle",icon:"△",act:()=>{setTool("shape");setShapeKind("triangle");setToolPanel(null);}},
           {label:"Cloud",icon:"☁",act:()=>{setTool("shape");setShapeKind("cloud");setToolPanel(null);}},
           {label:"Pentagon",icon:"⬟",act:()=>{setTool("shape");setShapeKind("pentagon");setToolPanel(null);}},
-        ].map((s:any)=><button key={s.label} onClick={s.act} style={{width:"100%",height:42,border:"none",borderRadius:8,background:(tool==="shape"&&s.label.toLowerCase().includes(shapeKind||""))?"#E8EDFF":"transparent",display:"flex",alignItems:"center",gap:14,padding:"0 12px",fontSize:15,fontWeight:650,color:"#1F2937",cursor:"pointer",textAlign:"left"}}><span style={{width:24,fontSize:21}}>{s.icon}</span>{s.label}</button>)}
+        ].map((s:any)=><button key={s.label} onClick={s.act} style={{width:"100%",height:42,border:"none",borderRadius:8,background:(tool==="shape"&&s.label.toLowerCase().includes(shapeKind||""))?"#EEEEEE":"transparent",display:"flex",alignItems:"center",gap:14,padding:"0 12px",fontSize:15,fontWeight:650,color:"#282828",cursor:"pointer",textAlign:"left"}}><span style={{width:24,fontSize:21}}>{s.icon}</span>{s.label}</button>)}
       </div>}
 
-      {toolPanel==="draw"&&<div style={{position:"absolute",left:86,top:400,zIndex:135,width:78,background:"#fff",borderRadius:12,padding:10,boxShadow:"0 22px 55px rgba(15,23,42,.16)",border:"1px solid #E5E7EB",display:"flex",flexDirection:"column",gap:9,alignItems:"center"}}>
-        {([{id:"pencil",icon:"✐",label:"Карандаш"},{id:"pen",icon:"✎",label:"Ручка"},{id:"pointer",icon:"☄",label:"Указка"}] as {id:DrawMode;icon:string;label:string}[]).map(m=><button key={m.id} title={m.label} onClick={()=>{setTool("draw");setDrawMode(m.id);}} style={{width:46,height:46,borderRadius:8,border:"none",background:drawMode===m.id?"#E8EDFF":"transparent",color:drawMode===m.id?"#3155E7":"#1F2937",fontSize:24,cursor:"pointer"}}>{m.icon}</button>)}
+      {toolPanel==="draw"&&<div style={{position:"absolute",left:86,top:400,zIndex:135,width:78,background:"#fff",borderRadius:12,padding:10,boxShadow:"0 22px 55px rgba(23,23,23,.16)",border:"1px solid #E5E7EB",display:"flex",flexDirection:"column",gap:9,alignItems:"center"}}>
+        {([{id:"pencil",icon:"✐",label:"Карандаш"},{id:"pen",icon:"✎",label:"Ручка"},{id:"pointer",icon:"☄",label:"Указка"}] as {id:DrawMode;icon:string;label:string}[]).map(m=><button key={m.id} title={m.label} onClick={()=>{setTool("draw");setDrawMode(m.id);}} style={{width:46,height:46,borderRadius:8,border:"none",background:drawMode===m.id?"#EEEEEE":"transparent",color:drawMode===m.id?"#5B5B5B":"#282828",fontSize:24,cursor:"pointer"}}>{m.icon}</button>)}
         <div style={{width:38,height:1,background:"#E5E7EB",margin:"2px 0"}}/>
-        {BOARD_DRAW_COLORS.map(c=><button key={c} onClick={()=>setDrawColor(c)} style={{width:36,height:36,borderRadius:"50%",background:c,border:drawColor===c?"3px solid #3155E7":"2px solid #E5E7EB",boxShadow:"inset 0 0 0 3px #fff",cursor:"pointer"}}/>)}
+        {BOARD_DRAW_COLORS.map(c=><button key={c} onClick={()=>setDrawColor(c)} style={{width:36,height:36,borderRadius:"50%",background:c,border:drawColor===c?"3px solid #5B5B5B":"2px solid #E5E7EB",boxShadow:"inset 0 0 0 3px #fff",cursor:"pointer"}}/>)}
       </div>}
 
       {/* ── MULTI-SELECTION TOOLBAR — shown when 2+ items selected ── */}
@@ -12589,12 +12589,12 @@ function BoardPage({userId}:{userId:string}){
           borderRadius:8,padding:"8px 14px",
           boxShadow:"0 4px 24px rgba(0,0,0,0.13)",border:"1px solid rgba(0,0,0,0.07)",
         }}>
-          <span style={{fontSize:12,fontWeight:700,color:"#2563EB",marginRight:4}}>
+          <span style={{fontSize:12,fontWeight:700,color:"#606060",marginRight:4}}>
             {selectedIds.size} объектов
           </span>
           <div style={{width:1,height:18,background:"#E2E8F0"}}/>
           <button onClick={duplicateSelected} title="Дублировать выбранное"
-            style={{padding:"4px 10px",border:"1px solid #E2E8F0",borderRadius:7,background:"transparent",cursor:"pointer",fontSize:11,fontWeight:600,color:"#1E293B",display:"flex",alignItems:"center",gap:4}}>
+            style={{padding:"4px 10px",border:"1px solid #E2E8F0",borderRadius:7,background:"transparent",cursor:"pointer",fontSize:11,fontWeight:600,color:"#282828",display:"flex",alignItems:"center",gap:4}}>
             ⧉ Дублировать
           </button>
           <button onClick={()=>{
@@ -12605,11 +12605,11 @@ function BoardPage({userId}:{userId:string}){
             // Already selectable, just show hint
           }} style={{display:"none"}}>_</button>
           <button onClick={deleteSelected}
-            style={{padding:"4px 10px",border:"1px solid #FCA5A5",borderRadius:7,background:"#FFF1F1",cursor:"pointer",fontSize:11,fontWeight:600,color:"#EF4444",display:"flex",alignItems:"center",gap:4}}>
+            style={{padding:"4px 10px",border:"1px solid #BFBFBF",borderRadius:7,background:"#FFF1F1",cursor:"pointer",fontSize:11,fontWeight:600,color:"#777777",display:"flex",alignItems:"center",gap:4}}>
             🗑 Удалить все
           </button>
           <button onClick={()=>{setSelectedIds(new Set());selRef.current=new Set();}}
-            style={{width:24,height:24,border:"1px solid #E2E8F0",borderRadius:6,background:"transparent",cursor:"pointer",fontSize:11,color:"#64748B",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            style={{width:24,height:24,border:"1px solid #E2E8F0",borderRadius:6,background:"transparent",cursor:"pointer",fontSize:11,color:"#727272",display:"flex",alignItems:"center",justifyContent:"center"}}>
             ✕
           </button>
         </div>
@@ -12630,8 +12630,8 @@ function BoardPage({userId}:{userId:string}){
           WebkitBackdropFilter:"blur(14px)",
           borderRadius:10,
           padding:"7px 9px",
-          boxShadow:"0 12px 36px rgba(15,23,42,0.14), 0 2px 8px rgba(15,23,42,0.08)",
-          border:"1px solid rgba(15,23,42,0.08)",
+          boxShadow:"0 12px 36px rgba(23,23,23,0.14), 0 2px 8px rgba(23,23,23,0.08)",
+          border:"1px solid rgba(23,23,23,0.08)",
           alignItems:"center",
           flexWrap:"nowrap",
           maxWidth:"calc(100vw - 360px)",
@@ -12639,12 +12639,12 @@ function BoardPage({userId}:{userId:string}){
           scrollbarWidth:"none",
         }}>
 
-          {sel1&&["sticky","text","shape"].includes(sel1.type)&&<div style={{width:34,height:34,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,fontWeight:700,color:"#0F172A",background:"#F8FAFC",border:"1px solid #E2E8F0",flexShrink:0}}>T</div>}
+          {sel1&&["sticky","text","shape"].includes(sel1.type)&&<div style={{width:34,height:34,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,fontWeight:700,color:"#171717",background:"#F8FAFC",border:"1px solid #E2E8F0",flexShrink:0}}>T</div>}
 
           {/* Color */}
           <div style={{position:"relative",flexShrink:0}}>
             <button onClick={()=>{setColorTarget(colorTarget?null:sel1?"item":"line");setShapeColorOpen(false);}}
-              style={{width:34,height:34,borderRadius:8,background:sel1?sel1.color||"#FEF08A":selLine?.color||"#64748B",border:"2px solid rgba(0,0,0,0.12)",cursor:"pointer",boxShadow:"inset 0 0 0 1px rgba(255,255,255,0.45)",flexShrink:0}}/>
+              style={{width:34,height:34,borderRadius:8,background:sel1?sel1.color||"#E9E9E9":selLine?.color||"#727272",border:"2px solid rgba(0,0,0,0.12)",cursor:"pointer",boxShadow:"inset 0 0 0 1px rgba(255,255,255,0.45)",flexShrink:0}}/>
             {colorTarget&&(
               <div style={{position:"absolute",top:"calc(100% + 6px)",left:0,background:"#fff",borderRadius:8,padding:10,boxShadow:"0 8px 24px rgba(0,0,0,0.14)",width:172,zIndex:200,border:"1px solid #E2E8F0"}}>
                 <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:8}}>
@@ -12658,7 +12658,7 @@ function BoardPage({userId}:{userId:string}){
                 </div>
                 {/* HEX input */}
                 <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:6}}>
-                  <span style={{fontSize:10,color:"#64748B",fontWeight:500}}>HEX</span>
+                  <span style={{fontSize:10,color:"#727272",fontWeight:500}}>HEX</span>
                   <input value={customColorInput} onChange={e=>setCustomColorInput(e.target.value)}
                     onKeyDown={e=>{if(e.key==="Enter"){if(sel1)updItems(itemsRef.current.map(it=>it.id===sel1.id?{...it,color:customColorInput}:it));else if(selLine)updLines(linesRef.current.map(l=>l.id===selLine.id?{...l,color:customColorInput}:l));setColorTarget(null);}}}
                     style={{flex:1,padding:"4px 7px",border:"1px solid #E2E8F0",borderRadius:7,fontSize:12,outline:"none",fontFamily:"monospace"}} placeholder="#000000"/>
@@ -12676,8 +12676,8 @@ function BoardPage({userId}:{userId:string}){
           {sel1?.type==="shape"&&(
             <div style={{position:"relative",flexShrink:0}}>
               <button onClick={(e)=>{e.stopPropagation();setShapeColorOpen(v=>!v);setColorTarget(null);}} title="Цвет фигуры"
-                style={{height:34,padding:"0 12px",borderRadius:8,border:"1px solid #E2E8F0",background:shapeColorOpen?"#EFF6FF":"#fff",cursor:"pointer",display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:800,color:shapeColorOpen?"#2563EB":"#0F172A",whiteSpace:"nowrap",boxShadow:shapeColorOpen?"0 4px 14px rgba(37,99,235,0.12)":"none"}}>
-                <span style={{width:18,height:18,borderRadius:6,background:sel1.color||"#3B82F6",border:"2px solid rgba(15,23,42,0.14)",boxShadow:"inset 0 0 0 2px rgba(255,255,255,0.55)"}}/>
+                style={{height:34,padding:"0 12px",borderRadius:8,border:"1px solid #E2E8F0",background:shapeColorOpen?"#EFF6FF":"#fff",cursor:"pointer",display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:800,color:shapeColorOpen?"#606060":"#171717",whiteSpace:"nowrap",boxShadow:shapeColorOpen?"0 4px 14px rgba(96,96,96,0.12)":"none"}}>
+                <span style={{width:18,height:18,borderRadius:6,background:sel1.color||"#7A7A7A",border:"2px solid rgba(23,23,23,0.14)",boxShadow:"inset 0 0 0 2px rgba(255,255,255,0.55)"}}/>
                 Цвет фигуры
               </button>
             </div>
@@ -12695,9 +12695,9 @@ function BoardPage({userId}:{userId:string}){
             <button onClick={()=>updItems(items.map(it=>it.id===sel1.id?{...it,fontSize:Math.min(72,(it.fontSize||14)+2)}:it))}
               style={{width:32,height:34,border:"1px solid #E2E8F0",borderRadius:8,background:"#fff",cursor:"pointer",fontSize:12,fontWeight:700,flexShrink:0}}>A+</button>
             <button onClick={()=>updItems(items.map(it=>it.id===sel1.id?{...it,fontBold:!it.fontBold}:it))}
-              style={{width:34,height:34,border:"1px solid #E2E8F0",borderRadius:8,background:sel1.fontBold?"#EFF6FF":"#fff",cursor:"pointer",fontSize:16,fontWeight:900,color:sel1.fontBold?"#2563EB":C.t1,flexShrink:0}}>B</button>
+              style={{width:34,height:34,border:"1px solid #E2E8F0",borderRadius:8,background:sel1.fontBold?"#EFF6FF":"#fff",cursor:"pointer",fontSize:16,fontWeight:900,color:sel1.fontBold?"#606060":C.t1,flexShrink:0}}>B</button>
             <button onClick={()=>updItems(items.map(it=>it.id===sel1.id?{...it,fontItalic:!it.fontItalic}:it))}
-              style={{width:34,height:34,border:"1px solid #E2E8F0",borderRadius:8,background:sel1.fontItalic?"#EFF6FF":"#fff",cursor:"pointer",fontSize:16,fontStyle:"italic",fontWeight:700,color:sel1.fontItalic?"#2563EB":C.t1,flexShrink:0}}>I</button>
+              style={{width:34,height:34,border:"1px solid #E2E8F0",borderRadius:8,background:sel1.fontItalic?"#EFF6FF":"#fff",cursor:"pointer",fontSize:16,fontStyle:"italic",fontWeight:700,color:sel1.fontItalic?"#606060":C.t1,flexShrink:0}}>I</button>
           </>}
 
           {/* Line controls */}
@@ -12706,18 +12706,18 @@ function BoardPage({userId}:{userId:string}){
             {([1,2,4] as number[]).map(th=>(
               <button key={th} onClick={()=>updLines(lines.map(l=>l.id===selLine.id?{...l,thickness:th}:l))}
                 style={{width:32,height:26,border:"1px solid #E2E8F0",borderRadius:7,background:selLine.thickness===th?"#EFF6FF":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                <div style={{height:th,width:20,background:selLine.thickness===th?"#2563EB":"#64748B",borderRadius:1}}/>
+                <div style={{height:th,width:20,background:selLine.thickness===th?"#606060":"#727272",borderRadius:1}}/>
               </button>
             ))}
             {(["solid","dashed","dotted"] as LineStyle[]).map(st=>(
               <button key={st} onClick={()=>updLines(lines.map(l=>l.id===selLine.id?{...l,style:st}:l))}
-                style={{padding:"4px 8px",border:"1px solid #E2E8F0",borderRadius:7,background:selLine.style===st?"#EFF6FF":"transparent",cursor:"pointer",fontSize:11,fontWeight:600,color:selLine.style===st?"#2563EB":C.t1}}>
+                style={{padding:"4px 8px",border:"1px solid #E2E8F0",borderRadius:7,background:selLine.style===st?"#EFF6FF":"transparent",cursor:"pointer",fontSize:11,fontWeight:600,color:selLine.style===st?"#606060":C.t1}}>
                 {st==="solid"?"—":st==="dashed"?"--":"··"}
               </button>
             ))}
             {(["none","arrow","double"] as ArrowTip[]).map(ar=>(
               <button key={ar} onClick={()=>updLines(lines.map(l=>l.id===selLine.id?{...l,arrow:ar}:l))}
-                style={{padding:"4px 8px",border:"1px solid #E2E8F0",borderRadius:7,background:selLine.arrow===ar?"#EFF6FF":"transparent",cursor:"pointer",fontSize:13,color:selLine.arrow===ar?"#2563EB":C.t1}}>
+                style={{padding:"4px 8px",border:"1px solid #E2E8F0",borderRadius:7,background:selLine.arrow===ar?"#EFF6FF":"transparent",cursor:"pointer",fontSize:13,color:selLine.arrow===ar?"#606060":C.t1}}>
                 {ar==="none"?"—":ar==="arrow"?"→":"↔"}
               </button>
             ))}
@@ -12733,14 +12733,14 @@ function BoardPage({userId}:{userId:string}){
           {/* Edit text */}
           {sel1&&!["image","link","draw"].includes(sel1.type)&&(
             <button onClick={()=>{if(editingId===sel1.id){setEditingId(null);return;}setEditingId(sel1.id);setEditText(sel1.type==="shape"?(sel1.shapeText||sel1.text||""):(sel1.text||""));}}
-              style={{height:34,padding:"0 12px",border:"1px solid #E2E8F0",borderRadius:8,background:editingId===sel1.id?"#EFF6FF":"#fff",cursor:"pointer",fontSize:12,fontWeight:700,color:editingId===sel1.id?"#2563EB":C.t1,whiteSpace:"nowrap",flexShrink:0}}>{editingId===sel1.id?"✓ Готово":"✏️ Текст"}</button>
+              style={{height:34,padding:"0 12px",border:"1px solid #E2E8F0",borderRadius:8,background:editingId===sel1.id?"#EFF6FF":"#fff",cursor:"pointer",fontSize:12,fontWeight:700,color:editingId===sel1.id?"#606060":C.t1,whiteSpace:"nowrap",flexShrink:0}}>{editingId===sel1.id?"✓ Готово":"✏️ Текст"}</button>
           )}
 
           {/* Duplicate */}
           {sel1&&<button onClick={duplicateSelected} title="Дублировать (Ctrl+D)" style={{width:26,height:26,border:"1px solid #E2E8F0",borderRadius:7,background:"transparent",cursor:"pointer",fontSize:14}}>⧉</button>}
 
           {/* Delete */}
-          <button onClick={deleteSelected} style={{width:26,height:26,border:"1px solid #FCA5A5",borderRadius:7,background:"#FFF1F1",cursor:"pointer",fontSize:12,color:"#EF4444"}}>🗑</button>
+          <button onClick={deleteSelected} style={{width:26,height:26,border:"1px solid #BFBFBF",borderRadius:7,background:"#FFF1F1",cursor:"pointer",fontSize:12,color:"#777777"}}>🗑</button>
         </div>
       )}
 
@@ -12758,25 +12758,25 @@ function BoardPage({userId}:{userId:string}){
             border:"1px solid #E2E8F0",
             borderRadius:10,
             padding:12,
-            boxShadow:"0 22px 55px rgba(15,23,42,0.22)",
+            boxShadow:"0 22px 55px rgba(23,23,23,0.22)",
           }}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:10}}>
             <div>
-              <div style={{fontSize:12,fontWeight:900,color:"#0F172A"}}>Цвет фигуры</div>
-              <div style={{fontSize:10,color:"#64748B",marginTop:2}}>Заливка выбранной фигуры</div>
+              <div style={{fontSize:12,fontWeight:900,color:"#171717"}}>Цвет фигуры</div>
+              <div style={{fontSize:10,color:"#727272",marginTop:2}}>Заливка выбранной фигуры</div>
             </div>
-            <button onClick={()=>setShapeColorOpen(false)} style={{width:24,height:24,border:"1px solid #E2E8F0",borderRadius:8,background:"#fff",cursor:"pointer",color:"#64748B",fontSize:14,lineHeight:1}}>×</button>
+            <button onClick={()=>setShapeColorOpen(false)} style={{width:24,height:24,border:"1px solid #E2E8F0",borderRadius:8,background:"#fff",cursor:"pointer",color:"#727272",fontSize:14,lineHeight:1}}>×</button>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:7,marginBottom:12}}>
             {BOARD_PALETTE.map(color=>(
               <button key={color} onClick={()=>{updateSelectedShapeColor(color);setShapeColorOpen(false);}} title={color}
-                style={{width:26,height:26,borderRadius:8,background:color,border:color.toLowerCase()===(sel1.color||"").toLowerCase()?"2px solid #2563EB":"1px solid rgba(15,23,42,0.16)",cursor:"pointer",boxShadow:color==="#ffffff"?"inset 0 0 0 1px #CBD5E1":"none"}}/>
+                style={{width:26,height:26,borderRadius:8,background:color,border:color.toLowerCase()===(sel1.color||"").toLowerCase()?"2px solid #606060":"1px solid rgba(23,23,23,0.16)",cursor:"pointer",boxShadow:color==="#ffffff"?"inset 0 0 0 1px #D3D3D3":"none"}}/>
             ))}
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <input type="color" value={sel1.color||"#3B82F6"} onChange={e=>updateSelectedShapeColor(e.target.value)} style={{width:42,height:34,border:"none",cursor:"pointer",borderRadius:8,padding:0,background:"transparent"}}/>
-            <input value={sel1.color||"#3B82F6"} onChange={e=>updateSelectedShapeColor(e.target.value)} placeholder="#3B82F6"
-              style={{flex:1,height:34,border:"1px solid #E2E8F0",borderRadius:8,padding:"0 10px",fontSize:12,fontFamily:"monospace",outline:"none",color:"#0F172A"}}/>
+            <input type="color" value={sel1.color||"#7A7A7A"} onChange={e=>updateSelectedShapeColor(e.target.value)} style={{width:42,height:34,border:"none",cursor:"pointer",borderRadius:8,padding:0,background:"transparent"}}/>
+            <input value={sel1.color||"#7A7A7A"} onChange={e=>updateSelectedShapeColor(e.target.value)} placeholder="#7A7A7A"
+              style={{flex:1,height:34,border:"1px solid #E2E8F0",borderRadius:8,padding:"0 10px",fontSize:12,fontFamily:"monospace",outline:"none",color:"#171717"}}/>
           </div>
         </div>
       )}
@@ -12799,7 +12799,7 @@ function BoardPage({userId}:{userId:string}){
         <svg className="board-bg-dot" style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none"}} xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="bgdots" x={(pan.x%(28*zoom))} y={(pan.y%(28*zoom))} width={28*zoom} height={28*zoom} patternUnits="userSpaceOnUse">
-              <circle cx={14*zoom} cy={14*zoom} r={Math.max(0.8,1.2*zoom)} fill="#CBD5E1" opacity="0.6"/>
+              <circle cx={14*zoom} cy={14*zoom} r={Math.max(0.8,1.2*zoom)} fill="#D3D3D3" opacity="0.6"/>
             </pattern>
           </defs>
           <rect className="board-bg-dot" width="100%" height="100%" fill="url(#bgdots)"/>
@@ -12819,8 +12819,8 @@ function BoardPage({userId}:{userId:string}){
                 if(!from)return null;
                 const a=anchorPos(from,connectorDrag.fromAnchor);
                 return <g>
-                  <line x1={a.x} y1={a.y} x2={connectorDrag.mx} y2={connectorDrag.my} stroke="#2563EB" strokeWidth="2" strokeDasharray="6 3" strokeLinecap="round"/>
-                  <circle cx={connectorDrag.mx} cy={connectorDrag.my} r="5" fill="#2563EB" opacity="0.7"/>
+                  <line x1={a.x} y1={a.y} x2={connectorDrag.mx} y2={connectorDrag.my} stroke="#606060" strokeWidth="2" strokeDasharray="6 3" strokeLinecap="round"/>
+                  <circle cx={connectorDrag.mx} cy={connectorDrag.my} r="5" fill="#606060" opacity="0.7"/>
                 </g>;
               })()}
 
@@ -12834,7 +12834,7 @@ function BoardPage({userId}:{userId:string}){
               {/* Draw preview */}
               {isDrawing&&drawPreview&&drawingRef.current&&(
                 <g transform={`translate(${drawingRef.current.startX},${drawingRef.current.startY})`}>
-                  <path d={drawPreview} fill="none" stroke={drawMode==="pencil"?"rgba(30,41,59,0.75)":drawColor} strokeWidth={drawMode==="pointer"?Math.max(4,drawThickness+2):drawMode==="pencil"?Math.max(1,drawThickness-1):drawThickness} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={drawMode==="pointer"?"10 6":"none"}/>
+                  <path d={drawPreview} fill="none" stroke={drawMode==="pencil"?"rgba(40,40,40,0.75)":drawColor} strokeWidth={drawMode==="pointer"?Math.max(4,drawThickness+2):drawMode==="pencil"?Math.max(1,drawThickness-1):drawThickness} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={drawMode==="pointer"?"10 6":"none"}/>
                 </g>
               )}
             </g>
@@ -12854,7 +12854,7 @@ function BoardPage({userId}:{userId:string}){
                   position:"absolute",left:it.x,top:it.y,width:it.w,height:it.h,
                   cursor:tool==="line"?"crosshair":(dragState.current&&Array.isArray(dragState.current.ids)&&dragState.current.ids.includes(it.id))?"grabbing":"grab",
                   zIndex:(it.zIndex||0)+5,
-                  outline:isSel?"2px solid #2563EB":isLineSrc?"2px solid #F59E0B":"none",
+                  outline:isSel?"2px solid #606060":isLineSrc?"2px solid #A7A7A7":"none",
                   outlineOffset:isSel||isLineSrc?3:0,
                   borderRadius:it.type==="sticky"?4:it.type==="shape"?0:10,
                   transition:"outline 0.1s",
@@ -12881,8 +12881,8 @@ function BoardPage({userId}:{userId:string}){
                       ?<textarea autoFocus value={editText} onChange={e=>setEditText(e.target.value)}
                           onBlur={()=>{const next=items.map(i=>i.id===it.id?{...i,text:editText}:i);updItems(next);setEditingId(null);}}
                           onKeyDown={e=>{if(e.key==="Escape"){const next=items.map(i=>i.id===it.id?{...i,text:editText}:i);updItems(next);setEditingId(null);}}}
-                          style={{flex:1,border:"none",background:"transparent",resize:"none",outline:"none",fontFamily:it.fontFamily||"Inter",fontSize:it.fontSize||16,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:it.color||"#1E293B",lineHeight:1.4,width:"100%",minHeight:"100%"}}/>
-                      :<div style={{fontFamily:it.fontFamily||"Inter",fontSize:it.fontSize||16,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:it.color||"#1E293B",lineHeight:1.4,wordBreak:"break-word",whiteSpace:"pre-wrap",width:"100%"}}>{it.text||"Текст"}</div>
+                          style={{flex:1,border:"none",background:"transparent",resize:"none",outline:"none",fontFamily:it.fontFamily||"Inter",fontSize:it.fontSize||16,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:it.color||"#282828",lineHeight:1.4,width:"100%",minHeight:"100%"}}/>
+                      :<div style={{fontFamily:it.fontFamily||"Inter",fontSize:it.fontSize||16,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:it.color||"#282828",lineHeight:1.4,wordBreak:"break-word",whiteSpace:"pre-wrap",width:"100%"}}>{it.text||"Текст"}</div>
                     }
                   </div>
                 )}
@@ -12893,18 +12893,18 @@ function BoardPage({userId}:{userId:string}){
                     onClick={e=>{e.stopPropagation();setDocPanelId(it.id);}}
                     style={{width:"100%",height:"100%",borderRadius:10,
                       background:it.type==="doc"?"linear-gradient(135deg,#EEF2FF,#FFFFFF)":"linear-gradient(135deg,#ECFDF5,#FFFFFF)",
-                      border:"1px solid "+(it.type==="doc"?"#C7D2FE":"#A7F3D0"),
-                      boxShadow:docPanelId===it.id?"0 0 0 2.5px #2563EB, 0 10px 26px rgba(15,23,42,.12)":"0 10px 26px rgba(15,23,42,.10)",
+                      border:"1px solid "+(it.type==="doc"?"#D4D4D4":"#D8D8D8"),
+                      boxShadow:docPanelId===it.id?"0 0 0 2.5px #606060, 0 10px 26px rgba(23,23,23,.12)":"0 10px 26px rgba(23,23,23,.10)",
                       padding:16,display:"flex",alignItems:"center",gap:12,
                       boxSizing:"border-box" as const,cursor:"pointer",transition:"box-shadow 0.15s"}}
-                    onMouseEnter={e=>{if(docPanelId!==it.id)(e.currentTarget as HTMLElement).style.boxShadow="0 14px 32px rgba(15,23,42,0.18)";}}
-                    onMouseLeave={e=>{if(docPanelId!==it.id)(e.currentTarget as HTMLElement).style.boxShadow="0 10px 26px rgba(15,23,42,0.10)";}}>
-                    <div style={{width:44,height:44,borderRadius:10,background:it.type==="doc"?"#4F46E5":"#10B981",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:23,flexShrink:0}}>{it.type==="doc"?"📄":"▦"}</div>
+                    onMouseEnter={e=>{if(docPanelId!==it.id)(e.currentTarget as HTMLElement).style.boxShadow="0 14px 32px rgba(23,23,23,0.18)";}}
+                    onMouseLeave={e=>{if(docPanelId!==it.id)(e.currentTarget as HTMLElement).style.boxShadow="0 10px 26px rgba(23,23,23,0.10)";}}>
+                    <div style={{width:44,height:44,borderRadius:10,background:it.type==="doc"?"#5B5B5B":"#808080",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:23,flexShrink:0}}>{it.type==="doc"?"📄":"▦"}</div>
                     <div style={{minWidth:0,flex:1}}>
                       <div style={{fontSize:15,fontWeight:900,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.text||(it.type==="doc"?"Документ":"Таблица")}</div>
                       <div style={{fontSize:11,color:C.t2,marginTop:4}}>{it.type==="doc"?"Нажми чтобы редактировать":"Нажми чтобы открыть таблицу"}</div>
                     </div>
-                    <div style={{fontSize:16,color:it.type==="doc"?"#4F46E5":"#10B981",opacity:0.5,flexShrink:0}}>→</div>
+                    <div style={{fontSize:16,color:it.type==="doc"?"#5B5B5B":"#808080",opacity:0.5,flexShrink:0}}>→</div>
                   </div>
                 )}
 
@@ -12912,10 +12912,10 @@ function BoardPage({userId}:{userId:string}){
                 {it.type==="icon"&&(
                   <div style={{width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,padding:6,boxSizing:"border-box"}}>
                     <div style={{display:"flex",alignItems:"center",justifyContent:"center",width:"100%",height:it.iconCategory==="emoji"?"100%":"auto",flex:it.iconCategory==="emoji"?1:undefined}}>
-                      {renderBoardLibraryIcon({glyph:it.iconGlyph,label:it.iconLabel,category:it.iconCategory,style:it.iconStyle,defaultColor:it.color||"#111827"},it.color||undefined,Math.max(24,Math.round(Math.min(it.w,it.h)*(it.iconCategory==="emoji"?0.62:0.48))))}
+                      {renderBoardLibraryIcon({glyph:it.iconGlyph,label:it.iconLabel,category:it.iconCategory,style:it.iconStyle,defaultColor:it.color||"#181818"},it.color||undefined,Math.max(24,Math.round(Math.min(it.w,it.h)*(it.iconCategory==="emoji"?0.62:0.48))))}
                     </div>
                     {it.iconCategory!=="emoji"&&it.iconLabel&&it.h>82&&(
-                      <div style={{fontSize:Math.max(9,Math.min(13,Math.round(it.w/8))),fontWeight:800,color:"#334155",textAlign:"center",lineHeight:1.15,maxWidth:"100%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.iconLabel}</div>
+                      <div style={{fontSize:Math.max(9,Math.min(13,Math.round(it.w/8))),fontWeight:800,color:"#3F3F3F",textAlign:"center",lineHeight:1.15,maxWidth:"100%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.iconLabel}</div>
                     )}
                   </div>
                 )}
@@ -12930,7 +12930,7 @@ function BoardPage({userId}:{userId:string}){
                 {/* ── DRAW ── */}
                 {it.type==="draw"&&it.drawPath&&(
                   <svg width={it.w} height={it.h} viewBox={`0 0 ${it.w} ${it.h}`} style={{overflow:"visible",pointerEvents:"none"}}>
-                    <path d={it.drawPath} fill="none" stroke={it.drawColor||"#2563EB"} strokeWidth={it.drawThickness||3} strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d={it.drawPath} fill="none" stroke={it.drawColor||"#606060"} strokeWidth={it.drawThickness||3} strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 )}
 
@@ -12941,25 +12941,25 @@ function BoardPage({userId}:{userId:string}){
                     {it.linkFavicon&&<img src={it.linkFavicon} alt="" style={{width:20,height:20,flexShrink:0,borderRadius:4}}/>}
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:12,fontWeight:600,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.linkTitle||it.linkUrl}</div>
-                      <div style={{fontSize:10,color:"#2563EB",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginTop:2}}>{it.linkUrl}</div>
+                      <div style={{fontSize:10,color:"#606060",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginTop:2}}>{it.linkUrl}</div>
                     </div>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#606060" strokeWidth="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                   </a>
                 )}
 
                 {/* ── EXTERNAL CARD ── */}
                 {it.type==="external_card"&&(
-                  <div style={{width:"100%",height:"100%",borderRadius:12,background:"#fff",border:"1px solid #E2E8F0",boxShadow:"0 12px 32px rgba(15,23,42,0.12)",overflow:"hidden",display:"flex",flexDirection:"column"}}>
-                    <div style={{height:6,background:`linear-gradient(90deg, ${it.color||"#7C3AED"}, #60A5FA)`}}/>
+                  <div style={{width:"100%",height:"100%",borderRadius:12,background:"#fff",border:"1px solid #E2E8F0",boxShadow:"0 12px 32px rgba(23,23,23,0.12)",overflow:"hidden",display:"flex",flexDirection:"column"}}>
+                    <div style={{height:6,background:`linear-gradient(90deg, ${it.color||"#626262"}, #9A9A9A)`}}/>
                     {it.imageUrl&&<div style={{height:54,position:"relative",background:"#F8FAFC",overflow:"hidden",flexShrink:0}}>
                       <img src={it.imageUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
-                      <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg, rgba(15,23,42,0.02), rgba(15,23,42,0.18))"}}/>
-                      <div style={{position:"absolute",right:8,bottom:8,width:28,height:28,borderRadius:8,background:"rgba(255,255,255,0.92)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 6px 18px rgba(15,23,42,0.18)",overflow:"hidden"}}>
+                      <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg, rgba(23,23,23,0.02), rgba(23,23,23,0.18))"}}/>
+                      <div style={{position:"absolute",right:8,bottom:8,width:28,height:28,borderRadius:8,background:"rgba(255,255,255,0.92)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 6px 18px rgba(23,23,23,0.18)",overflow:"hidden"}}>
                         {it.externalSource==="content"?<PlatformIcon pid={it.externalPlatform||"other"} size={18}/>:<span style={{fontSize:15}}>👤</span>}
                       </div>
                     </div>}
                     <div style={{padding:"12px 14px",display:"flex",gap:10,alignItems:"flex-start",flex:1,minHeight:0}}>
-                      <div style={{width:38,height:38,borderRadius:10,background:(it.color||"#7C3AED")+"18",border:"1px solid "+(it.color||"#7C3AED")+"30",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0,overflow:"hidden"}}>
+                      <div style={{width:38,height:38,borderRadius:10,background:(it.color||"#626262")+"18",border:"1px solid "+(it.color||"#626262")+"30",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0,overflow:"hidden"}}>
                         {it.imageUrl&&it.externalSource==="crm"?<img src={it.imageUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:it.externalSource==="content"?<PlatformIcon pid={it.externalPlatform||"other"} size={22}/>:<span>👤</span>}
                       </div>
                       <div style={{minWidth:0,flex:1}}>
@@ -12969,16 +12969,16 @@ function BoardPage({userId}:{userId:string}){
                       </div>
                     </div>
                     <div style={{padding:"8px 12px",borderTop:"1px solid #F1F5F9",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-                      <span style={{fontSize:9,fontWeight:900,textTransform:"uppercase",letterSpacing:.7,color:it.color||"#7C3AED",display:"flex",alignItems:"center",gap:5}}>
+                      <span style={{fontSize:9,fontWeight:900,textTransform:"uppercase",letterSpacing:.7,color:it.color||"#626262",display:"flex",alignItems:"center",gap:5}}>
                         {it.externalSource==="content"&&<PlatformIcon pid={it.externalPlatform||"other"} size={13}/>}
                         {it.externalSource==="crm"?"CRM":"Контент"}
                       </span>
                       <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:6,minWidth:0}}>
-                        {it.externalStatus&&<span style={{fontSize:9,fontWeight:800,padding:"3px 7px",borderRadius:999,background:(it.color||"#7C3AED")+"12",color:it.color||"#7C3AED",maxWidth:92,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.externalStatus}</span>}
+                        {it.externalStatus&&<span style={{fontSize:9,fontWeight:800,padding:"3px 7px",borderRadius:999,background:(it.color||"#626262")+"12",color:it.color||"#626262",maxWidth:92,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.externalStatus}</span>}
                         <button
                           onMouseDown={e=>e.stopPropagation()}
                           onClick={e=>{e.stopPropagation();setExpandedExternalItemId(it.id);}}
-                          style={{padding:"4px 8px",border:"1px solid #E2E8F0",borderRadius:999,background:"#fff",color:it.color||"#7C3AED",fontSize:9,fontWeight:900,cursor:"pointer",whiteSpace:"nowrap",boxShadow:"0 2px 8px rgba(15,23,42,0.06)"}}>Раскрыть</button>
+                          style={{padding:"4px 8px",border:"1px solid #E2E8F0",borderRadius:999,background:"#fff",color:it.color||"#626262",fontSize:9,fontWeight:900,cursor:"pointer",whiteSpace:"nowrap",boxShadow:"0 2px 8px rgba(23,23,23,0.06)"}}>Раскрыть</button>
                       </div>
                     </div>
                   </div>
@@ -12999,7 +12999,7 @@ function BoardPage({userId}:{userId:string}){
                 {/* Resize handle */}
                 {isSel&&!isEdit&&it.type!=="draw"&&(
                   <div onMouseDown={e=>{e.stopPropagation();resizeState.current={id:it.id,startMx:e.clientX,startMy:e.clientY,startW:it.w,startH:it.h};}}
-                    style={{position:"absolute",bottom:-5,right:-5,width:14,height:14,background:"#2563EB",borderRadius:3,cursor:"se-resize",zIndex:50,border:"2px solid #fff",boxShadow:"0 1px 4px rgba(0,0,0,0.2)"}}/>
+                    style={{position:"absolute",bottom:-5,right:-5,width:14,height:14,background:"#606060",borderRadius:3,cursor:"se-resize",zIndex:50,border:"2px solid #fff",boxShadow:"0 1px 4px rgba(0,0,0,0.2)"}}/>
                 )}
 
                 {/* Smart connector anchor points — show on hover/select */}
@@ -13021,10 +13021,10 @@ function BoardPage({userId}:{userId:string}){
                         style={{
                           position:"absolute",left:sx,top:sy,
                           width:14,height:14,borderRadius:"50%",
-                          background:isHov?"#2563EB":"#fff",
-                          border:"2px solid #2563EB",
+                          background:isHov?"#606060":"#fff",
+                          border:"2px solid #606060",
                           cursor:"crosshair",zIndex:60,
-                          boxShadow:isHov?"0 0 8px rgba(37,99,235,0.5)":"0 1px 3px rgba(0,0,0,0.2)",
+                          boxShadow:isHov?"0 0 8px rgba(96,96,96,0.5)":"0 1px 3px rgba(0,0,0,0.2)",
                           transition:"all 0.12s",
                         }}/>;
                     })}
@@ -13043,8 +13043,8 @@ function BoardPage({userId}:{userId:string}){
             top:marqueeRect.y*zoom+pan.y,
             width:marqueeRect.w*zoom,
             height:marqueeRect.h*zoom,
-            border:"1.5px dashed #2563EB",
-            background:"rgba(37,99,235,0.06)",
+            border:"1.5px dashed #606060",
+            background:"rgba(96,96,96,0.06)",
             borderRadius:3,
             pointerEvents:"none",
             zIndex:9998,
@@ -13055,8 +13055,8 @@ function BoardPage({userId}:{userId:string}){
         {normalizeBoardItems(items as any[]).length===0&&!loadingCanvas&&(
           <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
             <div style={{fontSize:48,marginBottom:12}}>🎨</div>
-            <div style={{fontSize:16,fontWeight:700,color:"#94A3B8",marginBottom:6}}>Доска пуста</div>
-            <div style={{fontSize:13,color:"#CBD5E1",maxWidth:260,textAlign:"center",lineHeight:1.6}}>Выбери инструмент в панели сверху и кликни на холст</div>
+            <div style={{fontSize:16,fontWeight:700,color:"#A1A1A1",marginBottom:6}}>Доска пуста</div>
+            <div style={{fontSize:13,color:"#D3D3D3",maxWidth:260,textAlign:"center",lineHeight:1.6}}>Выбери инструмент в панели сверху и кликни на холст</div>
           </div>
         )}
         {loadingCanvas&&(
@@ -13111,26 +13111,26 @@ function BoardPage({userId}:{userId:string}){
           width:Math.min(520,Math.round(window.innerWidth*0.42)),
           zIndex:95,background:"#fff",
           borderLeft:"1px solid #E2E8F0",
-          boxShadow:"-20px 0 50px rgba(15,23,42,0.12)",
+          boxShadow:"-20px 0 50px rgba(23,23,23,0.12)",
           display:"flex",flexDirection:"column",
         }}>
           {/* Header */}
           <div style={{padding:"12px 16px",borderBottom:"1px solid #E2E8F0",display:"flex",alignItems:"center",gap:10,background:"#FAFAFA",flexShrink:0}}>
-            <div style={{width:32,height:32,borderRadius:9,background:isDoc?"#4F46E5":"#10B981",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>
+            <div style={{width:32,height:32,borderRadius:9,background:isDoc?"#5B5B5B":"#808080",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>
               {isDoc?"📄":"▦"}
             </div>
             <input value={docItem.text||""} onChange={e=>{
               const next=normalizeBoardItems(items as any[]).map(i=>i.id===docItem.id?{...i,text:e.target.value}:i);
               setItems(next);clearTimeout((window as any)._titleTimer);
               (window as any)._titleTimer=setTimeout(()=>triggerSave(next,lines),1500);
-            }} style={{flex:1,border:"none",background:"transparent",fontSize:15,fontWeight:700,color:"#1E293B",outline:"none",fontFamily:"'Inter',sans-serif"}}
+            }} style={{flex:1,border:"none",background:"transparent",fontSize:15,fontWeight:700,color:"#282828",outline:"none",fontFamily:"'Inter',sans-serif"}}
             placeholder={isDoc?"Название документа":"Название таблицы"}/>
             <button onClick={exportPDF} title="Скачать PDF"
-              style={{padding:"5px 12px",background:"linear-gradient(135deg,#16A34A,#15803D)",color:"#fff",border:"none",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
+              style={{padding:"5px 12px",background:"linear-gradient(135deg,#6F6F6F,#585858)",color:"#fff",border:"none",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
               📄 PDF
             </button>
             <button onClick={()=>setDocPanelId(null)}
-              style={{width:28,height:28,border:"1px solid #E2E8F0",borderRadius:7,background:"transparent",cursor:"pointer",color:"#64748B",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✕</button>
+              style={{width:28,height:28,border:"1px solid #E2E8F0",borderRadius:7,background:"transparent",cursor:"pointer",color:"#727272",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✕</button>
           </div>
 
           {/* Doc editor */}
@@ -13138,18 +13138,18 @@ function BoardPage({userId}:{userId:string}){
             <div style={{padding:"6px 12px",borderBottom:"1px solid #F1F5F9",display:"flex",gap:3,flexWrap:"wrap",background:"#FAFAFA",flexShrink:0}}>
               {([{c:"bold",l:"B",s:{fontWeight:900}},{c:"italic",l:"I",s:{fontStyle:"italic"}},{c:"underline",l:"U",s:{textDecoration:"underline"}}] as {c:string;l:string;s:any}[]).map(b=>(
                 <button key={b.c} onMouseDown={e=>{e.preventDefault();document.execCommand(b.c);}}
-                  style={{width:26,height:26,borderRadius:5,border:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",fontSize:12,...b.s,color:"#1E293B"}}>{b.l}</button>
+                  style={{width:26,height:26,borderRadius:5,border:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",fontSize:12,...b.s,color:"#282828"}}>{b.l}</button>
               ))}
               <div style={{width:1,height:20,background:"#E2E8F0",margin:"0 3px",alignSelf:"center"}}/>
               {["h1","h2","p"].map(t=>(
                 <button key={t} onMouseDown={e=>{e.preventDefault();document.execCommand("formatBlock",false,t);}}
-                  style={{padding:"3px 7px",borderRadius:5,border:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",fontSize:10,fontWeight:600,color:"#64748B"}}>{t.toUpperCase()}</button>
+                  style={{padding:"3px 7px",borderRadius:5,border:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",fontSize:10,fontWeight:600,color:"#727272"}}>{t.toUpperCase()}</button>
               ))}
               <div style={{width:1,height:20,background:"#E2E8F0",margin:"0 3px",alignSelf:"center"}}/>
               <button onMouseDown={e=>{e.preventDefault();document.execCommand("insertUnorderedList");}}
-                style={{padding:"3px 7px",borderRadius:5,border:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",fontSize:10,color:"#64748B"}}>• Список</button>
+                style={{padding:"3px 7px",borderRadius:5,border:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",fontSize:10,color:"#727272"}}>• Список</button>
               <button onMouseDown={e=>{e.preventDefault();document.execCommand("insertOrderedList");}}
-                style={{padding:"3px 7px",borderRadius:5,border:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",fontSize:10,color:"#64748B"}}>1. Нум.</button>
+                style={{padding:"3px 7px",borderRadius:5,border:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",fontSize:10,color:"#727272"}}>1. Нум.</button>
             </div>
             <div contentEditable suppressContentEditableWarning
               onInput={e=>{
@@ -13159,17 +13159,17 @@ function BoardPage({userId}:{userId:string}){
                 (window as any)._docTimer=setTimeout(()=>triggerSave(next,lines),1500);
               }}
               dangerouslySetInnerHTML={{__html:(docItem as any).docContent||"<p>Начни писать здесь...</p>"}}
-              style={{flex:1,padding:"20px 22px",outline:"none",fontSize:14,lineHeight:1.8,color:"#1E293B",overflowY:"auto",fontFamily:"'Inter',sans-serif"}}/>
+              style={{flex:1,padding:"20px 22px",outline:"none",fontSize:14,lineHeight:1.8,color:"#282828",overflowY:"auto",fontFamily:"'Inter',sans-serif"}}/>
           </div>}
 
           {/* Table editor */}
           {!isDoc&&<div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
             <div style={{padding:"7px 14px",borderBottom:"1px solid #F1F5F9",display:"flex",gap:6,flexWrap:"wrap",background:"#FAFAFA",flexShrink:0}}>
               {[
-                {l:"+ Строка",fn:()=>saveTable([...tableRows,Array(tableRows[0]?.length||4).fill("")]),color:"#10B981"},
-                {l:"+ Столбец",fn:()=>saveTable(tableRows.map(r=>[...r,""])),color:"#10B981"},
-                ...(tableRows.length>1?[{l:"− Строку",fn:()=>saveTable(tableRows.slice(0,-1)),color:"#EF4444"}]:[]),
-                ...((tableRows[0]?.length||0)>1?[{l:"− Столбец",fn:()=>saveTable(tableRows.map(r=>r.slice(0,-1))),color:"#EF4444"}]:[]),
+                {l:"+ Строка",fn:()=>saveTable([...tableRows,Array(tableRows[0]?.length||4).fill("")]),color:"#808080"},
+                {l:"+ Столбец",fn:()=>saveTable(tableRows.map(r=>[...r,""])),color:"#808080"},
+                ...(tableRows.length>1?[{l:"− Строку",fn:()=>saveTable(tableRows.slice(0,-1)),color:"#777777"}]:[]),
+                ...((tableRows[0]?.length||0)>1?[{l:"− Столбец",fn:()=>saveTable(tableRows.map(r=>r.slice(0,-1))),color:"#777777"}]:[]),
               ].map((btn,i)=>(
                 <button key={i} onClick={btn.fn}
                   style={{padding:"4px 10px",borderRadius:6,border:"1px solid #E2E8F0",background:"#fff",cursor:"pointer",fontSize:11,fontWeight:600,color:btn.color}}>
@@ -13187,7 +13187,7 @@ function BoardPage({userId}:{userId:string}){
                           <input value={cell} onChange={e=>{
                             const nr=tableRows.map((r,r2)=>r2===ri?r.map((c,c2)=>c2===ci?e.target.value:c):r);
                             saveTable(nr);
-                          }} style={{width:"100%",padding:"7px 9px",border:"none",background:"transparent",fontSize:12,fontFamily:"'Inter',sans-serif",fontWeight:ri===0?700:400,color:"#1E293B",outline:"none",boxSizing:"border-box" as const}}/>
+                          }} style={{width:"100%",padding:"7px 9px",border:"none",background:"transparent",fontSize:12,fontFamily:"'Inter',sans-serif",fontWeight:ri===0?700:400,color:"#282828",outline:"none",boxSizing:"border-box" as const}}/>
                         </td>
                       ))}
                     </tr>
@@ -13201,12 +13201,12 @@ function BoardPage({userId}:{userId:string}){
 
       {externalDropHint&&(
         <div style={{position:"absolute",inset:0,top:48,zIndex:55,pointerEvents:"none",display:"flex",alignItems:"center",justifyContent:"center"}}>
-          <div style={{padding:"18px 26px",borderRadius:12,background:"rgba(124,58,237,0.92)",color:"#fff",fontSize:15,fontWeight:900,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>Отпусти карточку на доску</div>
+          <div style={{padding:"18px 26px",borderRadius:12,background:"rgba(98,98,98,0.92)",color:"#fff",fontSize:15,fontWeight:900,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>Отпусти карточку на доску</div>
         </div>
       )}
 
       {externalPanel&&(
-        <div style={{position:"absolute",top:48,right:0,bottom:0,width:360,zIndex:90,background:"rgba(255,255,255,0.97)",backdropFilter:"blur(14px)",borderLeft:"1px solid #E2E8F0",boxShadow:"-16px 0 40px rgba(15,23,42,0.10)",display:"flex",flexDirection:"column"}}>
+        <div style={{position:"absolute",top:48,right:0,bottom:0,width:360,zIndex:90,background:"rgba(255,255,255,0.97)",backdropFilter:"blur(14px)",borderLeft:"1px solid #E2E8F0",boxShadow:"-16px 0 40px rgba(23,23,23,0.10)",display:"flex",flexDirection:"column"}}>
           <div style={{padding:18,borderBottom:"1px solid #E2E8F0"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:14}}>
               <div>
@@ -13218,7 +13218,7 @@ function BoardPage({userId}:{userId:string}){
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
               {([{"id":"crm","label":"CRM"},{"id":"content","label":"Контент"}] as const).map(s=>(
                 <button key={s.id} onClick={()=>{setExternalSource(s.id);setExternalSearch("");}}
-                  style={{padding:"10px 12px",borderRadius:8,border:"1px solid "+(externalSource===s.id?"#7C3AED":"#E2E8F0"),background:externalSource===s.id?"linear-gradient(135deg,#F5F3FF,#EEF2FF)":"#fff",color:externalSource===s.id?"#6D28D9":C.t2,fontSize:12,fontWeight:900,cursor:"pointer"}}>{s.label}</button>
+                  style={{padding:"10px 12px",borderRadius:8,border:"1px solid "+(externalSource===s.id?"#626262":"#E2E8F0"),background:externalSource===s.id?"linear-gradient(135deg,#F5F3FF,#EEF2FF)":"#fff",color:externalSource===s.id?"#515151":C.t2,fontSize:12,fontWeight:900,cursor:"pointer"}}>{s.label}</button>
               ))}
             </div>
             {externalSource==="crm"&&(
@@ -13238,11 +13238,11 @@ function BoardPage({userId}:{userId:string}){
               :externalCards.slice(0,80).map((card:any)=>(
                 <div key={`${card.source}_${card.id}`} draggable
                   onDragStart={e=>{e.dataTransfer.setData("application/x-vizzy-card",JSON.stringify(card));e.dataTransfer.effectAllowed="copy";}}
-                  style={{background:"#fff",border:"1px solid #E2E8F0",borderLeft:"4px solid "+card.color,borderRadius:10,padding:12,cursor:"grab",boxShadow:"0 4px 16px rgba(15,23,42,0.05)"}}>
+                  style={{background:"#fff",border:"1px solid #E2E8F0",borderLeft:"4px solid "+card.color,borderRadius:10,padding:12,cursor:"grab",boxShadow:"0 4px 16px rgba(23,23,23,0.05)"}}>
                   <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
                     <div style={{width:42,height:42,borderRadius:10,background:card.color+"18",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0,overflow:"hidden",border:"1px solid "+card.color+"22",position:"relative"}}>
                       {card.imageUrl?<img src={card.imageUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:card.source==="content"?<PlatformIcon pid={card.platform||"other"} size={24}/>:<span>👤</span>}
-                      {card.source==="content"&&card.imageUrl&&<div style={{position:"absolute",right:-1,bottom:-1,width:18,height:18,borderRadius:7,background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(15,23,42,0.16)"}}><PlatformIcon pid={card.platform||"other"} size={13}/></div>}
+                      {card.source==="content"&&card.imageUrl&&<div style={{position:"absolute",right:-1,bottom:-1,width:18,height:18,borderRadius:7,background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(23,23,23,0.16)"}}><PlatformIcon pid={card.platform||"other"} size={13}/></div>}
                     </div>
                     <div style={{minWidth:0,flex:1}}>
                       <div style={{fontSize:13,fontWeight:900,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{card.title}</div>
@@ -13251,7 +13251,7 @@ function BoardPage({userId}:{userId:string}){
                     </div>
                   </div>
                   <div style={{display:"flex",gap:8,marginTop:12}}>
-                    <button onClick={()=>addExternalCardToBoard(card)} style={{flex:1,padding:"8px 10px",border:"none",borderRadius:8,background:"linear-gradient(135deg,#7C3AED,#2563EB)",color:"#fff",fontSize:11,fontWeight:900,cursor:"pointer",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>Добавить</button>
+                    <button onClick={()=>addExternalCardToBoard(card)} style={{flex:1,padding:"8px 10px",border:"none",borderRadius:8,background:"linear-gradient(135deg,#626262,#606060)",color:"#fff",fontSize:11,fontWeight:900,cursor:"pointer",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>Добавить</button>
                     <button onClick={()=>alert(card.source==="crm"?"Открой раздел CRM для полной карточки лида":"Открой раздел Контент для полной карточки")} style={{padding:"8px 10px",border:"1px solid #E2E8F0",borderRadius:8,background:"#fff",color:C.t2,fontSize:11,fontWeight:800,cursor:"pointer"}}>Источник</button>
                   </div>
                 </div>
@@ -13261,16 +13261,16 @@ function BoardPage({userId}:{userId:string}){
         </div>
       )}
 
-      {expandedExternalItem&&(<div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.58)",zIndex:320,display:"flex",alignItems:"center",justifyContent:"center",padding:20,backdropFilter:"blur(8px)"}} onClick={()=>setExpandedExternalItemId(null)}>
-        <div style={{width:"min(620px,100%)",maxHeight:"86vh",overflow:"hidden",background:"#fff",borderRadius:12,boxShadow:"0 28px 80px rgba(15,23,42,0.34)",border:"1px solid rgba(226,232,240,0.9)",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
-          <div style={{height:8,background:`linear-gradient(90deg, ${expandedExternalItem.color||"#7C3AED"}, #60A5FA)`}}/>
+      {expandedExternalItem&&(<div style={{position:"fixed",inset:0,background:"rgba(23,23,23,0.58)",zIndex:320,display:"flex",alignItems:"center",justifyContent:"center",padding:20,backdropFilter:"blur(8px)"}} onClick={()=>setExpandedExternalItemId(null)}>
+        <div style={{width:"min(620px,100%)",maxHeight:"86vh",overflow:"hidden",background:"#fff",borderRadius:12,boxShadow:"0 28px 80px rgba(23,23,23,0.34)",border:"1px solid rgba(226,232,240,0.9)",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+          <div style={{height:8,background:`linear-gradient(90deg, ${expandedExternalItem.color||"#626262"}, #9A9A9A)`}}/>
           <div style={{padding:22,borderBottom:"1px solid #E2E8F0",display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16}}>
             <div style={{display:"flex",gap:14,minWidth:0,alignItems:"center"}}>
-              <div style={{width:58,height:58,borderRadius:12,background:(expandedExternalItem.color||"#7C3AED")+"16",border:"1px solid "+(expandedExternalItem.color||"#7C3AED")+"30",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",flexShrink:0}}>
+              <div style={{width:58,height:58,borderRadius:12,background:(expandedExternalItem.color||"#626262")+"16",border:"1px solid "+(expandedExternalItem.color||"#626262")+"30",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",flexShrink:0}}>
                 {expandedExternalImage?<img src={expandedExternalImage} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:expandedExternalItem.externalSource==="content"?<PlatformIcon pid={expandedExternalItem.externalPlatform||"other"} size={30}/>:<span style={{fontSize:24}}>👤</span>}
               </div>
               <div style={{minWidth:0}}>
-                <div style={{fontSize:11,fontWeight:900,textTransform:"uppercase",letterSpacing:.8,color:expandedExternalItem.color||"#7C3AED",marginBottom:5}}>{expandedExternalItem.externalSource==="crm"?"CRM-лид":"Контент-карточка"}</div>
+                <div style={{fontSize:11,fontWeight:900,textTransform:"uppercase",letterSpacing:.8,color:expandedExternalItem.color||"#626262",marginBottom:5}}>{expandedExternalItem.externalSource==="crm"?"CRM-лид":"Контент-карточка"}</div>
                 <div style={{fontSize:22,fontWeight:950,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{expandedExternalItem.externalTitle||expandedExternalItem.text||"Карточка"}</div>
                 <div style={{fontSize:13,color:C.t2,marginTop:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{expandedExternalItem.externalSubtitle||"Связанная карточка"}</div>
               </div>
@@ -13278,20 +13278,20 @@ function BoardPage({userId}:{userId:string}){
             <button onClick={()=>setExpandedExternalItemId(null)} style={{width:34,height:34,borderRadius:8,border:"1px solid #E2E8F0",background:"#F8FAFC",cursor:"pointer",fontSize:18,color:C.t2,flexShrink:0}}>×</button>
           </div>
           <div style={{padding:22,overflowY:"auto",display:"grid",gap:12}}>
-            {!expandedExternalRecord&&<div style={{padding:"12px 14px",borderRadius:10,background:"#FFFBEB",border:"1px solid #FDE68A",color:"#92400E",fontSize:12,lineHeight:1.5}}>Оригинальная запись не найдена или ещё не загружена. Ниже показаны данные, сохранённые в карточке на доске.</div>}
+            {!expandedExternalRecord&&<div style={{padding:"12px 14px",borderRadius:10,background:"#FFFBEB",border:"1px solid #E2E2E2",color:"#535353",fontSize:12,lineHeight:1.5}}>Оригинальная запись не найдена или ещё не загружена. Ниже показаны данные, сохранённые в карточке на доске.</div>}
             {externalDetailRows.map(row=>{
               const value=normalizeDetailValue(row.value);
               const isLong=value.length>90;
               const isLink=/^https?:\/\//i.test(value)||value.startsWith("mailto:");
               return <div key={row.label} style={{display:"grid",gridTemplateColumns:"150px 1fr",gap:14,padding:"12px 14px",borderRadius:10,background:"#F8FAFC",border:"1px solid #E2E8F0"}}>
                 <div style={{fontSize:11,fontWeight:900,color:C.t2,textTransform:"uppercase",letterSpacing:.5}}>{row.label}</div>
-                {isLink?<a href={value} target="_blank" rel="noreferrer" style={{fontSize:13,fontWeight:700,color:expandedExternalItem.color||"#2563EB",wordBreak:"break-all"}}>{value}</a>:<div style={{fontSize:13,fontWeight:600,color:C.t1,lineHeight:1.55,whiteSpace:isLong?"pre-wrap":"normal",wordBreak:"break-word"}}>{value}</div>}
+                {isLink?<a href={value} target="_blank" rel="noreferrer" style={{fontSize:13,fontWeight:700,color:expandedExternalItem.color||"#606060",wordBreak:"break-all"}}>{value}</a>:<div style={{fontSize:13,fontWeight:600,color:C.t1,lineHeight:1.55,whiteSpace:isLong?"pre-wrap":"normal",wordBreak:"break-word"}}>{value}</div>}
               </div>;
             })}
           </div>
           <div style={{padding:"14px 22px",borderTop:"1px solid #E2E8F0",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,background:"#F8FAFC"}}>
             <div style={{fontSize:11,color:C.t2}}>Данные подтягиваются из текущей CRM/Контент-таблицы по сохранённому ID.</div>
-            <button onClick={()=>setExpandedExternalItemId(null)} style={{padding:"10px 16px",border:"none",borderRadius:8,background:"linear-gradient(135deg,#7C3AED,#2563EB)",color:"#fff",fontSize:12,fontWeight:900,cursor:"pointer"}}>Закрыть</button>
+            <button onClick={()=>setExpandedExternalItemId(null)} style={{padding:"10px 16px",border:"none",borderRadius:8,background:"linear-gradient(135deg,#626262,#606060)",color:"#fff",fontSize:12,fontWeight:900,cursor:"pointer"}}>Закрыть</button>
           </div>
         </div>
       </div>)}
@@ -13421,12 +13421,12 @@ function OfferPage({userId}:{userId:string}){
   );
 
   const CopyIcon=({done}:{done:boolean})=>done
-    ?<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+    ?<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#808080" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
     :<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>;
 
   const PrimaryBtn=({children,onClick,disabled,grad="blue"}:{children:React.ReactNode,onClick?:()=>void,disabled?:boolean,grad?:string})=>{
-    const bg=grad==="purple"?"linear-gradient(135deg,#7C3AED,#A855F7)":"linear-gradient(135deg,#2563EB,#4F46E5)";
-    return<button onClick={onClick} disabled={disabled} style={{width:"100%",padding:"16px",borderRadius:10,border:"none",background:disabled?"rgba(255,255,255,0.06)":bg,color:disabled?C.t2:"#fff",fontSize:15,fontWeight:700,cursor:disabled?"not-allowed":"pointer",boxShadow:disabled?"none":"0 4px 20px rgba(37,99,235,0.3)",transition:"all 0.2s",opacity:disabled?0.7:1}}>{children}</button>;
+    const bg=grad==="purple"?"linear-gradient(135deg,#626262,#808080)":"linear-gradient(135deg,#606060,#5B5B5B)";
+    return<button onClick={onClick} disabled={disabled} style={{width:"100%",padding:"16px",borderRadius:10,border:"none",background:disabled?"rgba(255,255,255,0.06)":bg,color:disabled?C.t2:"#fff",fontSize:15,fontWeight:700,cursor:disabled?"not-allowed":"pointer",boxShadow:disabled?"none":"0 4px 20px rgba(96,96,96,0.3)",transition:"all 0.2s",opacity:disabled?0.7:1}}>{children}</button>;
   };
 
   const SecondaryBtn=({children,onClick}:{children:React.ReactNode,onClick?:()=>void})=>(
@@ -13444,10 +13444,10 @@ function OfferPage({userId}:{userId:string}){
       </div>
 
       {/* Offer card */}
-      <div style={{background:dark?"rgba(79,142,247,0.06)":"#fff",border:`1.5px solid ${dark?"rgba(79,142,247,0.22)":"#BFDBFE"}`,borderRadius:10,padding:28,boxShadow:dark?"0 0 40px rgba(79,142,247,0.08)":C.sh,position:"relative"}}>
+      <div style={{background:dark?"rgba(135,135,135,0.06)":"#fff",border:`1.5px solid ${dark?"rgba(135,135,135,0.22)":"#D7D7D7"}`,borderRadius:10,padding:28,boxShadow:dark?"0 0 40px rgba(135,135,135,0.08)":C.sh,position:"relative"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-          <span style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#4F8EF7",textTransform:"uppercase"}}>YOUR OFFER</span>
-          {activeOffer?.offer_text&&<button onClick={()=>copyText(activeOffer.offer_text,setCopied)} style={{background:"none",border:"none",cursor:"pointer",padding:6,borderRadius:8,color:copied?"#10B981":C.t2}}><CopyIcon done={copied}/></button>}
+          <span style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#878787",textTransform:"uppercase"}}>YOUR OFFER</span>
+          {activeOffer?.offer_text&&<button onClick={()=>copyText(activeOffer.offer_text,setCopied)} style={{background:"none",border:"none",cursor:"pointer",padding:6,borderRadius:8,color:copied?"#808080":C.t2}}><CopyIcon done={copied}/></button>}
         </div>
         {activeOffer?.offer_text
           ?<div style={{fontSize:20,fontWeight:700,color:C.t1,lineHeight:1.6}}>{activeOffer.offer_text}</div>
@@ -13456,10 +13456,10 @@ function OfferPage({userId}:{userId:string}){
       </div>
 
       {/* Positioning card */}
-      <div style={{background:dark?"rgba(168,85,247,0.05)":"#fff",border:`1.5px solid ${dark?"rgba(168,85,247,0.18)":"#EDE9FE"}`,borderRadius:10,padding:28,boxShadow:dark?"0 0 30px rgba(168,85,247,0.06)":C.sh,position:"relative"}}>
+      <div style={{background:dark?"rgba(128,128,128,0.05)":"#fff",border:`1.5px solid ${dark?"rgba(128,128,128,0.18)":"#EDEDED"}`,borderRadius:10,padding:28,boxShadow:dark?"0 0 30px rgba(128,128,128,0.06)":C.sh,position:"relative"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-          <span style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#A855F7",textTransform:"uppercase"}}>YOUR POSITIONING</span>
-          {activeOffer?.positioning_text&&<button onClick={()=>copyText(activeOffer.positioning_text,setCopiedPos)} style={{background:"none",border:"none",cursor:"pointer",padding:6,borderRadius:8,color:copiedPos?"#10B981":C.t2}}><CopyIcon done={copiedPos}/></button>}
+          <span style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#808080",textTransform:"uppercase"}}>YOUR POSITIONING</span>
+          {activeOffer?.positioning_text&&<button onClick={()=>copyText(activeOffer.positioning_text,setCopiedPos)} style={{background:"none",border:"none",cursor:"pointer",padding:6,borderRadius:8,color:copiedPos?"#808080":C.t2}}><CopyIcon done={copiedPos}/></button>}
         </div>
         {activeOffer?.positioning_text
           ?<div style={{fontSize:16,fontWeight:500,color:C.t1,lineHeight:1.65}}>{activeOffer.positioning_text}</div>
@@ -13486,9 +13486,9 @@ function OfferPage({userId}:{userId:string}){
       <div style={{fontSize:14,color:C.t2,marginBottom:28}}>Выбери способ</div>
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
         {[
-          {id:"manual",icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,bg:"#DBEAFE",title:"Написать самостоятельно",sub:"Я знаю свой оффер. Просто введу его.",accent:false},
-          {id:"paste",icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>,bg:"#F3F4F6",title:"Вставить готовый текст",sub:"У меня есть текст. Просто вставлю его.",accent:false},
-          {id:"quiz",icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>,bg:"linear-gradient(135deg,#2563EB,#4F46E5)",title:"Сформировать с ИИ",sub:"Составить оффер с помощью ИИ — ответь на 8 вопросов.",accent:true},
+          {id:"manual",icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#606060" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,bg:"#E8E8E8",title:"Написать самостоятельно",sub:"Я знаю свой оффер. Просто введу его.",accent:false},
+          {id:"paste",icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#727272" strokeWidth="2"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>,bg:"#F3F4F6",title:"Вставить готовый текст",sub:"У меня есть текст. Просто вставлю его.",accent:false},
+          {id:"quiz",icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>,bg:"linear-gradient(135deg,#606060,#5B5B5B)",title:"Сформировать с ИИ",sub:"Составить оффер с помощью ИИ — ответь на 8 вопросов.",accent:true},
         ].map(opt=>(
           <button key={opt.id} onClick={()=>{
             if(opt.id==="manual"){setManualText(activeOffer?.offer_text||"");setMode("manual");}
@@ -13497,15 +13497,15 @@ function OfferPage({userId}:{userId:string}){
           }} style={{
             padding:24,borderRadius:12,cursor:"pointer",textAlign:"left",
             display:"flex",gap:16,alignItems:"flex-start",
-            background:opt.accent?(dark?"rgba(79,142,247,0.1)":"#EFF6FF"):(dark?"#171717":"#fff"),
-            border:opt.accent?`1.5px solid rgba(79,142,247,0.3)`:`1px solid ${dark?"rgba(255,255,255,0.07)":C.bd}`,
-            boxShadow:opt.accent?"0 4px 24px rgba(79,142,247,0.12)":C.sh,
+            background:opt.accent?(dark?"rgba(135,135,135,0.1)":"#EFF6FF"):(dark?"#171717":"#fff"),
+            border:opt.accent?`1.5px solid rgba(135,135,135,0.3)`:`1px solid ${dark?"rgba(255,255,255,0.07)":C.bd}`,
+            boxShadow:opt.accent?"0 4px 24px rgba(135,135,135,0.12)":C.sh,
           }}>
             <div style={{width:44,height:44,borderRadius:8,background:opt.bg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{opt.icon}</div>
             <div>
               <div style={{fontSize:15,fontWeight:700,color:C.t1,marginBottom:4}}>{opt.title}</div>
               <div style={{fontSize:13,color:C.t2}}>{opt.sub}</div>
-              {opt.id==="quiz"&&<div style={{fontSize:11,color:"#4F8EF7",fontWeight:700,marginTop:6}}>8 вопросов · ИИ составит оффер за тебя</div>}
+              {opt.id==="quiz"&&<div style={{fontSize:11,color:"#878787",fontWeight:700,marginTop:6}}>8 вопросов · ИИ составит оффер за тебя</div>}
             </div>
           </button>
         ))}
@@ -13521,7 +13521,7 @@ function OfferPage({userId}:{userId:string}){
       <div style={{fontSize:14,color:C.t2,marginBottom:24}}>{mode==="manual"?"Напиши текст оффера в поле ниже":"Скопируй и вставь свой оффер"}</div>
       <textarea value={manualText} onChange={e=>setManualText(e.target.value)} autoFocus
         placeholder={mode==="manual"?"Мы помогаем [кому] достичь [результат] за [срок] через [метод]...":"Вставь текст оффера сюда..."}
-        style={{width:"100%",minHeight:180,padding:16,border:`1.5px solid ${dark?"rgba(79,142,247,0.25)":"#BFDBFE"}`,borderRadius:10,fontSize:16,background:dark?"#171717":C.ib,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
+        style={{width:"100%",minHeight:180,padding:16,border:`1.5px solid ${dark?"rgba(135,135,135,0.25)":"#D7D7D7"}`,borderRadius:10,fontSize:16,background:dark?"#171717":C.ib,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
       <div style={{marginTop:14}}><PrimaryBtn onClick={()=>saveOffer(manualText.trim())} disabled={!manualText.trim()||saving}>{saving?"Сохраняем...":"Сохранить оффер"}</PrimaryBtn></div>
     </div>
   );
@@ -13534,7 +13534,7 @@ function OfferPage({userId}:{userId:string}){
       <div style={{fontSize:14,color:C.t2,marginBottom:24}}>Кто ты, для кого, чем отличаешься от других</div>
       <textarea value={posText} onChange={e=>setPosText(e.target.value)} autoFocus
         placeholder="Например: Я бизнес-стратег для онлайн-предпринимателей с доходом от 500к. Помогаю выйти из операционки. В отличие от коучей — работаю с цифрами и процессами."
-        style={{width:"100%",minHeight:160,padding:16,border:`1.5px solid ${dark?"rgba(168,85,247,0.25)":"#DDD6FE"}`,borderRadius:10,fontSize:15,background:dark?"#171717":C.ib,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
+        style={{width:"100%",minHeight:160,padding:16,border:`1.5px solid ${dark?"rgba(128,128,128,0.25)":"#DDDDDD"}`,borderRadius:10,fontSize:15,background:dark?"#171717":C.ib,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
       <div style={{marginTop:14}}><PrimaryBtn onClick={()=>savePositioning(posText.trim())} disabled={!posText.trim()||saving} grad="purple">{saving?"Сохраняем...":"Сохранить позиционирование"}</PrimaryBtn></div>
     </div>
   );
@@ -13556,14 +13556,14 @@ function OfferPage({userId}:{userId:string}){
         <div style={{marginBottom:32}}>
           <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
             <span style={{fontSize:11,color:C.t2,fontWeight:600}}>Вопрос {quizStep+1} из 8</span>
-            <span style={{fontSize:11,color:"#4F8EF7",fontWeight:700}}>{Math.round(((quizStep+1)/8)*100)}%</span>
+            <span style={{fontSize:11,color:"#878787",fontWeight:700}}>{Math.round(((quizStep+1)/8)*100)}%</span>
           </div>
           <div style={{height:4,background:dark?"rgba(255,255,255,0.06)":"#E5E7EB",borderRadius:4,overflow:"hidden"}}>
-            <div style={{height:"100%",width:`${((quizStep+1)/8)*100}%`,background:"linear-gradient(90deg,#2563EB,#4F46E5)",borderRadius:4,transition:"width 0.4s ease"}}/>
+            <div style={{height:"100%",width:`${((quizStep+1)/8)*100}%`,background:"linear-gradient(90deg,#606060,#5B5B5B)",borderRadius:4,transition:"width 0.4s ease"}}/>
           </div>
           <div style={{display:"flex",gap:4,marginTop:10}}>
             {QUESTIONS.map((_,i)=>(
-              <div key={i} style={{flex:1,height:3,borderRadius:3,background:i<quizStep?"#4F8EF7":i===quizStep?(dark?"rgba(79,142,247,0.4)":"#BFDBFE"):(dark?"rgba(255,255,255,0.05)":"#E5E7EB"),transition:"background 0.3s"}}/>
+              <div key={i} style={{flex:1,height:3,borderRadius:3,background:i<quizStep?"#878787":i===quizStep?(dark?"rgba(135,135,135,0.4)":"#D7D7D7"):(dark?"rgba(255,255,255,0.05)":"#E5E7EB"),transition:"background 0.3s"}}/>
             ))}
           </div>
         </div>
@@ -13573,10 +13573,10 @@ function OfferPage({userId}:{userId:string}){
 
         {q.multi
           ?<textarea value={answer} onChange={e=>setAnswer(e.target.value)} autoFocus placeholder="Твой ответ..."
-              style={{width:"100%",minHeight:130,padding:16,border:`1.5px solid ${dark?"rgba(79,142,247,0.28)":"#BFDBFE"}`,borderRadius:10,fontSize:15,background:dark?"#171717":C.ib,color:C.t1,outline:"none",resize:"none" as const,lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
+              style={{width:"100%",minHeight:130,padding:16,border:`1.5px solid ${dark?"rgba(135,135,135,0.28)":"#D7D7D7"}`,borderRadius:10,fontSize:15,background:dark?"#171717":C.ib,color:C.t1,outline:"none",resize:"none" as const,lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
           :<input value={answer} onChange={e=>setAnswer(e.target.value)} autoFocus placeholder="Твой ответ..."
               onKeyDown={e=>e.key==="Enter"&&canNext&&(isLast?generateWithAI():setQuizStep(s=>s+1))}
-              style={{width:"100%",padding:16,border:`1.5px solid ${dark?"rgba(79,142,247,0.28)":"#BFDBFE"}`,borderRadius:10,fontSize:15,background:dark?"#171717":C.ib,color:C.t1,outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
+              style={{width:"100%",padding:16,border:`1.5px solid ${dark?"rgba(135,135,135,0.28)":"#D7D7D7"}`,borderRadius:10,fontSize:15,background:dark?"#171717":C.ib,color:C.t1,outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
         }
 
         {aiError&&<div style={{marginTop:12,padding:"10px 14px",borderRadius:8,background:"#FEF2F2",color:C.r,fontSize:13}}>{aiError}</div>}
@@ -13593,7 +13593,7 @@ function OfferPage({userId}:{userId:string}){
   /* ── GENERATING ── */
   if(mode==="generating")return(
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"65vh",gap:24}}>
-      <div style={{width:88,height:88,borderRadius:12,background:"linear-gradient(135deg,#2563EB,#4F46E5)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",animation:"pulse 1.5s ease-in-out infinite"}}>
+      <div style={{width:88,height:88,borderRadius:12,background:"linear-gradient(135deg,#606060,#5B5B5B)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",animation:"pulse 1.5s ease-in-out infinite"}}>
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
       </div>
       <div style={{textAlign:"center"}}>
@@ -13606,9 +13606,9 @@ function OfferPage({userId}:{userId:string}){
   /* ── RESULT ── */
   if(mode==="result")return(
     <div style={{maxWidth:720,margin:"0 auto",padding:"32px 24px"}}>
-      <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#4F8EF7",textTransform:"uppercase",marginBottom:8}}>Готово ✨</div>
+      <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#878787",textTransform:"uppercase",marginBottom:8}}>Готово ✨</div>
       <div style={{fontSize:22,fontWeight:900,color:C.t1,marginBottom:24}}>ИИ составил твой оффер</div>
-      <div style={{background:dark?"rgba(79,142,247,0.06)":"#F0F7FF",border:`1.5px solid ${dark?"rgba(79,142,247,0.22)":"#BFDBFE"}`,borderRadius:10,padding:28,marginBottom:24,minHeight:120,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
+      <div style={{background:dark?"rgba(135,135,135,0.06)":"#F0F7FF",border:`1.5px solid ${dark?"rgba(135,135,135,0.22)":"#D7D7D7"}`,borderRadius:10,padding:28,marginBottom:24,minHeight:120,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
         <div style={{fontSize:17,fontWeight:600,color:C.t1,lineHeight:1.7,whiteSpace:"pre-wrap"}}>{displayedOffer}<span style={{opacity:displayedOffer.length<generatedOffer.length?1:0,animation:"pulse 0.8s infinite"}}>▌</span></div>
       </div>
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
@@ -13631,7 +13631,7 @@ function OfferPage({userId}:{userId:string}){
               {new Date(h.created_at).toLocaleDateString("ru-RU",{day:"numeric",month:"long",year:"numeric"})}
             </div>
             <div style={{fontSize:14,color:C.t1,lineHeight:1.6,marginBottom:12}}>{h.offer_text||"—"}</div>
-            <button onClick={()=>saveOffer(h.offer_text,h.positioning_text)} style={{fontSize:12,color:"#4F8EF7",background:"none",border:"none",cursor:"pointer",padding:0,fontWeight:700}}>
+            <button onClick={()=>saveOffer(h.offer_text,h.positioning_text)} style={{fontSize:12,color:"#878787",background:"none",border:"none",cursor:"pointer",padding:0,fontWeight:700}}>
               Восстановить этот оффер →
             </button>
           </div>
@@ -13766,7 +13766,7 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
   const C2=()=><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>;
   const PencilI=()=><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
 
-  const SectionLabel=({children,color="#4F8EF7"}:{children:React.ReactNode,color?:string})=>(
+  const SectionLabel=({children,color="#878787"}:{children:React.ReactNode,color?:string})=>(
     <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color,textTransform:"uppercase" as const,marginBottom:10}}>{children}</div>
   );
 
@@ -13775,9 +13775,9 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
     const done=type==="offer"?!!offer:type==="marketing"?!!marketing:!!funnel;
     return(
       <button onClick={()=>callAI(type)} disabled={loading}
-        style={{flex:1,padding:"13px 10px",borderRadius:8,border:`1.5px solid ${dark?"rgba(79,142,247,0.3)":"#BFDBFE"}`,
-          background:loading?(dark?"rgba(79,142,247,0.08)":"#EFF6FF"):(done?(dark?"rgba(16,185,129,0.08)":"#F0FDF4"):(dark?"rgba(79,142,247,0.06)":"#F8FAFF")),
-          color:done?"#10B981":C.a,cursor:loading?"not-allowed":"pointer",
+        style={{flex:1,padding:"13px 10px",borderRadius:8,border:`1.5px solid ${dark?"rgba(135,135,135,0.3)":"#D7D7D7"}`,
+          background:loading?(dark?"rgba(135,135,135,0.08)":"#EFF6FF"):(done?(dark?"rgba(128,128,128,0.08)":"#F0FDF4"):(dark?"rgba(135,135,135,0.06)":"#F8FAFF")),
+          color:done?"#808080":C.a,cursor:loading?"not-allowed":"pointer",
           display:"flex",flexDirection:"column" as const,alignItems:"center",gap:6,fontSize:12,fontWeight:700,transition:"all 0.2s"}}>
         <div style={{fontSize:18}}>{loading?"⏳":done?"✅":icon}</div>
         {loading?"Генерирую...":done?"Перегенерировать":label}
@@ -13798,12 +13798,12 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
           <span style={{fontSize:11,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:1}}>{label}</span>
           <button onClick={()=>{navigator.clipboard.writeText(full);setCopied(true);setTimeout(()=>setCopied(false),2000);}}
-            style={{background:"none",border:"none",cursor:"pointer",color:copied?"#10B981":C.t2,fontSize:11,display:"flex",alignItems:"center",gap:4,fontWeight:600}}>
+            style={{background:"none",border:"none",cursor:"pointer",color:copied?"#808080":C.t2,fontSize:11,display:"flex",alignItems:"center",gap:4,fontWeight:600}}>
             <C2/>{copied?"Скопировано":"Копировать"}
           </button>
         </div>
         <textarea value={full} onChange={e=>setter(e.target.value)}
-          style={{width:"100%",minHeight:110,padding:14,border:`1.5px solid ${dark?"rgba(79,142,247,0.2)":"#DBEAFE"}`,borderRadius:8,fontSize:14,background:dark?"#121212":C.ib,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.65,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
+          style={{width:"100%",minHeight:110,padding:14,border:`1.5px solid ${dark?"rgba(135,135,135,0.2)":"#E8E8E8"}`,borderRadius:8,fontSize:14,background:dark?"#121212":C.ib,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.65,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
       </div>
     );
   };
@@ -13814,8 +13814,8 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
   const active=products.filter(p=>!p.is_archived);
   if(mode==="list"&&active.length===0)return(
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"calc(100vh - 120px)",gap:20,padding:24}}>
-      <div style={{width:88,height:88,borderRadius:12,background:dark?"rgba(245,158,11,0.1)":"#FFFBEB",display:"flex",alignItems:"center",justifyContent:"center",border:`1.5px solid ${dark?"rgba(245,158,11,0.25)":"#FDE68A"}`}}>
-        <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="1.5"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+      <div style={{width:88,height:88,borderRadius:12,background:dark?"rgba(167,167,167,0.1)":"#FFFBEB",display:"flex",alignItems:"center",justifyContent:"center",border:`1.5px solid ${dark?"rgba(167,167,167,0.25)":"#E2E2E2"}`}}>
+        <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#A7A7A7" strokeWidth="1.5"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
       </div>
       <div style={{textAlign:"center"}}>
         <div style={{fontSize:24,fontWeight:900,color:C.t1,marginBottom:8}}>Products & Prices</div>
@@ -13823,11 +13823,11 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
       </div>
       <div style={{display:"flex",flexDirection:"column",gap:10,width:"100%",maxWidth:380}}>
         <button onClick={()=>{resetForm();setMode("add");}}
-          style={{padding:"16px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#D97706,#F59E0B)",color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
+          style={{padding:"16px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#878787,#A7A7A7)",color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
           <PencilI/>Добавить продукт вручную
         </button>
         <button onClick={()=>onNav("product")}
-          style={{padding:"16px",borderRadius:10,border:`1.5px solid ${dark?"rgba(52,211,153,0.3)":"#A7F3D0"}`,background:dark?"rgba(52,211,153,0.06)":"#F0FDF4",color:"#34D399",fontSize:15,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+          style={{padding:"16px",borderRadius:10,border:`1.5px solid ${dark?"rgba(157,157,157,0.3)":"#D8D8D8"}`,background:dark?"rgba(157,157,157,0.06)":"#F0FDF4",color:"#9D9D9D",fontSize:15,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
           Создать продукт с ИИ
         </button>
@@ -13844,7 +13844,7 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
           <div style={{fontSize:24,fontWeight:900,color:C.t1}}>Products & Prices</div>
         </div>
         <button onClick={()=>{resetForm();setMode("add");}}
-          style={{padding:"11px 20px",borderRadius:8,border:"none",background:"linear-gradient(135deg,#D97706,#F59E0B)",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:8,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
+          style={{padding:"11px 20px",borderRadius:8,border:"none",background:"linear-gradient(135deg,#878787,#A7A7A7)",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:8,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
           <span style={{fontSize:18}}>+</span>Добавить продукт
         </button>
       </div>
@@ -13854,14 +13854,14 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
             style={{background:dark?"#171717":"#fff",border:`1px solid ${dark?"rgba(255,255,255,0.07)":C.bd}`,borderRadius:12,padding:20,cursor:"pointer",textAlign:"left",boxShadow:C.sh,transition:"all 0.2s"}}
             onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(-2px)";(e.currentTarget as HTMLElement).style.boxShadow="0 8px 32px rgba(0,0,0,0.12)";}}
             onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(0)";(e.currentTarget as HTMLElement).style.boxShadow=C.sh;}}>
-            <div style={{width:52,height:52,borderRadius:10,background:dark?"rgba(245,158,11,0.1)":"#FFFBEB",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:14,overflow:"hidden",border:`1px solid ${dark?"rgba(245,158,11,0.2)":"#FDE68A"}`}}>
-              {p.logo_url?<img src={p.logo_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="1.5"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>}
+            <div style={{width:52,height:52,borderRadius:10,background:dark?"rgba(167,167,167,0.1)":"#FFFBEB",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:14,overflow:"hidden",border:`1px solid ${dark?"rgba(167,167,167,0.2)":"#E2E2E2"}`}}>
+              {p.logo_url?<img src={p.logo_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#A7A7A7" strokeWidth="1.5"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>}
             </div>
             <div style={{fontSize:16,fontWeight:800,color:C.t1,marginBottom:6,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</div>
             <div style={{fontSize:13,color:C.t2,lineHeight:1.5,marginBottom:12,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical" as any}}>{p.description}</div>
             {p.prices?.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:6}}>
               {p.prices.slice(0,2).map((pr:any,i:number)=>(
-                <span key={i} style={{fontSize:12,fontWeight:700,color:"#F59E0B",background:dark?"rgba(245,158,11,0.1)":"#FFFBEB",padding:"4px 10px",borderRadius:8,border:"1px solid rgba(245,158,11,0.2)"}}>{pr.name?`${pr.name}: `:""}{pr.price}</span>
+                <span key={i} style={{fontSize:12,fontWeight:700,color:"#A7A7A7",background:dark?"rgba(167,167,167,0.1)":"#FFFBEB",padding:"4px 10px",borderRadius:8,border:"1px solid rgba(167,167,167,0.2)"}}>{pr.name?`${pr.name}: `:""}{pr.price}</span>
               ))}
               {p.prices.length>2&&<span style={{fontSize:12,color:C.t2}}>+{p.prices.length-2}</span>}
             </div>}
@@ -13896,13 +13896,13 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
 
       {/* Section 1 */}
       <div style={{background:dark?"#171717":"#fff",borderRadius:10,padding:24,marginBottom:16,border:`1px solid ${dark?"rgba(255,255,255,0.06)":C.bd}`,boxShadow:C.sh}}>
-        <SectionLabel color="#F59E0B">Основная информация</SectionLabel>
+        <SectionLabel color="#A7A7A7">Основная информация</SectionLabel>
 
         {/* Logo upload */}
         <div style={{marginBottom:20}}>
           <input ref={logoRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0])uploadLogo(e.target.files[0]);}}/>
           <button onClick={()=>logoRef.current?.click()}
-            style={{width:80,height:80,borderRadius:10,border:`2px dashed ${dark?"rgba(245,158,11,0.3)":"#FDE68A"}`,background:dark?"rgba(245,158,11,0.06)":"#FFFBEB",cursor:"pointer",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            style={{width:80,height:80,borderRadius:10,border:`2px dashed ${dark?"rgba(167,167,167,0.3)":"#E2E2E2"}`,background:dark?"rgba(167,167,167,0.06)":"#FFFBEB",cursor:"pointer",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center"}}>
             {form.logoUrl?<img src={form.logoUrl} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:logoLoading?<div style={{fontSize:11,color:C.t2}}>...</div>:<div style={{textAlign:"center"}}><div style={{fontSize:22}}>📦</div><div style={{fontSize:9,color:C.t2,marginTop:2}}>Логотип</div></div>}
           </button>
         </div>
@@ -13928,7 +13928,7 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
 
       {/* Section 2 */}
       <div style={{background:dark?"#171717":"#fff",borderRadius:10,padding:24,marginBottom:16,border:`1px solid ${dark?"rgba(255,255,255,0.06)":C.bd}`,boxShadow:C.sh}}>
-        <SectionLabel color="#A855F7">Целевая аудитория и боли</SectionLabel>
+        <SectionLabel color="#808080">Целевая аудитория и боли</SectionLabel>
         <textarea value={form.targetAudience} onChange={e=>setForm(f=>({...f,targetAudience:e.target.value}))} placeholder="Кто твой идеальный клиент для этого продукта? Опиши конкретно." rows={2} style={{...iS(),resize:"vertical" as const,minHeight:70,marginBottom:14}}/>
         <div style={{fontSize:12,fontWeight:700,color:C.t2,marginBottom:8}}>Главные боли аудитории</div>
         {pains.map((pain,i)=>(
@@ -13941,8 +13941,8 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
       </div>
 
       {/* Section 3 — AI Generation */}
-      <div style={{background:dark?"rgba(79,142,247,0.05)":"#F8FAFF",borderRadius:10,padding:24,marginBottom:16,border:`1.5px solid ${dark?"rgba(79,142,247,0.15)":"#DBEAFE"}`,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
-        <SectionLabel color="#4F8EF7">Сгенерировать с ИИ</SectionLabel>
+      <div style={{background:dark?"rgba(135,135,135,0.05)":"#F8FAFF",borderRadius:10,padding:24,marginBottom:16,border:`1.5px solid ${dark?"rgba(135,135,135,0.15)":"#E8E8E8"}`,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
+        <SectionLabel color="#878787">Сгенерировать с ИИ</SectionLabel>
         <div style={{fontSize:13,color:C.t2,marginBottom:16}}>Заполни поля выше и нажми нужную кнопку. ИИ сделает остальное.</div>
         {formErr&&<div style={{padding:"10px 14px",borderRadius:8,background:"#FEF2F2",color:C.r,fontSize:13,marginBottom:14}}>{formErr}</div>}
         <div style={{display:"flex",gap:10,marginBottom:20}}>
@@ -13959,7 +13959,7 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
 
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
         <button onClick={saveProduct} disabled={saving||!form.name.trim()}
-          style={{width:"100%",padding:"16px",borderRadius:10,border:"none",background:form.name.trim()?"linear-gradient(135deg,#D97706,#F59E0B)":"rgba(255,255,255,0.06)",color:form.name.trim()?"#fff":C.t2,fontSize:15,fontWeight:700,cursor:form.name.trim()?"pointer":"not-allowed",boxShadow:form.name.trim()?"0 4px 20px rgba(245,158,11,0.3)":"none"}}>
+          style={{width:"100%",padding:"16px",borderRadius:10,border:"none",background:form.name.trim()?"linear-gradient(135deg,#878787,#A7A7A7)":"rgba(255,255,255,0.06)",color:form.name.trim()?"#fff":C.t2,fontSize:15,fontWeight:700,cursor:form.name.trim()?"pointer":"not-allowed",boxShadow:form.name.trim()?"0 4px 20px rgba(167,167,167,0.3)":"none"}}>
           {saving?"Сохраняем...":"Сохранить продукт"}
         </button>
         <button onClick={()=>setMode("list")} style={{width:"100%",padding:"14px",borderRadius:10,border:`1px solid ${dark?"rgba(255,255,255,0.08)":C.bd}`,background:"transparent",color:C.t2,fontSize:14,fontWeight:500,cursor:"pointer"}}>Отмена</button>
@@ -13970,7 +13970,7 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
   /* ── PRODUCT DETAIL ── */
   if(mode==="detail"&&selected){
     const s=selected;
-    const InlineEdit=({field,value,multiline,label,color="#4F8EF7"}:{field:string,value:string,multiline?:boolean,label:string,color?:string})=>{
+    const InlineEdit=({field,value,multiline,label,color="#878787"}:{field:string,value:string,multiline?:boolean,label:string,color?:string})=>{
       const isEditing=editField===field;
       return(
         <div style={{marginBottom:24}}>
@@ -13980,7 +13980,7 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
               style={{background:"none",border:"none",cursor:"pointer",color:isEditing?C.a:C.t2,padding:4}}>
               <PencilI/>
             </button>
-            {isEditing&&<button onClick={()=>saveDetailField(field,editVal)} style={{fontSize:11,color:"#10B981",background:"none",border:"none",cursor:"pointer",fontWeight:700}}>Сохранить</button>}
+            {isEditing&&<button onClick={()=>saveDetailField(field,editVal)} style={{fontSize:11,color:"#808080",background:"none",border:"none",cursor:"pointer",fontWeight:700}}>Сохранить</button>}
           </div>
           {isEditing
             ?multiline
@@ -14001,8 +14001,8 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
 
         {/* Header */}
         <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:28}}>
-          <div style={{width:64,height:64,borderRadius:12,background:dark?"rgba(245,158,11,0.1)":"#FFFBEB",display:"flex",alignItems:"center",justifyContent:"center",border:`1.5px solid ${dark?"rgba(245,158,11,0.2)":"#FDE68A"}`,overflow:"hidden",flexShrink:0}}>
-            {s.logo_url?<img src={s.logo_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="1.5"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>}
+          <div style={{width:64,height:64,borderRadius:12,background:dark?"rgba(167,167,167,0.1)":"#FFFBEB",display:"flex",alignItems:"center",justifyContent:"center",border:`1.5px solid ${dark?"rgba(167,167,167,0.2)":"#E2E2E2"}`,overflow:"hidden",flexShrink:0}}>
+            {s.logo_url?<img src={s.logo_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#A7A7A7" strokeWidth="1.5"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>}
           </div>
           <div style={{flex:1,minWidth:0}}>
             <div style={{fontSize:24,fontWeight:900,color:C.t1,marginBottom:4}}>{s.name}</div>
@@ -14014,12 +14014,12 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
         {/* Prices */}
         {(s.prices?.length>0)&&(
           <div style={{marginBottom:24}}>
-            <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#F59E0B",textTransform:"uppercase",marginBottom:10}}>Тарифы</div>
+            <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#A7A7A7",textTransform:"uppercase",marginBottom:10}}>Тарифы</div>
             <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
               {s.prices.map((pr:any,i:number)=>(
-                <div key={i} style={{padding:"12px 18px",borderRadius:8,background:dark?"rgba(245,158,11,0.08)":"#FFFBEB",border:`1.5px solid ${dark?"rgba(245,158,11,0.2)":"#FDE68A"}`}}>
-                  {pr.name&&<div style={{fontSize:11,color:"#D97706",fontWeight:700,marginBottom:2}}>{pr.name}</div>}
-                  <div style={{fontSize:18,fontWeight:900,color:"#F59E0B"}}>{pr.price}</div>
+                <div key={i} style={{padding:"12px 18px",borderRadius:8,background:dark?"rgba(167,167,167,0.08)":"#FFFBEB",border:`1.5px solid ${dark?"rgba(167,167,167,0.2)":"#E2E2E2"}`}}>
+                  {pr.name&&<div style={{fontSize:11,color:"#878787",fontWeight:700,marginBottom:2}}>{pr.name}</div>}
+                  <div style={{fontSize:18,fontWeight:900,color:"#A7A7A7"}}>{pr.price}</div>
                 </div>
               ))}
             </div>
@@ -14027,15 +14027,15 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
         )}
 
         <div style={{background:dark?"#171717":"#fff",borderRadius:10,padding:24,border:`1px solid ${dark?"rgba(255,255,255,0.06)":C.bd}`,boxShadow:C.sh,marginBottom:16}}>
-          <InlineEdit field="description" value={s.description} multiline label="Описание" color="#4F8EF7"/>
-          <InlineEdit field="target_audience" value={s.target_audience} multiline label="Целевая аудитория" color="#A855F7"/>
+          <InlineEdit field="description" value={s.description} multiline label="Описание" color="#878787"/>
+          <InlineEdit field="target_audience" value={s.target_audience} multiline label="Целевая аудитория" color="#808080"/>
           {s.pains?.length>0&&(
             <div style={{marginBottom:24}}>
-              <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#EC4899",textTransform:"uppercase",marginBottom:10}}>Боли аудитории</div>
+              <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#828282",textTransform:"uppercase",marginBottom:10}}>Боли аудитории</div>
               <div style={{display:"flex",flexDirection:"column",gap:6}}>
                 {s.pains.map((pain:string,i:number)=>(
-                  <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:8,background:dark?"rgba(236,72,153,0.06)":"#FFF1F8",border:`1px solid ${dark?"rgba(236,72,153,0.15)":"#FCE7F3"}`}}>
-                    <div style={{width:6,height:6,borderRadius:"50%",background:"#EC4899",flexShrink:0}}/>
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:8,background:dark?"rgba(130,130,130,0.06)":"#FFF1F8",border:`1px solid ${dark?"rgba(130,130,130,0.15)":"#EFEFEF"}`}}>
+                    <div style={{width:6,height:6,borderRadius:"50%",background:"#828282",flexShrink:0}}/>
                     <span style={{fontSize:13,color:C.t1}}>{pain}</span>
                   </div>
                 ))}
@@ -14044,10 +14044,10 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
           )}
         </div>
 
-        <div style={{background:dark?"rgba(79,142,247,0.05)":"#F8FAFF",borderRadius:10,padding:24,border:`1.5px solid ${dark?"rgba(79,142,247,0.12)":"#DBEAFE"}`,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
-          <InlineEdit field="offer_text" value={s.offer_text} multiline label="Offer" color="#4F8EF7"/>
-          <InlineEdit field="marketing_system" value={s.marketing_system} multiline label="Marketing System" color="#34D399"/>
-          <InlineEdit field="sales_funnel" value={s.sales_funnel} multiline label="Sales Funnel" color="#F59E0B"/>
+        <div style={{background:dark?"rgba(135,135,135,0.05)":"#F8FAFF",borderRadius:10,padding:24,border:`1.5px solid ${dark?"rgba(135,135,135,0.12)":"#E8E8E8"}`,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
+          <InlineEdit field="offer_text" value={s.offer_text} multiline label="Offer" color="#878787"/>
+          <InlineEdit field="marketing_system" value={s.marketing_system} multiline label="Marketing System" color="#9D9D9D"/>
+          <InlineEdit field="sales_funnel" value={s.sales_funnel} multiline label="Sales Funnel" color="#A7A7A7"/>
         </div>
       </div>
     );
@@ -14077,7 +14077,7 @@ function FormsPage({userId}:{userId:string}){
   const[editId,setEditId]=useState<string|null>(null);
   const[bTitle,setBTitle]=useState("");
   const[bDesc,setBDesc]=useState("");
-  const[bAccent,setBAccent]=useState("#10B981");
+  const[bAccent,setBAccent]=useState("#808080");
   const[bQuestions,setBQuestions]=useState<Question[]>([]);
   const[bCompTitle,setBCompTitle]=useState("Спасибо за ответы!");
   const[bCompSub,setBCompSub]=useState("");
@@ -14109,14 +14109,14 @@ function FormsPage({userId}:{userId:string}){
   const openBuilder=(form?:FormData)=>{
     if(form){
       setEditId(form.id);setBTitle(form.title);setBDesc(form.description);
-      setBAccent(form.accent_color||"#10B981");
+      setBAccent(form.accent_color||"#808080");
       setBQuestions(form.questions||[]);
       setBCompTitle(form.completion_title||"Спасибо!");
       setBCompSub(form.completion_subtitle||"");
       setBCompUrl(form.completion_url||"");
       setBCompBtn(form.completion_btn_label||"Перейти");
     }else{
-      setEditId(null);setBTitle("");setBDesc("");setBAccent("#10B981");
+      setEditId(null);setBTitle("");setBDesc("");setBAccent("#808080");
       setBQuestions([]);setBCompTitle("Спасибо за ответы!");setBCompSub("");setBCompUrl("");setBCompBtn("Перейти");
     }
     setBuilderStep(1);setTab("builder");
@@ -14314,7 +14314,7 @@ function FormsPage({userId}:{userId:string}){
                 <div style={{fontSize:13,color:C.t2}}>{form.questions?.length||0}</div>
                 <div style={{fontSize:13,color:C.t2}}>—</div>
                 <div>
-                  <Chip color={form.is_active?"#16A34A":undefined}>{form.is_active?"Активна":"Откл."}</Chip>
+                  <Chip color={form.is_active?"#6F6F6F":undefined}>{form.is_active?"Активна":"Откл."}</Chip>
                 </div>
                 <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
                   <GhostBtn onClick={()=>copyLink(form.slug)} icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>}>
@@ -14323,7 +14323,7 @@ function FormsPage({userId}:{userId:string}){
                   <GhostBtn onClick={()=>loadAnalytics(form)} icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>}>Ответы</GhostBtn>
                   <GhostBtn onClick={()=>openBuilder(form)} icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>}/>
                   <button onClick={()=>toggleActive(form)} style={{padding:"7px 8px",borderRadius:9,border:`1px solid ${gl.cardBorder}`,background:gl.card,cursor:"pointer",color:C.t2,fontSize:11,fontWeight:600}}>{form.is_active?"Откл.":"Вкл."}</button>
-                  <button onClick={()=>deleteForm(form.id)} style={{padding:"7px 8px",borderRadius:9,border:"1px solid rgba(239,68,68,0.15)",background:"transparent",cursor:"pointer",color:"#EF4444",fontSize:12}}>
+                  <button onClick={()=>deleteForm(form.id)} style={{padding:"7px 8px",borderRadius:9,border:"1px solid rgba(119,119,119,0.15)",background:"transparent",cursor:"pointer",color:"#777777",fontSize:12}}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
                   </button>
                 </div>
@@ -14396,7 +14396,7 @@ function FormsPage({userId}:{userId:string}){
                     <div style={{display:"flex",gap:2}}>
                       <button onClick={()=>moveQ(i,-1)} disabled={i===0} style={{width:26,height:26,borderRadius:6,border:`1px solid ${gl.cardBorder}`,background:"transparent",cursor:"pointer",color:C.t2,fontSize:12,opacity:i===0?0.3:1,display:"flex",alignItems:"center",justifyContent:"center"}}>↑</button>
                       <button onClick={()=>moveQ(i,1)} disabled={i===bQuestions.length-1} style={{width:26,height:26,borderRadius:6,border:`1px solid ${gl.cardBorder}`,background:"transparent",cursor:"pointer",color:C.t2,fontSize:12,opacity:i===bQuestions.length-1?0.3:1,display:"flex",alignItems:"center",justifyContent:"center"}}>↓</button>
-                      <button onClick={()=>removeQ(q.id)} style={{width:26,height:26,borderRadius:6,border:"1px solid rgba(239,68,68,0.15)",background:"transparent",cursor:"pointer",color:"#EF4444",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+                      <button onClick={()=>removeQ(q.id)} style={{width:26,height:26,borderRadius:6,border:"1px solid rgba(119,119,119,0.15)",background:"transparent",cursor:"pointer",color:"#777777",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
                     </div>
                   </div>
                   <input value={q.label} onChange={e=>updateQ(q.id,{label:e.target.value})} placeholder={`Текст вопроса ${i+1}...`} style={gInput}/>
@@ -14480,7 +14480,7 @@ function FormsPage({userId}:{userId:string}){
                 {copied===selectedForm.slug?"Скопировано":"Ссылка"}
               </GhostBtn>
               {responses.length>0&&<GhostBtn onClick={exportCSV} icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>}>CSV</GhostBtn>}
-              {responses.length>0&&<button onClick={deleteAllResponses} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:9,border:"1px solid rgba(239,68,68,0.2)",background:"transparent",color:"#EF4444",fontSize:12,fontWeight:600,cursor:"pointer"}}>
+              {responses.length>0&&<button onClick={deleteAllResponses} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:9,border:"1px solid rgba(119,119,119,0.2)",background:"transparent",color:"#777777",fontSize:12,fontWeight:600,cursor:"pointer"}}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
                 Удалить все
               </button>}
@@ -14577,7 +14577,7 @@ function FormsPage({userId}:{userId:string}){
                         })}
                         <td style={{padding:"11px 16px"}}>
                           <button onClick={()=>deleteResponse(r.id)} title="Удалить ответ"
-                            style={{width:26,height:26,borderRadius:7,border:"1px solid rgba(239,68,68,0.15)",background:"transparent",cursor:"pointer",color:"#EF4444",display:"flex",alignItems:"center",justifyContent:"center",opacity:0.6,transition:"opacity 0.15s"}}
+                            style={{width:26,height:26,borderRadius:7,border:"1px solid rgba(119,119,119,0.15)",background:"transparent",cursor:"pointer",color:"#777777",display:"flex",alignItems:"center",justifyContent:"center",opacity:0.6,transition:"opacity 0.15s"}}
                             onMouseEnter={e=>(e.currentTarget as HTMLElement).style.opacity="1"}
                             onMouseLeave={e=>(e.currentTarget as HTMLElement).style.opacity="0.6"}>
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
@@ -14613,10 +14613,10 @@ const COPY_TOOLS=[
 ];
 
 const TAG_COLORS:Record<string,string>={
-  "Редактура":"#6366F1","Продажи":"#10B981","Стратегия":"#F59E0B",
-  "Сторителлинг":"#EC4899","Контент":"#8B5CF6","Стиль":"#14B8A6",
-  "Реклама":"#F97316","Видео":"#EF4444","Бренд":"#3B82F6",
-  "Аудитория":"#06B6D4","Рассылка":"#84CC16","Соцсети":"#0EA5E9",
+  "Редактура":"#757575","Продажи":"#808080","Стратегия":"#A7A7A7",
+  "Сторителлинг":"#828282","Контент":"#7C7C7C","Стиль":"#858585",
+  "Реклама":"#909090","Видео":"#777777","Бренд":"#7A7A7A",
+  "Аудитория":"#858585","Рассылка":"#A2A2A2","Соцсети":"#808080",
 };
 
 /* ============ COPY AI — BATCH 1 (варианты) ============ */
@@ -14695,7 +14695,7 @@ async function copyGenVariants(system:string,user:string,count:number,avoid:stri
 
 function CopyToolRunner({tool,dark}:{tool:any,dark:boolean}){
   const cfg=COPY_B_TOOLS[tool.id];
-  const accent=TAG_COLORS[tool.tag]||"#8B5CF6";
+  const accent=TAG_COLORS[tool.tag]||"#7C7C7C";
   const bd=C.bd;
   const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
   const inputBg=dark?"#1C1C1C":"#F8FAFC";
@@ -14785,8 +14785,8 @@ function CopyToolRunner({tool,dark}:{tool:any,dark:boolean}){
             <div style={{fontSize:15,color:C.t1,lineHeight:1.65,whiteSpace:"pre-wrap" as const}}>{v.body}</div>
             {v.note&&<div style={{fontSize:12.5,color:C.t2,marginTop:10,lineHeight:1.5,borderLeft:`2px solid ${bd}`,paddingLeft:10}}>{v.note}</div>}
             <div style={{display:"flex",gap:8,marginTop:14}}>
-              <button onClick={()=>copyBody(v.body,i)} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:copied===i?"#10B981":C.t2,fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
-                {copied===i?<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Скопировано</>:<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Копировать</>}
+              <button onClick={()=>copyBody(v.body,i)} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:copied===i?"#808080":C.t2,fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                {copied===i?<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#808080" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Скопировано</>:<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Копировать</>}
               </button>
               <button onClick={()=>regen(i)} disabled={regenIdx===i} title="Перегенерировать вариант" style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:12.5,fontWeight:600,cursor:regenIdx===i?"default":"pointer",fontFamily:"'Inter',sans-serif"}}>
                 {regenIdx===i?<><div style={{width:12,height:12,border:"2px solid rgba(150,150,150,0.3)",borderTopColor:C.t2,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>Генерирую</>:<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Другой вариант</>}
@@ -14851,7 +14851,7 @@ async function copyRewrite(system:string,user:string):Promise<string>{
 
 function CopyRewriteRunner({tool,dark}:{tool:any,dark:boolean}){
   const cfg=COPY_A_TOOLS[tool.id];
-  const accent=TAG_COLORS[tool.tag]||"#8B5CF6";
+  const accent=TAG_COLORS[tool.tag]||"#7C7C7C";
   const bd=C.bd;
   const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
   const inputBg=dark?"#1C1C1C":"#F8FAFC";
@@ -14919,8 +14919,8 @@ function CopyRewriteRunner({tool,dark}:{tool:any,dark:boolean}){
           <div style={{display:"flex",gap:4,background:inputBg,borderRadius:8,padding:3}}>
             {(["result","original"] as const).map(t=><button key={t} onClick={()=>setTab(t)} style={{padding:"6px 14px",borderRadius:8,border:"none",background:tab===t?(dark?"rgba(255,255,255,0.08)":"#fff"):"transparent",color:tab===t?C.t1:C.t2,fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>{t==="result"?"Результат":"Оригинал"}</button>)}
           </div>
-          <button onClick={copy} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:copied?"#10B981":C.t2,fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
-            {copied?<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Скопировано</>:<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Копировать</>}
+          <button onClick={copy} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:copied?"#808080":C.t2,fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+            {copied?<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#808080" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Скопировано</>:<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Копировать</>}
           </button>
         </div>
         <div style={{fontSize:15,color:C.t1,lineHeight:1.7,whiteSpace:"pre-wrap" as const,opacity:tab==="original"?0.75:1}}>{tab==="result"?result:(vals[sourceKey]||"")}</div>
@@ -15001,7 +15001,7 @@ function CopyAIPage({userId}:{userId:string}){
           <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.025em",marginBottom:4}}>Инструменты Копирайтинга</div>
           <div style={{fontSize:14,color:C.t2}}>{COPY_TOOLS.length} инструментов · Vizzy Copy AI</div>
         </div>
-        <button style={{display:"flex",alignItems:"center",gap:8,padding:"10px 18px",borderRadius:8,border:"none",background:"#2563EB",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",flexShrink:0,letterSpacing:"-0.01em"}}>
+        <button style={{display:"flex",alignItems:"center",gap:8,padding:"10px 18px",borderRadius:8,border:"none",background:"#606060",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",flexShrink:0,letterSpacing:"-0.01em"}}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Создать свой
         </button>
@@ -15040,7 +15040,7 @@ function CopyAIPage({userId}:{userId:string}){
 
               {/* Star */}
               <button onClick={e=>toggleFav(tool.id,e)}
-                style={{position:"absolute",top:14,right:14,background:"none",border:"none",cursor:"pointer",color:favs.has(tool.id)?"#F59E0B":C.t2,opacity:favs.has(tool.id)?1:0.4,transition:"all 0.15s",padding:2}}
+                style={{position:"absolute",top:14,right:14,background:"none",border:"none",cursor:"pointer",color:favs.has(tool.id)?"#A7A7A7":C.t2,opacity:favs.has(tool.id)?1:0.4,transition:"all 0.15s",padding:2}}
                 onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.opacity="1";}}
                 onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.opacity=favs.has(tool.id)?"1":"0.4";}}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill={favs.has(tool.id)?"currentColor":"none"} stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
@@ -15364,7 +15364,7 @@ function KirillAIPage({userId}:{userId:string}){
             <div style={{minWidth:0}}>
               <div style={{fontSize:15,fontWeight:700,color:C.t1,letterSpacing:"-0.01em"}}>Kirill Scales AI</div>
               <div style={{fontSize:11,color:C.t2,fontWeight:500,display:"flex",alignItems:"center",gap:5}}>
-                <div style={{width:6,height:6,borderRadius:"50%",background:loading?"#F59E0B":"#10B981"}}/>
+                <div style={{width:6,height:6,borderRadius:"50%",background:loading?"#A7A7A7":"#808080"}}/>
                 {loading?"Печатает…":"Твой персональный стратег по бизнесу"}
               </div>
             </div>
@@ -15417,7 +15417,7 @@ function KirillAIPage({userId}:{userId:string}){
                 padding:msg.role==="user"?"12px 16px":"14px 18px",
                 borderRadius:msg.role==="user"?"16px 16px 4px 16px":"4px 16px 16px 16px",
                 background:msg.role==="user"
-                  ?"linear-gradient(135deg,#1D4ED8,#2563EB)"
+                  ?"linear-gradient(135deg,#4F4F4F,#606060)"
                   :(dark?"rgba(255,255,255,0.05)":"#F8FAFC"),
                 border:msg.role==="assistant"?`1px solid ${bd}`:"none",
                 color:msg.role==="user"?"#fff":C.t1,
@@ -15438,7 +15438,7 @@ function KirillAIPage({userId}:{userId:string}){
                 <button onClick={()=>copyMsg(msg.content,msg.id)}
                   style={{padding:"4px 10px",borderRadius:7,border:`1px solid ${bd}`,background:dark?"rgba(255,255,255,0.04)":"#fff",color:C.t2,fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"'Inter',sans-serif"}}>
                   {copiedId===msg.id
-                    ?<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Скопировано</>
+                    ?<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#808080" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Скопировано</>
                     :<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Копировать</>
                   }
                 </button>
@@ -15460,7 +15460,7 @@ function KirillAIPage({userId}:{userId:string}){
               style={{flex:1,background:"transparent",border:"none",outline:"none",resize:"none" as const,fontSize:14,color:C.t1,lineHeight:1.6,fontFamily:"'Inter',sans-serif",maxHeight:160,overflowY:"auto" as const,padding:0}}
             />
             <button onClick={loading?stop:send}
-              style={{width:36,height:36,borderRadius:9,border:"none",background:input.trim()||loading?"#1D4ED8":"rgba(0,0,0,0.08)",color:input.trim()||loading?"#fff":C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.15s"}}>
+              style={{width:36,height:36,borderRadius:9,border:"none",background:input.trim()||loading?"#4F4F4F":"rgba(0,0,0,0.08)",color:input.trim()||loading?"#fff":C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.15s"}}>
               {loading
                 ?<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
                 :<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -15487,7 +15487,7 @@ function KirillAIPage({userId}:{userId:string}){
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 16px 12px",borderBottom:`1px solid ${bd}`,flexShrink:0}}>
             <div style={{fontSize:14,fontWeight:700,color:C.t1,letterSpacing:"-0.01em"}}>Список чатов</div>
             <button onClick={newChat}
-              style={{display:"flex",alignItems:"center",gap:5,padding:"6px 11px",borderRadius:8,border:"none",background:"#1D4ED8",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+              style={{display:"flex",alignItems:"center",gap:5,padding:"6px 11px",borderRadius:8,border:"none",background:"#4F4F4F",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Новый
             </button>
@@ -15507,20 +15507,20 @@ function KirillAIPage({userId}:{userId:string}){
                   style={{
                     display:"flex",alignItems:"center",gap:8,
                     padding:"9px 10px",borderRadius:8,cursor:"pointer",
-                    background:isAct?(dark?"rgba(79,142,247,0.14)":"rgba(37,99,235,0.08)"):"transparent",
-                    border:`1px solid ${isAct?(dark?"rgba(79,142,247,0.28)":"rgba(37,99,235,0.18)"):"transparent"}`,
+                    background:isAct?(dark?"rgba(135,135,135,0.14)":"rgba(96,96,96,0.08)"):"transparent",
+                    border:`1px solid ${isAct?(dark?"rgba(135,135,135,0.28)":"rgba(96,96,96,0.18)"):"transparent"}`,
                     transition:"background 0.15s",
                   }}>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{display:"flex",alignItems:"center",gap:6}}>
-                      {gen&&<div style={{width:6,height:6,borderRadius:"50%",background:"#F59E0B",flexShrink:0,animation:"bounce 1.2s ease-in-out infinite"}}/>}
+                      {gen&&<div style={{width:6,height:6,borderRadius:"50%",background:"#A7A7A7",flexShrink:0,animation:"bounce 1.2s ease-in-out infinite"}}/>}
                       <div style={{fontSize:13,fontWeight:isAct?600:500,color:isAct?C.t1:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.title||"Новый чат"}</div>
                     </div>
                     <div style={{fontSize:11,color:C.t2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginTop:2}}>{preview.slice(0,60)}</div>
                   </div>
                   {showDel&&<button onClick={e=>removeChat(c.id,e)} title="Удалить чат"
                     style={{width:24,height:24,borderRadius:6,border:"none",background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}
-                    onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color="#EF4444";(e.currentTarget as HTMLElement).style.background=dark?"rgba(239,68,68,0.12)":"rgba(239,68,68,0.08)";}}
+                    onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color="#777777";(e.currentTarget as HTMLElement).style.background=dark?"rgba(119,119,119,0.12)":"rgba(119,119,119,0.08)";}}
                     onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.color=C.t2;(e.currentTarget as HTMLElement).style.background="transparent";}}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
                   </button>}
