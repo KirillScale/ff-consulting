@@ -8793,11 +8793,9 @@ function ProductAIPage({userId}:{userId:string}){
 
   /* ---------- GENERATING ---------- */
   if(view==="generating")return(
-    <div style={{maxWidth:720,margin:"0 auto",padding:"36px 24px",minHeight:"60vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:24}}>
-      <div style={{width:72,height:72,borderRadius:10,background:GRAD,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
-        <div style={{width:30,height:30,border:"3px solid rgba(255,255,255,0.35)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      </div>
+    <div style={{width:"100%",padding:"36px 44px",minHeight:"calc(100vh - 140px)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:24}}>
+      <img src="/icon-product.png" width={104} height={104} style={{objectFit:"contain" as const,animation:"vpBounce 1.05s ease-in-out infinite"}} alt="Vizzy Product AI"/>
+      <style>{`@keyframes vpBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-22px)}}`}</style>
       <div style={{textAlign:"center" as const}}>
         <div style={{fontSize:22,fontWeight:800,color:C.t1,letterSpacing:"-0.02em",marginBottom:8}}>Генерируем варианты продукта</div>
         <div style={{fontSize:14,color:C.t2,lineHeight:1.6,maxWidth:400}}>AI анализирует ваши ответы и подбирает 10 форматов продукта под вашу экспертизу. Это займёт 10–20 секунд.</div>
@@ -9285,7 +9283,7 @@ function ProductAIPage({userId}:{userId:string}){
 
   /* ---------- LIST ---------- */
   return(
-    <div style={{maxWidth:960,margin:"0 auto",padding:"36px 24px"}}>
+    <div style={{maxWidth:1360,margin:"0 auto",width:"100%",padding:"32px 44px"}}>
       <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:28,gap:16,flexWrap:"wrap" as const}}>
         <div>
           <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.025em",marginBottom:4}}>Мои продукты</div>
@@ -9301,10 +9299,8 @@ function ProductAIPage({userId}:{userId:string}){
       {loading?(
         <div style={{padding:60,textAlign:"center" as const,color:C.t2,fontSize:14}}>Загрузка...</div>
       ):products.length===0?(
-        <div style={{background:cardBg,border:`1px dashed ${bd}`,borderRadius:10,padding:"64px 24px",textAlign:"center" as const}}>
-          <div style={{width:64,height:64,borderRadius:12,background:dark?"rgba(255,255,255,0.05)":"#F0FDF4",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px"}}>
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#808080" strokeWidth="1.5"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-          </div>
+        <div style={{background:cardBg,border:`1px dashed ${bd}`,borderRadius:12,padding:"48px 24px",textAlign:"center" as const,minHeight:"calc(100vh - 220px)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+          <img src="/icon-product.png" width={84} height={84} style={{objectFit:"contain" as const,margin:"0 auto 22px",display:"block"}} alt="Vizzy Product AI"/>
           <div style={{fontSize:20,fontWeight:800,color:C.t1,marginBottom:8,letterSpacing:"-0.02em"}}>У вас пока нет продуктов</div>
           <div style={{fontSize:14,color:C.t2,lineHeight:1.6,maxWidth:360,margin:"0 auto 24px"}}>Создайте свой первый цифровой продукт за 15 минут — ответьте на 5 вопросов, остальное сделает AI.</div>
           <button onClick={openCreate} disabled={busy}
@@ -9323,9 +9319,7 @@ function ProductAIPage({userId}:{userId:string}){
                 onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(128,128,128,0.35)";}}
                 onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=bd;}}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-                  <div style={{width:40,height:40,borderRadius:8,background:dark?"rgba(255,255,255,0.05)":"#F0FDF4",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#808080" strokeWidth="1.6"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-                  </div>
+                  <img src="/icon-product.png" width={40} height={40} style={{objectFit:"contain" as const,display:"block"}} alt=""/>
                   <button onClick={e=>deleteProduct(p.id,e)} title="Удалить"
                     style={{width:28,height:28,borderRadius:8,border:"none",background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}
                     onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color="#777777";}}
