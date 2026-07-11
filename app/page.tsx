@@ -8,31 +8,31 @@ const ThemeCtx=createContext<{dark:boolean;toggle:()=>void}>({dark:false,toggle:
 const useTheme=()=>useContext(ThemeCtx);
 
 const LIGHT={
-  bg:"#F5F7FA",w:"#FFFFFF",a:"#2563EB",ah:"#1D4ED8",
-  t1:"#111827",t2:"#6B7280",bd:"#E5E7EB",
-  g:"#10B981",r:"#EF4444",y:"#F59E0B",
+  bg:"#F5F7FA",w:"#FFFFFF",a:"#1A1A1A",ah:"#000000",
+  t1:"#181818",t2:"#727272",bd:"#E5E7EB",
+  g:"#808080",r:"#777777",y:"#A7A7A7",
   sh:"0 2px 12px rgba(0,0,0,0.06)",ib:"#F9FAFB",
-  pk:"#EC4899",lb:"#06B6D4",dk:"#1F1F1F",da:"#2F2F2F",
+  pk:"#828282",lb:"#858585",dk:"#1F1F1F",da:"#2F2F2F",
   glass:"rgba(255,255,255,0.8)",glassBd:"rgba(0,0,0,0.08)",
 };
 
 // Deep Dark Glass — референс Quantix
 const DARK={
-  bg:"#080B12",
-  w:"#0F1420",          // тёмный цвет карточек (не прозрачный — для надёжности)
-  a:"#4F8EF7",
-  ah:"#3B82F6",
-  t1:"#E8F0FF",
-  t2:"#5A6A8A",
-  bd:"rgba(255,255,255,0.07)",
-  g:"#10B981",r:"#EF4444",y:"#F59E0B",
+  bg:"#0A0A0A",         // чистый нейтральный чёрный фон (как ChatGPT)
+  w:"#171717",          // нейтральные тёмно-серые карточки
+  a:"#3F3F46",
+  ah:"#52525B",
+  t1:"#ECECEC",         // нейтральный светлый текст
+  t2:"#8A8A8A",         // нейтральный серый вторичный текст
+  bd:"rgba(255,255,255,0.08)",
+  g:"#808080",r:"#777777",y:"#A7A7A7",
   sh:"0 8px 32px rgba(0,0,0,0.6)",
-  ib:"#141927",         // тёмный инпут
-  pk:"#EC4899",lb:"#06B6D4",
-  dk:"#060810",
-  da:"#0D1018",
-  glass:"rgba(15,20,32,0.85)",
-  glassBd:"rgba(255,255,255,0.07)",
+  ib:"#1C1C1C",         // нейтральный инпут
+  pk:"#828282",lb:"#858585",
+  dk:"#0A0A0A",
+  da:"#141414",
+  glass:"rgba(23,23,23,0.85)",
+  glassBd:"rgba(255,255,255,0.08)",
 };
 
 let C:{[k:string]:string}={...LIGHT};
@@ -42,7 +42,7 @@ const applyTheme=(dark:boolean)=>{Object.assign(C,dark?DARK:LIGHT);};
 const PLATS=[{id:"instagram",label:"Instagram",color:C.pk},{id:"telegram",label:"Telegram",color:C.a},{id:"youtube",label:"YouTube",color:C.r},{id:"vk",label:"VK",color:C.lb},{id:"other",label:"Другое",color:C.t2}];
 const CTYPES=["Пост","Reels","Stories","Текст","Видео","Другое"];
 const CSTATS=[{id:"idea",label:"Идея",color:C.t2},{id:"progress",label:"В работе",color:C.y},{id:"ready",label:"Готово",color:C.a},{id:"published",label:"Опубликовано",color:C.g}];
-const STAGES_DEFAULT=[{id:"new",label:"Новый",color:C.a},{id:"contact",label:"Взаимодействовали",color:"#8B5CF6"},{id:"call",label:"Созвон",color:C.y},{id:"closed",label:"Закрыт",color:C.g},{id:"rejected",label:"Отказ",color:C.r}];
+const STAGES_DEFAULT=[{id:"new",label:"Новый",color:C.a},{id:"contact",label:"Взаимодействовали",color:"#7C7C7C"},{id:"call",label:"Созвон",color:C.y},{id:"closed",label:"Закрыт",color:C.g},{id:"rejected",label:"Отказ",color:C.r}];
 const SRCS=["Instagram","Telegram","YouTube","Сайт","Рекомендация","Реклама","Другое"];
 const TASK_STATUS=[{id:"todo",label:"Не начата",color:C.t2},{id:"inprogress",label:"В процессе",color:C.y},{id:"done",label:"Выполнена",color:C.g}];
 const CALL_GOALS=["Созвон с командой","Созвон с лидом","Созвон с клиентом","Своя цель"];
@@ -52,28 +52,28 @@ const NAV_GROUPS=[
     label:"MY BUSINESS",
     alwaysOpen:true,
     items:[
-      {id:"dashboard",label:"Dashboard",accent:"#4F8EF7",ic:"M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"},
-      {id:"strategy",label:"War Room",accent:"#4F8EF7",ic:"M13 10V3L4 14h7v7l9-11h-7z"},
-      {id:"crm",label:"CRM",accent:"#38BDF8",ic:"M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"},
-      {id:"content",label:"Content",accent:"#A855F7",ic:"M7 4v16M17 4v16M3 8h4m10 0h4M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"},
-      {id:"calls",label:"Calls",accent:"#38BDF8",ic:"M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"},
-      {id:"offer",label:"Positioning",accent:"#F59E0B",ic:"M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"},
+      {id:"dashboard",label:"Dashboard",accent:"#878787",ic:"M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"},
+      {id:"strategy",label:"War Room",accent:"#878787",ic:"M13 10V3L4 14h7v7l9-11h-7z"},
+      {id:"crm",label:"CRM",accent:"#9C9C9C",ic:"M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"},
+      {id:"content",label:"Content",accent:"#808080",ic:"M7 4v16M17 4v16M3 8h4m10 0h4M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"},
+      {id:"calls",label:"Calls",accent:"#9C9C9C",ic:"M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"},
+      {id:"offer",label:"Positioning",accent:"#A7A7A7",ic:"M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"},
     ]
   },
   {
     label:"AI TOOLS",
     items:[
-      {id:"ai",label:"Kirill Scales AI",ic:"M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z",accent:"#A78BFA"},
-      {id:"product",label:"Vizzy Product AI",ic:"M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4",accent:"#34D399"},
-      {id:"script",label:"Vizzy Copy AI",ic:"M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z",accent:"#FB923C"},
+      {id:"ai",label:"Kirill Scales AI",ic:"M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z",accent:"#A0A0A0"},
+      {id:"product",label:"Vizzy Product AI",ic:"M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4",accent:"#9D9D9D"},
+      {id:"script",label:"Vizzy Copy AI",ic:"M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z",accent:"#A8A8A8"},
       {id:"stories",label:"Vizzy Stories AI",ic:"M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z",accent:"gradient"},
     ]
   },
   {
     label:"OTHER",
     items:[
-      {id:"links",label:"Links",accent:"#94A3B8",ic:"M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"},
-      {id:"profile",label:"Settings",accent:"#94A3B8",ic:"M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2 M12 11a4 4 0 100-8 4 4 0 000 8z"},
+      {id:"links",label:"Links",accent:"#A1A1A1",ic:"M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"},
+      {id:"profile",label:"Settings",accent:"#A1A1A1",ic:"M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2 M12 11a4 4 0 100-8 4 4 0 000 8z"},
     ]
   },
 ];
@@ -115,7 +115,7 @@ const I = ({path,size=20,color="currentColor",sw=1.5}:{path:string,size?:number,
 const iS = ():React.CSSProperties => ({
   width:"100%",padding:"11px 14px",
   border:"1px solid "+C.bd,
-  borderRadius:10,fontSize:14,outline:"none",
+  borderRadius:8,fontSize:14,outline:"none",
   background:C.ib,
   color:C.t1,
   boxSizing:"border-box" as const,
@@ -133,14 +133,14 @@ const Btn = ({children,onClick,primary=true,style:sx,disabled}:{children:React.R
   return <button onClick={onClick} disabled={disabled} style={{
     padding:"10px 20px",
     background:primary
-      ?(dark?"linear-gradient(135deg,#1E3A8A,#2563EB)":C.a)
+      ?(dark?"linear-gradient(135deg,#3B3B3B,#606060)":C.a)
       :(dark?"rgba(255,255,255,0.05)":C.bg),
     color:primary?"#fff":(dark?"rgba(255,255,255,0.6)":C.t2),
     border:primary?"none":`1px solid ${C.bd}`,
-    borderRadius:10,fontSize:14,fontWeight:600,
+    borderRadius:8,fontSize:14,fontWeight:600,
     cursor:disabled?"not-allowed":"pointer",
     opacity:disabled?0.5:1,
-    boxShadow:primary&&dark?"0 0 20px rgba(37,99,235,0.3),inset 0 1px 0 rgba(255,255,255,0.1)":"none",
+    boxShadow:primary&&dark?"0 0 20px rgba(96,96,96,0.3),inset 0 1px 0 rgba(255,255,255,0.1)":"none",
     transition:"all 0.2s ease",
     ...sx
   }}>{children}</button>;
@@ -150,8 +150,8 @@ const Tag = ({label,color}:{label:string,color:string}) => <span style={{fontSiz
 const Card = ({children,style:sx}:{children:React.ReactNode,style?:React.CSSProperties}) => {
   const{dark}=useTheme();
   return <div style={{
-    background:dark?"#0F1420":C.w,
-    borderRadius:16,padding:24,
+    background:dark?"#171717":C.w,
+    borderRadius:10,padding:24,
     boxShadow:dark?"0 4px 24px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.04)":C.sh,
     border:dark?"1px solid rgba(255,255,255,0.06)":"none",
     ...sx
@@ -162,10 +162,10 @@ const Card = ({children,style:sx}:{children:React.ReactNode,style?:React.CSSProp
 const useCardStyle=(overrides?:React.CSSProperties):React.CSSProperties=>{
   const{dark}=useTheme();
   return{
-    background:dark?"#0F1420":C.w,
+    background:dark?"#171717":C.w,
     border:dark?"1px solid rgba(255,255,255,0.06)":"none",
     boxShadow:dark?"0 4px 24px rgba(0,0,0,0.4)":C.sh,
-    borderRadius:16,
+    borderRadius:10,
     ...overrides,
   };
 };
@@ -175,15 +175,15 @@ const useColStyle=(isOver?:boolean):React.CSSProperties=>{
   const{dark}=useTheme();
   return{
     background:dark
-      ?(isOver?"rgba(79,142,247,0.08)":"#0C1019")
+      ?(isOver?"rgba(135,135,135,0.08)":"#141414")
       :(isOver?"#F0F6FF":"#F2F2F7"),
     border:dark
-      ?(isOver?"2px solid rgba(79,142,247,0.4)":"2px solid rgba(255,255,255,0.04)")
-      :(isOver?"2px solid #007AFF":"2px solid transparent"),
+      ?(isOver?"2px solid rgba(135,135,135,0.4)":"2px solid rgba(255,255,255,0.04)")
+      :(isOver?"2px solid #656565":"2px solid transparent"),
     boxShadow:dark
-      ?(isOver?"0 0 20px rgba(79,142,247,0.12)":"0 2px 12px rgba(0,0,0,0.3)")
-      :(isOver?"0 0 0 2px #007AFF,0 4px 20px rgba(0,122,255,0.15)":"0 1px 4px rgba(0,0,0,0.06)"),
-    borderRadius:18,
+      ?(isOver?"0 0 20px rgba(135,135,135,0.12)":"0 2px 12px rgba(0,0,0,0.3)")
+      :(isOver?"0 0 0 2px #656565,0 4px 20px rgba(101,101,101,0.15)":"0 1px 4px rgba(0,0,0,0.06)"),
+    borderRadius:12,
   };
 };
 
@@ -238,9 +238,9 @@ function Auth({ onLogin }: { onLogin: (u: any) => void }) {
 
   return (
     <div style={{minHeight:"100vh",background:`linear-gradient(135deg,${C.dk},${C.da},${C.a})`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter',sans-serif",padding:20}}>
-      <div style={{background:C.w,borderRadius:24,padding:"48px 40px",width:"100%",maxWidth:420,boxShadow:"0 24px 80px rgba(0,0,0,0.25)"}}>
+      <div style={{background:C.w,borderRadius:12,padding:"48px 40px",width:"100%",maxWidth:420,boxShadow:"0 24px 80px rgba(0,0,0,0.25)"}}>
         <div style={{textAlign:"center",marginBottom:36}}>
-          <div style={{display:"inline-flex",alignItems:"center",gap:10,background:C.dk,padding:"14px 28px",borderRadius:12}}>
+          <div style={{display:"inline-flex",alignItems:"center",gap:10,background:C.dk,padding:"14px 28px",borderRadius:8}}>
             <Logo s={40}/><Brand size="lg"/>
           </div>
         </div>
@@ -248,7 +248,7 @@ function Auth({ onLogin }: { onLogin: (u: any) => void }) {
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
           <input placeholder="Email" type="email" value={email} onChange={e=>setEmail(e.target.value)} style={iS()}/>
           <input placeholder="Пароль" type="password" value={pw} onChange={e=>setPw(e.target.value)} style={iS()} onKeyDown={e=>e.key==="Enter"&&login()}/>
-          {err&&<div style={{background:"#FEF2F2",color:C.r,padding:"10px 14px",borderRadius:10,fontSize:13,fontWeight:500}}>{err}</div>}
+          {err&&<div style={{background:"#FEF2F2",color:C.r,padding:"10px 14px",borderRadius:8,fontSize:13,fontWeight:500}}>{err}</div>}
           <Btn onClick={login} style={{width:"100%",padding:"14px 0",fontSize:15,marginTop:8,opacity:loading?0.6:1}}>
             {loading?"Вход...":"Войти"}
           </Btn>
@@ -295,7 +295,7 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
 
   const renderItem=(n:any)=>{
     const isActive=active===n.id;
-    const accent=getAccent(n)||"#4F8EF7";
+    const accent=getAccent(n)||"#878787";
     const isGrad=n.accent==="gradient";
     const customIcon=AI_ICONS[n.id];
     // Parse accent to rgb for backgrounds
@@ -309,7 +309,7 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
           display:"flex",alignItems:"center",gap:10,
           padding:collapsed?"9px 0":"7px 10px 7px 10px",
           justifyContent:collapsed?"center":"flex-start",
-          borderRadius:11,
+          borderRadius:8,
           cursor:"pointer",width:"100%",
           position:"relative",overflow:"hidden",
           transition:"all 0.25s cubic-bezier(0.4,0,0.2,1)",
@@ -353,14 +353,14 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
           position:"absolute",left:0,top:"16%",bottom:"16%",width:3,
           borderRadius:"0 3px 3px 0",
           background:isGrad
-            ?"linear-gradient(180deg,#86EFAC,#A78BFA)"
+            ?"linear-gradient(180deg,#C8C8C8,#A0A0A0)"
             :"linear-gradient(180deg,rgba("+r+","+g2+","+b+",1),rgba("+r+","+g2+","+b+",0.4))",
           boxShadow:"0 0 12px rgba("+r+","+g2+","+b+",0.8), 0 0 24px rgba("+r+","+g2+","+b+",0.4)",
         }}/>}
 
         {/* Shimmer overlay */}
         {isActive&&<div style={{
-          position:"absolute",inset:0,borderRadius:11,
+          position:"absolute",inset:0,borderRadius:8,
           background:"linear-gradient(105deg,transparent 30%,rgba(255,255,255,0.04) 50%,transparent 70%)",
           backgroundSize:"200% 100%",
           animation:"shimmer 4s ease-in-out infinite",
@@ -384,7 +384,7 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
           background:customIcon?"transparent"
             :isActive
               ?isGrad
-                ?"linear-gradient(135deg,rgba(134,239,172,0.3),rgba(167,139,250,0.3))"
+                ?"linear-gradient(135deg,rgba(200,200,200,0.3),rgba(160,160,160,0.3))"
                 :"rgba("+r+","+g2+","+b+",0.2)"
               :`rgba(255,255,255,0.04)`,
           border:isActive
@@ -398,7 +398,7 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
           {customIcon
             ?<img src={customIcon} width={26} height={26} style={{borderRadius:8,objectFit:"cover",opacity:isActive?1:0.5}} alt={n.label}/>
             :<I path={n.ic} size={13}
-                color={isActive?(isGrad?"#c4f5d4":accent):"rgba(255,255,255,0.4)"}
+                color={isActive?(isGrad?"#E3E3E3":accent):"rgba(255,255,255,0.4)"}
                 sw={isActive?2:1.5}/>
           }
         </div>
@@ -406,7 +406,7 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
         {!collapsed&&<span style={{
           fontSize:12.5,fontWeight:isActive?600:400,flex:1,textAlign:"left",
           color:isActive
-            ?(isGrad?"#c4f5d4":accent==="gradient"?"#86EFAC":accent)
+            ?(isGrad?"#E3E3E3":accent==="gradient"?"#C8C8C8":accent)
             :"rgba(255,255,255,0.5)",
           overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
           transition:"color 0.2s",
@@ -417,7 +417,7 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
         {!collapsed&&isActive&&<div style={{
           width:5,height:5,borderRadius:"50%",flexShrink:0,
           background:isGrad
-            ?"linear-gradient(135deg,#86EFAC,#A78BFA)"
+            ?"linear-gradient(135deg,#C8C8C8,#A0A0A0)"
             :accent,
           boxShadow:"0 0 6px rgba("+r+","+g2+","+b+",0.8), 0 0 12px rgba("+r+","+g2+","+b+",0.5)",
         }}/>}
@@ -425,7 +425,7 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
     );
   };
 
-  const SB_BG="linear-gradient(180deg,#06080F 0%,#080B14 50%,#060810 100%)";
+  const SB_BG="linear-gradient(180deg,#0C0C0C 0%,#0A0A0A 100%)";
 
   return(
     <div style={{
@@ -443,8 +443,8 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
           100%{background-position:200% center}
         }
         @keyframes borderGlow{
-          0%,100%{border-color:rgba(79,142,247,0.15)}
-          50%{border-color:rgba(79,142,247,0.4)}
+          0%,100%{border-color:rgba(135,135,135,0.15)}
+          50%{border-color:rgba(135,135,135,0.4)}
         }
         .sb-scroll::-webkit-scrollbar{width:2px}
         .sb-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.05);border-radius:2px}
@@ -454,7 +454,7 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
       <div style={{
         position:"absolute",top:-60,left:"50%",transform:"translateX(-50%)",
         width:200,height:120,
-        background:"radial-gradient(ellipse,rgba(79,142,247,0.12) 0%,transparent 70%)",
+        background:"transparent",
         pointerEvents:"none",
       }}/>
 
@@ -467,17 +467,17 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
         flexShrink:0,position:"relative",
       }}>
         <div style={{
-          width:36,height:36,borderRadius:10,
-          background:"linear-gradient(135deg,#1a2340,#0d1428)",
-          border:"1px solid rgba(79,142,247,0.3)",
+          width:36,height:36,borderRadius:8,
+          background:"linear-gradient(135deg,#1E1E1E,#141414)",
+          border:"1px solid rgba(255,255,255,0.1)",
           display:"flex",alignItems:"center",justifyContent:"center",
-          boxShadow:"0 0 16px rgba(79,142,247,0.2),inset 0 1px 0 rgba(255,255,255,0.05)",
+          boxShadow:"inset 0 1px 0 rgba(255,255,255,0.05)",
           flexShrink:0,
         }}>
           <Logo s={26}/>
         </div>
         {!collapsed&&<div style={{display:"flex",flexDirection:"column",lineHeight:1.2}}>
-          <span style={{fontSize:14,fontWeight:800,color:"#E8F0FF",letterSpacing:1.5}}>VIZZY</span>
+          <span style={{fontSize:14,fontWeight:800,color:"#ECECEC",letterSpacing:1.5}}>VIZZY</span>
           <span style={{fontSize:8,color:"rgba(255,255,255,0.25)",letterSpacing:1}}>by Kirill Scales</span>
         </div>}
       </div>
@@ -498,7 +498,7 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
                     <span style={{
                       fontSize:9,fontWeight:700,
                       color:hasActiveItem
-                        ?((group.items.find(i=>i.id===active)?.accent||"rgba(79,142,247,0.7)")+"bb")
+                        ?((group.items.find(i=>i.id===active)?.accent||"rgba(135,135,135,0.7)")+"bb")
                         :"rgba(255,255,255,0.18)",
                       letterSpacing:1.8,textTransform:"uppercase",
                     }}>{group.label}</span>
@@ -516,7 +516,7 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
                     <span style={{
                       fontSize:9,fontWeight:700,
                       color:hasActiveItem
-                        ?((group.items.find(i=>i.id===active)?.accent||"rgba(79,142,247,0.7)")+"bb")
+                        ?((group.items.find(i=>i.id===active)?.accent||"rgba(135,135,135,0.7)")+"bb")
                         :"rgba(255,255,255,0.18)",
                       letterSpacing:1.8,textTransform:"uppercase",
                     }}>{group.label}</span>
@@ -561,13 +561,13 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
           {!collapsed&&<span style={{fontSize:10,color:"rgba(255,255,255,0.25)",letterSpacing:0.5}}>Тема интерфейса</span>}
           <button onClick={toggle}
             style={{
-              width:48,height:26,borderRadius:13,flexShrink:0,
+              width:48,height:26,borderRadius:10,flexShrink:0,
               background:dark
-                ?"linear-gradient(90deg,#1E3A8A,#4F46E5)"
+                ?"linear-gradient(90deg,#3B3B3B,#5B5B5B)"
                 :"rgba(255,255,255,0.1)",
-              border:`1px solid ${dark?"rgba(79,142,247,0.4)":"rgba(255,255,255,0.1)"}`,
+              border:`1px solid ${dark?"rgba(135,135,135,0.4)":"rgba(255,255,255,0.1)"}`,
               cursor:"pointer",position:"relative",
-              boxShadow:dark?"0 0 12px rgba(79,142,247,0.25)":"none",
+              boxShadow:dark?"0 0 12px rgba(135,135,135,0.25)":"none",
               transition:"all 0.4s ease",
               outline:"none",
             }}>
@@ -575,11 +575,11 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
               position:"absolute",top:2,
               left:dark?24:2,
               width:20,height:20,borderRadius:"50%",
-              background:dark?"#E0EAFF":"rgba(255,255,255,0.7)",
+              background:dark?"#E9E9E9":"rgba(255,255,255,0.7)",
               transition:"left 0.35s cubic-bezier(0.4,0,0.2,1)",
               display:"flex",alignItems:"center",justifyContent:"center",
               fontSize:11,
-              boxShadow:dark?"0 0 8px rgba(79,142,247,0.6)":"0 1px 4px rgba(0,0,0,0.2)",
+              boxShadow:dark?"0 0 8px rgba(135,135,135,0.6)":"0 1px 4px rgba(0,0,0,0.2)",
             }}>
               {dark?"🌙":"☀️"}
             </div>
@@ -592,7 +592,7 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
             width:"100%",display:"flex",alignItems:"center",gap:8,
             padding:collapsed?"10px 0":"7px 10px",
             justifyContent:collapsed?"center":"flex-start",
-            border:"none",borderRadius:10,cursor:"pointer",
+            border:"none",borderRadius:8,cursor:"pointer",
             background:"transparent",color:"rgba(255,255,255,0.25)",
             fontSize:12,transition:"all 0.15s",outline:"none",
           }}
@@ -610,11 +610,11 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
             width:"100%",display:"flex",alignItems:"center",gap:8,
             padding:collapsed?"10px 0":"7px 10px",
             justifyContent:collapsed?"center":"flex-start",
-            border:"none",borderRadius:10,cursor:"pointer",
+            border:"none",borderRadius:8,cursor:"pointer",
             background:"transparent",color:"rgba(255,255,255,0.2)",
             fontSize:12,transition:"all 0.15s",outline:"none",
           }}
-          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(239,68,68,0.08)";(e.currentTarget as HTMLElement).style.color="#EF4444";}}
+          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(119,119,119,0.08)";(e.currentTarget as HTMLElement).style.color="#777777";}}
           onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";(e.currentTarget as HTMLElement).style.color="rgba(255,255,255,0.2)";}}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
@@ -667,15 +667,15 @@ function MobileNav({active,onNav,onLogout}:{active:string,onNav:(id:string)=>voi
         {more.map(n=>{
           const a=active===n.id;
           return <button key={n.id} onClick={()=>{onNav(n.id);setDrawerOpen(false);}}
-            style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",border:"none",borderRadius:12,background:a?C.a:"rgba(255,255,255,0.07)",cursor:"pointer"}}>
+            style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",border:"none",borderRadius:8,background:a?C.a:"rgba(255,255,255,0.07)",cursor:"pointer"}}>
             <I path={n.ic} size={18} color={a?"#fff":"rgba(255,255,255,0.7)"}/>
             <span style={{fontSize:13,color:a?"#fff":"rgba(255,255,255,0.7)",fontWeight:a?600:400,textAlign:"left",lineHeight:1.2}}>{n.label}</span>
           </button>;
         })}
         <button onClick={()=>{onLogout();setDrawerOpen(false);}}
-          style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",border:"none",borderRadius:12,background:"rgba(239,68,68,0.15)",cursor:"pointer",gridColumn:"span 2"}}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="1.5"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          <span style={{fontSize:13,color:"#EF4444",fontWeight:500}}>Выйти</span>
+          style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",border:"none",borderRadius:8,background:"rgba(119,119,119,0.15)",cursor:"pointer",gridColumn:"span 2"}}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#777777" strokeWidth="1.5"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span style={{fontSize:13,color:"#777777",fontWeight:500}}>Выйти</span>
         </button>
       </div>
     </div>
@@ -700,7 +700,7 @@ const Head=({name,onMenuOpen}:{name:string,onMenuOpen?:()=>void})=>{
   return <div style={{
     height:64,
     background:dark
-      ?"rgba(8,11,18,0.85)"
+      ?"rgba(14,14,14,0.85)"
       :C.w,
     backdropFilter:dark?"blur(24px)":"none",
     WebkitBackdropFilter:dark?"blur(24px)":"none",
@@ -710,19 +710,23 @@ const Head=({name,onMenuOpen}:{name:string,onMenuOpen?:()=>void})=>{
     boxShadow:dark?"0 1px 0 rgba(255,255,255,0.03), 0 4px 20px rgba(0,0,0,0.3)":"none",
   }}>
     <div style={{fontSize:15,fontWeight:600,color:C.t1}}>{greeting}{displayName?", "+displayName:""}</div>
-    <div style={{display:"inline-flex",alignItems:"center",justifyContent:"center",
+    <div style={{display:"inline-flex",alignItems:"center",gap:10,
       background:dark?"rgba(255,255,255,0.04)":"#1F1F1F",
       border:dark?"1px solid rgba(255,255,255,0.08)":"none",
-      padding:"8px 16px",borderRadius:12,
-      boxShadow:dark?"0 0 20px rgba(79,142,247,0.1),inset 0 1px 0 rgba(255,255,255,0.04)":"none",
+      padding:"8px 20px",borderRadius:8,
+      boxShadow:dark?"inset 0 1px 0 rgba(255,255,255,0.04)":"none",
     }}>
-      <img src="/vizzy-icon.png" alt="Vizzy" style={{height:32,width:"auto",objectFit:"contain",display:"block",filter:dark?"invert(1) brightness(2)":"invert(1) brightness(2)"}}/>
+      <Logo s={28}/>
+      <div style={{display:"flex",flexDirection:"column",lineHeight:1.15}}>
+        <span style={{color:"#fff",fontSize:11,fontWeight:800,letterSpacing:1.5}}>VIZZY</span>
+        <span style={{color:"rgba(255,255,255,0.5)",fontSize:8,fontWeight:300,letterSpacing:1}}>by Kirill Scales</span>
+      </div>
     </div>
     <div style={{fontSize:13,color:C.t2}}>{fmtDate(new Date())}</div>
   </div>;
 };
 
-const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"calc(100vh - 180px)",gap:20}}><div style={{width:80,height:80,borderRadius:20,background:C.a+"18",display:"flex",alignItems:"center",justifyContent:"center"}}><I path={ic} size={36} color={C.a} sw={1.2}/></div><div style={{fontSize:22,fontWeight:700}}>{title}</div><Card style={{padding:"12px 24px"}}><span style={{fontSize:14,color:C.t2}}>Раздел скоро будет доступен</span></Card></div>;
+const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"calc(100vh - 180px)",gap:20}}><div style={{width:80,height:80,borderRadius:10,background:C.a+"18",display:"flex",alignItems:"center",justifyContent:"center"}}><I path={ic} size={36} color={C.a} sw={1.2}/></div><div style={{fontSize:22,fontWeight:700}}>{title}</div><Card style={{padding:"12px 24px"}}><span style={{fontSize:14,color:C.t2}}>Раздел скоро будет доступен</span></Card></div>;
 
 /* ============ MAIN APP ============ */
 export default function App() {
@@ -818,9 +822,9 @@ class PageErrorBoundary extends React.Component<{children:React.ReactNode,name:s
     if(this.state.err)return(
       <div style={{padding:40,textAlign:"center"}}>
         <div style={{fontSize:32,marginBottom:12}}>⚠️</div>
-        <div style={{fontSize:18,fontWeight:700,marginBottom:8,color:"#EF4444"}}>Ошибка в разделе {this.props.name}</div>
-        <div style={{fontSize:12,color:"#64748B",marginBottom:20,fontFamily:"monospace",maxWidth:600,margin:"0 auto 20px"}}>{this.state.err.message}</div>
-        <button onClick={()=>this.setState({err:null})} style={{padding:"10px 20px",background:"#2563EB",color:"#fff",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:600}}>Обновить раздел</button>
+        <div style={{fontSize:18,fontWeight:700,marginBottom:8,color:"#777777"}}>Ошибка в разделе {this.props.name}</div>
+        <div style={{fontSize:12,color:"#727272",marginBottom:20,fontFamily:"monospace",maxWidth:600,margin:"0 auto 20px"}}>{this.state.err.message}</div>
+        <button onClick={()=>this.setState({err:null})} style={{padding:"10px 20px",background:"#606060",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontSize:14,fontWeight:600}}>Обновить раздел</button>
       </div>
     );
     return this.props.children;
@@ -838,7 +842,7 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
 
   const pageContent=<>
     {page==="dashboard"&&<SafePage name="Dashboard"><DashPage userId={user.id} name={userName} avatar={userAvatar} onNav={setPage} onAvatarChange={async(url:string)=>{setUserAvatar(url);await supabase.from("profiles").upsert({id:user.id,avatar_url:url},{onConflict:"id"});}}/></SafePage>}
-    {page==="strategy"&&<SafePage name="War Room"><StrategyPage userId={user.id}/></SafePage>}
+    {page==="strategy"&&<SafePage name="War Room"><StrategyPage userId={user.id} onNav={setPage}/></SafePage>}
     {page==="crm"&&<SafePage name="CRM"><CrmPage userId={user.id}/></SafePage>}
     {page==="calls"&&<SafePage name="Созвоны"><CallsPage userId={user.id}/></SafePage>}
     {page==="mailings"&&<SafePage name="Рассылки"><MailingsPage userId={user.id}/></SafePage>}
@@ -853,8 +857,8 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
     {page==="files"&&<SafePage name="Файлы"><FilesPage userId={user.id}/></SafePage>}
     {page==="ai"&&<SafePage name="AI"><KirillAIPage userId={user.id}/></SafePage>}
     {page==="script"&&<SafePage name="Copy AI"><CopyAIPage userId={user.id}/></SafePage>}
-    {page==="product"&&<SafePage name="Product AI"><Placeholder title="Vizzy Product AI" ic="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></SafePage>}
-    {page==="stories"&&<SafePage name="Stories AI"><Placeholder title="Vizzy Stories AI" ic="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></SafePage>}
+    {page==="product"&&<SafePage name="Product AI"><ProductAIPage userId={user.id}/></SafePage>}
+    {page==="stories"&&<SafePage name="Stories AI"><StoriesAIPage userId={user.id}/></SafePage>}
     {page==="forms"&&<SafePage name="Forms"><FormsPage userId={user.id}/></SafePage>}
     {page==="prices"&&<SafePage name="Prices & Product"><PricesPage userId={user.id} onNav={setPage}/></SafePage>}
     {page==="icp"&&<SafePage name="ICP & IVP"><Placeholder title="ICP & IVP" ic="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></SafePage>}
@@ -866,31 +870,25 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
   return (
     <div style={{
       fontFamily:"'Inter',-apple-system,BlinkMacSystemFont,sans-serif",
-      background:dark?"#080B12":C.bg,
+      background:dark?"#0A0A0A":C.bg,
       minHeight:"100vh",color:C.t1,
       position:"relative",
       transition:"background 0.5s ease, color 0.4s ease",
     }}>
-      {/* Ambient glows — dark mode only */}
-      {dark&&<>
-        <div style={{position:"fixed",top:-200,left:"30%",width:700,height:700,borderRadius:"50%",background:"radial-gradient(ellipse,rgba(37,99,235,0.07) 0%,transparent 65%)",pointerEvents:"none",zIndex:0}}/>
-        <div style={{position:"fixed",bottom:-200,right:"5%",width:500,height:500,borderRadius:"50%",background:"radial-gradient(ellipse,rgba(139,92,246,0.06) 0%,transparent 65%)",pointerEvents:"none",zIndex:0}}/>
-        <div style={{position:"fixed",top:"40%",left:"50%",width:400,height:400,borderRadius:"50%",background:"radial-gradient(ellipse,rgba(6,182,212,0.03) 0%,transparent 60%)",pointerEvents:"none",zIndex:0}}/>
-      </>}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
-        @keyframes burningGlow{0%,100%{box-shadow:0 0 12px rgba(239,68,68,0.2)}50%{box-shadow:0 0 24px rgba(239,68,68,0.4)}}
-        @keyframes deferrableGlow{0%,100%{box-shadow:0 0 8px rgba(245,158,11,0.12)}50%{box-shadow:0 0 16px rgba(245,158,11,0.28)}}
-        @keyframes glowPulse{0%,100%{box-shadow:0 0 8px 2px rgba(74,222,128,0.3)}50%{box-shadow:0 0 20px 6px rgba(74,222,128,0.6)}}
+        @keyframes burningGlow{0%,100%{box-shadow:0 0 12px rgba(119,119,119,0.2)}50%{box-shadow:0 0 24px rgba(119,119,119,0.4)}}
+        @keyframes deferrableGlow{0%,100%{box-shadow:0 0 8px rgba(167,167,167,0.12)}50%{box-shadow:0 0 16px rgba(167,167,167,0.28)}}
+        @keyframes glowPulse{0%,100%{box-shadow:0 0 8px 2px rgba(167,167,167,0.3)}50%{box-shadow:0 0 20px 6px rgba(167,167,167,0.6)}}
         @keyframes stickerBounce{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
         @keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(120px) rotate(720deg);opacity:0}}
         @keyframes progressGlow{0%,100%{opacity:0.6}50%{opacity:1}}
         @keyframes accentPulse{0%,100%{opacity:0.6;transform:scale(1)}50%{opacity:1;transform:scale(1.05)}}
         @keyframes floatUp{0%{transform:translateY(4px);opacity:0}100%{transform:translateY(0);opacity:1}}
         @keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
-        @keyframes borderGlow{0%,100%{border-color:rgba(79,142,247,0.2)}50%{border-color:rgba(79,142,247,0.5)}}
+        @keyframes borderGlow{0%,100%{border-color:rgba(135,135,135,0.2)}50%{border-color:rgba(135,135,135,0.5)}}
         *{box-sizing:border-box;}
         body{overflow-x:hidden;margin:0;}
         *{transition:background-color 0.35s ease,border-color 0.35s ease,color 0.35s ease,box-shadow 0.35s ease;}
@@ -899,21 +897,36 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
         .sb-scroll::-webkit-scrollbar{width:2px}
         .sb-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.06);border-radius:2px}
 
+        /* ── DESIGN SYSTEM POLISH (unified premium layer) ── */
+        html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;}
+        body{letter-spacing:-0.006em;}
+        ::selection{background:rgba(117,117,117,0.22);}
+        button{letter-spacing:-0.005em;}
+        button:active{transform:translateY(0.5px);}
+        input:focus,textarea:focus,select:focus{
+          border-color:rgba(117,117,117,0.55)!important;
+          box-shadow:0 0 0 3px rgba(117,117,117,0.12)!important;
+        }
+        body.dark input:focus,body.dark textarea:focus,body.dark select:focus{
+          border-color:rgba(149,149,149,0.6)!important;
+          box-shadow:0 0 0 3px rgba(149,149,149,0.14)!important;
+        }
+
         /* ── DARK MODE GLOBAL OVERRIDES ── */
         body.dark {
-          background:#080B12;
-          color:#E8F0FF;
+          background:#0A0A0A;
+          color:#ECECEC;
         }
         /* All white/light card surfaces */
         body.dark [data-card],
         body.dark .card-surface {
-          background:#0F1420 !important;
+          background:#171717 !important;
           border:1px solid rgba(255,255,255,0.06) !important;
-          color:#E8F0FF;
+          color:#ECECEC;
         }
         /* Kanban columns */
         body.dark .kanban-col {
-          background:#0C1019 !important;
+          background:#141414 !important;
           border-color:rgba(255,255,255,0.05) !important;
         }
         /* Segment controls (F2F2F7 backgrounds) */
@@ -925,9 +938,9 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
         body.dark input,
         body.dark textarea,
         body.dark select {
-          background:#141927 !important;
+          background:#1C1C1C !important;
           border-color:rgba(255,255,255,0.08) !important;
-          color:#E8F0FF !important;
+          color:#ECECEC !important;
         }
         body.dark input::placeholder,
         body.dark textarea::placeholder {
@@ -945,7 +958,7 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
         }
         /* Modals */
         body.dark [data-modal] {
-          background:#0F1420 !important;
+          background:#171717 !important;
           border:1px solid rgba(255,255,255,0.08) !important;
           box-shadow:0 24px 60px rgba(0,0,0,0.7) !important;
         }
@@ -956,70 +969,81 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
         body.dark ::-webkit-scrollbar-thumb:hover {background:rgba(255,255,255,0.14);}
         /* Lead/task cards */
         body.dark .lead-card {
-          background:#131926 !important;
+          background:#171717 !important;
           border:1px solid rgba(255,255,255,0.06) !important;
           box-shadow:0 2px 12px rgba(0,0,0,0.4) !important;
         }
         body.dark .lead-card:hover {
-          border-color:rgba(79,142,247,0.25) !important;
+          border-color:rgba(255,255,255,0.12) !important;
           box-shadow:0 4px 20px rgba(0,0,0,0.5) !important;
         }
         /* Year map table */
         body.dark .yearmap-table {
-          background:#0C1019 !important;
+          background:#141414 !important;
           border-color:rgba(255,255,255,0.05) !important;
         }
         /* Priority menus, dropdowns */
         body.dark .dropdown-menu {
-          background:#131926 !important;
+          background:#171717 !important;
           border:1px solid rgba(255,255,255,0.08) !important;
           box-shadow:0 12px 40px rgba(0,0,0,0.6) !important;
         }
         /* Segment button active state */
         body.dark .seg-active {
-          background:#0F1420 !important;
+          background:#171717 !important;
           box-shadow:0 1px 4px rgba(0,0,0,0.5) !important;
-          color:#E8F0FF !important;
+          color:#ECECEC !important;
         }
         /* Stats cards on CRM, Content etc */
         body.dark .stat-card {
-          background:#0F1420 !important;
+          background:#171717 !important;
           border:1px solid rgba(255,255,255,0.06) !important;
         }
         /* Empty state areas */
         body.dark .empty-state {
-          background:#0C1019 !important;
+          background:#141414 !important;
           border:1px solid rgba(255,255,255,0.05) !important;
         }
         /* Board preview cards */
         body.dark .board-preview-card {
-          background:#0F1420 !important;
+          background:#171717 !important;
           border:1px solid rgba(255,255,255,0.07) !important;
           box-shadow:0 4px 20px rgba(0,0,0,0.5) !important;
         }
         body.dark .board-preview-card:hover {
-          border-color:rgba(79,142,247,0.3) !important;
-          box-shadow:0 8px 32px rgba(79,142,247,0.08),0 0 0 1px rgba(79,142,247,0.15) !important;
+          border-color:rgba(255,255,255,0.14) !important;
+          box-shadow:0 8px 32px rgba(0,0,0,0.5) !important;
         }
         /* Funnel cards in CRM */
         body.dark .funnel-card {
-          background:#0F1420 !important;
+          background:#171717 !important;
           border:1px solid rgba(255,255,255,0.06) !important;
           box-shadow:0 4px 20px rgba(0,0,0,0.4) !important;
         }
         /* Notification/toast */
         body.dark .toast-panel {
-          background:#131926 !important;
+          background:#171717 !important;
           border:1px solid rgba(255,255,255,0.08) !important;
         }
         /* Form new-item panels */
         body.dark .form-panel {
-          background:#0E1521 !important;
+          background:#161616 !important;
           border:1px solid rgba(255,255,255,0.07) !important;
           border-radius:16px !important;
         }
       `}</style>
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+
+      {/* Kirill Scales AI — global tab visible on all MY BUSINESS pages */}
+      {!isMobile&&["dashboard","strategy","crm","content","calls","offer","prices"].includes(page)&&(
+        <div onClick={()=>setPage("ai")} title="Kirill Scales AI"
+          style={{position:"fixed",right:0,top:"40%",transform:"translateY(-50%)",background:"linear-gradient(180deg,#4F4F4F 0%,#858585 100%)",width:32,height:130,borderRadius:"12px 0 0 12px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:7,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",zIndex:200,transition:"box-shadow 0.2s"}}
+          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="-6px 0 32px rgba(133,133,133,0.55)";}}
+          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="-4px 0 24px rgba(133,133,133,0.35)";}}>
+          <img src="/icon-ai.png" width={18} height={18} style={{borderRadius:4,objectFit:"cover" as const}} alt=""/>
+          <div style={{writingMode:"vertical-rl" as const,textOrientation:"mixed" as const,transform:"rotate(180deg)",fontSize:10,fontWeight:700,color:"#fff",letterSpacing:1.5}}>KS AI</div>
+        </div>
+      )}
 
       {isMobile ? <>
         <MobileNav active={page} onNav={setPage} onLogout={logout}/>
@@ -1063,8 +1087,8 @@ function ProfilePage({user,name,avatar,setName,setAvatar}:{user:any,name:string,
   };
 
   return <div style={{maxWidth:760}}>
-    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:isMobile?18:28,marginBottom:20,display:"flex",alignItems:"center",gap:16}}>
-      <div style={{width:64,height:64,borderRadius:18,background:"rgba(255,255,255,0.10)",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",border:"1px solid rgba(255,255,255,0.12)"}}>
+    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:10,padding:isMobile?18:28,marginBottom:20,display:"flex",alignItems:"center",gap:16}}>
+      <div style={{width:64,height:64,borderRadius:12,background:"rgba(255,255,255,0.10)",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",border:"1px solid rgba(255,255,255,0.12)"}}>
         {localAvatar?<img src={localAvatar} alt="Аватар" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<span style={{color:"#fff",fontSize:24,fontWeight:800}}>{(localName||user.email||"U").slice(0,1).toUpperCase()}</span>}
       </div>
       <div>
@@ -1227,7 +1251,7 @@ function DashPage({userId,name,avatar,onNav,onAvatarChange}:{userId:string,name:
 
   return <>
     {/* Hero greeting with avatar */}
-    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:isMobile?"18px 20px":"28px 36px",marginBottom:isMobile?16:24,color:"#fff",display:"flex",alignItems:"center",gap:16}}>
+    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:10,padding:isMobile?"18px 20px":"28px 36px",marginBottom:isMobile?16:24,color:"#fff",display:"flex",alignItems:"center",gap:16}}>
       <label style={{cursor:"pointer",flexShrink:0}}>
         <div style={{width:isMobile?52:64,height:isMobile?52:64,borderRadius:"50%",border:"3px solid rgba(255,255,255,0.3)",overflow:"hidden",background:"rgba(255,255,255,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
           {avatarUploading
@@ -1274,7 +1298,7 @@ function DashPage({userId,name,avatar,onNav,onAvatarChange}:{userId:string,name:
         }
       </Card>
 
-      <div onClick={()=>onNav("media")} style={{cursor:"pointer",background:C.w,borderRadius:16,padding:isMobile?16:24,boxShadow:C.sh}}>
+      <div onClick={()=>onNav("media")} style={{cursor:"pointer",background:C.w,borderRadius:10,padding:isMobile?16:24,boxShadow:C.sh}}>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}>
           <span style={{fontSize:isMobile?14:16,fontWeight:600}}>Медийность</span>
           <span style={{fontSize:12,color:C.a}}>Подробнее →</span>
@@ -1283,7 +1307,7 @@ function DashPage({userId,name,avatar,onNav,onAvatarChange}:{userId:string,name:
           ? <div style={{padding:"20px 0",textAlign:"center",color:C.t2,fontSize:14}}>Нет данных</div>
           : <div style={{display:"flex",flexDirection:"column",gap:8}}>
               <div style={{fontSize:11,color:C.t2,marginBottom:2}}>Обновлено: {latestMedia.date}</div>
-              {[{label:"Instagram",key:"ig",icon:<IgSvg size={16}/>},{label:"YouTube",key:"yt",icon:<YtSvg size={16}/>},{label:"Telegram",key:"tg",icon:<TgSvg size={16}/>}].map(p=><div key={p.key} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:C.bg,borderRadius:10,border:"1px solid "+C.bd}}>
+              {[{label:"Instagram",key:"ig",icon:<IgSvg size={16}/>},{label:"YouTube",key:"yt",icon:<YtSvg size={16}/>},{label:"Telegram",key:"tg",icon:<TgSvg size={16}/>}].map(p=><div key={p.key} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:C.bg,borderRadius:8,border:"1px solid "+C.bd}}>
                 {p.icon}
                 <span style={{fontSize:13,flex:1,fontWeight:500}}>{p.label}</span>
                 <span style={{fontSize:isMobile?14:18,fontWeight:800,color:C.t1}}>{fmt$(latestMedia[p.key]||0)}</span>
@@ -1299,7 +1323,7 @@ function DashPage({userId,name,avatar,onNav,onAvatarChange}:{userId:string,name:
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}><span style={{fontSize:isMobile?14:16,fontWeight:600}}>Задачи сегодня</span><button onClick={()=>onNav("strategy")} style={{fontSize:13,color:C.a,background:"none",border:"none",cursor:"pointer"}}>Стратегия</button></div>
         {allTodayTasks.filter((t:any)=>t.status!=="done"&&!t.done).length===0
           ? <div style={{padding:"16px 0",textAlign:"center",color:C.t2,fontSize:14}}>Нет задач</div>
-          : <div style={{display:"flex",flexDirection:"column",gap:8}}>{allTodayTasks.filter((t:any)=>t.status!=="done"&&!t.done).slice(0,5).map((t:any)=><div key={t.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:C.bg,borderRadius:10,borderLeft:"3px solid "+(t.type==="biz"?C.a:C.y)}}>
+          : <div style={{display:"flex",flexDirection:"column",gap:8}}>{allTodayTasks.filter((t:any)=>t.status!=="done"&&!t.done).slice(0,5).map((t:any)=><div key={t.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:C.bg,borderRadius:8,borderLeft:"3px solid "+(t.type==="biz"?C.a:C.y)}}>
             <span style={{fontSize:13,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.text}</span>
             {!isMobile&&<Tag label={tsLbl(t.status||"todo")} color={tsCol(t.status||"todo")}/>}
             <span style={{fontSize:11,color:C.t2,flexShrink:0}}>{t.mins}м</span>
@@ -1335,13 +1359,13 @@ function DashPage({userId,name,avatar,onNav,onAvatarChange}:{userId:string,name:
               const mins = isToday ? minsUntilCall(c) : null;
               const isPast = mins !== null && mins < 0;
               const isImminentOrNow = mins !== null && mins >= 0;
-              return <div key={c.id} style={{display:"flex",alignItems:"center",gap:10,padding:isMobile?"10px 12px":"12px 16px",background:isToday?"#FFF7ED":C.bg,borderRadius:10,borderLeft:"3px solid "+(isToday?C.y:C.a)}}>
+              return <div key={c.id} style={{display:"flex",alignItems:"center",gap:10,padding:isMobile?"10px 12px":"12px 16px",background:isToday?"#FFF7ED":C.bg,borderRadius:8,borderLeft:"3px solid "+(isToday?C.y:C.a)}}>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:isMobile?13:14,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{callLabel(c)}</div>
                   <div style={{fontSize:11,color:C.t2,marginTop:2}}>{c.date} в {c.time_start}</div>
                 </div>
-                {isToday && isImminentOrNow && <span style={{fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:20,background:C.y+"22",color:C.y,whiteSpace:"nowrap"}}>через {mins}м</span>}
-                {isToday && isPast && <span style={{fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:20,background:C.r+"18",color:C.r}}>Сегодня</span>}
+                {isToday && isImminentOrNow && <span style={{fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:10,background:C.y+"22",color:C.y,whiteSpace:"nowrap"}}>через {mins}м</span>}
+                {isToday && isPast && <span style={{fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:10,background:C.r+"18",color:C.r}}>Сегодня</span>}
                 {!isToday && <span style={{fontSize:11,color:C.t2,flexShrink:0}}>{c.date}</span>}
               </div>;
             })}
@@ -1350,15 +1374,15 @@ function DashPage({userId,name,avatar,onNav,onAvatarChange}:{userId:string,name:
     </Card>
 
     {/* Kirill Scales AI widget */}
-    <div onClick={()=>onNav("ai")} style={{marginTop:isMobile?12:16,background:`linear-gradient(135deg,${C.dk},#2a2a2a)`,borderRadius:16,padding:isMobile?"14px 16px":"18px 24px",cursor:"pointer",display:"flex",alignItems:"center",gap:16,border:"1px solid rgba(255,255,255,0.08)",boxShadow:"0 4px 20px rgba(0,0,0,0.15)",transition:"transform 0.15s,box-shadow 0.15s"}}
+    <div onClick={()=>onNav("ai")} style={{marginTop:isMobile?12:16,background:`linear-gradient(135deg,${C.dk},#2a2a2a)`,borderRadius:10,padding:isMobile?"14px 16px":"18px 24px",cursor:"pointer",display:"flex",alignItems:"center",gap:16,border:"1px solid rgba(255,255,255,0.08)",boxShadow:"0 4px 20px rgba(0,0,0,0.15)",transition:"transform 0.15s,box-shadow 0.15s"}}
       onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(-1px)";(e.currentTarget as HTMLElement).style.boxShadow="0 8px 28px rgba(0,0,0,0.2)";}}
       onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(0)";(e.currentTarget as HTMLElement).style.boxShadow="0 4px 20px rgba(0,0,0,0.15)";}}>
-      <img src="/ai-avatar.png" style={{width:isMobile?48:56,height:isMobile?48:56,borderRadius:14,objectFit:"cover",flexShrink:0,border:"2px solid rgba(255,255,255,0.15)"}} alt="AI"/>
+      <img src="/ai-avatar.png" style={{width:isMobile?48:56,height:isMobile?48:56,borderRadius:10,objectFit:"cover",flexShrink:0,border:"2px solid rgba(255,255,255,0.15)"}} alt="AI"/>
       <div style={{flex:1,minWidth:0}}>
         <div style={{fontSize:isMobile?14:16,fontWeight:700,color:"#fff",marginBottom:3}}>Kirill Scales AI</div>
         <div style={{fontSize:isMobile?11:12,color:"rgba(255,255,255,0.5)",lineHeight:1.5}}>Твой AI-ассистент по бизнесу и маркетингу. Спроси что угодно.</div>
       </div>
-      <div style={{flexShrink:0,width:36,height:36,borderRadius:10,background:"rgba(255,255,255,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div style={{flexShrink:0,width:36,height:36,borderRadius:8,background:"rgba(255,255,255,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
       </div>
     </div>
@@ -1415,7 +1439,7 @@ function TaskModal({task,taskType,userId,onClose}:{task:any,taskType:"kanban"|"g
         <div style={{fontSize:13,fontWeight:600,marginBottom:14,color:C.t1}}>Комментарии ({taskComments.length})</div>
         {taskComments.length===0&&<div style={{padding:"24px 0",textAlign:"center",color:C.t2,fontSize:13}}>Нет комментариев</div>}
         <div style={{display:"flex",flexDirection:"column",gap:10}}>
-          {taskComments.map((c:any)=><div key={c.id} style={{background:C.bg,borderRadius:12,padding:"12px 14px"}}>
+          {taskComments.map((c:any)=><div key={c.id} style={{background:C.bg,borderRadius:8,padding:"12px 14px"}}>
             {editId===c.id
               ? <div style={{display:"flex",gap:8,flexDirection:"column"}}>
                   <textarea value={editText} onChange={e=>setEditText(e.target.value)} rows={2} style={{...iS(),resize:"none",fontSize:13}}/>
@@ -1442,7 +1466,7 @@ function TaskModal({task,taskType,userId,onClose}:{task:any,taskType:"kanban"|"g
       {/* Input */}
       <div style={{padding:"16px 24px",borderTop:"1px solid "+C.bd}}>
         <textarea value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&(e.metaKey||e.ctrlKey))send();}} placeholder="Напиши комментарий... (Cmd+Enter для отправки)" rows={3} style={{...iS(),resize:"none",fontSize:13,marginBottom:10}}/>
-        <button onClick={send} disabled={!text.trim()} style={{width:"100%",padding:"10px",background:C.a,color:"#fff",border:"none",borderRadius:10,fontSize:14,fontWeight:600,cursor:text.trim()?"pointer":"not-allowed",opacity:text.trim()?1:0.5}}>Отправить</button>
+        <button onClick={send} disabled={!text.trim()} style={{width:"100%",padding:"10px",background:C.a,color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:600,cursor:text.trim()?"pointer":"not-allowed",opacity:text.trim()?1:0.5}}>Отправить</button>
       </div>
     </div>
   </div>;
@@ -1471,7 +1495,7 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
   const[resizingId,setResizingId]=useState<string|null>(null);
 
   const YEARS=[currentYear, currentYear+1, currentYear+2];
-  const COLORS=[C.a,"#8B5CF6",C.g,C.r,C.y,C.pk,"#06B6D4","#F97316"];
+  const COLORS=[C.a,"#7C7C7C",C.g,C.r,C.y,C.pk,"#858585","#909090"];
   const PERIODS:Array<[number,string]>=[[1,"1 мес"],[3,"3 мес"],[6,"6 мес"],[12,"Год"]];
 
   const visibleGoals=useMemo(()=>{
@@ -1556,11 +1580,11 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
 
   // Progress-based bar color: 0%=red, 50%=orange/yellow, 100%=green
   const progressColor=(pct:number,achieved:boolean)=>{
-    if(achieved||pct>=100)return{bg:"linear-gradient(90deg,#4ADE80,#16A34A)",shadow:"0 3px 14px rgba(74,222,128,0.5)"};
-    if(pct>=75)return{bg:"linear-gradient(90deg,#86EFAC,#22C55E)",shadow:"0 3px 12px rgba(34,197,94,0.35)"};
-    if(pct>=50)return{bg:"linear-gradient(90deg,#FDE68A,#F59E0B)",shadow:"0 3px 12px rgba(245,158,11,0.35)"};
-    if(pct>=25)return{bg:"linear-gradient(90deg,#FCA5A5,#F97316)",shadow:"0 3px 12px rgba(249,115,22,0.35)"};
-    return{bg:"linear-gradient(90deg,#FCA5A5,#EF4444)",shadow:"0 3px 12px rgba(239,68,68,0.35)"};
+    if(achieved||pct>=100)return{bg:"linear-gradient(90deg,#A7A7A7,#6F6F6F)",shadow:"0 3px 14px rgba(167,167,167,0.5)"};
+    if(pct>=75)return{bg:"linear-gradient(90deg,#C8C8C8,#898989)",shadow:"0 3px 12px rgba(137,137,137,0.35)"};
+    if(pct>=50)return{bg:"linear-gradient(90deg,#E2E2E2,#A7A7A7)",shadow:"0 3px 12px rgba(167,167,167,0.35)"};
+    if(pct>=25)return{bg:"linear-gradient(90deg,#BFBFBF,#909090)",shadow:"0 3px 12px rgba(144,144,144,0.35)"};
+    return{bg:"linear-gradient(90deg,#BFBFBF,#777777)",shadow:"0 3px 12px rgba(119,119,119,0.35)"};
   };
 
   const goalProgress=(gid:string)=>{
@@ -1612,15 +1636,15 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
       <h2 style={{margin:0,fontSize:20,fontWeight:700,color:C.t1}}>Карта года</h2>
       <div style={{flex:1}}/>
       {/* Year tabs */}
-      <div style={{display:"flex",gap:4,background:C.ib,borderRadius:10,padding:3,border:"1px solid "+C.bd}}>
+      <div style={{display:"flex",gap:4,background:C.ib,borderRadius:8,padding:3,border:"1px solid "+C.bd}}>
         {YEARS.map(y=><button key={y} onClick={()=>{setViewYear(y);setStartMonth(0);}} style={{padding:"5px 12px",border:"none",borderRadius:7,background:viewYear===y&&period===12?C.a:"transparent",color:viewYear===y&&period===12?"#fff":C.t2,fontSize:12,fontWeight:700,cursor:"pointer"}}>{y}</button>)}
       </div>
       {/* Period tabs */}
-      <div style={{display:"flex",gap:4,background:C.ib,borderRadius:10,padding:3,border:"1px solid "+C.bd}}>
+      <div style={{display:"flex",gap:4,background:C.ib,borderRadius:8,padding:3,border:"1px solid "+C.bd}}>
         {PERIODS.map(([p,l])=><button key={p} onClick={()=>{setPeriod(p as any);if(p===12)setStartMonth(0);else setStartMonth(Math.max(0,now.getMonth()-1));}} style={{padding:"5px 12px",border:"none",borderRadius:7,background:period===p?C.a:"transparent",color:period===p?"#fff":C.t2,fontSize:12,fontWeight:700,cursor:"pointer"}}>{l}</button>)}
       </div>
       <button onClick={()=>{setShowForm(!showForm);setEditGoal(null);}}
-        style={{padding:"8px 18px",background:C.a,color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer",boxShadow:"0 0 16px "+C.a+"30"}}>
+        style={{padding:"8px 18px",background:C.a,color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",boxShadow:"0 0 16px "+C.a+"30"}}>
         + Цель
       </button>
     </div>
@@ -1637,7 +1661,7 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
     </div>}
 
     {/* Add/Edit form */}
-    {(showForm||editGoal)&&<div style={{background:C.w,borderRadius:14,padding:20,marginBottom:16,border:"1px solid "+C.bd}}>
+    {(showForm||editGoal)&&<div style={{background:C.w,borderRadius:10,padding:20,marginBottom:16,border:"1px solid "+C.bd}}>
       <div style={{fontSize:14,fontWeight:700,marginBottom:14,color:C.t1}}>{editGoal?"Изменить цель":"Новая цель"}</div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:12}}>
         <div style={{gridColumn:"span 3"}}><label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4}}>Название</label>
@@ -1661,7 +1685,7 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
     </div>}
 
     {/* Grid */}
-    <div className="yearmap-table" style={{background:C.w,borderRadius:16,border:"1px solid "+C.bd,overflow:"hidden"}}
+    <div className="yearmap-table" style={{background:C.w,borderRadius:10,border:"1px solid "+C.bd,overflow:"hidden"}}
       onMouseMove={e=>{
         if(!barResizeRef.current)return;
         const{id,side,startX,origDate,containerW}=barResizeRef.current;
@@ -1725,8 +1749,8 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
               <div style={{flexShrink:0,color:C.t2,opacity:0.3,fontSize:12,cursor:"grab"}}>⠿</div>
               {/* Progress dot — color matches bar */}
               <div style={{width:9,height:9,borderRadius:"50%",flexShrink:0,
-                background:gAchieved?"#16A34A":pct>=75?"#22C55E":pct>=50?"#F59E0B":pct>=25?"#F97316":"#EF4444",
-                boxShadow:gAchieved?"0 0 6px rgba(22,163,74,0.6)":"none",
+                background:gAchieved?"#6F6F6F":pct>=75?"#898989":pct>=50?"#A7A7A7":pct>=25?"#909090":"#777777",
+                boxShadow:gAchieved?"0 0 6px rgba(111,111,111,0.6)":"none",
                 transition:"background 0.4s",
               }}/>
               <div style={{flex:1,minWidth:0}}>
@@ -1736,7 +1760,7 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
                 )}
                 {/* Progress bar mini */}
                 <div style={{height:2,borderRadius:2,background:C.bd,marginTop:4,overflow:"hidden"}}>
-                  <div style={{height:"100%",width:pct+"%",background:gAchieved?"#16A34A":pct>=50?"#F59E0B":"#EF4444",borderRadius:2,transition:"width 0.4s,background 0.4s"}}/>
+                  <div style={{height:"100%",width:pct+"%",background:gAchieved?"#6F6F6F":pct>=50?"#A7A7A7":"#777777",borderRadius:2,transition:"width 0.4s,background 0.4s"}}/>
                 </div>
               </div>
               <span style={{fontSize:10,fontWeight:600,color:C.t2,flexShrink:0}}>{pct}%</span>
@@ -1749,7 +1773,7 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
               {visibleMonths.map((_,i)=>(
                 <div key={i} style={{position:"absolute",left:`${i*(100/period)}%`,top:0,bottom:0,width:1,background:C.bd,opacity:0.35}}/>
               ))}
-              {todayCol>=0&&<div style={{position:"absolute",left:`${todayCol}%`,top:0,bottom:0,width:2,background:"#EF4444",zIndex:3,borderRadius:1,opacity:0.7}}/>}
+              {todayCol>=0&&<div style={{position:"absolute",left:`${todayCol}%`,top:0,bottom:0,width:2,background:"#777777",zIndex:3,borderRadius:1,opacity:0.7}}/>}
 
               {bar
                 ?<div style={{
@@ -1828,7 +1852,7 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
       {visibleGoals.length>0&&todayCol>=0&&<div style={{display:"flex",borderTop:"1px solid "+C.bd+"44"}}>
         <div style={{width:200,flexShrink:0}}/>
         <div style={{flex:1,position:"relative",height:18}}>
-          <div style={{position:"absolute",left:`${todayCol}%`,transform:"translateX(-50%)",top:2,fontSize:9,fontWeight:700,color:"#EF4444",whiteSpace:"nowrap"}}>▲ Сегодня</div>
+          <div style={{position:"absolute",left:`${todayCol}%`,transform:"translateX(-50%)",top:2,fontSize:9,fontWeight:700,color:"#777777",whiteSpace:"nowrap"}}>▲ Сегодня</div>
         </div>
       </div>}
     </div>
@@ -1837,9 +1861,9 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
 /* ============ GOALS BLOCK ============ */
 // Priority system helpers
 const PRIORITIES={
-  urgent:{id:"urgent",label:"Горит",color:"#EF4444",icon:"🔥"},
-  medium:{id:"medium",label:"Ещё терпимо",color:"#F59E0B",icon:"⏳"},
-  low:{id:"low",label:"Можно отложить",color:"#10B981",icon:"📌"},
+  urgent:{id:"urgent",label:"Горит",color:"#777777",icon:"🔥"},
+  medium:{id:"medium",label:"Ещё терпимо",color:"#A7A7A7",icon:"⏳"},
+  low:{id:"low",label:"Можно отложить",color:"#808080",icon:"📌"},
 };
 
 const calcAutoPriority=(endDate:string|null):{p:"urgent"|"medium"|"low",days:number|null,overdue:boolean}=>{
@@ -1911,7 +1935,7 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
       await goalTasks.update(task.id,{text:txt,mins:+mins,type,date:date||null});
       onClose();
     };
-    return<div style={{padding:"12px 14px",borderRadius:10,background:"#EFF6FF",border:"2px solid "+C.a,marginBottom:6}}>
+    return<div style={{padding:"12px 14px",borderRadius:8,background:"#EFF6FF",border:"2px solid "+C.a,marginBottom:6}}>
       <input autoFocus value={txt} onChange={e=>setTxt(e.target.value)}
         onKeyDown={e=>{if(e.key==="Enter")save();if(e.key==="Escape")onClose();}}
         style={{...iS(),padding:"7px 10px",fontSize:13,marginBottom:8,fontWeight:500}}/>
@@ -1953,7 +1977,7 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
       await goalTasks.add({goal_id:goalId,text:localText,mins:localMins,type:localType,date:localDate||null,done:false,status:"todo",sort_order:order});
       setShowGTF(null);
     };
-    return<div style={{marginTop:8,padding:12,background:C.w,borderRadius:10,border:"1px solid "+C.bd}}>
+    return<div style={{marginTop:8,padding:12,background:C.w,borderRadius:8,border:"1px solid "+C.bd}}>
       <input autoFocus placeholder="Название задачи" value={localText} onChange={e=>setLocalText(e.target.value)}
         onKeyDown={e=>{if(e.key==="Enter")addLocal();if(e.key==="Escape")setShowGTF(null);}}
         style={{...iS(),padding:"8px 10px",fontSize:12,marginBottom:8}}/>
@@ -1970,7 +1994,7 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
     </div>;
   },[showGTF,goalTasks,TYPES]);
 
-  const COLORS=[C.a,"#8B5CF6",C.g,C.r,C.y,C.pk,"#06B6D4","#F97316"];
+  const COLORS=[C.a,"#7C7C7C",C.g,C.r,C.y,C.pk,"#858585","#909090"];
 
   const showToast=(msg:string)=>{setToast(msg);setTimeout(()=>setToast(null),3500);};
 
@@ -2065,13 +2089,13 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
     if(!tasks.length)return 0;
     return Math.round(tasks.filter((t:any)=>t.status==="done"||t.done).length/tasks.length*100);
   };
-  const prgColor=(p:number)=>p===100?"#16A34A":p>=75?"#84CC16":p>=50?C.y:p>=25?"#F97316":C.r;
+  const prgColor=(p:number)=>p===100?"#6F6F6F":p>=75?"#A2A2A2":p>=50?C.y:p>=25?"#909090":C.r;
   const prgGradient=(p:number)=>p===100
-    ?"linear-gradient(90deg,#4ADE80,#16A34A,#4ADE80)"
-    :p>=75?"linear-gradient(90deg,#BEF264,#84CC16)"
-    :p>=50?"linear-gradient(90deg,#FDE68A,#EAB308)"
-    :p>=25?"linear-gradient(90deg,#FED7AA,#F97316)"
-    :"linear-gradient(90deg,#FCA5A5,#EF4444)";
+    ?"linear-gradient(90deg,#A7A7A7,#6F6F6F,#A7A7A7)"
+    :p>=75?"linear-gradient(90deg,#D2D2D2,#A2A2A2)"
+    :p>=50?"linear-gradient(90deg,#E2E2E2,#B0B0B0)"
+    :p>=25?"linear-gradient(90deg,#DEDEDE,#909090)"
+    :"linear-gradient(90deg,#BFBFBF,#777777)";
   const prgSticker=(p:number)=>p===100?"🏆":p>=80?"🔥":p>=60?"💪":p>=40?"📈":p>=20?"🌱":"🎯";
   const prgStickerLabel=(p:number)=>p===100?"Цель достигнута!":p>=80?"Почти готово!":p>=60?"Хороший темп":p>=40?"В процессе":p>=20?"Начало положено":"Старт";
 
@@ -2079,9 +2103,9 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
 
   // Confetti burst for 100% goals
   const ConfettiBurst=()=>(
-    <div style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden",borderRadius:14,zIndex:10}}>
+    <div style={{position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden",borderRadius:10,zIndex:10}}>
       {Array.from({length:18},(_,i)=>{
-        const colors=["#FFD700","#FF6B6B","#4ADE80","#60A5FA","#F472B6","#A78BFA"];
+        const colors=["#CACACA","#979797","#A7A7A7","#9A9A9A","#A1A1A1","#A0A0A0"];
         const color=colors[i%colors.length];
         const left=5+Math.random()*90;
         const delay=Math.random()*0.8;
@@ -2096,7 +2120,7 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
       })}
       <style>{`
         @keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(120px) rotate(720deg);opacity:0}}
-        @keyframes glowPulse{0%,100%{box-shadow:0 0 8px 2px rgba(74,222,128,0.4)}50%{box-shadow:0 0 20px 6px rgba(74,222,128,0.7)}}
+        @keyframes glowPulse{0%,100%{box-shadow:0 0 8px 2px rgba(167,167,167,0.4)}50%{box-shadow:0 0 20px 6px rgba(167,167,167,0.7)}}
         @keyframes progressGlow{0%,100%{opacity:0.6}50%{opacity:1}}
         @keyframes stickerBounce{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
       `}</style>
@@ -2115,13 +2139,13 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
     const sticker=prgSticker(p);
     const doneTasks=gTasks.filter((t:any)=>t.status==="done"||t.done).length;
 
-    const borderColor=isAchieved?"#4ADE80":(g.color||C.a);
-    const cardBg=isAchieved?"linear-gradient(135deg,#F0FDF4,#DCFCE7)":C.w;
+    const borderColor=isAchieved?"#A7A7A7":(g.color||C.a);
+    const cardBg=isAchieved?"linear-gradient(135deg,#F0FDF4,#F0F0F0)":C.w;
 
-    return <div style={{background:isAchieved?"#F0FDF4":C.bg,borderRadius:14,overflow:"hidden",border:"1px solid "+(isAchieved?"#BBF7D0":C.bd),
+    return <div style={{background:isAchieved?"#F0FDF4":C.bg,borderRadius:10,overflow:"hidden",border:"1px solid "+(isAchieved?"#E1E1E1":C.bd),
       transition:"transform 0.2s,box-shadow 0.2s",borderLeft:`4px solid ${borderColor}`,
       position:"relative",
-      boxShadow:isAchieved?"0 0 0 1px #BBF7D0, 0 4px 16px rgba(74,222,128,0.12)":"none",
+      boxShadow:isAchieved?"0 0 0 1px #E1E1E1, 0 4px 16px rgba(167,167,167,0.12)":"none",
       animation:isAchieved?"glowPulse 3s ease-in-out infinite":"none",
     }}>
       {isAchieved&&<ConfettiBurst/>}
@@ -2141,9 +2165,9 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
       <div style={{padding:"14px 18px",display:"flex",alignItems:"flex-start",gap:12,background:isAchieved?"transparent":C.w,cursor:"pointer"}} onClick={()=>setOpenGoal(isOpen?null:g.id)}>
         <div style={{flex:1,minWidth:0}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,flexWrap:"wrap"}}>
-            <span style={{fontSize:14,fontWeight:700,color:isAchieved?"#15803D":C.t1}}>{g.name}</span>
-            {isAchieved&&<span style={{fontSize:10,fontWeight:700,background:"#4ADE8022",color:"#16A34A",borderRadius:20,padding:"2px 10px",border:"1px solid #4ADE8040"}}>✓ Достигнута</span>}
-            {!isAchieved&&overdue&&<span style={{fontSize:10,fontWeight:700,background:C.r+"18",color:C.r,borderRadius:20,padding:"2px 8px"}}>Просрочена на {Math.abs(days||0)} дн.</span>}
+            <span style={{fontSize:14,fontWeight:700,color:isAchieved?"#585858":C.t1}}>{g.name}</span>
+            {isAchieved&&<span style={{fontSize:10,fontWeight:700,background:"#4ADE8022",color:"#6F6F6F",borderRadius:10,padding:"2px 10px",border:"1px solid #4ADE8040"}}>✓ Достигнута</span>}
+            {!isAchieved&&overdue&&<span style={{fontSize:10,fontWeight:700,background:C.r+"18",color:C.r,borderRadius:10,padding:"2px 8px"}}>Просрочена на {Math.abs(days||0)} дн.</span>}
             {!isAchieved&&!overdue&&days!==null&&days<=14&&<span style={{fontSize:10,color:pr.color,fontWeight:600}}>осталось {days} дн.</span>}
           </div>
           {g.start_date&&g.end_date&&<div style={{fontSize:11,color:C.t2,marginBottom:8}}>{g.start_date.substring(5)} — {g.end_date.substring(5)}</div>}
@@ -2151,7 +2175,7 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
           {/* ── STYLED PROGRESS BAR ── */}
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             {/* Sticker */}
-            <div style={{fontSize:20,flexShrink:0,animation:"stickerBounce 2s ease-in-out infinite",filter:isAchieved?"drop-shadow(0 0 6px rgba(74,222,128,0.8))":"none"}}
+            <div style={{fontSize:20,flexShrink:0,animation:"stickerBounce 2s ease-in-out infinite",filter:isAchieved?"drop-shadow(0 0 6px rgba(167,167,167,0.8))":"none"}}
               title={prgStickerLabel(p)}>{sticker}</div>
 
             {/* Bar container */}
@@ -2184,8 +2208,8 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
             {/* Percent badge */}
             <div style={{
               flexShrink:0,minWidth:52,textAlign:"center",
-              padding:"3px 10px",borderRadius:20,
-              background:isAchieved?"linear-gradient(135deg,#4ADE80,#16A34A)":prgGradient(p),
+              padding:"3px 10px",borderRadius:10,
+              background:isAchieved?"linear-gradient(135deg,#A7A7A7,#6F6F6F)":prgGradient(p),
               boxShadow:"0 2px 8px "+prgColor(p)+"44",
               transition:"all 0.4s",
             }}>
@@ -2199,11 +2223,11 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
         <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}} onClick={e=>e.stopPropagation()}>
           {!isAchieved&&<div style={{position:"relative"}}>
             <button onClick={()=>setPriorityMenu(isPriorityMenuOpen?null:g.id)}
-              style={{display:"flex",alignItems:"center",gap:4,padding:"5px 10px",borderRadius:20,border:"1px solid "+pr.color+"33",background:pr.color+"10",cursor:"pointer",fontSize:11,fontWeight:600,color:pr.color}}>
+              style={{display:"flex",alignItems:"center",gap:4,padding:"5px 10px",borderRadius:10,border:"1px solid "+pr.color+"33",background:pr.color+"10",cursor:"pointer",fontSize:11,fontWeight:600,color:pr.color}}>
               <span style={{animation:isUrgent?"pulse 1.5s ease-in-out infinite":"none"}}>{pr.icon}</span>
               <span>{pr.label}</span>
             </button>
-            {isPriorityMenuOpen&&<div className="dropdown-menu" style={{position:"absolute",top:"calc(100% + 4px)",right:0,background:C.w,border:"1px solid "+C.bd,borderRadius:10,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:100,minWidth:200,overflow:"hidden"}}>
+            {isPriorityMenuOpen&&<div className="dropdown-menu" style={{position:"absolute",top:"calc(100% + 4px)",right:0,background:C.w,border:"1px solid "+C.bd,borderRadius:8,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:100,minWidth:200,overflow:"hidden"}}>
               {Object.values(PRIORITIES).map(op=><button key={op.id} onClick={()=>setPriority(g.id,op.id,true)}
                 style={{width:"100%",padding:"10px 14px",background:g.priority===op.id?op.color+"10":"transparent",border:"none",borderBottom:"1px solid "+C.bd,cursor:"pointer",display:"flex",alignItems:"center",gap:8,fontSize:13,color:g.priority===op.id?op.color:C.t1,fontWeight:g.priority===op.id?600:400,textAlign:"left"}}>
                 <span>{op.icon}</span><span>{op.label}</span>
@@ -2288,7 +2312,7 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
                 <span style={{fontSize:10,color:C.t2}}>{t.mins}м</span>
                 {t.date&&<span style={{fontSize:10,color:C.t2}}>📅 {t.date.substring(5)}</span>}
                 <Tag label={tsLbl(t.status||"todo")} color={tsCol(t.status||"todo")}/>
-                {tSubtasks.length>0&&<span style={{fontSize:10,color:C.t2,background:C.ib,borderRadius:10,padding:"1px 7px",border:"1px solid "+C.bd}}>{doneSubtasks}/{tSubtasks.length} подзадач</span>}
+                {tSubtasks.length>0&&<span style={{fontSize:10,color:C.t2,background:C.ib,borderRadius:8,padding:"1px 7px",border:"1px solid "+C.bd}}>{doneSubtasks}/{tSubtasks.length} подзадач</span>}
               </div>
             </div>
 
@@ -2354,25 +2378,25 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
         })}
         {showGTF===g.id
           ? <AddTaskForm goalId={g.id}/>
-          : <button onClick={()=>setShowGTF(g.id)} style={{width:"100%",padding:"8px",background:"transparent",border:"1px dashed "+C.bd,borderRadius:10,fontSize:12,color:C.t2,cursor:"pointer",marginTop:4}}>+ Задача</button>
+          : <button onClick={()=>setShowGTF(g.id)} style={{width:"100%",padding:"8px",background:"transparent",border:"1px dashed "+C.bd,borderRadius:8,fontSize:12,color:C.t2,cursor:"pointer",marginTop:4}}>+ Задача</button>
         }
       </div>}
     </div>;
   };
 
-  return <div className="yearmap-table" style={{background:C.w,borderRadius:20,boxShadow:"0 4px 24px rgba(0,0,0,0.07)",border:"1px solid "+C.bd,overflow:"hidden"}}>
+  return <div className="yearmap-table" style={{background:C.w,borderRadius:10,boxShadow:"0 4px 24px rgba(0,0,0,0.07)",border:"1px solid "+C.bd,overflow:"hidden"}}>
     <style>{`
       @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
-      @keyframes burningGlow{0%,100%{box-shadow:0 0 12px rgba(239,68,68,0.18),0 0 0 1px rgba(239,68,68,0.12)}50%{box-shadow:0 0 22px rgba(239,68,68,0.32),0 0 0 1px rgba(239,68,68,0.22)}}
-      @keyframes deferrableGlow{0%,100%{box-shadow:0 0 8px rgba(245,158,11,0.12)}50%{box-shadow:0 0 16px rgba(245,158,11,0.24)}}
+      @keyframes burningGlow{0%,100%{box-shadow:0 0 12px rgba(119,119,119,0.18),0 0 0 1px rgba(119,119,119,0.12)}50%{box-shadow:0 0 22px rgba(119,119,119,0.32),0 0 0 1px rgba(119,119,119,0.22)}}
+      @keyframes deferrableGlow{0%,100%{box-shadow:0 0 8px rgba(167,167,167,0.12)}50%{box-shadow:0 0 16px rgba(167,167,167,0.24)}}
     `}</style>
     {/* Toast */}
-    {toast&&<div style={{position:"fixed",bottom:isMobile?72:24,left:"50%",transform:"translateX(-50%)",background:C.dk,color:"#fff",padding:"12px 20px",borderRadius:12,fontSize:13,fontWeight:500,zIndex:1000,boxShadow:"0 8px 24px rgba(0,0,0,0.2)",maxWidth:360,textAlign:"center"}}>{toast}</div>}
+    {toast&&<div style={{position:"fixed",bottom:isMobile?72:24,left:"50%",transform:"translateX(-50%)",background:C.dk,color:"#fff",padding:"12px 20px",borderRadius:8,fontSize:13,fontWeight:500,zIndex:1000,boxShadow:"0 8px 24px rgba(0,0,0,0.2)",maxWidth:360,textAlign:"center"}}>{toast}</div>}
 
     {/* Header */}
     <div style={{padding:"18px 24px",background:`linear-gradient(135deg,${C.dk},${C.da})`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
-        <div style={{width:32,height:32,borderRadius:10,background:"rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+        <div style={{width:32,height:32,borderRadius:8,background:"rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center"}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
         </div>
         <div>
@@ -2380,7 +2404,7 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
           <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",marginTop:1}}>{childGoals.length} целей · сортировка по приоритету</div>
         </div>
       </div>
-      <button onClick={()=>setShowNewGoal(!showNewGoal)} style={{padding:"8px 16px",background:"rgba(255,255,255,0.15)",color:"#fff",border:"1px solid rgba(255,255,255,0.25)",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer"}}>+ Цель</button>
+      <button onClick={()=>setShowNewGoal(!showNewGoal)} style={{padding:"8px 16px",background:"rgba(255,255,255,0.15)",color:"#fff",border:"1px solid rgba(255,255,255,0.25)",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer"}}>+ Цель</button>
     </div>
 
     {/* New goal form */}
@@ -2408,7 +2432,7 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
             onDragOver={e=>onGoalDragOver(g.id,e)}
             onDrop={()=>onGoalDrop(g.id)}
             onDragEnd={()=>{setGoalDragId(null);setGoalDragOver(null);}}
-            style={{opacity:goalDragId===g.id?0.45:1,outline:goalDragOver===g.id&&goalDragId!==g.id?"2px dashed "+C.a:"none",borderRadius:14,transition:"opacity 0.15s"}}>
+            style={{opacity:goalDragId===g.id?0.45:1,outline:goalDragOver===g.id&&goalDragId!==g.id?"2px dashed "+C.a:"none",borderRadius:10,transition:"opacity 0.15s"}}>
             <GoalCard g={g} isAchieved={false}/>
           </div>;
         })}
@@ -2419,8 +2443,8 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
         <div style={{marginTop:8}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
             <span style={{fontSize:18}}>🏆</span>
-            <span style={{fontSize:13,fontWeight:700,color:"#16A34A",textTransform:"uppercase",letterSpacing:0.5}}>Достигнутые</span>
-            <span style={{fontSize:11,background:"#4ADE8020",color:"#16A34A",borderRadius:20,padding:"1px 8px",fontWeight:600}}>
+            <span style={{fontSize:13,fontWeight:700,color:"#6F6F6F",textTransform:"uppercase",letterSpacing:0.5}}>Достигнутые</span>
+            <span style={{fontSize:11,background:"#4ADE8020",color:"#6F6F6F",borderRadius:10,padding:"1px 8px",fontWeight:600}}>
               {childGoals.filter((g:any)=>goalProgress(g.id)===100).length}
             </span>
             <div style={{flex:1,height:1,background:"#4ADE8030"}}/>
@@ -2436,7 +2460,247 @@ function GoalsBlock({userId,goals,goalTasks,dndDrag,dndOver,setDndDrag,setDndOve
   </div>;
 }
 
-function StrategyPage({userId}:{userId:string}){
+/* ============ TASK PLANNER (War Room) ============ */
+const PLANNER_COLORS=["#3B82F6","#8B5CF6","#EC4899","#EF4444","#F59E0B","#10B981","#14B8A6","#64748B"];
+const PRIO:Record<string,{label:string,color:string}>={none:{label:"Без приоритета",color:"#94A3B8"},low:{label:"Низкий",color:"#64748B"},medium:{label:"Средний",color:"#F59E0B"},high:{label:"Высокий",color:"#EF4444"}};
+const PL_WD=["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
+const PL_MONTHS=["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+const pd=(d:Date)=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const uidp=(p:string)=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+
+function TaskPlanner({userId}:{userId:string}){
+  const{dark}=useTheme();
+  const isMobile=useIsMobile();
+  const{data:tasks,add,update,remove,loading}=useTable("planner_tasks",userId);
+  const[view,setView]=useState<"calendar"|"list">("calendar");
+  const[cur,setCur]=useState(()=>new Date());
+  const[edit,setEdit]=useState<any>(null);
+  const[subInput,setSubInput]=useState("");
+  const[saving,setSaving]=useState(false);
+
+  const bd=C.bd;
+  const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
+  const inputBg=dark?"#1C1C1C":"#F8FAFC";
+  const todayStr=pd(new Date());
+
+  const y=cur.getFullYear(),m=cur.getMonth();
+  const gridStart=new Date(y,m,1);gridStart.setDate(gridStart.getDate()-((gridStart.getDay()+6)%7));
+  const days:Date[]=[];for(let i=0;i<42;i++){const d=new Date(gridStart);d.setDate(gridStart.getDate()+i);days.push(d);}
+  const forDay=(d:Date)=>tasks.filter((t:any)=>t.due_date===pd(d)).sort((a:any,b:any)=>String(a.due_time||"99").localeCompare(String(b.due_time||"99")));
+
+  const blank=(date?:string)=>({title:"",description:"",due_date:date||"",due_time:"",priority:"none",color:PLANNER_COLORS[0],done:false,subtasks:[]});
+  const openNew=(date?:string)=>{setEdit(blank(date));setSubInput("");};
+  const openEdit=(t:any)=>{setEdit({...t,subtasks:t.subtasks||[]});setSubInput("");};
+
+  const save=async()=>{
+    if(!edit||!edit.title.trim())return;
+    setSaving(true);
+    const payload={title:edit.title.trim(),description:edit.description||"",due_date:edit.due_date||"",due_time:edit.due_time||"",priority:edit.priority||"none",color:edit.color||PLANNER_COLORS[0],done:!!edit.done,subtasks:edit.subtasks||[],updated_at:new Date().toISOString()};
+    if(edit.id)await update(edit.id,payload); else await add(payload);
+    setSaving(false);setEdit(null);
+  };
+  const del=async()=>{if(edit?.id&&confirm("Удалить задачу?")){await remove(edit.id);setEdit(null);}};
+  const toggleDone=(t:any,e?:any)=>{e&&e.stopPropagation();update(t.id,{done:!t.done});};
+  const addSub=()=>{if(!subInput.trim())return;setEdit((x:any)=>({...x,subtasks:[...(x.subtasks||[]),{id:uidp("s"),text:subInput.trim(),done:false}]}));setSubInput("");};
+  const toggleSub=(id:string)=>setEdit((x:any)=>({...x,subtasks:x.subtasks.map((s:any)=>s.id===id?{...s,done:!s.done}:s)}));
+  const rmSub=(id:string)=>setEdit((x:any)=>({...x,subtasks:x.subtasks.filter((s:any)=>s.id!==id)}));
+
+  const navMonth=(n:number)=>setCur(new Date(y,m+n,1));
+
+  // ---- list groups ----
+  const listGroups=()=>{
+    const t=new Date();const today=pd(t);const tm=new Date(t);tm.setDate(t.getDate()+1);const tomorrow=pd(tm);
+    const done=tasks.filter((x:any)=>x.done);
+    const active=tasks.filter((x:any)=>!x.done);
+    const overdue=active.filter((x:any)=>x.due_date&&x.due_date<today);
+    const nowDay=active.filter((x:any)=>x.due_date===today);
+    const tmr=active.filter((x:any)=>x.due_date===tomorrow);
+    const upcoming=active.filter((x:any)=>x.due_date&&x.due_date>tomorrow).sort((a:any,b:any)=>a.due_date.localeCompare(b.due_date));
+    const nodate=active.filter((x:any)=>!x.due_date);
+    return [
+      {key:"overdue",label:"Просрочено",items:overdue,tone:"#EF4444"},
+      {key:"today",label:"Сегодня",items:nowDay,tone:C.t1},
+      {key:"tomorrow",label:"Завтра",items:tmr,tone:C.t1},
+      {key:"upcoming",label:"Предстоящие",items:upcoming,tone:C.t1},
+      {key:"nodate",label:"Без даты",items:nodate,tone:C.t2},
+      {key:"done",label:"Выполнено",items:done,tone:C.t2},
+    ].filter(g=>g.items.length>0);
+  };
+
+  const prioDot=(p:string)=>p&&p!=="none"&&p!=="low"?<span style={{width:6,height:6,borderRadius:"50%",background:PRIO[p]?.color,flexShrink:0}}/>:null;
+  const fmtDue=(t:any)=>{if(!t.due_date)return "";const[Y,M,D]=t.due_date.split("-");return `${D}.${M}${t.due_time?" "+t.due_time:""}`;};
+
+  return(
+    <div style={{width:"100%"}}>
+      {/* Toolbar */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:16,flexWrap:"wrap" as const}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          {view==="calendar"&&<>
+            <button onClick={()=>navMonth(-1)} style={{width:34,height:34,borderRadius:8,border:"1px solid "+bd,background:cardBg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <button onClick={()=>navMonth(1)} style={{width:34,height:34,borderRadius:8,border:"1px solid "+bd,background:cardBg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+            <span style={{fontSize:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em",minWidth:isMobile?0:180}}>{PL_MONTHS[m]} {y}</span>
+            <button onClick={()=>setCur(new Date())} style={{padding:"6px 14px",background:"transparent",color:C.t1,border:"1px solid "+bd,borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer"}}>Сегодня</button>
+          </>}
+          {view==="list"&&<span style={{fontSize:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em"}}>Текущие задачи</span>}
+        </div>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          <div style={{display:"flex",background:C.ib,borderRadius:8,padding:3,border:"1px solid "+bd,gap:2}}>
+            {(["calendar","list"] as const).map(v=>(
+              <button key={v} onClick={()=>setView(v)} style={{padding:"6px 14px",borderRadius:6,border:"none",background:view===v?cardBg:"transparent",color:view===v?C.t1:C.t2,fontSize:12,fontWeight:600,cursor:"pointer",boxShadow:view===v?"0 1px 3px rgba(0,0,0,0.1)":"none"}}>{v==="calendar"?"Календарь":"Список"}</button>
+            ))}
+          </div>
+          <button onClick={()=>openNew(view==="calendar"?"":todayStr)} style={{padding:"8px 16px",background:C.t1,color:C.bg,border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Задача
+          </button>
+        </div>
+      </div>
+
+      {loading?<div style={{padding:50,textAlign:"center" as const,color:C.t2,fontSize:14}}>Загрузка…</div>:view==="calendar"?(
+        /* ---------- MONTH GRID ---------- */
+        <div style={{border:"1px solid "+bd,borderRadius:12,overflow:"hidden",background:cardBg}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",borderBottom:"1px solid "+bd}}>
+            {PL_WD.map(w=><div key={w} style={{padding:"10px 8px",textAlign:"center" as const,fontSize:11,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3}}>{w}</div>)}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)"}}>
+            {days.map((d,i)=>{
+              const inM=d.getMonth()===m;const isToday=pd(d)===todayStr;const dayTasks=forDay(d);
+              return(
+                <div key={i} onClick={()=>openNew(pd(d))}
+                  style={{minHeight:isMobile?84:116,borderRight:(i%7!==6)?"1px solid "+bd:"none",borderBottom:i<35?"1px solid "+bd:"none",padding:6,cursor:"pointer",background:inM?"transparent":(dark?"rgba(255,255,255,0.015)":"rgba(0,0,0,0.015)"),display:"flex",flexDirection:"column",gap:3}}>
+                  <div style={{display:"flex",justifyContent:"flex-end"}}>
+                    <span style={{fontSize:12,fontWeight:isToday?800:500,color:isToday?C.bg:(inM?C.t1:C.t2),width:22,height:22,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",background:isToday?C.t1:"transparent"}}>{d.getDate()}</span>
+                  </div>
+                  {dayTasks.slice(0,isMobile?2:3).map((t:any)=>(
+                    <div key={t.id} onClick={e=>{e.stopPropagation();openEdit(t);}}
+                      style={{display:"flex",alignItems:"center",gap:5,padding:"2px 6px",borderRadius:5,background:(t.color||"#64748B")+"1E",borderLeft:"2px solid "+(t.color||"#64748B"),cursor:"pointer",minWidth:0}}>
+                      <span onClick={e=>toggleDone(t,e)} style={{width:11,height:11,borderRadius:3,border:"1.5px solid "+(t.color||"#64748B"),background:t.done?(t.color||"#64748B"):"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        {t.done&&<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}
+                      </span>
+                      {prioDot(t.priority)}
+                      <span style={{fontSize:11,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.5:1}}>{t.due_time?t.due_time+" ":""}{t.title}</span>
+                    </div>
+                  ))}
+                  {dayTasks.length>(isMobile?2:3)&&<span style={{fontSize:10,color:C.t2,paddingLeft:4}}>+{dayTasks.length-(isMobile?2:3)} ещё</span>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ):(
+        /* ---------- LIST ---------- */
+        <div style={{display:"flex",flexDirection:"column",gap:22}}>
+          {listGroups().length===0&&<div style={{padding:"50px 0",textAlign:"center" as const,color:C.t2,fontSize:14}}>Задач пока нет. Нажмите «Задача», чтобы добавить.</div>}
+          {listGroups().map(g=>(
+            <div key={g.key}>
+              <div style={{fontSize:12,fontWeight:700,color:g.tone,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:10}}>{g.label} · {g.items.length}</div>
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {g.items.map((t:any)=>(
+                  <div key={t.id} onClick={()=>openEdit(t)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:cardBg,border:"1px solid "+bd,borderRadius:10,cursor:"pointer"}}>
+                    <span onClick={e=>toggleDone(t,e)} style={{width:20,height:20,borderRadius:6,border:"2px solid "+(t.color||"#64748B"),background:t.done?(t.color||"#64748B"):"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+                      {t.done&&<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5"><polyline points="20 6 9 17 4 12"/></svg>}
+                    </span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        <span style={{width:8,height:8,borderRadius:"50%",background:t.color||"#64748B",flexShrink:0}}/>
+                        <span style={{fontSize:14,fontWeight:600,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.55:1}}>{t.title}</span>
+                      </div>
+                      {(t.description||(t.subtasks&&t.subtasks.length>0))&&<div style={{fontSize:12,color:C.t2,marginTop:3,marginLeft:16,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                        {t.subtasks&&t.subtasks.length>0?`Подзадачи: ${t.subtasks.filter((s:any)=>s.done).length}/${t.subtasks.length}`:""}
+                        {t.subtasks&&t.subtasks.length>0&&t.description?" · ":""}
+                        {t.description?t.description.replace(/\n/g," "):""}
+                      </div>}
+                    </div>
+                    {t.priority&&t.priority!=="none"&&<span style={{fontSize:11,fontWeight:600,color:PRIO[t.priority].color,background:PRIO[t.priority].color+"1E",padding:"3px 9px",borderRadius:20,flexShrink:0}}>{PRIO[t.priority].label}</span>}
+                    {t.due_date&&<span style={{fontSize:12,color:g.key==="overdue"?"#EF4444":C.t2,flexShrink:0,fontWeight:500}}>{fmtDue(t)}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ---------- EDITOR MODAL ---------- */}
+      {edit&&<div onClick={()=>setEdit(null)} style={{position:"fixed" as const,inset:0,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(4px)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:16,overflowY:"auto" as const}}>
+        <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:560,maxHeight:"90vh",overflowY:"auto" as const,background:dark?"#161616":"#fff",border:"1px solid "+bd,borderRadius:16,padding:24,boxShadow:"0 24px 60px rgba(0,0,0,0.5)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:18}}>
+            <span onClick={()=>setEdit((x:any)=>({...x,done:!x.done}))} style={{width:24,height:24,borderRadius:7,border:"2px solid "+(edit.color||"#64748B"),background:edit.done?(edit.color||"#64748B"):"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+              {edit.done&&<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5"><polyline points="20 6 9 17 4 12"/></svg>}
+            </span>
+            <input value={edit.title} onChange={e=>setEdit((x:any)=>({...x,title:e.target.value}))} placeholder="Название задачи" autoFocus
+              style={{flex:1,border:"none",outline:"none",background:"transparent",fontSize:19,fontWeight:700,color:C.t1,fontFamily:"'Inter',sans-serif",textDecoration:edit.done?"line-through":"none"}}/>
+            <button onClick={()=>setEdit(null)} style={{width:32,height:32,borderRadius:8,border:"none",background:"transparent",color:C.t2,cursor:"pointer",flexShrink:0}}>✕</button>
+          </div>
+
+          <textarea value={edit.description} onChange={e=>setEdit((x:any)=>({...x,description:e.target.value}))} placeholder="Описание задачи…"
+            style={{width:"100%",minHeight:70,padding:"11px 13px",border:"1px solid "+bd,borderRadius:10,fontSize:14,background:inputBg,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const,marginBottom:16}}/>
+
+          <div style={{display:"flex",gap:12,marginBottom:16,flexWrap:"wrap" as const}}>
+            <div style={{flex:1,minWidth:150}}>
+              <label style={{fontSize:11,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:6,display:"block"}}>Срок</label>
+              <input type="date" value={edit.due_date} onChange={e=>setEdit((x:any)=>({...x,due_date:e.target.value}))} style={{width:"100%",padding:"10px 12px",border:"1px solid "+bd,borderRadius:9,fontSize:13,background:inputBg,color:C.t1,outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
+            </div>
+            <div style={{width:120}}>
+              <label style={{fontSize:11,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:6,display:"block"}}>Время</label>
+              <input type="time" value={edit.due_time} onChange={e=>setEdit((x:any)=>({...x,due_time:e.target.value}))} style={{width:"100%",padding:"10px 12px",border:"1px solid "+bd,borderRadius:9,fontSize:13,background:inputBg,color:C.t1,outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
+            </div>
+          </div>
+
+          <div style={{marginBottom:16}}>
+            <label style={{fontSize:11,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8,display:"block"}}>Приоритет</label>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap" as const}}>
+              {(["none","low","medium","high"] as const).map(p=><button key={p} onClick={()=>setEdit((x:any)=>({...x,priority:p}))} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:8,border:"1px solid "+(edit.priority===p?PRIO[p].color:bd),background:edit.priority===p?PRIO[p].color+"18":"transparent",color:edit.priority===p?PRIO[p].color:C.t2,fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                {p!=="none"&&<span style={{width:7,height:7,borderRadius:"50%",background:PRIO[p].color}}/>}{PRIO[p].label}
+              </button>)}
+            </div>
+          </div>
+
+          <div style={{marginBottom:16}}>
+            <label style={{fontSize:11,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8,display:"block"}}>Цвет</label>
+            <div style={{display:"flex",gap:8}}>
+              {PLANNER_COLORS.map(col=><button key={col} onClick={()=>setEdit((x:any)=>({...x,color:col}))} style={{width:26,height:26,borderRadius:7,border:edit.color===col?"2px solid "+C.t1:"1px solid "+bd,background:col,cursor:"pointer"}}/>)}
+            </div>
+          </div>
+
+          <div style={{marginBottom:20}}>
+            <label style={{fontSize:11,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8,display:"block"}}>Подзадачи{edit.subtasks?.length>0?` · ${edit.subtasks.filter((s:any)=>s.done).length}/${edit.subtasks.length}`:""}</label>
+            <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:8}}>
+              {(edit.subtasks||[]).map((s:any)=>(
+                <div key={s.id} style={{display:"flex",alignItems:"center",gap:9,padding:"8px 10px",background:inputBg,borderRadius:8}}>
+                  <span onClick={()=>toggleSub(s.id)} style={{width:17,height:17,borderRadius:5,border:"2px solid "+C.t2,background:s.done?C.t1:"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+                    {s.done&&<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={C.bg} strokeWidth="3.5"><polyline points="20 6 9 17 4 12"/></svg>}
+                  </span>
+                  <span style={{flex:1,fontSize:13,color:C.t1,textDecoration:s.done?"line-through":"none",opacity:s.done?0.55:1}}>{s.text}</span>
+                  <button onClick={()=>rmSub(s.id)} style={{border:"none",background:"transparent",color:C.t2,cursor:"pointer",fontSize:15,padding:0,flexShrink:0}}>✕</button>
+                </div>
+              ))}
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <input value={subInput} onChange={e=>setSubInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();addSub();}}} placeholder="Добавить подзадачу…"
+                style={{flex:1,padding:"9px 12px",border:"1px solid "+bd,borderRadius:9,fontSize:13,background:inputBg,color:C.t1,outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
+              <button onClick={addSub} style={{padding:"0 16px",borderRadius:9,border:"1px solid "+bd,background:"transparent",color:C.t1,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Добавить</button>
+            </div>
+          </div>
+
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,paddingTop:16,borderTop:"1px solid "+bd}}>
+            {edit.id?<button onClick={del} style={{padding:"11px 16px",borderRadius:10,border:"none",background:"transparent",color:"#EF4444",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Удалить</button>:<span/>}
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={()=>setEdit(null)} style={{padding:"11px 20px",borderRadius:10,border:"1px solid "+bd,background:"transparent",color:C.t2,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Отмена</button>
+              <button onClick={save} disabled={!edit.title.trim()||saving} style={{padding:"11px 24px",borderRadius:10,border:"none",background:edit.title.trim()?C.t1:C.ib,color:edit.title.trim()?C.bg:C.t2,fontSize:14,fontWeight:700,cursor:edit.title.trim()?"pointer":"default",fontFamily:"'Inter',sans-serif"}}>{saving?"Сохраняю…":"Сохранить"}</button>
+            </div>
+          </div>
+        </div>
+      </div>}
+    </div>
+  );
+}
+
+function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
   const kanban = useTable("kanban", userId);
   const goals = useTable("goals", userId);
   const goalTasks = useTable("goal_tasks", userId);
@@ -2767,10 +3031,10 @@ function StrategyPage({userId}:{userId:string}){
     const nowTop=((nowMin-CAL_START*60)/60)*SLOT_H;
     const tasksOnDay=(d:string)=>allCalTasks.filter((t:any)=>(t.date||t.start_date)===d);
 
-    return<div id="cal-grid-outer" style={{display:"flex",flexDirection:"column",background:C.w,borderRadius:16,border:"1px solid "+C.bd,overflow:"hidden",userSelect:"none"}}>
+    return<div id="cal-grid-outer" style={{display:"flex",flexDirection:"column",background:C.w,borderRadius:10,border:"1px solid "+C.bd,overflow:"hidden",userSelect:"none"}}>
       {/* Early hours toggle */}
       <button onClick={()=>setCalShowEarly(v=>!v)}
-        style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"6px 0",background:calShowEarly?"rgba(37,99,235,0.04)":C.bg,border:"none",borderBottom:"1px solid "+C.bd,cursor:"pointer",fontSize:11,color:C.t2,fontWeight:600,transition:"background 0.2s"}}>
+        style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:"6px 0",background:calShowEarly?"rgba(96,96,96,0.04)":C.bg,border:"none",borderBottom:"1px solid "+C.bd,cursor:"pointer",fontSize:11,color:C.t2,fontWeight:600,transition:"background 0.2s"}}>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points={calShowEarly?"18 15 12 9 6 15":"6 9 12 15 18 9"}/></svg>
         {calShowEarly?"Скрыть 00:00 – 07:00":"Показать 00:00 – 07:00"}
       </button>
@@ -2790,7 +3054,7 @@ function StrategyPage({userId}:{userId:string}){
               {Array.from({length:CAL_EARLY},(_,i)=>(
                 <div key={i} onClick={()=>!dragTaskId&&!resizing&&openCalNew(dateStr,i)}
                   style={{height:SLOT_H,borderBottom:"1px solid rgba(0,0,0,0.04)",cursor:"pointer"}}
-                  onMouseEnter={e=>{if(!dragTaskId&&!resizing)(e.currentTarget as HTMLElement).style.background="rgba(37,99,235,0.03)";}}
+                  onMouseEnter={e=>{if(!dragTaskId&&!resizing)(e.currentTarget as HTMLElement).style.background="rgba(96,96,96,0.03)";}}
                   onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}/>
               ))}
               {earlyTasks.map((t:any,ti:number)=>{
@@ -2799,7 +3063,7 @@ function StrategyPage({userId}:{userId:string}){
                 const topPx=Math.max(0,st/60*SLOT_H);
                 const heightPx=Math.max(20,(et-st)/60*SLOT_H-2);
                 const isDone=t.status==="done"||t.done;
-                const color=isDone?"#22C55E":(t._src==="goal"?(goals.data.find((g:any)=>g.id===t.goal_id)?.color||C.a):typeColor(t.type||"biz"));
+                const color=isDone?"#898989":(t._src==="goal"?(goals.data.find((g:any)=>g.id===t.goal_id)?.color||C.a):typeColor(t.type||"biz"));
                 return<div key={t.id} style={{position:"absolute",top:topPx,left:"2px",width:"94%",height:heightPx,background:color+"14",border:"1.5px solid "+color+"40",borderLeft:"3px solid "+color,borderRadius:7,padding:"3px 6px 3px 8px",overflow:"hidden",zIndex:ti+2,fontSize:10,color:color}}>
                   {t.text||t.title}
                 </div>;
@@ -2824,9 +3088,9 @@ function StrategyPage({userId}:{userId:string}){
           const dt=new Date(dateStr+"T12:00:00");
           const dayTasks=tasksOnDay(dateStr);
           const isDrop=dropPreview?.dateStr===dateStr;
-          return<div key={dateStr} style={{borderRight:"1px solid "+C.bd,position:"relative",background:isDrop?"rgba(37,99,235,0.02)":"transparent"}}>
+          return<div key={dateStr} style={{borderRight:"1px solid "+C.bd,position:"relative",background:isDrop?"rgba(96,96,96,0.02)":"transparent"}}>
             {/* Header */}
-            <div style={{height:48,borderBottom:"1px solid "+C.bd,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",position:"sticky",top:0,zIndex:5,background:isToday?"rgba(37,99,235,0.04)":C.w}}>
+            <div style={{height:48,borderBottom:"1px solid "+C.bd,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",position:"sticky",top:0,zIndex:5,background:isToday?"rgba(96,96,96,0.04)":C.w}}>
               <span style={{fontSize:10,color:isToday?C.a:C.t2,fontWeight:600,textTransform:"uppercase"}}>
                 {["Вс","Пн","Вт","Ср","Чт","Пт","Сб"][dt.getDay()]}
               </span>
@@ -2839,7 +3103,7 @@ function StrategyPage({userId}:{userId:string}){
               {Array.from({length:CAL_HOURS},(_,i)=>(
                 <div key={i} onClick={()=>!dragTaskId&&!resizing&&openCalNew(dateStr,i+CAL_START)}
                   style={{height:SLOT_H,borderBottom:"1px solid rgba(0,0,0,0.04)",cursor:"pointer"}}
-                  onMouseEnter={e=>{if(!dragTaskId&&!resizing)(e.currentTarget as HTMLElement).style.background="rgba(37,99,235,0.03)";}}
+                  onMouseEnter={e=>{if(!dragTaskId&&!resizing)(e.currentTarget as HTMLElement).style.background="rgba(96,96,96,0.03)";}}
                   onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}/>
               ))}
               {/* Drop preview line */}
@@ -2859,7 +3123,7 @@ function StrategyPage({userId}:{userId:string}){
                 const heightPx=Math.max(24,(et-st)/60*SLOT_H-2);
                 const isDone=t.status==="done"||t.done;
                 const isAuto=t.auto_placed&&!t.manually_placed;
-                const color=isDone?"#22C55E":(t._src==="goal"?(goals.data.find((g:any)=>g.id===t.goal_id)?.color||C.a):typeColor(t.type||"biz"));
+                const color=isDone?"#898989":(t._src==="goal"?(goals.data.find((g:any)=>g.id===t.goal_id)?.color||C.a):typeColor(t.type||"biz"));
                 const dur=et-st;
                 // Overlap offset
                 const prev=dayTasks.filter((_:any,j:number)=>j<ti&&timeToMin(dayTasks[j].start_time||"09:00")<et&&timeToMin(dayTasks[j].end_time||"10:00")>st);
@@ -2871,14 +3135,14 @@ function StrategyPage({userId}:{userId:string}){
                     top:topPx,left:off?(off*10)+"px":"2px",
                     width:off?"calc(90% - "+(off*10)+"px)":"94%",
                     height:heightPx,
-                    background:isDone?"rgba(34,197,94,0.08)":color+"14",
+                    background:isDone?"rgba(137,137,137,0.08)":color+"14",
                     border:isAuto?"1.5px dashed "+color+"55":"1.5px solid "+color+"40",
                     borderLeft:`3px solid ${color}`,
                     borderRadius:7,padding:"4px 6px 4px 8px",
                     cursor:"grab",overflow:"hidden",zIndex:ti+2,
                     opacity:dragTaskId===t.id?0.4:1,
                     transition:"box-shadow 0.15s",
-                    boxShadow:isDone?"0 0 8px rgba(34,197,94,0.12)":"0 1px 3px rgba(0,0,0,0.07)",
+                    boxShadow:isDone?"0 0 8px rgba(137,137,137,0.12)":"0 1px 3px rgba(0,0,0,0.07)",
                   }}
                   onMouseDown={e=>{
                     if((e.target as HTMLElement).classList.contains("cal-resize"))return;
@@ -2893,7 +3157,7 @@ function StrategyPage({userId}:{userId:string}){
                   }}
                   onClick={e=>{if(!dragTaskId&&Math.abs(e.movementX)<3)setCalModal(t);}}
                   onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 2px 14px "+color+"40";(e.currentTarget as HTMLElement).style.zIndex="50";}}
-                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow=isDone?"0 0 8px rgba(34,197,94,0.12)":"0 1px 3px rgba(0,0,0,0.07)";(e.currentTarget as HTMLElement).style.zIndex=String(ti+2);}}>
+                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow=isDone?"0 0 8px rgba(137,137,137,0.12)":"0 1px 3px rgba(0,0,0,0.07)";(e.currentTarget as HTMLElement).style.zIndex=String(ti+2);}}>
                   {/* Checkbox */}
                   <div style={{display:"flex",alignItems:"flex-start",gap:5}}>
                     <button onMouseDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();
@@ -2901,7 +3165,7 @@ function StrategyPage({userId}:{userId:string}){
                       if(t._src==="kanban")kanban.update(t.id,{status:done?"done":"todo",done});
                       else if(t._src==="goal")goalTasks.update(t.id,{status:done?"done":"todo",done});
                       else calTasks.update(t.id,{status:done?"done":"todo",done});}}
-                      style={{width:13,height:13,minWidth:13,borderRadius:3,border:"1.5px solid "+(isDone?"#22C55E":color),background:isDone?"#22C55E":"transparent",cursor:"pointer",marginTop:1,display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s"}}>
+                      style={{width:13,height:13,minWidth:13,borderRadius:3,border:"1.5px solid "+(isDone?"#898989":color),background:isDone?"#898989":"transparent",cursor:"pointer",marginTop:1,display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s"}}>
                       {isDone&&<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5"><polyline points="20 6 9 17 4 12"/></svg>}
                     </button>
                     <div style={{flex:1,fontSize:11,fontWeight:700,color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:isDone?"line-through":"none",lineHeight:1.3}}>{t.text}</div>
@@ -2935,7 +3199,7 @@ function StrategyPage({userId}:{userId:string}){
       for(let i=0;i<offset;i++)cells.push("");
       for(let d=1;d<=daysInMonth;d++)cells.push(`${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`);
       while(cells.length%7)cells.push("");
-      return<div style={{background:C.w,borderRadius:16,border:"1px solid "+C.bd,overflow:"hidden"}}>
+      return<div style={{background:C.w,borderRadius:10,border:"1px solid "+C.bd,overflow:"hidden"}}>
         <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",background:C.ib,borderBottom:"1px solid "+C.bd}}>
           {["Пн","Вт","Ср","Чт","Пт","Сб","Вс"].map(d=><div key={d} style={{textAlign:"center",padding:"10px 0",fontSize:11,fontWeight:700,color:C.t2}}>{d}</div>)}
         </div>
@@ -2945,9 +3209,9 @@ function StrategyPage({userId}:{userId:string}){
             const dayT=allCalTasks.filter((t:any)=>(t.date||t.start_date)===d);
             const isToday=d===tdStr;
             return<div key={d} onClick={()=>openCalNew(d)}
-              style={{minHeight:90,borderRight:"1px solid "+C.bd+"44",borderBottom:"1px solid "+C.bd+"44",padding:"6px 4px",cursor:"pointer",background:isToday?"rgba(37,99,235,0.03)":"transparent",transition:"background 0.1s"}}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=isToday?"rgba(37,99,235,0.06)":C.ib;}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=isToday?"rgba(37,99,235,0.03)":"transparent";}}>
+              style={{minHeight:90,borderRight:"1px solid "+C.bd+"44",borderBottom:"1px solid "+C.bd+"44",padding:"6px 4px",cursor:"pointer",background:isToday?"rgba(96,96,96,0.03)":"transparent",transition:"background 0.1s"}}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=isToday?"rgba(96,96,96,0.06)":C.ib;}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=isToday?"rgba(96,96,96,0.03)":"transparent";}}>
               <div style={{display:"flex",justifyContent:"center",marginBottom:3}}>
                 <div style={{width:24,height:24,borderRadius:"50%",background:isToday?C.a:"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>
                   <span style={{fontSize:12,fontWeight:isToday?700:400,color:isToday?"#fff":C.t1}}>{parseInt(d.split("-")[2])}</span>
@@ -2956,10 +3220,10 @@ function StrategyPage({userId}:{userId:string}){
               {dayT.slice(0,3).map((t:any)=>{
                 const isDone=t.status==="done"||t.done;
                 const isAuto=t.auto_placed&&!t.manually_placed;
-                const color=isDone?"#22C55E":(t._src==="goal"?(goals.data.find((g:any)=>g.id===t.goal_id)?.color||C.a):typeColor(t.type||"biz"));
+                const color=isDone?"#898989":(t._src==="goal"?(goals.data.find((g:any)=>g.id===t.goal_id)?.color||C.a):typeColor(t.type||"biz"));
                 return<div key={t.id} onClick={e=>{e.stopPropagation();setCalModal(t);}}
                   style={{fontSize:10,padding:"2px 5px",borderRadius:4,marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
-                    background:isDone?"rgba(34,197,94,0.08)":color+"14",color,
+                    background:isDone?"rgba(137,137,137,0.08)":color+"14",color,
                     border:isAuto?"1px dashed "+color+"40":"1px solid "+color+"25",
                     borderLeft:`2px solid ${color}`,textDecoration:isDone?"line-through":"none"}}>
                   {t.start_time&&<span style={{opacity:0.6,fontSize:9}}>{t.start_time} </span>}{t.text}
@@ -2995,9 +3259,9 @@ function StrategyPage({userId}:{userId:string}){
     const isDone=t&&(t.status==="done"||t.done);
 
     if(isView&&t){
-      const color=isDone?"#22C55E":(t._src==="goal"?(goals.data.find((g:any)=>g.id===t.goal_id)?.color||C.a):typeColor(t.type||"biz"));
+      const color=isDone?"#898989":(t._src==="goal"?(goals.data.find((g:any)=>g.id===t.goal_id)?.color||C.a):typeColor(t.type||"biz"));
       return<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setCalModal(null)}>
-        <div style={{background:C.w,borderRadius:18,padding:28,width:"100%",maxWidth:420,border:"1px solid "+C.bd,boxShadow:"0 24px 60px rgba(0,0,0,0.35)"}} onClick={e=>e.stopPropagation()}>
+        <div style={{background:C.w,borderRadius:12,padding:28,width:"100%",maxWidth:420,border:"1px solid "+C.bd,boxShadow:"0 24px 60px rgba(0,0,0,0.35)"}} onClick={e=>e.stopPropagation()}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
             <div style={{width:12,height:12,borderRadius:3,background:color,flexShrink:0}}/>
             <div style={{fontSize:17,fontWeight:700,color:C.t1,flex:1}}>{t.text}</div>
@@ -3012,11 +3276,11 @@ function StrategyPage({userId}:{userId:string}){
           </div>
           <div style={{display:"flex",gap:10}}>
             <button onClick={()=>setCalModal({...t,_editing:true})}
-              style={{flex:1,padding:"9px",background:C.a+"14",color:C.a,border:"1px solid "+C.a+"30",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer"}}>
+              style={{flex:1,padding:"9px",background:C.a+"14",color:C.a,border:"1px solid "+C.a+"30",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer"}}>
               {"✏️ Редактировать"}
             </button>
             {!t._src&&<button onClick={()=>{calTasks.remove(t.id);setCalModal(null);}}
-              style={{padding:"9px 16px",background:C.r+"10",color:C.r,border:"1px solid "+C.r+"25",borderRadius:10,fontSize:13,cursor:"pointer"}}>
+              style={{padding:"9px 16px",background:C.r+"10",color:C.r,border:"1px solid "+C.r+"25",borderRadius:8,fontSize:13,cursor:"pointer"}}>
               {"🗑"}
             </button>}
           </div>
@@ -3025,7 +3289,7 @@ function StrategyPage({userId}:{userId:string}){
     }
 
     return<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setCalModal(null)}>
-      <div style={{background:C.w,borderRadius:18,padding:28,width:"100%",maxWidth:460,border:"1px solid "+C.bd,boxShadow:"0 24px 60px rgba(0,0,0,0.35)"}} onClick={e=>e.stopPropagation()}>
+      <div style={{background:C.w,borderRadius:12,padding:28,width:"100%",maxWidth:460,border:"1px solid "+C.bd,boxShadow:"0 24px 60px rgba(0,0,0,0.35)"}} onClick={e=>e.stopPropagation()}>
         <div style={{fontSize:17,fontWeight:700,color:C.t1,marginBottom:20}}>{isNew?"Новая задача":"Редактировать"}</div>
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
           <div>
@@ -3066,11 +3330,11 @@ function StrategyPage({userId}:{userId:string}){
         </div>
         <div style={{display:"flex",gap:10,marginTop:20,justifyContent:"flex-end"}}>
           <button onClick={()=>setCalModal(null)}
-            style={{padding:"9px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:10,fontSize:13,cursor:"pointer"}}>
+            style={{padding:"9px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:8,fontSize:13,cursor:"pointer"}}>
             Отмена
           </button>
           <button onClick={saveCalTask}
-            style={{padding:"9px 22px",background:C.a,color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer",boxShadow:"0 0 16px "+C.a+"40"}}>
+            style={{padding:"9px 22px",background:C.a,color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",boxShadow:"0 0 16px "+C.a+"40"}}>
             {isNew?"Создать":"Сохранить"}
           </button>
         </div>
@@ -3130,7 +3394,7 @@ function StrategyPage({userId}:{userId:string}){
     if(!tasks.length)return 0;
     return Math.round(tasks.filter((t:any)=>t.status==="done"||t.done).length/tasks.length*100);
   };
-  const prgColor=(p:number)=>p<30?C.r:p<50?"#F97316":p<70?C.y:p<90?"#84CC16":"#16A34A";
+  const prgColor=(p:number)=>p<30?C.r:p<50?"#909090":p<70?C.y:p<90?"#A2A2A2":"#6F6F6F";
 
   // ── Task urgency (shared in StrategyPage) ──
   const taskUrgency=(t:any):{kind:"burning"|"deferrable"|"normal",daysLeft:number|null}=>{
@@ -3204,7 +3468,7 @@ function StrategyPage({userId}:{userId:string}){
         <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap"}}>
           <span style={{fontSize:12,fontWeight:500,textDecoration:isDone?"line-through":"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.text}</span>
         </div>
-        <div style={{display:"flex",gap:6,marginTop:2}}><span style={{fontSize:10,color:C.t2}}>{t.mins}м</span>{t.fromGoal&&<span style={{fontSize:10,color:t.goalColor}}>★</span>}{showDate&&t.date&&<span style={{fontSize:10,color:taskUrgency(t).kind==="burning"?"#EF4444":C.t2,fontWeight:taskUrgency(t).kind==="burning"?700:400}}>{t.date.substring(5)}</span>}</div>
+        <div style={{display:"flex",gap:6,marginTop:2}}><span style={{fontSize:10,color:C.t2}}>{t.mins}м</span>{t.fromGoal&&<span style={{fontSize:10,color:t.goalColor}}>★</span>}{showDate&&t.date&&<span style={{fontSize:10,color:taskUrgency(t).kind==="burning"?"#777777":C.t2,fontWeight:taskUrgency(t).kind==="burning"?700:400}}>{t.date.substring(5)}</span>}</div>
       </div>
       <button onClick={()=>startEdit(t)} style={{width:16,height:16,border:"none",background:"transparent",cursor:"pointer",color:C.t2,fontSize:10,opacity:0.6}}>✏️</button>
       {!t.fromGoal&&<button onClick={()=>setDeleteConfirm(t.id)} style={{width:16,height:16,border:"none",background:"transparent",cursor:"pointer",color:C.r,fontSize:11}}>×</button>}
@@ -3219,226 +3483,43 @@ function StrategyPage({userId}:{userId:string}){
     cursor:"pointer",transition:"all 0.2s",
   });
 
-  // ── Vizzy AI EA Chat state ──
-  const[vizzyOpen,setVizzyOpen]=useState(false);
-  const[vizzyMessages,setVizzyMessages]=useState<{role:"user"|"assistant",text:string}[]>([
-    {role:"assistant",text:"Привет! Я Vizzy AI — твой Executive Assistant. Помогу с задачами, стратегией и планированием. Что нужно?"}
-  ]);
-  const[vizzyInput,setVizzyInput]=useState("");
-  const[vizzyLoading,setVizzyLoading]=useState(false);
-  const vizzyBottomRef=useRef<HTMLDivElement>(null);
-  const VIZZY_ACCENT="#A78BFA";
 
-  const buildContext=()=>{
-    if(stratTab==="sprint"){
-      const taskList=kanban.data.map((t:any)=>`- ${t.text} (${tsLbl(t.status||"todo")}, ${t.mins}мин, ${t.date})`).join("\n");
-      return`[Контекст: Текущий спринт]\n${taskList||"Задач нет"}`;
-    }
-    if(stratTab==="yearmap"){
-      const goalList=goals.data.map((g:any)=>{
-        const gTasks=goalTasks.data.filter((t:any)=>t.goal_id===g.id);
-        return`Цель: ${g.name}\n  Задачи: ${gTasks.map((t:any)=>t.text).join(", ")||"нет"}`;
-      }).join("\n");
-      return`[Контекст: Карта года]\n${goalList||"Целей нет"}`;
-    }
-    return"";
-  };
-
-  const sendVizzy=async()=>{
-    const txt=vizzyInput.trim();
-    if(!txt||vizzyLoading)return;
-    const ctx=buildContext();
-    const userMsg={role:"user" as const,text:txt};
-    setVizzyMessages(prev=>[...prev,userMsg]);
-    setVizzyInput("");
-    setVizzyLoading(true);
-    const history=vizzyMessages.slice(-8).map(m=>({role:m.role,content:m.text}));
-    try{
-      const res=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-          system:`Ты — Vizzy AI, строгий Executive Assistant. Отвечай чётко и по делу. Без воды. Используй короткие абзацы. Контекст платформы пользователя:\n${ctx}`,
-          messages:[...history,{role:"user",content:txt}]
-        })});
-      const data=await res.json();
-      const reply=data.content?.[0]?.text||"Нет ответа";
-      setVizzyMessages(prev=>[...prev,{role:"assistant",text:reply}]);
-    }catch{
-      setVizzyMessages(prev=>[...prev,{role:"assistant",text:"Ошибка соединения. Попробуй ещё раз."}]);
-    }
-    setVizzyLoading(false);
-  };
-
-  useEffect(()=>{
-    if(vizzyBottomRef.current)vizzyBottomRef.current.scrollIntoView({behavior:"smooth"});
-  },[vizzyMessages]);
 
   return <>
-    {/* Vizzy AI toggle tab */}
-    <div onClick={()=>setVizzyOpen(!vizzyOpen)} style={{position:"fixed",right:vizzyOpen?376:0,top:"40%",transform:"translateY(-50%)",background:`linear-gradient(135deg,${VIZZY_ACCENT},#7C3AED)`,width:32,height:120,borderRadius:"12px 0 0 12px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,boxShadow:"-4px 0 20px rgba(167,139,250,0.35)",zIndex:110,transition:"right 0.3s ease"}}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-      <div style={{writingMode:"vertical-rl",textOrientation:"mixed",transform:"rotate(180deg)",fontSize:10,fontWeight:700,color:"#fff",letterSpacing:1}}>VIZZY AI</div>
-    </div>
 
-    {/* Vizzy AI EA Chat panel */}
-    <div style={{position:"fixed",right:0,top:0,bottom:0,width:376,background:"#12101E",borderLeft:"1px solid rgba(167,139,250,0.18)",transform:vizzyOpen?"translateX(0)":"translateX(100%)",transition:"transform 0.3s ease",zIndex:105,display:"flex",flexDirection:"column",fontFamily:"'Inter',sans-serif"}}>
 
-      {/* Header */}
-      <div style={{padding:"16px 18px",borderBottom:"1px solid rgba(167,139,250,0.15)",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"space-between",background:"rgba(167,139,250,0.05)"}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <div style={{width:34,height:34,borderRadius:10,background:"linear-gradient(135deg,#A78BFA,#7C3AED)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-          </div>
-          <div>
-            <div style={{fontSize:14,fontWeight:700,color:"#fff",lineHeight:1.2}}>Vizzy AI</div>
-            <div style={{fontSize:10,color:"rgba(167,139,250,0.7)",display:"flex",alignItems:"center",gap:4}}>
-              <div style={{width:6,height:6,borderRadius:"50%",background:"#10B981"}}/>
-              Executive Assistant · {stratTab==="sprint"?"Спринт":"Карта года"}
-            </div>
-          </div>
-        </div>
-        <div style={{display:"flex",gap:6}}>
-          <button onClick={()=>setVizzyMessages([{role:"assistant",text:"История очищена. Чем могу помочь?"}])}
-            title="Очистить чат"
-            style={{width:28,height:28,borderRadius:7,border:"1px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.05)",cursor:"pointer",color:"rgba(255,255,255,0.4)",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
-          </button>
-          <button onClick={()=>setVizzyOpen(false)} style={{width:28,height:28,borderRadius:7,border:"none",background:"rgba(255,255,255,0.07)",cursor:"pointer",color:"rgba(255,255,255,0.5)",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
-        </div>
-      </div>
-
-      {/* Quick action chips */}
-      <div style={{padding:"8px 14px",borderBottom:"1px solid rgba(167,139,250,0.1)",display:"flex",gap:6,flexWrap:"wrap",flexShrink:0}}>
-        {["Проанализируй задачи","Найди слабые места","Что делать дальше?","Оптимизируй план"].map(q=>(
-          <button key={q} onClick={()=>{setVizzyInput(q);}}
-            style={{padding:"4px 10px",background:"rgba(167,139,250,0.1)",border:"1px solid rgba(167,139,250,0.2)",borderRadius:20,fontSize:10,color:VIZZY_ACCENT,cursor:"pointer",fontWeight:500,whiteSpace:"nowrap"}}>
-            {q}
-          </button>
-        ))}
-      </div>
-
-      {/* Messages */}
-      <div style={{flex:1,overflowY:"auto",padding:"14px 16px",display:"flex",flexDirection:"column",gap:12}}>
-        {vizzyMessages.map((m,i)=>(
-          <div key={i} style={{display:"flex",flexDirection:"column",alignItems:m.role==="user"?"flex-end":"flex-start",gap:3}}>
-            {m.role==="assistant"&&(
-              <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:2}}>
-                <div style={{width:18,height:18,borderRadius:5,background:"linear-gradient(135deg,#A78BFA,#7C3AED)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-                </div>
-                <span style={{fontSize:10,color:"rgba(167,139,250,0.6)",fontWeight:600}}>Vizzy AI</span>
-              </div>
-            )}
-            <div style={{
-              maxWidth:"88%",padding:"10px 13px",borderRadius:m.role==="user"?"12px 12px 4px 12px":"12px 12px 12px 4px",
-              background:m.role==="user"?"linear-gradient(135deg,#A78BFA,#7C3AED)":"rgba(255,255,255,0.06)",
-              border:m.role==="user"?"none":"1px solid rgba(255,255,255,0.08)",
-              fontSize:13,color:m.role==="user"?"#fff":"rgba(255,255,255,0.88)",
-              lineHeight:1.6,whiteSpace:"pre-wrap",wordBreak:"break-word",
-            }}>
-              {m.text}
-            </div>
-          </div>
-        ))}
-        {vizzyLoading&&(
-          <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0"}}>
-            <div style={{width:18,height:18,borderRadius:5,background:"linear-gradient(135deg,#A78BFA,#7C3AED)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-            </div>
-            <div style={{display:"flex",gap:4}}>
-              {[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:VIZZY_ACCENT,animation:`pulse 1.2s ease-in-out ${i*0.2}s infinite`}}/>)}
-            </div>
-          </div>
-        )}
-        <div ref={vizzyBottomRef}/>
-      </div>
-
-      {/* Input */}
-      <div style={{padding:"10px 14px",borderTop:"1px solid rgba(167,139,250,0.15)",background:"rgba(0,0,0,0.2)",flexShrink:0}}>
-        <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
-          <textarea value={vizzyInput} onChange={e=>setVizzyInput(e.target.value)}
-            onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendVizzy();}}}
-            placeholder="Напиши вопрос... (Enter — отправить)"
-            rows={1}
-            style={{flex:1,border:"1px solid rgba(167,139,250,0.25)",outline:"none",resize:"none",fontSize:13,fontFamily:"'Inter',sans-serif",color:"#fff",background:"rgba(255,255,255,0.05)",lineHeight:1.5,maxHeight:100,overflowY:"auto",borderRadius:10,padding:"9px 12px",transition:"all 0.2s"}}
-            onInput={e=>{const t=e.currentTarget;t.style.height="auto";t.style.height=Math.min(t.scrollHeight,100)+"px";}}
-          />
-          <button onClick={sendVizzy} disabled={!vizzyInput.trim()||vizzyLoading}
-            style={{width:36,height:36,borderRadius:9,border:"none",background:vizzyInput.trim()&&!vizzyLoading?"linear-gradient(135deg,#A78BFA,#7C3AED)":"rgba(255,255,255,0.08)",cursor:vizzyInput.trim()&&!vizzyLoading?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.15s"}}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          </button>
-        </div>
-      </div>
-    </div>
 
     {/* Main content shifts when panel is open */}
-    <div style={{marginRight:vizzyOpen?376:0,transition:"margin-right 0.3s ease"}}>
 
     {/* Tabs */}
-    <div style={{display:"inline-flex",background:C.bg,borderRadius:12,padding:3,gap:2,marginBottom:24,border:"1px solid "+C.bd}}>
+    <div style={{display:"inline-flex",background:C.bg,borderRadius:8,padding:3,gap:2,marginBottom:24,border:"1px solid "+C.bd}}>
       <button style={tabStyle(stratTab==="sprint")} onClick={()=>setStratTab("sprint")}>Текущий спринт</button>
       <button style={tabStyle(stratTab==="yearmap")} onClick={()=>setStratTab("yearmap")}>Карта года</button>
       <button style={tabStyle(stratTab==="calendar")} onClick={()=>setStratTab("calendar")}>Календарь задач</button>
     </div>
     {stratTab==="yearmap"&&<YearMap userId={userId} goals={goals} goalUpdate={goals.update} goalAdd={goals.add} goalTasks={goalTasks}/>}
 
-    {/* CALENDAR */}
-    {stratTab==="calendar"&&<>
-      {/* Toolbar */}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,flexWrap:"wrap",gap:10}}>
-        <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <button onClick={()=>navCal(-1)} style={{width:34,height:34,borderRadius:9,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-          <button onClick={()=>navCal(1)} style={{width:34,height:34,borderRadius:9,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
-          <span style={{fontSize:16,fontWeight:700,color:C.t1,minWidth:220}}>{calTitle()}</span>
-          <button onClick={()=>setCalDate(new Date())}
-            style={{padding:"6px 14px",background:C.a+"14",color:C.a,border:"1px solid "+C.a+"30",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer"}}>
-            Сегодня
-          </button>
-        </div>
-        <div style={{display:"flex",gap:6,alignItems:"center"}}>
-          <div style={{display:"flex",background:C.ib,borderRadius:9,padding:3,border:"1px solid "+C.bd,gap:2}}>
-            {(["month","week","day"] as const).map(m=>(
-              <button key={m} onClick={()=>setCalMode(m)}
-                style={{padding:"6px 14px",borderRadius:7,border:"none",background:calMode===m?C.w:"transparent",color:calMode===m?C.t1:C.t2,fontSize:12,fontWeight:calMode===m?600:400,cursor:"pointer",boxShadow:calMode===m?"0 1px 4px rgba(0,0,0,0.08)":"none",transition:"all 0.15s"}}>
-                {m==="month"?"Месяц":m==="week"?"Неделя":"День"}
-              </button>
-            ))}
-          </div>
-          <button onClick={()=>openCalNew()}
-            style={{padding:"8px 18px",background:C.a,color:"#fff",border:"none",borderRadius:9,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,boxShadow:"0 0 16px "+C.a+"30"}}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            + Задача
-          </button>
-        </div>
-      </div>
-      {/* Auto-placed banner */}
+    {/* CALENDAR — Task Planner */}
+    {stratTab==="calendar"&&<TaskPlanner userId={userId}/>}
 
-      <div style={{overflowY:"auto",maxHeight:"calc(100vh - 280px)"}}>
-        <CalendarView/>
-      </div>
-      <CalModal/>
-    </>}
     {stratTab==="sprint"&&<>
-      {kanbanErrToast&&<div style={{position:"fixed",bottom:isMobile?72:24,left:"50%",transform:"translateX(-50%)",background:C.r,color:"#fff",padding:"12px 20px",borderRadius:12,fontSize:13,fontWeight:500,zIndex:1000,boxShadow:"0 8px 24px rgba(0,0,0,0.2)"}}>Не удалось сохранить порядок. Попробуйте ещё раз</div>}
+      {kanbanErrToast&&<div style={{position:"fixed",bottom:isMobile?72:24,left:"50%",transform:"translateX(-50%)",background:C.r,color:"#fff",padding:"12px 20px",borderRadius:8,fontSize:13,fontWeight:500,zIndex:1000,boxShadow:"0 8px 24px rgba(0,0,0,0.2)"}}>Не удалось сохранить порядок. Попробуйте ещё раз</div>}
       {/* Kanban */}
       <div style={{marginBottom:20}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
           <div style={{fontSize:isMobile?16:18,fontWeight:700}}>Задачи на {isMobile?"день":"7 дней"}</div>
           <div style={{display:"flex",gap:8,alignItems:"center"}}>
             {isMobile&&<span style={{fontSize:12,color:C.t2,marginRight:4}}>{scroll+1} / 7</span>}
-            <button onClick={()=>setScroll(Math.max(0,scroll-1))} disabled={scroll===0} style={{width:36,height:36,borderRadius:10,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:scroll===0?0.3:1}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg></button>
-            <button onClick={()=>setScroll(7)} title="Сегодня" style={{height:36,padding:"0 10px",borderRadius:10,border:"1px solid "+C.bd,background:scroll===7?C.a+"15":C.w,cursor:"pointer",fontSize:11,color:scroll===7?C.a:C.t2,fontWeight:600}}>Сегодня</button>
-            <button onClick={()=>setScroll(Math.min(maxScroll,scroll+1))} disabled={scroll>=maxScroll} style={{width:36,height:36,borderRadius:10,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:scroll>=maxScroll?0.3:1}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg></button>
+            <button onClick={()=>setScroll(Math.max(0,scroll-1))} disabled={scroll===0} style={{width:36,height:36,borderRadius:8,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:scroll===0?0.3:1}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg></button>
+            <button onClick={()=>setScroll(7)} title="Сегодня" style={{height:36,padding:"0 10px",borderRadius:8,border:"1px solid "+C.bd,background:scroll===7?C.a+"15":C.w,cursor:"pointer",fontSize:11,color:scroll===7?C.a:C.t2,fontWeight:600}}>Сегодня</button>
+            <button onClick={()=>setScroll(Math.min(maxScroll,scroll+1))} disabled={scroll>=maxScroll} style={{width:36,height:36,borderRadius:8,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:scroll>=maxScroll?0.3:1}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg></button>
           </div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(4,1fr)",gap:isMobile?12:14}}>
           {visibleDays.map(d=>{const st=dayStats(d);const isT=d===td;const isPast=d<td;const dt=new Date(d);
             const bc=isT?C.a:st.allDone?C.g:isPast&&!st.allDone&&st.tasks.length>0?C.r:"transparent";
-            return<div key={d} style={{background:C.w,borderRadius:16,boxShadow:C.sh,border:"2px solid "+bc,display:"flex",flexDirection:"column",minHeight:isMobile?200:300}}>
-              <div style={{padding:"14px 16px",borderBottom:"1px solid "+C.bd,display:"flex",justifyContent:"space-between",background:isT?"rgba(37,99,235,0.04)":"transparent"}}>
+            return<div key={d} style={{background:C.w,borderRadius:10,boxShadow:C.sh,border:"2px solid "+bc,display:"flex",flexDirection:"column",minHeight:isMobile?200:300}}>
+              <div style={{padding:"14px 16px",borderBottom:"1px solid "+C.bd,display:"flex",justifyContent:"space-between",background:isT?"rgba(96,96,96,0.04)":"transparent"}}>
                 <div><div style={{fontSize:20,fontWeight:700,color:isT?C.a:C.t1}}>{dt.getDate()}</div><div style={{fontSize:11,color:C.t2}}>{WDS[dt.getDay()]}, {MR[dt.getMonth()].substring(0,3)}</div></div>
                 {st.overload&&<span style={{fontSize:10,color:C.r,fontWeight:600}}>⚠️ Перегруз</span>}
               </div>
@@ -3467,13 +3548,13 @@ function StrategyPage({userId}:{userId:string}){
                   <div style={{display:"flex",gap:6}}>
                     <button onClick={()=>addTask(d)} style={{flex:1,padding:"6px",background:C.a,color:"#fff",border:"none",borderRadius:6,fontSize:12,cursor:"pointer"}}>+</button>
                     <button onClick={()=>{setShowTF(null);setRecurModal({dayStr:d});setRecurForm(f=>({...f,from:d,to:d}));}} title="Повторять задачу"
-                      style={{padding:"6px 10px",background:"#7C3AED10",border:"1px solid #7C3AED30",borderRadius:6,fontSize:12,cursor:"pointer",color:"#7C3AED",fontWeight:600}}>🔁</button>
+                      style={{padding:"6px 10px",background:"#7C3AED10",border:"1px solid #7C3AED30",borderRadius:6,fontSize:12,cursor:"pointer",color:"#626262",fontWeight:600}}>🔁</button>
                     <button onClick={()=>setShowTF(null)} style={{padding:"6px 10px",background:C.bg,border:"1px solid "+C.bd,borderRadius:6,fontSize:12,cursor:"pointer"}}>×</button>
                   </div>
                 </div>:<div style={{display:"flex",gap:6,marginTop:6}}>
                   <button onClick={()=>setShowTF(d)} style={{flex:1,padding:"6px",background:C.bg,border:"1px dashed "+C.bd,borderRadius:8,fontSize:12,color:C.t2,cursor:"pointer"}}>+ Задача</button>
                   <button onClick={()=>{setRecurModal({dayStr:d});setRecurForm(f=>({...f,from:d,to:d}));}} title="Повторять задачу"
-                    style={{padding:"6px 10px",background:"#7C3AED10",border:"1px dashed #7C3AED40",borderRadius:8,fontSize:12,color:"#7C3AED",cursor:"pointer"}}>🔁</button>
+                    style={{padding:"6px 10px",background:"#7C3AED10",border:"1px dashed #7C3AED40",borderRadius:8,fontSize:12,color:"#626262",cursor:"pointer"}}>🔁</button>
                 </div>}
               </div>
               {(()=>{
@@ -3482,8 +3563,8 @@ function StrategyPage({userId}:{userId:string}){
                 const total=nonDel.length;
                 const pct=total>0?Math.round(done/total*100):0;
                 const allDone=total>0&&done===total;
-                const barColor=pct===100?"#16A34A":pct>=60?"#22C55E":pct>=30?"#F59E0B":"#EF4444";
-                const gradient=pct===100?"linear-gradient(90deg,#4ADE80,#16A34A)":pct>=60?"linear-gradient(90deg,#86EFAC,#22C55E)":pct>=30?"linear-gradient(90deg,#FDE68A,#F59E0B)":"linear-gradient(90deg,#FCA5A5,#EF4444)";
+                const barColor=pct===100?"#6F6F6F":pct>=60?"#898989":pct>=30?"#A7A7A7":"#777777";
+                const gradient=pct===100?"linear-gradient(90deg,#A7A7A7,#6F6F6F)":pct>=60?"linear-gradient(90deg,#C8C8C8,#898989)":pct>=30?"linear-gradient(90deg,#E2E2E2,#A7A7A7)":"linear-gradient(90deg,#BFBFBF,#777777)";
                 if(total===0)return null;
                 return <div style={{padding:"10px 14px",borderTop:"1px solid "+C.bd,background:allDone?"#F0FDF4":C.w,transition:"background 0.4s"}}>
                   <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -3501,7 +3582,7 @@ function StrategyPage({userId}:{userId:string}){
         </div>
       </div>
 
-      <div style={{background:C.w,borderRadius:12,padding:"14px 20px",boxShadow:C.sh,marginBottom:24,display:"flex",alignItems:"center",gap:12}}>
+      <div style={{background:C.w,borderRadius:8,padding:"14px 20px",boxShadow:C.sh,marginBottom:24,display:"flex",alignItems:"center",gap:12}}>
         <span style={{fontSize:20}}>{advice.icon}</span>
         <span style={{fontSize:14,lineHeight:1.5}}>{advice.text}</span>
       </div>
@@ -3515,14 +3596,14 @@ function StrategyPage({userId}:{userId:string}){
 
     {/* Recurring task modal */}
     {recurModal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:20,backdropFilter:"blur(6px)"}} onClick={()=>setRecurModal(null)}>
-      <div style={{width:"min(480px,100%)",background:C.w,borderRadius:20,overflow:"hidden",boxShadow:"0 24px 60px rgba(0,0,0,0.25)",border:"1px solid "+C.bd}} onClick={e=>e.stopPropagation()}>
+      <div style={{width:"min(480px,100%)",background:C.w,borderRadius:10,overflow:"hidden",boxShadow:"0 24px 60px rgba(0,0,0,0.25)",border:"1px solid "+C.bd}} onClick={e=>e.stopPropagation()}>
         {/* Header */}
-        <div style={{padding:"18px 22px",background:"linear-gradient(135deg,#7C3AED,#4F8EF7)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div style={{padding:"18px 22px",background:"linear-gradient(135deg,#626262,#878787)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div>
             <div style={{fontSize:16,fontWeight:700,color:"#fff"}}>🔁 Повторяющаяся задача</div>
             <div style={{fontSize:11,color:"rgba(255,255,255,0.7)",marginTop:2}}>Создаст задачу на каждый день периода</div>
           </div>
-          <button onClick={()=>setRecurModal(null)} style={{width:30,height:30,borderRadius:10,border:"1px solid rgba(255,255,255,0.2)",background:"rgba(255,255,255,0.1)",cursor:"pointer",color:"#fff",fontSize:18}}>×</button>
+          <button onClick={()=>setRecurModal(null)} style={{width:30,height:30,borderRadius:8,border:"1px solid rgba(255,255,255,0.2)",background:"rgba(255,255,255,0.1)",cursor:"pointer",color:"#fff",fontSize:18}}>×</button>
         </div>
         {/* Body */}
         <div style={{padding:"20px 22px",display:"flex",flexDirection:"column",gap:14}}>
@@ -3552,7 +3633,7 @@ function StrategyPage({userId}:{userId:string}){
             <div style={{display:"flex",gap:8}}>
               {([["daily","Каждый день"],["weekdays","Будни"],["weekly","Раз в неделю"]] as [string,string][]).map(([val,lbl])=>(
                 <button key={val} onClick={()=>setRecurForm({...recurForm,freq:val})}
-                  style={{flex:1,padding:"8px 4px",borderRadius:10,border:"1px solid "+(recurForm.freq===val?"#7C3AED":""+C.bd),background:recurForm.freq===val?"#7C3AED10":"transparent",color:recurForm.freq===val?"#7C3AED":C.t2,fontSize:12,fontWeight:recurForm.freq===val?700:400,cursor:"pointer",transition:"all 0.15s"}}>
+                  style={{flex:1,padding:"8px 4px",borderRadius:8,border:"1px solid "+(recurForm.freq===val?"#626262":""+C.bd),background:recurForm.freq===val?"#7C3AED10":"transparent",color:recurForm.freq===val?"#626262":C.t2,fontSize:12,fontWeight:recurForm.freq===val?700:400,cursor:"pointer",transition:"all 0.15s"}}>
                   {lbl}
                 </button>
               ))}
@@ -3569,7 +3650,7 @@ function StrategyPage({userId}:{userId:string}){
               if(recurForm.freq==="daily"||recurForm.freq==="weekdays")cur.setDate(cur.getDate()+1);
               else cur.setDate(cur.getDate()+7);
             }
-            return <div style={{padding:"10px 14px",background:"#7C3AED10",borderRadius:10,border:"1px solid #7C3AED20",fontSize:12,color:"#7C3AED",fontWeight:500}}>
+            return <div style={{padding:"10px 14px",background:"#7C3AED10",borderRadius:8,border:"1px solid #7C3AED20",fontSize:12,color:"#626262",fontWeight:500}}>
               Будет создано <b>{count}</b> {count===1?"задача":count<5?"задачи":"задач"} · {recurForm.mins} мин каждая
             </div>;
           })()}
@@ -3577,28 +3658,27 @@ function StrategyPage({userId}:{userId:string}){
         </div>
         {/* Footer */}
         <div style={{padding:"14px 22px",borderTop:"1px solid "+C.bd,display:"flex",gap:10,justifyContent:"flex-end"}}>
-          <button onClick={()=>setRecurModal(null)} style={{padding:"10px 18px",background:C.bg,border:"1px solid "+C.bd,borderRadius:10,fontSize:13,cursor:"pointer",color:C.t2}}>Отмена</button>
+          <button onClick={()=>setRecurModal(null)} style={{padding:"10px 18px",background:C.bg,border:"1px solid "+C.bd,borderRadius:8,fontSize:13,cursor:"pointer",color:C.t2}}>Отмена</button>
           <button onClick={addRecurringTask} disabled={recurLoading}
-            style={{padding:"10px 20px",background:recurLoading?"#9CA3AF":"linear-gradient(135deg,#7C3AED,#4F8EF7)",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:700,cursor:recurLoading?"default":"pointer",display:"flex",alignItems:"center",gap:8}}>
+            style={{padding:"10px 20px",background:recurLoading?"#9CA3AF":"linear-gradient(135deg,#626262,#878787)",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:recurLoading?"default":"pointer",display:"flex",alignItems:"center",gap:8}}>
             {recurLoading?<><div style={{width:14,height:14,border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/> Создаю...</>:"🔁 Запустить повтор"}
           </button>
         </div>
       </div>
     </div>}
 
-    </div>
   </>;
 }
 
 /* ============ CRM ============ */
 const CRM_DEFAULT_STAGES=[
-  {id:"new",label:"Новый",color:"#007AFF"},
-  {id:"contact",label:"Взаимодействовали",color:"#AF52DE"},
-  {id:"call",label:"Созвон",color:"#FF9500"},
-  {id:"closed",label:"Закрыт",color:"#34C759"},
-  {id:"rejected",label:"Отказ",color:"#FF3B30"},
+  {id:"new",label:"Новый",color:"#656565"},
+  {id:"contact",label:"Взаимодействовали",color:"#7E7E7E"},
+  {id:"call",label:"Созвон",color:"#A4A4A4"},
+  {id:"closed",label:"Закрыт",color:"#8F8F8F"},
+  {id:"rejected",label:"Отказ",color:"#747474"},
 ];
-const FUNNEL_COLORS=["#007AFF","#AF52DE","#FF9500","#34C759","#FF2D55","#5AC8FA","#FF3B30","#4CD964"];
+const FUNNEL_COLORS=["#656565","#7E7E7E","#A4A4A4","#8F8F8F","#707070","#ADADAD","#747474","#A2A2A2"];
 
 function CrmPage({userId}:{userId:string}){
   const isMobile=useIsMobile();
@@ -3898,12 +3978,12 @@ function CrmPage({userId}:{userId:string}){
 
   const tabSt=(active:boolean):React.CSSProperties=>({
     flex:1,padding:"8px 0",border:"none",borderRadius:8,
-    background:active?(isDark?"rgba(79,142,247,0.15)":"#fff"):"transparent",
-    color:active?(isDark?"#4F8EF7":C.t1):C.t2,
+    background:active?(isDark?"rgba(135,135,135,0.15)":"#fff"):"transparent",
+    color:active?(isDark?"#878787":C.t1):C.t2,
     fontSize:13,fontWeight:active?600:400,cursor:"pointer",
-    boxShadow:active?(isDark?`0 0 16px rgba(79,142,247,0.2)`:"0 1px 4px rgba(0,0,0,0.12)"):"none",
+    boxShadow:active?(isDark?`0 0 16px rgba(135,135,135,0.2)`:"0 1px 4px rgba(0,0,0,0.12)"):"none",
     transition:"all 0.2s",
-    borderBottom:active?(isDark?"2px solid #4F8EF7":"2px solid transparent"):"2px solid transparent",
+    borderBottom:active?(isDark?"2px solid #878787":"2px solid transparent"):"2px solid transparent",
   });
 
   // Edit lead state
@@ -3978,7 +4058,7 @@ function CrmPage({userId}:{userId:string}){
       {/* ── Edit modal is rendered globally so it also works from List view */}
       {false&&isEditing&&(
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setEditLeadId(null)}>
-          <div style={{background:C.w,borderRadius:18,padding:28,width:"100%",maxWidth:480,border:"1px solid "+C.bd,boxShadow:"0 24px 60px rgba(0,0,0,0.4)"}} onClick={e=>e.stopPropagation()}>
+          <div style={{background:C.w,borderRadius:12,padding:28,width:"100%",maxWidth:480,border:"1px solid "+C.bd,boxShadow:"0 24px 60px rgba(0,0,0,0.4)"}} onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:16,fontWeight:700,color:C.t1,marginBottom:20}}>✏️ Редактировать лида</div>
 
             {/* Avatar upload in modal */}
@@ -4027,8 +4107,8 @@ function CrmPage({userId}:{userId:string}){
                 style={{width:"100%",padding:"9px 11px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,outline:"none",background:C.ib,color:C.t1,resize:"vertical",fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
             </div>
             <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
-              <button onClick={()=>setEditLeadId(null)} style={{padding:"9px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:10,fontSize:13,cursor:"pointer"}}>Отмена</button>
-              <button onClick={saveEditLead} style={{padding:"9px 20px",background:C.a,color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer",boxShadow:"0 0 16px "+C.a+"40"}}>Сохранить</button>
+              <button onClick={()=>setEditLeadId(null)} style={{padding:"9px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:8,fontSize:13,cursor:"pointer"}}>Отмена</button>
+              <button onClick={saveEditLead} style={{padding:"9px 20px",background:C.a,color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",boxShadow:"0 0 16px "+C.a+"40"}}>Сохранить</button>
             </div>
           </div>
         </div>
@@ -4037,14 +4117,14 @@ function CrmPage({userId}:{userId:string}){
       {/* ── Delete confirm modal ── */}
       {deleteConfirmId===l.id&&(
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setDeleteConfirmId(null)}>
-          <div style={{background:C.w,borderRadius:18,padding:28,width:"100%",maxWidth:380,textAlign:"center",border:"1px solid "+C.bd,boxShadow:"0 24px 60px rgba(0,0,0,0.5)"}} onClick={e=>e.stopPropagation()}>
+          <div style={{background:C.w,borderRadius:12,padding:28,width:"100%",maxWidth:380,textAlign:"center",border:"1px solid "+C.bd,boxShadow:"0 24px 60px rgba(0,0,0,0.5)"}} onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:36,marginBottom:12}}>🗑️</div>
             <div style={{fontSize:16,fontWeight:700,color:C.t1,marginBottom:8}}>Удалить лида «{l.name}»?</div>
             <div style={{fontSize:13,color:C.t2,marginBottom:6,lineHeight:1.6}}>Это действие <strong>нельзя отменить</strong>.<br/>Все данные по этому лиду будут удалены безвозвратно.</div>
             <div style={{display:"flex",gap:10,marginTop:22,justifyContent:"center"}}>
-              <button onClick={()=>setDeleteConfirmId(null)} style={{padding:"10px 20px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:10,fontSize:13,fontWeight:500,cursor:"pointer"}}>Отмена</button>
+              <button onClick={()=>setDeleteConfirmId(null)} style={{padding:"10px 20px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:8,fontSize:13,fontWeight:500,cursor:"pointer"}}>Отмена</button>
               <button onClick={()=>{allLeads.remove(l.id);setDeleteConfirmId(null);setOpenLead(null);}}
-                style={{padding:"10px 22px",background:"linear-gradient(135deg,#FF6B9D,#E91E8C)",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 0 20px rgba(233,30,140,0.4)"}}>
+                style={{padding:"10px 22px",background:"linear-gradient(135deg,#9D9D9D,#676767)",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 0 20px rgba(103,103,103,0.4)"}}>
                 🗑 Удалить навсегда
               </button>
             </div>
@@ -4056,7 +4136,7 @@ function CrmPage({userId}:{userId:string}){
       <div draggable onDragStart={e=>onDragStart(l.id,e)} onDragEnd={onDragEnd}
         onClick={()=>setOpenLead(isOpen?null:l.id)}
         style={{
-          background:C.w,borderRadius:11,padding:"11px 12px",marginBottom:6,
+          background:C.w,borderRadius:8,padding:"11px 12px",marginBottom:6,
           cursor:"grab",userSelect:"none",boxSizing:"border-box" as const,
           border:"1px solid "+C.bd,
           borderLeft:`3px solid ${stageColor}`,
@@ -4079,7 +4159,7 @@ function CrmPage({userId}:{userId:string}){
         }}>
 
         {/* Subtle shimmer bg */}
-        <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg,"+stageColor+"04,transparent)",pointerEvents:"none",borderRadius:11}}/>
+        <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg,"+stageColor+"04,transparent)",pointerEvents:"none",borderRadius:8}}/>
 
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,minWidth:0,position:"relative"}}>
           {/* Avatar */}
@@ -4100,15 +4180,15 @@ function CrmPage({userId}:{userId:string}){
           {/* Clean: only 3 action buttons */}
           <div style={{display:"flex",gap:6,alignItems:"stretch"}} onClick={e=>e.stopPropagation()}>
             <button onClick={()=>{setWorkPanelLead(l);setWorkPanelTab("profile");setTouchGenResult("");setTouchGenGoal("");}}
-              style={{flex:1,padding:"9px 10px",background:"linear-gradient(135deg,#7C3AED,#4F8EF7)",color:"#fff",border:"none",borderRadius:10,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 0 14px rgba(124,58,237,0.25)"}}>
+              style={{flex:1,padding:"9px 10px",background:"linear-gradient(135deg,#626262,#878787)",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
               Работать с лидом
             </button>
             <button onClick={()=>openEditLead(l)}
-              style={{padding:"9px 14px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:10,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              style={{padding:"9px 14px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:8,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
               ✏️
             </button>
             <button onClick={()=>setDeleteConfirmId(l.id)}
-              style={{padding:"9px 14px",background:"#FFF1F2",color:"#E91E8C",border:"1px solid #FECDD3",borderRadius:10,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              style={{padding:"9px 14px",background:"#FFF1F2",color:"#676767",border:"1px solid #DCDCDC",borderRadius:8,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
               🗑
             </button>
           </div>
@@ -4144,7 +4224,7 @@ function CrmPage({userId}:{userId:string}){
     };
 
     const ReportBlock=({color,border,title,children}:{color:string,border:string,title:string,children:React.ReactNode})=>(
-      <div style={{padding:"12px 14px",background:color,border:"1px solid "+border,borderRadius:12,borderLeft:"3px solid "+border.replace("40","").replace("50","").replace("30","")}}>
+      <div style={{padding:"12px 14px",background:color,border:"1px solid "+border,borderRadius:8,borderLeft:"3px solid "+border.replace("40","").replace("50","").replace("30","")}}>
         <div style={{fontSize:10,fontWeight:800,color:border.replace("40","").replace("50","").replace("30",""),marginBottom:7,textTransform:"uppercase",letterSpacing:0.6}}>{title}</div>
         <div style={{fontSize:12,color:C.t1,lineHeight:1.75,whiteSpace:"pre-wrap"}}>{children}</div>
       </div>
@@ -4164,17 +4244,17 @@ function CrmPage({userId}:{userId:string}){
             <div style={{flex:1,minWidth:0}}>
               <div style={{fontSize:17,fontWeight:800,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.name}</div>
               {(l.contact||l.phone||l.email)&&<div style={{fontSize:12,color:C.t2,marginTop:2}}>{l.contact||l.phone||l.email}</div>}
-              {l.deal&&<div style={{fontSize:12,fontWeight:700,color:"#16A34A",marginTop:2}}>{fmt$(l.deal)} ₽</div>}
+              {l.deal&&<div style={{fontSize:12,fontWeight:700,color:"#6F6F6F",marginTop:2}}>{fmt$(l.deal)} ₽</div>}
             </div>
-            <button onClick={()=>setWorkPanelLead(null)} style={{width:32,height:32,borderRadius:10,border:"1px solid "+C.bd,background:C.bg,cursor:"pointer",fontSize:18,color:C.t2,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>×</button>
+            <button onClick={()=>setWorkPanelLead(null)} style={{width:32,height:32,borderRadius:8,border:"1px solid "+C.bd,background:C.bg,cursor:"pointer",fontSize:18,color:C.t2,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>×</button>
           </div>
           <div style={{display:"flex",gap:8}}>
             {writeUrl&&<a href={writeUrl} target="_blank" rel="noreferrer"
-              style={{flex:1,padding:"9px 12px",background:"linear-gradient(135deg,#22C55E,#16A34A)",color:"#fff",border:"none",borderRadius:10,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,textDecoration:"none"}}>
+              style={{flex:1,padding:"9px 12px",background:"linear-gradient(135deg,#898989,#6F6F6F)",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,textDecoration:"none"}}>
               ✉ Написать лиду
             </a>}
             <button onClick={()=>{openTouchModal(l.id);}}
-              style={{flex:1,padding:"9px 12px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:10,fontSize:12,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+              style={{flex:1,padding:"9px 12px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
               📋 История касаний
             </button>
           </div>
@@ -4224,32 +4304,32 @@ function CrmPage({userId}:{userId:string}){
             <div style={{borderTop:"1px solid "+C.bd,paddingTop:14}}>
               <button disabled={aiReportLoading===l.id}
                 onClick={async()=>{await generateAiReport(l);setWorkPanelLead((prev:any)=>prev?{...prev,...allLeads.data.find((x:any)=>x.id===l.id)}:prev);}}
-                style={{width:"100%",padding:"11px 14px",background:aiReportLoading===l.id?"#6D28D9":"linear-gradient(135deg,#7C3AED,#4F8EF7)",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:700,cursor:aiReportLoading===l.id?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:"0 0 16px rgba(124,58,237,0.2)"}}>
+                style={{width:"100%",padding:"11px 14px",background:aiReportLoading===l.id?"#515151":"linear-gradient(135deg,#626262,#878787)",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:aiReportLoading===l.id?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
                 {aiReportLoading===l.id?<><div style={{width:14,height:14,border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/> Формирую отчёт...</>:"Сформировать отчёт через ИИ"}
               </button>
 
               {l.ai_report&&(()=>{
                 const r=parseReport(l.ai_report);
                 return<div style={{marginTop:12,display:"flex",flexDirection:"column",gap:10}}>
-                  {r.portrait&&<div style={{padding:"12px 14px",background:"#EFF6FF",border:"1px solid #93C5FD",borderRadius:12,borderLeft:"3px solid #3B82F6"}}>
-                    <div style={{fontSize:10,fontWeight:800,color:"#1D4ED8",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Портрет лида</div>
-                    <div style={{fontSize:12,color:"#1E3A5F",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.portrait}</div>
+                  {r.portrait&&<div style={{padding:"12px 14px",background:"#EFF6FF",border:"1px solid #BCBCBC",borderRadius:8,borderLeft:"3px solid #7A7A7A"}}>
+                    <div style={{fontSize:10,fontWeight:800,color:"#4F4F4F",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Портрет лида</div>
+                    <div style={{fontSize:12,color:"#363636",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.portrait}</div>
                   </div>}
-                  {r.emotions&&<div style={{padding:"12px 14px",background:"#FFF7ED",border:"1px solid #FED7AA",borderRadius:12,borderLeft:"3px solid #F97316"}}>
-                    <div style={{fontSize:10,fontWeight:800,color:"#C2410C",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Эмоциональное состояние</div>
-                    <div style={{fontSize:12,color:"#7C2D12",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.emotions}</div>
+                  {r.emotions&&<div style={{padding:"12px 14px",background:"#FFF7ED",border:"1px solid #DEDEDE",borderRadius:8,borderLeft:"3px solid #909090"}}>
+                    <div style={{fontSize:10,fontWeight:800,color:"#626262",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Эмоциональное состояние</div>
+                    <div style={{fontSize:12,color:"#424242",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.emotions}</div>
                   </div>}
-                  {r.probability&&<div style={{padding:"12px 14px",background:"#F0F9FF",border:"1px solid #7DD3FC",borderRadius:12,borderLeft:"3px solid #0EA5E9"}}>
-                    <div style={{fontSize:10,fontWeight:800,color:"#0369A1",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Вероятность покупки</div>
-                    <div style={{fontSize:12,color:"#0C4A6E",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.probability}</div>
+                  {r.probability&&<div style={{padding:"12px 14px",background:"#F0F9FF",border:"1px solid #BEBEBE",borderRadius:8,borderLeft:"3px solid #808080"}}>
+                    <div style={{fontSize:10,fontWeight:800,color:"#515151",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Вероятность покупки</div>
+                    <div style={{fontSize:12,color:"#3C3C3C",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.probability}</div>
                   </div>}
-                  {r.risks&&<div style={{padding:"12px 14px",background:"#FFF1F2",border:"1px solid #FECDD3",borderRadius:12,borderLeft:"3px solid #F43F5E"}}>
-                    <div style={{fontSize:10,fontWeight:800,color:"#BE123C",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Риски потери лида</div>
-                    <div style={{fontSize:12,color:"#881337",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.risks}</div>
+                  {r.risks&&<div style={{padding:"12px 14px",background:"#FFF1F2",border:"1px solid #DCDCDC",borderRadius:8,borderLeft:"3px solid #797979"}}>
+                    <div style={{fontSize:10,fontWeight:800,color:"#4A4A4A",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Риски потери лида</div>
+                    <div style={{fontSize:12,color:"#3A3A3A",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.risks}</div>
                   </div>}
-                  {r.steps&&<div style={{padding:"12px 14px",background:"#FAF5FF",border:"1px solid #D8B4FE",borderRadius:12,borderLeft:"3px solid #7C3AED"}}>
-                    <div style={{fontSize:10,fontWeight:800,color:"#6D28D9",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Оптимальный следующий шаг</div>
-                    <div style={{fontSize:12,color:"#4C1D95",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.steps}</div>
+                  {r.steps&&<div style={{padding:"12px 14px",background:"#FAF5FF",border:"1px solid #C7C7C7",borderRadius:8,borderLeft:"3px solid #626262"}}>
+                    <div style={{fontSize:10,fontWeight:800,color:"#515151",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Оптимальный следующий шаг</div>
+                    <div style={{fontSize:12,color:"#393939",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.steps}</div>
                   </div>}
                 </div>;
               })()}
@@ -4258,7 +4338,7 @@ function CrmPage({userId}:{userId:string}){
 
           {/* ── TOUCHES TAB ── */}
           {workPanelTab==="touches"&&<>
-            {!hasReport&&<div style={{padding:"14px 16px",background:"#FFF7ED",border:"1px solid #FED7AA",borderRadius:12,fontSize:12,color:"#C2410C",lineHeight:1.7}}>
+            {!hasReport&&<div style={{padding:"14px 16px",background:"#FFF7ED",border:"1px solid #DEDEDE",borderRadius:8,fontSize:12,color:"#626262",lineHeight:1.7}}>
               Для генерации касания нужен отчёт ИИ. Перейди во вкладку Профиль и сначала сформируй его.
             </div>}
             <div>
@@ -4269,21 +4349,21 @@ function CrmPage({userId}:{userId:string}){
             </div>
             <button disabled={touchGenLoading||!hasReport}
               onClick={()=>generateTouchpoint(workPanelLead)}
-              style={{width:"100%",padding:"11px 14px",background:!hasReport?"#9CA3AF":touchGenLoading?"#6D28D9":"linear-gradient(135deg,#7C3AED,#4F8EF7)",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:700,cursor:(!hasReport||touchGenLoading)?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+              style={{width:"100%",padding:"11px 14px",background:!hasReport?"#9CA3AF":touchGenLoading?"#515151":"linear-gradient(135deg,#626262,#878787)",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:(!hasReport||touchGenLoading)?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
               {touchGenLoading?<><div style={{width:14,height:14,border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/> Генерирую касания...</>:"Сгенерировать касание"}
             </button>
 
             {touchGenResult&&touchGenResult!=="__no_report__"&&(()=>{
               const touches=parseTouches(touchGenResult);
               const colors=[
-                {bg:"#EFF6FF",border:"#93C5FD",accent:"#1D4ED8"},
-                {bg:"#FAF5FF",border:"#D8B4FE",accent:"#6D28D9"},
-                {bg:"#F0FDF4",border:"#86EFAC",accent:"#15803D"},
+                {bg:"#EFF6FF",border:"#BCBCBC",accent:"#4F4F4F"},
+                {bg:"#FAF5FF",border:"#C7C7C7",accent:"#515151"},
+                {bg:"#F0FDF4",border:"#C8C8C8",accent:"#585858"},
               ];
               return<div style={{display:"flex",flexDirection:"column",gap:12}}>
                 {touches.map((t:any,i:number)=>{
                   const c=colors[i]||colors[0];
-                  return<div key={i} style={{padding:"14px 16px",background:c.bg,border:"1px solid "+c.border,borderRadius:12,borderLeft:"3px solid "+c.accent}}>
+                  return<div key={i} style={{padding:"14px 16px",background:c.bg,border:"1px solid "+c.border,borderRadius:8,borderLeft:"3px solid "+c.accent}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
                       <div>
                         <div style={{fontSize:11,fontWeight:800,color:c.accent,textTransform:"uppercase",letterSpacing:0.5}}>{t.name}</div>
@@ -4302,7 +4382,7 @@ function CrmPage({userId}:{userId:string}){
                 })}
               </div>;
             })()}
-            {touchGenResult==="__no_report__"&&<div style={{padding:"14px 16px",background:"#FFF7ED",border:"1px solid #FED7AA",borderRadius:12,fontSize:12,color:"#C2410C"}}>
+            {touchGenResult==="__no_report__"&&<div style={{padding:"14px 16px",background:"#FFF7ED",border:"1px solid #DEDEDE",borderRadius:8,fontSize:12,color:"#626262"}}>
               Сначала сформируй отчёт ИИ во вкладке Профиль.
             </div>}
           </>}
@@ -4319,7 +4399,7 @@ function CrmPage({userId}:{userId:string}){
           <div style={{fontSize:13,color:C.t2,marginTop:2}}>Выбери воронку продаж или создай новую</div>
         </div>
         <button onClick={()=>setNewFunnelModal(true)}
-          style={{padding:"10px 20px",background:"#007AFF",color:"#fff",border:"none",borderRadius:12,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
+          style={{padding:"10px 20px",background:"#656565",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Новая воронка
         </button>
@@ -4328,11 +4408,11 @@ function CrmPage({userId}:{userId:string}){
       {funnels.loading
         ?<div style={{textAlign:"center",padding:60,color:C.t2}}>Загрузка...</div>
         :funnels.data.length===0
-        ?<div style={{textAlign:"center",padding:"80px 32px",background:C.w,borderRadius:20,border:"1px solid "+C.bd}} className="empty-state">
+        ?<div style={{textAlign:"center",padding:"80px 32px",background:C.w,borderRadius:10,border:"1px solid "+C.bd}} className="empty-state">
             <div style={{fontSize:48,marginBottom:16}}>🎯</div>
             <div style={{fontSize:18,fontWeight:700,color:C.t1,marginBottom:8}}>Воронок пока нет</div>
             <div style={{fontSize:14,color:C.t2,marginBottom:24}}>Создай первую воронку продаж для управления лидами</div>
-            <button onClick={()=>setNewFunnelModal(true)} style={{padding:"12px 24px",background:C.a,color:"#fff",border:"none",borderRadius:12,fontSize:14,fontWeight:700,cursor:"pointer"}}>
+            <button onClick={()=>setNewFunnelModal(true)} style={{padding:"12px 24px",background:C.a,color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:700,cursor:"pointer"}}>
               + Создать воронку
             </button>
           </div>
@@ -4346,7 +4426,7 @@ function CrmPage({userId}:{userId:string}){
               return <div key={fu.id}
                 onClick={()=>openFunnel(fu.id)}
                 style={{
-                  background:C.w,borderRadius:18,padding:"20px",cursor:"pointer",
+                  background:C.w,borderRadius:12,padding:"20px",cursor:"pointer",
                   border:"1px solid "+C.bd,
                   transition:"all 0.25s ease",position:"relative",overflow:"hidden",
                   boxShadow:`0 4px 20px rgba(0,0,0,0.08)`,
@@ -4384,7 +4464,7 @@ function CrmPage({userId}:{userId:string}){
                 {/* Funnel icon + name */}
                 <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16,paddingRight:64}}>
                   <div style={{
-                    width:36,height:36,borderRadius:10,flexShrink:0,
+                    width:36,height:36,borderRadius:8,flexShrink:0,
                     background:"linear-gradient(135deg,"+accentColor+"20,"+accentColor+"08)",
                     border:"1px solid "+accentColor+"30",
                     display:"flex",alignItems:"center",justifyContent:"center",
@@ -4405,7 +4485,7 @@ function CrmPage({userId}:{userId:string}){
                     {label:"Закрыто",value:fuClosed.length},
                     {label:"Конверсия",value:convRate+"%"},
                   ].map((s,i)=>(
-                    <div key={i} style={{background:C.ib,borderRadius:10,padding:"10px 8px",textAlign:"center",border:"1px solid "+C.bd}}>
+                    <div key={i} style={{background:C.ib,borderRadius:8,padding:"10px 8px",textAlign:"center",border:"1px solid "+C.bd}}>
                       <div style={{fontSize:17,fontWeight:700,color:C.t1,lineHeight:1.2}}>{s.value}</div>
                       <div style={{fontSize:10,color:C.t2,marginTop:3}}>{s.label}</div>
                     </div>
@@ -4439,7 +4519,7 @@ function CrmPage({userId}:{userId:string}){
             {/* Add card */}
             <div onClick={()=>setNewFunnelModal(true)}
               style={{
-                background:"transparent",borderRadius:18,padding:"20px",cursor:"pointer",
+                background:"transparent",borderRadius:12,padding:"20px",cursor:"pointer",
                 border:"1px dashed "+C.bd,
                 display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
                 gap:10,minHeight:200,transition:"all 0.2s",
@@ -4456,7 +4536,7 @@ function CrmPage({userId}:{userId:string}){
                 el.style.background="transparent";
                 el.style.boxShadow="none";
               }}>
-              <div style={{width:40,height:40,borderRadius:12,background:C.ib,border:"1px solid "+C.bd,display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s"}}>
+              <div style={{width:40,height:40,borderRadius:8,background:C.ib,border:"1px solid "+C.bd,display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s"}}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </div>
               <div style={{fontSize:13,fontWeight:500,color:C.t2}}>Новая воронка</div>
@@ -4467,7 +4547,7 @@ function CrmPage({userId}:{userId:string}){
       {/* ── New funnel modal ── */}
       {newFunnelModal&&(
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setNewFunnelModal(false)}>
-          <div style={{background:"#fff",borderRadius:20,padding:32,width:"100%",maxWidth:440,boxShadow:"0 24px 60px rgba(0,0,0,0.18)"}} onClick={e=>e.stopPropagation()}>
+          <div style={{background:"#fff",borderRadius:10,padding:32,width:"100%",maxWidth:440,boxShadow:"0 24px 60px rgba(0,0,0,0.18)"}} onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:18,fontWeight:700,marginBottom:20,color:"#1C1C1E"}}>Новая воронка продаж</div>
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
               <div>
@@ -4485,14 +4565,14 @@ function CrmPage({userId}:{userId:string}){
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                   {FUNNEL_COLORS.map(color=>(
                     <button key={color} onClick={()=>setNewFunnelColor(color)}
-                      style={{width:32,height:32,borderRadius:10,background:color,border:newFunnelColor===color?"3px solid #1C1C1E":"3px solid transparent",cursor:"pointer",transition:"border 0.1s"}}/>
+                      style={{width:32,height:32,borderRadius:8,background:color,border:newFunnelColor===color?"3px solid #1C1C1E":"3px solid transparent",cursor:"pointer",transition:"border 0.1s"}}/>
                   ))}
                 </div>
               </div>
             </div>
             <div style={{display:"flex",gap:10,marginTop:24,justifyContent:"flex-end"}}>
-              <button onClick={()=>setNewFunnelModal(false)} style={{padding:"10px 18px",background:"#F2F2F7",color:"#8E8E93",border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer"}}>Отмена</button>
-              <button onClick={createFunnel} disabled={!newFunnelName.trim()} style={{padding:"10px 20px",background:newFunnelName.trim()?"#007AFF":"#C6C6C8",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:700,cursor:newFunnelName.trim()?"pointer":"default"}}>Создать</button>
+              <button onClick={()=>setNewFunnelModal(false)} style={{padding:"10px 18px",background:"#F2F2F7",color:"#8E8E93",border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer"}}>Отмена</button>
+              <button onClick={createFunnel} disabled={!newFunnelName.trim()} style={{padding:"10px 20px",background:newFunnelName.trim()?"#656565":"#C6C6C8",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:newFunnelName.trim()?"pointer":"default"}}>Создать</button>
             </div>
           </div>
         </div>
@@ -4501,14 +4581,14 @@ function CrmPage({userId}:{userId:string}){
       {/* ── Edit funnel name ── */}
       {editFunnelId&&(
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setEditFunnelId(null)}>
-          <div style={{background:"#fff",borderRadius:20,padding:28,width:"100%",maxWidth:380}} onClick={e=>e.stopPropagation()}>
+          <div style={{background:"#fff",borderRadius:10,padding:28,width:"100%",maxWidth:380}} onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:16,fontWeight:700,marginBottom:16}}>Переименовать воронку</div>
             <input autoFocus value={editFunnelName} onChange={e=>setEditFunnelName(e.target.value)}
               onKeyDown={e=>{if(e.key==="Enter"){funnels.update(editFunnelId,{name:editFunnelName});setEditFunnelId(null);}}}
               style={iS()}/>
             <div style={{display:"flex",gap:8,marginTop:16,justifyContent:"flex-end"}}>
-              <button onClick={()=>setEditFunnelId(null)} style={{padding:"9px 16px",background:"#F2F2F7",color:"#8E8E93",border:"none",borderRadius:10,fontSize:13,cursor:"pointer"}}>Отмена</button>
-              <button onClick={()=>{funnels.update(editFunnelId,{name:editFunnelName});setEditFunnelId(null);}} style={{padding:"9px 18px",background:"#007AFF",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:700,cursor:"pointer"}}>Сохранить</button>
+              <button onClick={()=>setEditFunnelId(null)} style={{padding:"9px 16px",background:"#F2F2F7",color:"#8E8E93",border:"none",borderRadius:8,fontSize:13,cursor:"pointer"}}>Отмена</button>
+              <button onClick={()=>{funnels.update(editFunnelId,{name:editFunnelName});setEditFunnelId(null);}} style={{padding:"9px 18px",background:"#656565",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer"}}>Сохранить</button>
             </div>
           </div>
         </div>
@@ -4517,13 +4597,13 @@ function CrmPage({userId}:{userId:string}){
       {/* ── Delete confirm ── */}
       {deleteFunnelId&&(
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setDeleteFunnelId(null)}>
-          <div style={{background:"#fff",borderRadius:20,padding:28,maxWidth:360,width:"100%",textAlign:"center"}} onClick={e=>e.stopPropagation()}>
+          <div style={{background:"#fff",borderRadius:10,padding:28,maxWidth:360,width:"100%",textAlign:"center"}} onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:36,marginBottom:12}}>🗑️</div>
             <div style={{fontSize:16,fontWeight:700,marginBottom:8}}>Удалить воронку?</div>
             <div style={{fontSize:13,color:C.t2,marginBottom:20}}>Все лиды в этой воронке тоже будут удалены. Отменить нельзя.</div>
             <div style={{display:"flex",gap:10,justifyContent:"center"}}>
-              <button onClick={()=>setDeleteFunnelId(null)} style={{padding:"10px 20px",background:"#F2F2F7",color:"#8E8E93",border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer"}}>Отмена</button>
-              <button onClick={deleteFunnel} style={{padding:"10px 20px",background:"#FF3B30",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:700,cursor:"pointer"}}>Удалить</button>
+              <button onClick={()=>setDeleteFunnelId(null)} style={{padding:"10px 20px",background:"#F2F2F7",color:"#8E8E93",border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer"}}>Отмена</button>
+              <button onClick={deleteFunnel} style={{padding:"10px 20px",background:"#747474",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer"}}>Удалить</button>
             </div>
           </div>
         </div>
@@ -4534,14 +4614,14 @@ function CrmPage({userId}:{userId:string}){
   // ── SCREEN: FUNNEL INNER ─────────────────────────────────────────
   return <>
     <WorkPanel/>
-    {crmToast&&<div style={{position:"fixed",bottom:28,right:28,background:"#16A34A",color:"#fff",padding:"13px 20px",borderRadius:14,fontSize:13,fontWeight:600,zIndex:600,boxShadow:"0 8px 28px rgba(22,163,74,0.35)",display:"flex",alignItems:"center",gap:10,maxWidth:340,lineHeight:1.5}}>✓ {crmToast}</div>}
+    {crmToast&&<div style={{position:"fixed",bottom:28,right:28,background:"#6F6F6F",color:"#fff",padding:"13px 20px",borderRadius:10,fontSize:13,fontWeight:600,zIndex:600,boxShadow:"0 8px 28px rgba(111,111,111,0.35)",display:"flex",alignItems:"center",gap:10,maxWidth:340,lineHeight:1.5}}>✓ {crmToast}</div>}
     {touchModalLead&&touchModalLeadId&&(
       <div style={{position:"fixed",inset:0,background:"rgba(5,8,15,0.62)",zIndex:320,display:"flex",alignItems:"center",justifyContent:"center",padding:isMobile?12:24,backdropFilter:"blur(8px)"}} onClick={closeTouchModal}>
-        <div style={{width:"100%",maxWidth:860,maxHeight:"88dvh",background:C.w,border:"1px solid "+C.bd,borderRadius:24,boxShadow:"0 28px 80px rgba(0,0,0,0.36)",overflow:"hidden",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
-          <div style={{padding:isMobile?18:24,borderBottom:"1px solid "+C.bd,background:"linear-gradient(135deg, rgba(79,70,229,0.10), rgba(124,58,237,0.08), transparent)",position:"relative"}}>
-            <button onClick={closeTouchModal} style={{position:"absolute",right:16,top:16,width:34,height:34,borderRadius:12,border:"1px solid "+C.bd,background:C.w,color:C.t2,cursor:"pointer",fontSize:18,lineHeight:1}}>×</button>
+        <div style={{width:"100%",maxWidth:860,maxHeight:"88dvh",background:C.w,border:"1px solid "+C.bd,borderRadius:12,boxShadow:"0 28px 80px rgba(0,0,0,0.36)",overflow:"hidden",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+          <div style={{padding:isMobile?18:24,borderBottom:"1px solid "+C.bd,background:"linear-gradient(135deg, rgba(91,91,91,0.10), rgba(98,98,98,0.08), transparent)",position:"relative"}}>
+            <button onClick={closeTouchModal} style={{position:"absolute",right:16,top:16,width:34,height:34,borderRadius:8,border:"1px solid "+C.bd,background:C.w,color:C.t2,cursor:"pointer",fontSize:18,lineHeight:1}}>×</button>
             <div style={{display:"flex",alignItems:"center",gap:14,paddingRight:42}}>
-              <div style={{width:48,height:48,borderRadius:16,background:"linear-gradient(135deg,#4F46E5,#7C3AED)",boxShadow:"0 0 28px rgba(124,58,237,0.30)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:22}}>✨</div>
+              <div style={{width:48,height:48,borderRadius:10,background:"linear-gradient(135deg,#5B5B5B,#626262)",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:22}}>✨</div>
               <div style={{minWidth:0}}>
                 <div style={{fontSize:isMobile?20:24,fontWeight:900,color:C.t1,lineHeight:1.15}}>Касания</div>
                 <div style={{fontSize:13,color:C.t2,marginTop:5,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{touchModalLead.name||"Лид"} · {activeFunnel?.name||"CRM"}</div>
@@ -4550,28 +4630,28 @@ function CrmPage({userId}:{userId:string}){
           </div>
 
           <div style={{padding:isMobile?14:22,overflowY:"auto",display:"grid",gap:12,background:C.ib}}>
-            <div style={{background:C.w,border:"1px solid "+C.bd,borderRadius:18,padding:isMobile?14:16,display:"flex",alignItems:isMobile?"stretch":"center",justifyContent:"space-between",gap:12,flexDirection:isMobile?"column":"row"}}>
+            <div style={{background:C.w,border:"1px solid "+C.bd,borderRadius:12,padding:isMobile?14:16,display:"flex",alignItems:isMobile?"stretch":"center",justifyContent:"space-between",gap:12,flexDirection:isMobile?"column":"row"}}>
               <div>
                 <div style={{fontSize:14,fontWeight:800,color:C.t1}}>План касаний по лиду</div>
                 <div style={{fontSize:12,color:C.t2,marginTop:4,lineHeight:1.5}}>Открывай нужное касание, прописывай сообщение, дату и время отправки. Все касания не раскрываются сразу, чтобы карточка оставалась чистой.</div>
               </div>
-              {touchSavedLeadId===touchModalLeadId&&<div style={{fontSize:12,fontWeight:800,color:"#16A34A",padding:"8px 12px",borderRadius:999,background:"#22C55E10",border:"1px solid #22C55E25",whiteSpace:"nowrap"}}>Сохранено</div>}
+              {touchSavedLeadId===touchModalLeadId&&<div style={{fontSize:12,fontWeight:800,color:"#6F6F6F",padding:"8px 12px",borderRadius:999,background:"#22C55E10",border:"1px solid #22C55E25",whiteSpace:"nowrap"}}>Сохранено</div>}
             </div>
 
             {touchModalRows.map((touch:any,index:number)=>{
               const isOpen=openTouchItemId===touch.id;
               const isFilled=String(touch.message||"").trim().length>0;
-              return <div key={touch.id} style={{background:C.w,border:"1px solid "+(isOpen?"rgba(124,58,237,0.36)":C.bd),borderRadius:18,overflow:"hidden",boxShadow:isOpen?"0 14px 36px rgba(124,58,237,0.10)":"none"}}>
-                <button onClick={()=>setOpenTouchItemId(isOpen?null:touch.id)} style={{width:"100%",padding:isMobile?14:16,background:isOpen?"linear-gradient(135deg, rgba(79,70,229,0.08), rgba(124,58,237,0.06))":"transparent",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,textAlign:"left"}}>
+              return <div key={touch.id} style={{background:C.w,border:"1px solid "+(isOpen?"rgba(98,98,98,0.36)":C.bd),borderRadius:12,overflow:"hidden",boxShadow:isOpen?"0 14px 36px rgba(98,98,98,0.10)":"none"}}>
+                <button onClick={()=>setOpenTouchItemId(isOpen?null:touch.id)} style={{width:"100%",padding:isMobile?14:16,background:isOpen?"linear-gradient(135deg, rgba(91,91,91,0.08), rgba(98,98,98,0.06))":"transparent",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,textAlign:"left"}}>
                   <div style={{display:"flex",alignItems:"center",gap:12,minWidth:0}}>
-                    <div style={{width:34,height:34,borderRadius:12,background:isFilled?"linear-gradient(135deg,#4F46E5,#7C3AED)":"rgba(124,58,237,0.10)",color:isFilled?"#fff":"#6D48F7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:900,flexShrink:0}}>{index+1}</div>
+                    <div style={{width:34,height:34,borderRadius:8,background:isFilled?"linear-gradient(135deg,#5B5B5B,#626262)":"rgba(98,98,98,0.10)",color:isFilled?"#fff":"#676767",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:900,flexShrink:0}}>{index+1}</div>
                     <div style={{minWidth:0}}>
                       <div style={{fontSize:14,fontWeight:900,color:C.t1}}>{`Касание ${index+1}`}</div>
                       <div style={{fontSize:12,color:C.t2,marginTop:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:isMobile?220:520}}>{isFilled?touch.message:"Сообщение ещё не заполнено"}</div>
                     </div>
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-                    {(touch.date||touch.time)&&<span style={{fontSize:11,fontWeight:800,color:touch.sent?"#16A34A":"#6D48F7",padding:"6px 9px",borderRadius:999,background:touch.sent?"#22C55E10":"rgba(124,58,237,0.08)",border:"1px solid "+(touch.sent?"#22C55E25":"rgba(124,58,237,0.16)"),display:isMobile?"none":"inline-block"}}>{touch.sent?"Отправлено":"Запланировано"}</span>}
+                    {(touch.date||touch.time)&&<span style={{fontSize:11,fontWeight:800,color:touch.sent?"#6F6F6F":"#676767",padding:"6px 9px",borderRadius:999,background:touch.sent?"#22C55E10":"rgba(98,98,98,0.08)",border:"1px solid "+(touch.sent?"#22C55E25":"rgba(98,98,98,0.16)"),display:isMobile?"none":"inline-block"}}>{touch.sent?"Отправлено":"Запланировано"}</span>}
                     <span style={{fontSize:18,color:C.t2,transform:isOpen?"rotate(180deg)":"rotate(0deg)",transition:"transform 0.15s"}}>⌄</span>
                   </div>
                 </button>
@@ -4580,27 +4660,27 @@ function CrmPage({userId}:{userId:string}){
                   <div>
                     <label style={{display:"block",fontSize:12,fontWeight:800,color:C.t2,marginBottom:7}}>Текст сообщения</label>
                     <textarea value={touch.message||""} onChange={e=>updateTouch(touchModalLeadId!,touch.id,{message:e.target.value,sent:false})} placeholder="Напиши follow-up, напоминание или готовое сообщение для отправки..." rows={5}
-                      style={{width:"100%",padding:"14px 15px",border:"1px solid "+C.bd,borderRadius:14,fontSize:14,outline:"none",background:C.ib,color:C.t1,resize:"vertical",fontFamily:"Inter, sans-serif",lineHeight:1.55,boxSizing:"border-box" as const}}/>
+                      style={{width:"100%",padding:"14px 15px",border:"1px solid "+C.bd,borderRadius:10,fontSize:14,outline:"none",background:C.ib,color:C.t1,resize:"vertical",fontFamily:"Inter, sans-serif",lineHeight:1.55,boxSizing:"border-box" as const}}/>
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12}}>
                     <div>
                       <label style={{display:"block",fontSize:12,fontWeight:800,color:C.t2,marginBottom:7}}>Дата отправки</label>
-                      <input type="date" value={touch.date||""} onChange={e=>updateTouch(touchModalLeadId!,touch.id,{date:e.target.value,sent:false})} style={{width:"100%",padding:"12px 13px",border:"1px solid "+C.bd,borderRadius:14,fontSize:14,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"Inter, sans-serif"}}/>
+                      <input type="date" value={touch.date||""} onChange={e=>updateTouch(touchModalLeadId!,touch.id,{date:e.target.value,sent:false})} style={{width:"100%",padding:"12px 13px",border:"1px solid "+C.bd,borderRadius:10,fontSize:14,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"Inter, sans-serif"}}/>
                     </div>
                     <div>
                       <label style={{display:"block",fontSize:12,fontWeight:800,color:C.t2,marginBottom:7}}>Время отправки</label>
-                      <input type="time" value={touch.time||""} onChange={e=>updateTouch(touchModalLeadId!,touch.id,{time:e.target.value,sent:false})} style={{width:"100%",padding:"12px 13px",border:"1px solid "+C.bd,borderRadius:14,fontSize:14,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"Inter, sans-serif"}}/>
+                      <input type="time" value={touch.time||""} onChange={e=>updateTouch(touchModalLeadId!,touch.id,{time:e.target.value,sent:false})} style={{width:"100%",padding:"12px 13px",border:"1px solid "+C.bd,borderRadius:10,fontSize:14,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"Inter, sans-serif"}}/>
                     </div>
                   </div>
 
                   {isFilled&&<div style={{display:"grid",gap:8}}>
                     <div style={{fontSize:12,fontWeight:800,color:C.t2}}>Предпросмотр</div>
-                    <div style={{maxWidth:"100%",padding:"12px 15px",borderRadius:"18px 18px 18px 6px",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",fontSize:14,lineHeight:1.55,boxShadow:"0 0 22px rgba(124,58,237,0.18)",whiteSpace:"pre-wrap",wordBreak:"break-word",opacity:touch.sent?0.72:1,boxSizing:"border-box" as const}}>{touch.message}</div>
+                    <div style={{maxWidth:"100%",padding:"12px 15px",borderRadius:"18px 18px 18px 6px",background:"linear-gradient(135deg,#5B5B5B,#626262)",color:"#fff",fontSize:14,lineHeight:1.55,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",whiteSpace:"pre-wrap",wordBreak:"break-word",opacity:touch.sent?0.72:1,boxSizing:"border-box" as const}}>{touch.message}</div>
                   </div>}
 
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
-                    <button onClick={()=>updateTouch(touchModalLeadId!,touch.id,{sent:!touch.sent})} style={{padding:"10px 13px",borderRadius:12,border:"1px solid "+(touch.sent?"#22C55E35":"rgba(124,58,237,0.20)"),background:touch.sent?"#22C55E10":"rgba(124,58,237,0.08)",color:touch.sent?"#16A34A":"#6D48F7",fontSize:12,fontWeight:900,cursor:"pointer"}}>{touch.sent?"✓ Отправлено":"Отметить отправленным"}</button>
-                    {touchModalRows.length>1&&<button onClick={()=>removeTouchRow(touchModalLeadId!,touch.id)} style={{padding:"10px 13px",borderRadius:12,border:"1px solid rgba(239,68,68,0.22)",background:"rgba(239,68,68,0.08)",color:"#EF4444",fontSize:12,fontWeight:800,cursor:"pointer"}}>Удалить касание</button>}
+                    <button onClick={()=>updateTouch(touchModalLeadId!,touch.id,{sent:!touch.sent})} style={{padding:"10px 13px",borderRadius:8,border:"1px solid "+(touch.sent?"#22C55E35":"rgba(98,98,98,0.20)"),background:touch.sent?"#22C55E10":"rgba(98,98,98,0.08)",color:touch.sent?"#6F6F6F":"#676767",fontSize:12,fontWeight:900,cursor:"pointer"}}>{touch.sent?"✓ Отправлено":"Отметить отправленным"}</button>
+                    {touchModalRows.length>1&&<button onClick={()=>removeTouchRow(touchModalLeadId!,touch.id)} style={{padding:"10px 13px",borderRadius:8,border:"1px solid rgba(119,119,119,0.22)",background:"rgba(119,119,119,0.08)",color:"#777777",fontSize:12,fontWeight:800,cursor:"pointer"}}>Удалить касание</button>}
                   </div>
                 </div>}
               </div>
@@ -4608,10 +4688,10 @@ function CrmPage({userId}:{userId:string}){
           </div>
 
           <div style={{padding:isMobile?14:18,borderTop:"1px solid "+C.bd,background:C.w,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
-            <button onClick={()=>{const newTouch={id:`touch_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,message:"",date:"",time:"",sent:false};setTouchesByLead(prev=>({...prev,[touchModalLeadId!]:[...(prev[touchModalLeadId!]||[]),newTouch]}));setOpenTouchItemId(newTouch.id);}} style={{padding:"11px 14px",background:"transparent",color:"#6D48F7",border:"1px dashed rgba(124,58,237,0.30)",borderRadius:13,fontSize:13,fontWeight:900,cursor:"pointer"}}>+ Добавить касание</button>
+            <button onClick={()=>{const newTouch={id:`touch_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,message:"",date:"",time:"",sent:false};setTouchesByLead(prev=>({...prev,[touchModalLeadId!]:[...(prev[touchModalLeadId!]||[]),newTouch]}));setOpenTouchItemId(newTouch.id);}} style={{padding:"11px 14px",background:"transparent",color:"#676767",border:"1px dashed rgba(98,98,98,0.30)",borderRadius:10,fontSize:13,fontWeight:900,cursor:"pointer"}}>+ Добавить касание</button>
             <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-              <button onClick={closeTouchModal} style={{padding:"11px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:13,fontSize:13,fontWeight:800,cursor:"pointer"}}>Закрыть</button>
-              <button onClick={()=>saveTouchRows(touchModalLeadId!)} style={{padding:"11px 18px",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",border:"none",borderRadius:13,fontSize:13,fontWeight:900,cursor:"pointer",boxShadow:"0 0 22px rgba(124,58,237,0.24)"}}>Сохранить касания</button>
+              <button onClick={closeTouchModal} style={{padding:"11px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:10,fontSize:13,fontWeight:800,cursor:"pointer"}}>Закрыть</button>
+              <button onClick={()=>saveTouchRows(touchModalLeadId!)} style={{padding:"11px 18px",background:"linear-gradient(135deg,#5B5B5B,#626262)",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:900,cursor:"pointer",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>Сохранить касания</button>
             </div>
           </div>
         </div>
@@ -4621,13 +4701,13 @@ function CrmPage({userId}:{userId:string}){
     {/* ── Global edit lead modal: works from Kanban and List views ── */}
     {editLeadId&&(
       <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setEditLeadId(null)}>
-        <div style={{background:C.w,borderRadius:20,padding:isMobile?20:28,width:"100%",maxWidth:520,maxHeight:"calc(100dvh - 40px)",overflowY:"auto",border:"1px solid "+C.bd,boxShadow:"0 24px 60px rgba(0,0,0,0.4)",boxSizing:"border-box" as const}} onClick={e=>e.stopPropagation()}>
+        <div style={{background:C.w,borderRadius:10,padding:isMobile?20:28,width:"100%",maxWidth:520,maxHeight:"calc(100dvh - 40px)",overflowY:"auto",border:"1px solid "+C.bd,boxShadow:"0 24px 60px rgba(0,0,0,0.4)",boxSizing:"border-box" as const}} onClick={e=>e.stopPropagation()}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:20}}>
             <div>
               <div style={{fontSize:16,fontWeight:800,color:C.t1}}>✏️ Редактировать лида</div>
               <div style={{fontSize:11,color:C.t2,marginTop:3}}>Изменения сохранятся в текущей воронке и будут видны в канбане и списке.</div>
             </div>
-            <button onClick={()=>setEditLeadId(null)} style={{width:32,height:32,borderRadius:10,border:"1px solid "+C.bd,background:C.ib,color:C.t2,cursor:"pointer",fontSize:18,lineHeight:1}}>×</button>
+            <button onClick={()=>setEditLeadId(null)} style={{width:32,height:32,borderRadius:8,border:"1px solid "+C.bd,background:C.ib,color:C.t2,cursor:"pointer",fontSize:18,lineHeight:1}}>×</button>
           </div>
 
           <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:20}}>
@@ -4657,7 +4737,7 @@ function CrmPage({userId}:{userId:string}){
               <div key={k}>
                 <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>{label}</label>
                 <input type={k==="deal"?"number":"text"} value={editLeadData[k]||""} onChange={e=>setEditLeadData({...editLeadData,[k]:e.target.value})}
-                  style={{width:"100%",padding:"10px 12px",border:"1px solid "+C.bd,borderRadius:11,fontSize:12,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"Inter, sans-serif"}}/>
+                  style={{width:"100%",padding:"10px 12px",border:"1px solid "+C.bd,borderRadius:8,fontSize:12,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"Inter, sans-serif"}}/>
               </div>
             ))}
           </div>
@@ -4665,7 +4745,7 @@ function CrmPage({userId}:{userId:string}){
             <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>📋 Описание лида</label>
             <textarea value={editLeadData.note||""} onChange={e=>setEditLeadData({...editLeadData,note:e.target.value})} rows={4}
               placeholder="Подробный конспект по лиду: откуда пришёл, в чём боль, что обсуждали, договорённости, следующий шаг..."
-              style={{width:"100%",padding:"10px 12px",border:"1px solid "+C.bd,borderRadius:11,fontSize:12,outline:"none",background:C.ib,color:C.t1,resize:"vertical",fontFamily:"Inter, sans-serif",boxSizing:"border-box" as const,lineHeight:1.6}}/>
+              style={{width:"100%",padding:"10px 12px",border:"1px solid "+C.bd,borderRadius:8,fontSize:12,outline:"none",background:C.ib,color:C.t1,resize:"vertical",fontFamily:"Inter, sans-serif",boxSizing:"border-box" as const,lineHeight:1.6}}/>
           </div>
           {/* 5 CRM fields */}
           <div style={{marginBottom:18}}>
@@ -4688,8 +4768,8 @@ function CrmPage({userId}:{userId:string}){
             </div>
           </div>
           <div style={{display:"flex",gap:10,justifyContent:"flex-end",flexWrap:"wrap"}}>
-            <button onClick={()=>setEditLeadId(null)} style={{padding:"10px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:11,fontSize:13,cursor:"pointer",fontWeight:600}}>Отмена</button>
-            <button onClick={saveEditLead} disabled={!String(editLeadData.name||"").trim()} style={{padding:"10px 20px",background:String(editLeadData.name||"").trim()?"linear-gradient(135deg,"+C.a+","+C.ah+")":C.bd,color:"#fff",border:"none",borderRadius:11,fontSize:13,fontWeight:800,cursor:String(editLeadData.name||"").trim()?"pointer":"default",boxShadow:String(editLeadData.name||"").trim()?"0 0 18px "+C.a+"35":"none"}}>Сохранить</button>
+            <button onClick={()=>setEditLeadId(null)} style={{padding:"10px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:8,fontSize:13,cursor:"pointer",fontWeight:600}}>Отмена</button>
+            <button onClick={saveEditLead} disabled={!String(editLeadData.name||"").trim()} style={{padding:"10px 20px",background:String(editLeadData.name||"").trim()?"linear-gradient(135deg,"+C.a+","+C.ah+")":C.bd,color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:800,cursor:String(editLeadData.name||"").trim()?"pointer":"default",boxShadow:String(editLeadData.name||"").trim()?"0 0 18px "+C.a+"35":"none"}}>Сохранить</button>
           </div>
         </div>
       </div>
@@ -4712,7 +4792,7 @@ function CrmPage({userId}:{userId:string}){
           return <button key={fu.id} onClick={()=>openFunnel(fu.id)}
             style={{padding:"6px 14px",borderRadius:9,border:"1px solid "+(isAct?ac+"50":C.bd),whiteSpace:"nowrap",fontSize:12,fontWeight:isAct?700:400,cursor:"pointer",flexShrink:0,background:isAct?ac+"12":"transparent",color:isAct?ac:C.t2,boxShadow:isAct?"0 0 12px "+ac+"20":"none",transition:"all 0.15s"}}>
             {fu.name}
-            <span style={{marginLeft:5,fontSize:10,opacity:0.7,background:isAct?ac+"25":C.bd,borderRadius:10,padding:"1px 6px"}}>{cnt}</span>
+            <span style={{marginLeft:5,fontSize:10,opacity:0.7,background:isAct?ac+"25":C.bd,borderRadius:8,padding:"1px 6px"}}>{cnt}</span>
           </button>;
         })}
         <button onClick={()=>setNewFunnelModal(true)}
@@ -4732,7 +4812,7 @@ function CrmPage({userId}:{userId:string}){
         {l:"Закрыто",v:leads.filter((l:any)=>l.status==="closed").length},
         {l:"Сделки",v:fmt$(totalD)+" ₽"},
       ].map((s,i)=>(
-        <div key={i} style={{background:C.w,borderRadius:14,padding:"14px 16px",border:"1px solid "+C.bd,transition:"all 0.2s"}}
+        <div key={i} style={{background:C.w,borderRadius:10,padding:"14px 16px",border:"1px solid "+C.bd,transition:"all 0.2s"}}
           onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.a+"30";(e.currentTarget as HTMLElement).style.boxShadow="0 0 16px "+C.a+"10";}}
           onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
           <div style={{fontSize:20,fontWeight:700,color:C.t1,marginBottom:2,lineHeight:1.2}}>{s.v}</div>
@@ -4742,19 +4822,19 @@ function CrmPage({userId}:{userId:string}){
     </div>
 
     {/* Today agenda */}
-    <div style={{background:C.w,borderRadius:18,padding:isMobile?16:18,border:"1px solid "+C.bd,marginBottom:18,boxShadow:"0 0 22px rgba(124,58,237,0.08)",position:"relative",overflow:"hidden"}}>
-      <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg, rgba(79,70,229,0.06), rgba(124,58,237,0.02) 45%, transparent 70%)",pointerEvents:"none"}}/>
+    <div style={{background:C.w,borderRadius:12,padding:isMobile?16:18,border:"1px solid "+C.bd,marginBottom:18,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",position:"relative",overflow:"hidden"}}>
+      <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg, rgba(91,91,91,0.06), rgba(98,98,98,0.02) 45%, transparent 70%)",pointerEvents:"none"}}/>
       <div style={{display:"flex",alignItems:isMobile?"flex-start":"center",justifyContent:"space-between",gap:12,marginBottom:todayTouchAgenda.length?14:0,flexDirection:isMobile?"column":"row",position:"relative"}}>
         <div>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
-            <div style={{width:34,height:34,borderRadius:12,background:"linear-gradient(135deg,#4F46E5,#7C3AED)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 0 18px rgba(124,58,237,0.28)",color:"#fff",fontSize:16}}>✉️</div>
+            <div style={{width:34,height:34,borderRadius:8,background:"linear-gradient(135deg,#5B5B5B,#626262)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",color:"#fff",fontSize:16}}>✉️</div>
             <div>
               <div style={{fontSize:16,fontWeight:800,color:C.t1}}>Кому сегодня, что нужно отправить</div>
               <div style={{fontSize:12,color:C.t2,marginTop:2}}>{activeFunnel?.name?`Воронка: ${activeFunnel.name}`:"Текущая воронка"}</div>
             </div>
           </div>
         </div>
-        <div style={{padding:"7px 12px",borderRadius:999,background:"linear-gradient(135deg, rgba(79,70,229,0.12), rgba(124,58,237,0.12))",border:"1px solid rgba(124,58,237,0.18)",fontSize:12,fontWeight:700,color:"#5B46F5",whiteSpace:"nowrap"}}>
+        <div style={{padding:"7px 12px",borderRadius:999,background:"linear-gradient(135deg, rgba(91,91,91,0.12), rgba(98,98,98,0.12))",border:"1px solid rgba(98,98,98,0.18)",fontSize:12,fontWeight:700,color:"#606060",whiteSpace:"nowrap"}}>
           {todayTouchAgenda.length?`${todayTouchAgenda.length} задач на сегодня`:"На сегодня касаний нет"}
         </div>
       </div>
@@ -4762,18 +4842,18 @@ function CrmPage({userId}:{userId:string}){
       {todayTouchAgenda.length>0
         ?<div style={{display:"grid",gap:10,position:"relative"}}>
           {todayTouchAgenda.slice(0,8).map((item:any,idx:number)=>{
-            const accent=item.overdue?"#EF4444":"#7C3AED";
-            return <div key={item.touch.id} style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"minmax(0,1.2fr) minmax(0,2fr) auto",gap:10,alignItems:"center",padding:"12px 14px",background:C.ib,borderRadius:14,border:"1px solid "+accent+"22"}}>
+            const accent=item.overdue?"#777777":"#626262";
+            return <div key={item.touch.id} style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"minmax(0,1.2fr) minmax(0,2fr) auto",gap:10,alignItems:"center",padding:"12px 14px",background:C.ib,borderRadius:10,border:"1px solid "+accent+"22"}}>
               <div style={{minWidth:0}}>
                 <div style={{fontSize:13,fontWeight:800,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.lead.name||`Лид ${idx+1}`}</div>
                 <div style={{fontSize:11,color:C.t2,marginTop:3}}>{item.lead.source||"Без источника"} · {`Касание ${item.touchIndex}`}</div>
               </div>
               <div style={{minWidth:0}}>
-                <div style={{display:"inline-block",maxWidth:"100%",padding:"9px 12px",borderRadius:"16px 16px 16px 6px",background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",fontSize:12,lineHeight:1.45,boxShadow:"0 0 18px rgba(124,58,237,0.18)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.touch.message}</div>
+                <div style={{display:"inline-block",maxWidth:"100%",padding:"9px 12px",borderRadius:"16px 16px 16px 6px",background:"linear-gradient(135deg,#5B5B5B,#626262)",color:"#fff",fontSize:12,lineHeight:1.45,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.touch.message}</div>
               </div>
               <div style={{display:"flex",alignItems:isMobile?"stretch":"center",gap:8,justifyContent:isMobile?"flex-start":"flex-end",flexWrap:"wrap"}}>
                 <div style={{fontSize:11,fontWeight:700,color:accent,padding:"7px 10px",borderRadius:999,background:accent+"10",border:"1px solid "+accent+"25"}}>{item.overdue?"Просрочено":"Сегодня"}{item.touch.time?` · ${item.touch.time}`:""}</div>
-                <button onClick={()=>updateTouch(item.lead.id,item.touch.id,{sent:true})} style={{padding:"7px 10px",border:"1px solid #22C55E30",borderRadius:999,background:"#22C55E10",color:"#16A34A",fontSize:11,fontWeight:800,cursor:"pointer"}}>Отметить отправленным</button>
+                <button onClick={()=>updateTouch(item.lead.id,item.touch.id,{sent:true})} style={{padding:"7px 10px",border:"1px solid #22C55E30",borderRadius:999,background:"#22C55E10",color:"#6F6F6F",fontSize:11,fontWeight:800,cursor:"pointer"}}>Отметить отправленным</button>
               </div>
             </div>
           })}
@@ -4783,7 +4863,7 @@ function CrmPage({userId}:{userId:string}){
     </div>
 
     {/* Tabs */}
-    <div style={{display:"flex",background:C.ib,borderRadius:10,padding:3,marginBottom:20,gap:2,border:"1px solid "+C.bd}}>
+    <div style={{display:"flex",background:C.ib,borderRadius:8,padding:3,marginBottom:20,gap:2,border:"1px solid "+C.bd}}>
       <button style={tabSt(tab==="kanban")} onClick={()=>setTab("kanban")}>Канбан</button>
       <button style={tabSt(tab==="list")} onClick={()=>setTab("list")}>Список лидов</button>
     </div>
@@ -4799,7 +4879,7 @@ function CrmPage({userId}:{userId:string}){
         </button>
       </div>
 
-      {show&&<div style={{background:C.w,borderRadius:14,padding:18,marginBottom:18,border:"1px solid "+C.bd}} className="form-panel">
+      {show&&<div style={{background:C.w,borderRadius:10,padding:18,marginBottom:18,border:"1px solid "+C.bd}} className="form-panel">
         <div style={{fontSize:14,fontWeight:600,marginBottom:14,color:C.t1}}>Новый лид</div>
         <div style={{display:"flex",gap:14,marginBottom:14,alignItems:"flex-start"}}>
           {/* Avatar upload */}
@@ -4858,7 +4938,7 @@ function CrmPage({userId}:{userId:string}){
             onDrop={e=>{e.stopPropagation();onStageDrop(stage.id);onDrop(stage.id);}}
             onDragLeave={()=>{setDragOver(null);setStageDragOver(null);}}
             onDragEnd={()=>{setStageDragId(null);setStageDragOver(null);}}
-            style={{minWidth:228,width:228,flexShrink:0,background:isOver?C.a+"06":C.ib,borderRadius:14,padding:"0 0 10px",
+            style={{minWidth:228,width:228,flexShrink:0,background:isOver?C.a+"06":C.ib,borderRadius:10,padding:"0 0 10px",
               border:"1px solid "+(isStageDragOver?stage.color+"80":isOver?C.a+"40":C.bd),
               boxShadow:isStageDragOver?"0 0 16px "+stage.color+"30":isOver?"0 0 20px "+C.a+"15":"none",
               opacity:stageDragId===stage.id?0.45:1,
@@ -4885,7 +4965,7 @@ function CrmPage({userId}:{userId:string}){
                       <span style={{fontSize:12,fontWeight:600,color:C.t1}}>{stage.label}</span>
                     </div>
                     <div style={{display:"flex",alignItems:"center",gap:4}}>
-                      <span style={{fontSize:10,fontWeight:700,color:stage.color,background:stage.color+"18",borderRadius:20,padding:"1px 6px"}}>{stageLeads.length}</span>
+                      <span style={{fontSize:10,fontWeight:700,color:stage.color,background:stage.color+"18",borderRadius:10,padding:"1px 6px"}}>{stageLeads.length}</span>
                       <button onClick={()=>setEditStageId(stage.id)} title="Настроить этап"
                         style={{width:20,height:20,border:"none",background:"transparent",cursor:"pointer",borderRadius:5,display:"flex",alignItems:"center",justifyContent:"center",color:C.t2,fontSize:11,opacity:0.5}}>✎</button>
                     </div>
@@ -4902,7 +4982,7 @@ function CrmPage({userId}:{userId:string}){
         {/* Add stage button */}
         <div style={{minWidth:180,flexShrink:0,display:"flex",alignItems:"flex-start",paddingTop:4}}>
           <button onClick={addStage}
-            style={{width:"100%",padding:"10px 14px",background:"transparent",border:"1px dashed "+C.bd,borderRadius:14,fontSize:12,color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,transition:"all 0.15s"}}
+            style={{width:"100%",padding:"10px 14px",background:"transparent",border:"1px dashed "+C.bd,borderRadius:10,fontSize:12,color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,transition:"all 0.15s"}}
             onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.a;(e.currentTarget as HTMLElement).style.color=C.a;(e.currentTarget as HTMLElement).style.background=C.a+"08";}}
             onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.color=C.t2;(e.currentTarget as HTMLElement).style.background="transparent";}}>
             + Добавить этап
@@ -4923,7 +5003,7 @@ function CrmPage({userId}:{userId:string}){
           + Лид
         </button>
       </div>
-      {show&&<div style={{background:C.w,borderRadius:14,padding:18,marginBottom:16,border:"1px solid "+C.bd}} className="form-panel">
+      {show&&<div style={{background:C.w,borderRadius:10,padding:18,marginBottom:16,border:"1px solid "+C.bd}} className="form-panel">
         <div style={{fontSize:14,fontWeight:600,marginBottom:14,color:C.t1}}>Новый лид</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
           {([["name","Имя *"],["contact","Контакт"],["phone","Телефон"],["email","Email"],["note","Описание лида"],["deal","Сделка, ₽"]] as const).map(([k,l])=>(
@@ -4945,7 +5025,7 @@ function CrmPage({userId}:{userId:string}){
           <button onClick={()=>setShow(false)} style={{padding:"9px 14px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:9,fontSize:12,cursor:"pointer"}}>Отмена</button>
         </div>
       </div>}
-      <div style={{background:C.w,borderRadius:14,overflow:"hidden",border:"1px solid "+C.bd}}>
+      <div style={{background:C.w,borderRadius:10,overflow:"hidden",border:"1px solid "+C.bd}}>
         {found.length===0
           ?<div style={{padding:48,textAlign:"center",color:C.t2,fontSize:13}}>Нет лидов</div>
           :found.map((l:any,i:number)=>(
@@ -4965,12 +5045,12 @@ function CrmPage({userId}:{userId:string}){
               </div>
               <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
                 {l.deal&&<span style={{fontSize:11,fontWeight:600,color:C.g}}>{fmt$(l.deal)}₽</span>}
-                <span style={{fontSize:10,fontWeight:600,padding:"2px 9px",borderRadius:20,background:stCol(l.status)+"14",color:stCol(l.status),border:"1px solid "+stCol(l.status)+"25"}}>{stLbl(l.status)}</span>
+                <span style={{fontSize:10,fontWeight:600,padding:"2px 9px",borderRadius:10,background:stCol(l.status)+"14",color:stCol(l.status),border:"1px solid "+stCol(l.status)+"25"}}>{stLbl(l.status)}</span>
                 {/* Написать */}
                 {getWriteUrl(l)&&<a href={getWriteUrl(l)!} target="_blank" rel="noreferrer"
-                  style={{padding:"5px 12px",background:"linear-gradient(135deg,#22C55E14,#16A34A10)",color:"#16A34A",border:"1px solid #22C55E30",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",textDecoration:"none",transition:"all 0.15s",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:4}}
-                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#22C55E,#16A34A)";(e.currentTarget as HTMLElement).style.color="#fff";}}
-                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#22C55E14,#16A34A10)";(e.currentTarget as HTMLElement).style.color="#16A34A";}}>
+                  style={{padding:"5px 12px",background:"linear-gradient(135deg,#22C55E14,#16A34A10)",color:"#6F6F6F",border:"1px solid #22C55E30",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",textDecoration:"none",transition:"all 0.15s",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:4}}
+                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#898989,#6F6F6F)";(e.currentTarget as HTMLElement).style.color="#fff";}}
+                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#22C55E14,#16A34A10)";(e.currentTarget as HTMLElement).style.color="#6F6F6F";}}>
                   ✉️ Написать
                 </a>}
                 {/* Edit */}
@@ -4995,7 +5075,7 @@ function CrmPage({userId}:{userId:string}){
     {/* New funnel modal (also accessible from within funnel) */}
     {newFunnelModal&&(
       <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setNewFunnelModal(false)}>
-        <div style={{background:"#fff",borderRadius:20,padding:32,width:"100%",maxWidth:440,boxShadow:"0 24px 60px rgba(0,0,0,0.18)"}} onClick={e=>e.stopPropagation()}>
+        <div style={{background:"#fff",borderRadius:10,padding:32,width:"100%",maxWidth:440,boxShadow:"0 24px 60px rgba(0,0,0,0.18)"}} onClick={e=>e.stopPropagation()}>
           <div style={{fontSize:18,fontWeight:700,marginBottom:20}}>Новая воронка продаж</div>
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
             <div>
@@ -5012,14 +5092,14 @@ function CrmPage({userId}:{userId:string}){
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                 {FUNNEL_COLORS.map(color=>(
                   <button key={color} onClick={()=>setNewFunnelColor(color)}
-                    style={{width:32,height:32,borderRadius:10,background:color,border:newFunnelColor===color?"3px solid #1C1C1E":"3px solid transparent",cursor:"pointer"}}/>
+                    style={{width:32,height:32,borderRadius:8,background:color,border:newFunnelColor===color?"3px solid #1C1C1E":"3px solid transparent",cursor:"pointer"}}/>
                 ))}
               </div>
             </div>
           </div>
           <div style={{display:"flex",gap:10,marginTop:24,justifyContent:"flex-end"}}>
-            <button onClick={()=>setNewFunnelModal(false)} style={{padding:"10px 18px",background:"#F2F2F7",color:"#8E8E93",border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer"}}>Отмена</button>
-            <button onClick={createFunnel} disabled={!newFunnelName.trim()} style={{padding:"10px 20px",background:newFunnelName.trim()?"#007AFF":"#C6C6C8",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:700,cursor:newFunnelName.trim()?"pointer":"default"}}>Создать</button>
+            <button onClick={()=>setNewFunnelModal(false)} style={{padding:"10px 18px",background:"#F2F2F7",color:"#8E8E93",border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer"}}>Отмена</button>
+            <button onClick={createFunnel} disabled={!newFunnelName.trim()} style={{padding:"10px 20px",background:newFunnelName.trim()?"#656565":"#C6C6C8",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:newFunnelName.trim()?"pointer":"default"}}>Создать</button>
           </div>
         </div>
       </div>
@@ -5036,6 +5116,7 @@ const PlatformIcon=({pid,size=16}:{pid:string,size?:number})=>{
   if(pid==="instagram") return <svg width={size} height={size} viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5" stroke="url(#igG)" strokeWidth="2"/><circle cx="12" cy="12" r="5" stroke="url(#igG)" strokeWidth="2"/><circle cx="17.5" cy="6.5" r="1.2" fill="#E1306C"/><defs><linearGradient id="igG" x1="2" y1="22" x2="22" y2="2" gradientUnits="userSpaceOnUse"><stop stopColor="#F58529"/><stop offset="0.5" stopColor="#DD2A7B"/><stop offset="1" stopColor="#8134AF"/></linearGradient></defs></svg>;
   if(pid==="youtube") return <svg width={size} height={size} viewBox="0 0 24 24"><rect width="24" height="24" rx="5" fill="#FF0000"/><path d="M19.59 7.35A2.5 2.5 0 0017.83 5.6C16.37 5.2 12 5.2 12 5.2s-4.37 0-5.83.4A2.5 2.5 0 004.41 7.35 26 26 0 004 12a26 26 0 00.41 4.65A2.5 2.5 0 006.17 18.4c1.46.4 5.83.4 5.83.4s4.37 0 5.83-.4a2.5 2.5 0 001.76-1.75A26 26 0 0020 12a26 26 0 00-.41-4.65z" fill="white"/><path d="M10 15.2l5.2-3.2-5.2-3.2v6.4z" fill="#FF0000"/></svg>;
   if(pid==="telegram") return <svg width={size} height={size} viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#29B6F6"/><path d="M5.5 11.8l11.5-4.4c.5-.2 1 .1.8.9l-2 9.2c-.1.6-.5.7-.9.5l-2.5-1.8-1.2 1.1c-.1.1-.3.2-.6.2l.2-2.6 4.8-4.3c.2-.2 0-.3-.3-.1L7.8 13.4 5.3 12.7c-.6-.2-.6-.6.2-.9z" fill="white"/></svg>;
+  if(pid==="tiktok") return <svg width={size} height={size} viewBox="0 0 24 24"><rect width="24" height="24" rx="5" fill="#010101"/><path d="M17 7.6a4.3 4.3 0 01-2.6-.9v5.9a3.9 3.9 0 11-3.9-3.9c.2 0 .4 0 .6.1v2a1.9 1.9 0 00-.6-.1 1.9 1.9 0 101.9 1.9V4h1.9a4.3 4.3 0 002.7 3.1z" fill="#25F4EE" opacity="0.9" transform="translate(-0.6 0.6)"/><path d="M17 7.6a4.3 4.3 0 01-2.6-.9v5.9a3.9 3.9 0 11-3.9-3.9c.2 0 .4 0 .6.1v2a1.9 1.9 0 00-.6-.1 1.9 1.9 0 101.9 1.9V4h1.9a4.3 4.3 0 002.7 3.1z" fill="#FE2C55" opacity="0.9" transform="translate(0.6 -0.2)"/><path d="M17 7.6a4.3 4.3 0 01-2.6-.9v5.9a3.9 3.9 0 11-3.9-3.9c.2 0 .4 0 .6.1v2a1.9 1.9 0 00-.6-.1 1.9 1.9 0 101.9 1.9V4h1.9a4.3 4.3 0 002.7 3.1z" fill="#fff"/></svg>;
   if(pid==="vk") return <svg width={size} height={size} viewBox="0 0 24 24"><rect width="24" height="24" rx="5" fill="#4C75A3"/><path d="M13.1 16.3h1.2s.4 0 .5-.3c.1-.2 0-.5 0-.5s-.1-1.3.6-1.5c.7-.2 1.5 1.3 2.4 1.8.7.4 1.2.3 1.2.3l2.4-.1s1.2-.1.7-.9c0-.1-.3-.6-1.4-1.6-1.2-1.1-1-1 .4-2.9.9-1.2 1.2-2 1.1-2.3-.1-.3-1.1-.2-1.1-.2h-2.7s-.2 0-.3.1c-.1.1-.2.3-.2.3s-.4 1.1-.9 2c-1.1 1.8-1.5 1.9-1.7 1.8-.4-.3-.3-1-.3-1.6V9.4c0-1.3-.3-1.8-1.1-1.8H10c-.5 0-.8.3-.8.3s-.3.3.2.3c.6.1.7.5.7.5V12c0 1.5-.3 1.7-.7 1.7-.7 0-1.6-1.3-2.3-2.8-.3-.7-.6-1.5-.6-1.5s-.1-.2-.2-.3c-.2-.1-.4-.1-.4-.1H3.5s-.5 0-.5.3c0 .3.2.9.9 2.1C5.1 13.9 6.8 16.4 9.1 16.4c1.3 0 1.3-.2 1.3-.2l1.2-.3s.1-.2.3-.1c.2.1.1.3.1.3l-.1.5s-.1.3.1.5c.1.1.3.1.3.1h2.1" fill="white"/></svg>;
   return <div style={{width:size,height:size,borderRadius:"50%",background:C.t2+"44",display:"flex",alignItems:"center",justifyContent:"center"}}><svg width={size*0.55} height={size*0.55} viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg></div>;
 };
@@ -5043,7 +5124,7 @@ const PlatformIcon=({pid,size=16}:{pid:string,size?:number})=>{
 function ContentPage({userId}:{userId:string}){
   const isMobile=useIsMobile();
   const{data:items,add,update,remove}=useTable("content",userId);
-  const[tab,setTab]=useState<"list"|"calendar"|"stories">("list");
+  const[tab,setTab]=useState<"list"|"calendar"|"stories"|"scripts">("list");
   const[show,setShow]=useState(false);
   const[editId,setEditId]=useState<string|null>(null);
   const[coverUploading,setCoverUploading]=useState(false);
@@ -5088,7 +5169,7 @@ function ContentPage({userId}:{userId:string}){
       +"<style>body{font-family:Arial,sans-serif;max-width:800px;margin:40px auto;padding:0 24px;color:#1a1a2e;line-height:1.6;}"
       +"h1{font-size:26px;font-weight:800;margin-bottom:8px;}"
       +".meta{font-size:13px;color:#666;margin-bottom:24px;}"
-      +".badge{background:#f0f4ff;color:#2563eb;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:600;margin-right:8px;}"
+      +".badge{background:#f0f4ff;color:#606060;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:600;margin-right:8px;}"
       +".content{background:#f8f9fa;border-radius:8px;padding:16px;font-size:14px;white-space:pre-wrap;line-height:1.8;}"
       +"img{max-width:100%;border-radius:8px;margin-bottom:16px;max-height:360px;object-fit:cover;width:100%;}"
       +"</style></head><body>"
@@ -5148,10 +5229,10 @@ function ContentPage({userId}:{userId:string}){
   };
 
   const CONTENT_STAGES=[
-    {id:"idea",label:"💡 Идея",color:"#8B5CF6",hint:"Концепции и темы ждут своей очереди"},
-    {id:"progress",label:"🎬 Разработка",color:"#F59E0B",hint:"Съёмка, написание текста, сбор материала"},
-    {id:"ready",label:"✂️ Реализация",color:"#3B82F6",hint:"Монтаж, дизайн, финальная правка"},
-    {id:"published",label:"🚀 Опубликовано",color:"#10B981",hint:"Вышло в свет — собирает реакции"},
+    {id:"idea",label:"Идея",color:C.t1,hint:"Концепции и темы ждут своей очереди"},
+    {id:"progress",label:"Разработка",color:C.t1,hint:"Съёмка, написание текста, сбор материала"},
+    {id:"ready",label:"Реализация",color:C.t1,hint:"Монтаж, дизайн, финальная правка"},
+    {id:"published",label:"Опубликовано",color:C.t1,hint:"Вышло в свет — собирает реакции"},
   ];
   const[kanbanDrag,setKanbanDrag]=useState<string|null>(null);
   const[kanbanOver,setKanbanOver]=useState<string|null>(null);
@@ -5227,21 +5308,23 @@ function ContentPage({userId}:{userId:string}){
         return<button key={pf.id} onClick={()=>setPlatformFilter(pf.id)}
           style={{
             display:"flex",alignItems:"center",gap:6,
-            padding:"6px 14px",borderRadius:20,border:"none",cursor:"pointer",
+            padding:"6px 14px",borderRadius:10,border:"none",cursor:"pointer",
             fontSize:12,fontWeight:isActive?700:400,
-            background:isActive?C.a:C.ib,
-            color:isActive?"#fff":C.t2,
-            boxShadow:isActive?"0 0 14px "+C.a+"40":"none",
+            background:isActive?C.t1:C.ib,
+            color:isActive?C.bg:C.t2,
+            boxShadow:"none",
             transition:"all 0.18s",
           }}
           onMouseEnter={e=>{if(!isActive)(e.currentTarget as HTMLElement).style.background=C.bd;}}
           onMouseLeave={e=>{if(!isActive)(e.currentTarget as HTMLElement).style.background=C.ib;}}>
-          <span>{pf.icon}</span>
+          {pf.id==="all"?<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={isActive?C.bg:C.t2} strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            :pf.id==="other"?<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={isActive?C.bg:C.t2} strokeWidth="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/></svg>
+            :<PlatformIcon pid={pf.id} size={16}/>}
           {pf.label}
           {cnt>0&&<span style={{
-            background:isActive?"rgba(255,255,255,0.25)":C.a+"20",
-            color:isActive?"#fff":C.a,
-            borderRadius:20,padding:"0 7px",fontSize:11,fontWeight:700,
+            background:isActive?"rgba(255,255,255,0.22)":C.bd,
+            color:isActive?C.bg:C.t2,
+            borderRadius:6,padding:"0 7px",fontSize:11,fontWeight:700,
           }}>{cnt}</span>}
         </button>;
       })}
@@ -5254,14 +5337,14 @@ function ContentPage({userId}:{userId:string}){
         const total=filteredItems.length;
         const pct=total?Math.round(cnt/total*100):0;
         const isMax=cnt>0&&cnt===Math.max(...CONTENT_STAGES.map(s=>filteredItems.filter((x:any)=>x.status===s.id).length));
-        return<div key={stage.id} style={{background:C.w,borderRadius:14,padding:"16px 18px",border:"1px solid "+(isMax?stage.color+"40":C.bd),boxShadow:isMax?"0 0 20px "+stage.color+"15":"none",transition:"all 0.2s"}}>
+        return<div key={stage.id} style={{background:C.w,borderRadius:10,padding:"16px 18px",border:"1px solid "+(isMax?stage.color+"30":C.bd),boxShadow:"none",transition:"all 0.2s"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
             <span style={{fontSize:13,color:C.t2,fontWeight:500}}>{stage.label}</span>
-            {isMax&&cnt>0&&<span style={{fontSize:10,background:stage.color+"18",color:stage.color,borderRadius:20,padding:"2px 7px",fontWeight:600}}>больше всего</span>}
+            {isMax&&cnt>0&&<span style={{fontSize:10,background:C.bd,color:C.t2,borderRadius:6,padding:"2px 7px",fontWeight:600}}>больше всего</span>}
           </div>
           <div style={{fontSize:26,fontWeight:800,color:stage.color,marginBottom:6}}>{cnt}</div>
           <div style={{height:4,borderRadius:4,background:C.bd,overflow:"hidden"}}>
-            <div style={{height:"100%",width:pct+"%",background:"linear-gradient(90deg,"+stage.color+","+stage.color+"bb)",borderRadius:4,transition:"width 0.4s"}}/>
+            <div style={{height:"100%",width:pct+"%",background:stage.color,borderRadius:4,transition:"width 0.4s"}}/>
           </div>
           <div style={{fontSize:10,color:C.t2,marginTop:4}}>{pct}% от всех</div>
         </div>;
@@ -5269,8 +5352,8 @@ function ContentPage({userId}:{userId:string}){
     </div>
 
     {/* ── Tabs ── */}
-    <div style={{display:"flex",gap:4,marginBottom:20,borderBottom:"2px solid "+C.bd}}>
-      {[{id:"list",label:"📋 Канбан"},{id:"calendar",label:"Календарь"},{id:"stories",label:"📊 Карусели историй"}].map(t=><button key={t.id} onClick={()=>setTab(t.id as any)} style={{padding:"10px 20px",background:"none",border:"none",borderBottom:tab===t.id?"3px solid "+C.a:"3px solid transparent",color:tab===t.id?C.a:C.t2,fontSize:14,fontWeight:tab===t.id?600:400,cursor:"pointer",marginBottom:-2}}>{t.label}</button>)}
+    <div style={{display:"flex",gap:4,marginBottom:20,borderBottom:"1px solid "+C.bd}}>
+      {[{id:"list",label:"Канбан"},{id:"calendar",label:"Календарь"},{id:"stories",label:"Карусели историй"},{id:"scripts",label:"Сценарии"}].map(t=><button key={t.id} onClick={()=>setTab(t.id as any)} style={{padding:"10px 18px",background:"none",border:"none",borderBottom:tab===t.id?"2px solid "+C.t1:"2px solid transparent",color:tab===t.id?C.t1:C.t2,fontSize:14,fontWeight:tab===t.id?600:500,cursor:"pointer",marginBottom:-2,letterSpacing:"-0.01em"}}>{t.label}</button>)}
     </div>
 
     {/* ── KANBAN TAB ── */}
@@ -5282,9 +5365,9 @@ function ContentPage({userId}:{userId:string}){
           <div style={{fontSize:12,color:C.t2,marginTop:2}}>Перетаскивай карточки между этапами</div>
         </div>
         <button onClick={()=>{setShow(!show);setEditId(null);sF(emptyF());}}
-          style={{padding:"9px 18px",background:C.a,color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,boxShadow:"0 0 16px "+C.a+"30"}}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          + Контент
+          style={{padding:"9px 18px",background:C.t1,color:C.bg,border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,boxShadow:"none"}}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Контент
         </button>
       </div>
 
@@ -5296,7 +5379,7 @@ function ContentPage({userId}:{userId:string}){
           <div style={{gridRow:"span 2",display:"flex",flexDirection:"column",gap:8}}>
             <label style={{fontSize:12,color:C.t2,fontWeight:600}}>Обложка</label>
             <label style={{cursor:"pointer",flex:1}}>
-              <div style={{width:"100%",minHeight:120,background:C.ib,borderRadius:12,border:"2px dashed "+C.bd,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
+              <div style={{width:"100%",minHeight:120,background:C.ib,borderRadius:8,border:"2px dashed "+C.bd,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
                 {coverUploading
                   ? <div style={{width:24,height:24,border:"3px solid "+C.bd,borderTopColor:C.a,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
                   : f.cover_url
@@ -5343,7 +5426,7 @@ function ContentPage({userId}:{userId:string}){
         <div style={{display:"flex",gap:10,marginTop:16,flexWrap:"wrap"}}>
           <Btn onClick={sub}>{editId?"Сохранить":"Добавить"}</Btn>
           {editId&&f.scenario&&<button onClick={()=>downloadPDF({...f,id:editId})}
-            style={{padding:"9px 16px",background:"linear-gradient(135deg,#16A34A,#15803D)",color:"#fff",border:"none",borderRadius:9,fontSize:12,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,boxShadow:"0 0 12px rgba(22,163,74,0.3)"}}>
+            style={{padding:"9px 16px",background:"linear-gradient(135deg,#6F6F6F,#585858)",color:"#fff",border:"none",borderRadius:9,fontSize:12,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,boxShadow:"0 0 12px rgba(111,111,111,0.3)"}}>
             📄 Скачать PDF
           </button>}
           <Btn primary={false} onClick={()=>{setShow(false);setEditId(null);}}>Отмена</Btn>
@@ -5351,7 +5434,7 @@ function ContentPage({userId}:{userId:string}){
       </Card>}
 
       {/* KANBAN BOARD */}
-      <div style={{display:"flex",gap:14,overflowX:"auto",alignItems:"flex-start",paddingBottom:16,scrollbarWidth:"none"}}>
+      <div style={{display:"flex",gap:14,alignItems:"stretch",paddingBottom:16,width:"100%",overflowX:"auto"}}>
         {CONTENT_STAGES.map(stage=>{
           const stageItems=filteredItems.filter((x:any)=>x.status===stage.id);
           const isOver=kanbanOver===stage.id;
@@ -5360,30 +5443,36 @@ function ContentPage({userId}:{userId:string}){
             onDrop={()=>onKanbanDrop(stage.id)}
             onDragLeave={()=>setKanbanOver(null)}
             style={{
-              minWidth:260,width:260,flexShrink:0,
-              background:isOver?C.a+"06":C.ib,
-              borderRadius:14,
-              border:"1px solid "+(isOver?stage.color+"50":C.bd),
-              boxShadow:isOver?"0 0 20px "+stage.color+"15":"none",
+              flex:1,minWidth:200,
+              background:isOver?(C.t1+"08"):C.ib,
+              borderRadius:10,
+              border:"1px solid "+(isOver?C.t1+"40":C.bd),
+              boxShadow:"none",
               transition:"all 0.2s",
               overflow:"hidden",
+              display:"flex",flexDirection:"column",
             }}>
             {/* Column header */}
             <div style={{padding:"14px 14px 10px",borderBottom:"1px solid "+C.bd}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
                 <div style={{display:"flex",alignItems:"center",gap:7}}>
-                  <div style={{width:8,height:8,borderRadius:"50%",background:stage.color,boxShadow:"0 0 6px "+stage.color+"80"}}/>
+                  <div style={{width:7,height:7,borderRadius:"50%",background:C.t1}}/>
                   <span style={{fontSize:13,fontWeight:700,color:C.t1}}>{stage.label}</span>
                 </div>
-                <span style={{fontSize:11,fontWeight:700,color:stage.color,background:stage.color+"15",borderRadius:20,padding:"2px 8px"}}>{stageItems.length}</span>
+                <span style={{fontSize:11,fontWeight:700,color:C.t2,background:C.bd,borderRadius:6,padding:"2px 8px"}}>{stageItems.length}</span>
               </div>
               <div style={{fontSize:10,color:C.t2,lineHeight:1.4}}>{stage.hint}</div>
             </div>
 
             {/* Cards */}
-            <div style={{padding:"10px 10px",display:"flex",flexDirection:"column",gap:8,minHeight:80}}>
+            <div style={{padding:"12px 12px",display:"flex",flexDirection:"column",gap:8,flex:1,minHeight:"48vh"}}>
               {stageItems.length===0&&!isOver&&(
-                <div style={{padding:"20px 0",textAlign:"center",color:C.t2,fontSize:11,opacity:0.4}}>Пусто</div>
+                <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,padding:"24px 12px",textAlign:"center" as const}}>
+                  <div style={{width:34,height:34,borderRadius:9,border:"1px dashed "+C.bd,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.6" style={{opacity:0.6}}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  </div>
+                  <div style={{fontSize:11.5,color:C.t2,lineHeight:1.5,maxWidth:150,opacity:0.7}}>Перетащите сюда карточку или добавьте новую</div>
+                </div>
               )}
               {stageItems.map((x:any)=>(
                 <div key={x.id}
@@ -5391,17 +5480,17 @@ function ContentPage({userId}:{userId:string}){
                   onDragStart={()=>onKanbanDragStart(x.id)}
                   onDragEnd={onKanbanDragEnd}
                   style={{
-                    background:C.w,borderRadius:10,padding:"12px 12px",
+                    background:C.w,borderRadius:8,padding:"12px 12px",
                     border:"1px solid "+C.bd,
-                    borderLeft:"3px solid "+stage.color,
+                    borderLeft:"2px solid "+C.t1,
                     cursor:"grab",
                     opacity:kanbanDrag===x.id?0.4:1,
                     transition:"all 0.15s",
                     boxShadow:"0 1px 4px rgba(0,0,0,0.06)",
                     animation:"leadPulse 5s ease-in-out infinite",
                   }}
-                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 4px 16px "+stage.color+"20";(e.currentTarget as HTMLElement).style.borderColor=stage.color+"60";(e.currentTarget as HTMLElement).style.animationPlayState="paused";}}
-                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 1px 4px rgba(0,0,0,0.06)";(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.borderLeftColor=stage.color;(e.currentTarget as HTMLElement).style.animationPlayState="running";}}>
+                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 4px 14px rgba(0,0,0,0.10)";(e.currentTarget as HTMLElement).style.borderColor=C.t1+"40";(e.currentTarget as HTMLElement).style.animationPlayState="paused";}}
+                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 1px 4px rgba(0,0,0,0.06)";(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.borderLeftColor=C.t1;(e.currentTarget as HTMLElement).style.animationPlayState="running";}}>
 
                   {/* Card top: platform + type */}
                   <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:7}}>
@@ -5411,7 +5500,7 @@ function ContentPage({userId}:{userId:string}){
                     }
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:12,fontWeight:700,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{x.topic}</div>
-                      <div style={{fontSize:10,color:C.t2,marginTop:1}}>{x.type} · <span style={{color:pCol(x.platform)}}>{pLbl(x.platform)}</span></div>
+                      <div style={{fontSize:10,color:C.t2,marginTop:1}}>{x.type} · <span style={{color:C.t2}}>{pLbl(x.platform)}</span></div>
                     </div>
                   </div>
 
@@ -5430,7 +5519,7 @@ function ContentPage({userId}:{userId:string}){
                       {x.scenario&&<button onClick={e=>{e.stopPropagation();downloadPDF(x);}}
                         title="Скачать PDF"
                         style={{width:24,height:24,borderRadius:6,border:"none",background:"#16A34A12",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#6F6F6F" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
                       </button>}
                       <button onClick={e=>{e.stopPropagation();startEdit(x);}}
                         style={{width:24,height:24,borderRadius:6,border:"none",background:C.ib,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -5461,7 +5550,7 @@ function ContentPage({userId}:{userId:string}){
 
               {/* Drop zone indicator */}
               {isOver&&kanbanDrag&&(
-                <div style={{height:60,borderRadius:10,border:"1px dashed "+stage.color,background:stage.color+"06",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <div style={{height:60,borderRadius:8,border:"1px dashed "+stage.color,background:stage.color+"06",display:"flex",alignItems:"center",justifyContent:"center"}}>
                   <span style={{fontSize:11,color:stage.color}}>Перетащи сюда</span>
                 </div>
               )}
@@ -5519,15 +5608,15 @@ function ContentPage({userId}:{userId:string}){
                 minHeight:110,padding:"6px",
                 borderRight:i%7!==6?"1px solid "+C.bd+"66":"none",
                 borderBottom:"1px solid "+C.bd+"66",
-                background:isDragOver?"rgba(37,99,235,0.08)":(isT?"rgba(37,99,235,0.03)":"transparent"),
+                background:isDragOver?"rgba(96,96,96,0.08)":(isT?"rgba(96,96,96,0.03)":"transparent"),
                 cursor:d?"pointer":"default",
                 transition:"background 0.15s",
                 outline:isDragOver?"2px dashed "+C.a:"none",
                 outlineOffset:-2,
                 position:"relative",
               }}
-              onMouseEnter={e=>{if(d&&!calDragId)(e.currentTarget as HTMLElement).style.background=isT?"rgba(37,99,235,0.06)":C.ib;}}
-              onMouseLeave={e=>{if(!isDragOver)(e.currentTarget as HTMLElement).style.background=isT?"rgba(37,99,235,0.03)":"transparent";}}>
+              onMouseEnter={e=>{if(d&&!calDragId)(e.currentTarget as HTMLElement).style.background=isT?"rgba(96,96,96,0.06)":C.ib;}}
+              onMouseLeave={e=>{if(!isDragOver)(e.currentTarget as HTMLElement).style.background=isT?"rgba(96,96,96,0.03)":"transparent";}}>
 
               {/* Drop indicator */}
               {isDragOver&&<div style={{position:"absolute",inset:2,borderRadius:6,border:"2px dashed "+C.a,background:C.a+"06",pointerEvents:"none",zIndex:10,display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -5583,7 +5672,291 @@ function ContentPage({userId}:{userId:string}){
     </>}
 
     {tab==="stories"&&<StoriesCarouselTab userId={userId}/>}
+    {tab==="scripts"&&<ScriptsTab userId={userId}/>}
   </>;
+}
+
+/* ============ СЦЕНАРИИ (Scripts) ============ */
+const SCRIPT_SHORT_SYS="Ты — эксперт мирового уровня по созданию вирусных коротких видео для Instagram Reels, TikTok и YouTube Shorts. Твоя задача — не просто улучшить сценарий, а максимально повысить вероятность, что зритель досмотрит ролик до конца. Усиль первые 1–3 секунды и открывающие фразы; усиль эмоцию, любопытство, неожиданность, контраст и конфликт; убери скучные и медленные части; сделай каждую следующую фразу вызывающей желание смотреть дальше; сделай структуру максимально динамичной; используй психологические триггеры удержания; повышай вероятность сохранений и репостов. Если указан ICP — адаптируй все формулировки под эту аудиторию. Верни ПОЛНОСТЬЮ улучшённую версию сценария без комментариев.";
+const SCRIPT_LONG_SYS="Ты — эксперт мирового уровня по созданию образовательного и экспертного видеоконтента. Твоя задача — улучшить сценарий так, чтобы он усиливал доверие аудитории к автору и максимально удерживал внимание на протяжении всего видео. Улучши структуру повествования и логическую последовательность; добавь больше ценности и практической пользы; сделай объяснения понятнее; устрани провалы внимания; добавь плавные переходы между блоками; усиль экспертную позицию автора и убедительность аргументов; повышай доверие через примеры, наблюдения и объяснения; сохраняй естественный стиль речи. Если указан ICP — адаптируй под конкретную аудиторию. Верни ПОЛНОСТЬЮ улучшённую версию сценария без комментариев.";
+
+async function dsMessages(messages:any[],maxTokens=1600,temperature=0.8):Promise<string>{
+  const res=await fetch("https://api.deepseek.com/v1/chat/completions",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","Authorization":`Bearer ${process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY}`},
+    body:JSON.stringify({model:"deepseek-chat",max_tokens:maxTokens,temperature,messages}),
+  });
+  const d=await res.json();
+  return d.choices?.[0]?.message?.content||"";
+}
+
+async function improveScript(kind:string,content:string,icp:string):Promise<string>{
+  const system=kind==="short"?SCRIPT_SHORT_SYS:SCRIPT_LONG_SYS;
+  const user=`${icp?`ICP / Целевая аудитория:\n${icp}\n\n`:""}Текущий сценарий:\n\n${content}`;
+  const t=await dsMessages([{role:"system",content:system},{role:"user",content:user}],3200,0.8);
+  return t.replace(/```/g,"").trim();
+}
+
+function exportScriptPDF(name:string,content:string){
+  const esc=(s:any)=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const paras=String(content||"").split(/\n{2,}/).map(p=>`<p>${esc(p).replace(/\n/g,"<br>")}</p>`).join("");
+  const html=`<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>${esc(name||"Сценарий")}</title>
+<style>@page{size:A4;margin:22mm 20mm}body{font-family:-apple-system,'Segoe UI',Inter,Arial,sans-serif;color:#111;line-height:1.7;margin:0}
+h1{font-size:24px;font-weight:800;letter-spacing:-.02em;margin:0 0 6px}.rule{height:2px;background:linear-gradient(90deg,#878787,#7A7A7A);width:70px;border-radius:2px;margin:14px 0 26px}
+p{font-size:14px;margin:0 0 14px;white-space:pre-wrap}.foot{margin-top:32px;padding-top:14px;border-top:1px solid #E5E7EB;font-size:11px;color:#9CA3AF;text-align:center}</style></head>
+<body><h1>${esc(name||"Сценарий")}</h1><div class="rule"></div>${paras}<div class="foot">Vizzy · Сценарии</div></body></html>`;
+  const w=window.open("","_blank");if(!w){alert("Разреши всплывающие окна, чтобы скачать PDF.");return;}
+  w.document.open();w.document.write(html);w.document.close();w.focus();setTimeout(()=>{try{w.print();}catch(e){}},350);
+}
+
+function ScriptsTab({userId}:{userId:string}){
+  const{dark}=useTheme();
+  const isMobile=useIsMobile();
+  const{data:scripts,loading,add,update,remove}=useTable("scripts",userId);
+
+  const[view,setView]=useState<"list"|"editor">("list");
+  const[curId,setCurId]=useState<string|null>(null);
+  const[picker,setPicker]=useState(false);
+
+  const[name,setName]=useState("");
+  const[kind,setKind]=useState<"short"|"long">("short");
+  const[content,setContent]=useState("");
+  const[icp,setIcp]=useState("");
+  const[versions,setVersions]=useState<any[]>([]);
+  const[chat,setChat]=useState<any[]>([]);
+
+  const[improving,setImproving]=useState(false);
+  const[chatting,setChatting]=useState(false);
+  const[chatInput,setChatInput]=useState("");
+  const[showHist,setShowHist]=useState(false);
+  const chatEnd=useRef<HTMLDivElement>(null);
+
+  const bd=C.bd;
+  const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
+  const inputBg=dark?"#1C1C1C":"#F8FAFC";
+  const accent="#878787";
+
+  const sorted=[...scripts].sort((a,b)=>String(b.updated_at||b.created_at||"").localeCompare(String(a.updated_at||a.created_at||"")));
+
+  // autosave (debounced)
+  useEffect(()=>{
+    if(view!=="editor"||!curId)return;
+    const t=setTimeout(()=>{
+      update(curId,{name,content,icp,versions,chat,updated_at:new Date().toISOString()});
+    },800);
+    return ()=>clearTimeout(t);
+  },[name,content,icp,versions,chat,view,curId]);
+
+  useEffect(()=>{chatEnd.current?.scrollIntoView({behavior:"smooth"});},[chat,chatting]);
+
+  const openScript=(row:any)=>{
+    setCurId(row.id);setName(row.name||"Новый сценарий");setKind(row.kind==="long"?"long":"short");
+    setContent(row.content||"");setIcp(row.icp||"");setVersions(row.versions||[]);setChat(row.chat||[]);
+    setChatInput("");setShowHist(false);setView("editor");
+  };
+
+  const createScript=async(k:"short"|"long")=>{
+    setPicker(false);
+    const row=await add({name:k==="short"?"Short Form сценарий":"Long Form сценарий",kind:k,content:"",icp:"",versions:[],chat:[],updated_at:new Date().toISOString()});
+    if(!row){alert("Не удалось создать сценарий. Проверь, что в базе создана таблица scripts (см. инструкцию).");return;}
+    openScript(row);
+  };
+
+  const del=async(id:string,e:React.MouseEvent)=>{e.stopPropagation();if(confirm("Удалить сценарий? Действие необратимо."))await remove(id);};
+
+  const doImprove=async()=>{
+    if(!content.trim()){alert("Сначала напиши или надиктуй сценарий в редакторе слева.");return;}
+    setImproving(true);
+    try{
+      const improved=await improveScript(kind,content,icp);
+      if(improved){
+        setVersions(prev=>[{content,at:new Date().toISOString()},...prev].slice(0,20));
+        setContent(improved);
+      }
+    }catch(e){alert("Не удалось улучшить сценарий. Проверь API-ключ и попробуй ещё раз.");}
+    setImproving(false);
+  };
+
+  const sendChat=async()=>{
+    const msg=chatInput.trim();
+    if(!msg||chatting)return;
+    setChatInput("");
+    const uMsg={role:"user",content:msg,id:"u"+Date.now()};
+    setChat(prev=>[...prev,uMsg]);
+    setChatting(true);
+    try{
+      const sys=`Ты — AI-редактор видеосценариев (${kind==="short"?"короткие вирусные видео: Reels/TikTok/Shorts":"длинные экспертные видео"}). Помогаешь писать, улучшать и структурировать сценарий. Всегда держи в контексте текущий текст сценария из редактора.${icp?" Учитывай ICP аудитории.":""}`;
+      const ctx=`${icp?`ICP:\n${icp}\n\n`:""}Текущий сценарий в редакторе:\n"""\n${content||"(пусто)"}\n"""`;
+      const history=chat.slice(-8).map(m=>({role:m.role,content:m.content}));
+      const reply=await dsMessages([{role:"system",content:sys+"\n\n"+ctx},...history,{role:"user",content:msg}],1600,0.8);
+      setChat(prev=>[...prev,{role:"assistant",content:reply||"Не удалось ответить.",id:"a"+Date.now()}]);
+    }catch(e){setChat(prev=>[...prev,{role:"assistant",content:"Ошибка соединения. Попробуй ещё раз.",id:"e"+Date.now()}]);}
+    setChatting(false);
+  };
+
+  const applyToEditor=(text:string)=>{
+    if(confirm("Заменить текст сценария в редакторе этим ответом?")){
+      setVersions(prev=>[{content,at:new Date().toISOString()},...prev].slice(0,20));
+      setContent(text);
+    }
+  };
+
+  /* ---------- LIST ---------- */
+  if(view==="list")return(
+    <div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,marginBottom:20,flexWrap:"wrap" as const}}>
+        <div style={{fontSize:14,color:C.t2}}>Пишите сценарии для видео с AI-ассистентом. Всё сохраняется автоматически.</div>
+        {sorted.length>0&&<button onClick={()=>setPicker(true)} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 18px",borderRadius:8,border:"none",background:accent,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Создать сценарий
+        </button>}
+      </div>
+
+      {loading?(
+        <div style={{padding:50,textAlign:"center" as const,color:C.t2,fontSize:14}}>Загрузка…</div>
+      ):sorted.length===0?(
+        <div style={{background:cardBg,border:`1px dashed ${bd}`,borderRadius:12,padding:"60px 24px",textAlign:"center" as const}}>
+          <div style={{width:60,height:60,borderRadius:10,background:dark?"rgba(135,135,135,0.12)":"#EFF6FF",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 18px"}}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="1.5"><path d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+          </div>
+          <div style={{fontSize:19,fontWeight:800,color:C.t1,marginBottom:8}}>Пока нет сценариев</div>
+          <div style={{fontSize:14,color:C.t2,lineHeight:1.6,maxWidth:360,margin:"0 auto 22px"}}>Создайте первый сценарий — выберите формат, а дальше пишите вместе с AI.</div>
+          <button onClick={()=>setPicker(true)} style={{display:"inline-flex",alignItems:"center",gap:8,padding:"12px 24px",borderRadius:8,border:"none",background:accent,color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Создать сценарий</button>
+        </div>
+      ):(
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:14}}>
+          {sorted.map(s=>(
+            <div key={s.id} onClick={()=>openScript(s)} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:18,cursor:"pointer",transition:"border-color 0.15s"}}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(135,135,135,0.4)";}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=bd;}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                <span style={{fontSize:11,fontWeight:700,color:accent,background:"rgba(135,135,135,0.12)",padding:"3px 10px",borderRadius:10}}>{s.kind==="long"?"Long Form":"Short Form"}</span>
+                <button onClick={e=>del(s.id,e)} title="Удалить" style={{width:26,height:26,borderRadius:7,border:"none",background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}
+                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color="#777777";}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.color=C.t2;}}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>
+                </button>
+              </div>
+              <div style={{fontSize:16,fontWeight:700,color:C.t1,lineHeight:1.35,marginBottom:8,overflow:"hidden",textOverflow:"ellipsis",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical" as const}}>{s.name||"Без названия"}</div>
+              <div style={{fontSize:12,color:C.t2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{(s.content||"Пустой сценарий").replace(/\n/g," ").slice(0,70)}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {picker&&<div onClick={()=>setPicker(false)} style={{position:"fixed" as const,inset:0,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(4px)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+        <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:520,background:dark?"#161616":"#fff",border:`1px solid ${bd}`,borderRadius:10,padding:26}}>
+          <div style={{fontSize:19,fontWeight:800,color:C.t1,marginBottom:6}}>Выберите тип сценария</div>
+          <div style={{fontSize:13,color:C.t2,marginBottom:20}}>От типа зависит логика улучшения от AI.</div>
+          <div style={{display:"flex",gap:12,flexDirection:isMobile?"column":"row"}}>
+            {([["short","Short Form Video","Reels, TikTok, Shorts — максимальная вирусность и удержание"],["long","Long Form Video","Экспертные видео — доверие, польза, глубина"]] as const).map(([k,t,d])=>(
+              <button key={k} onClick={()=>createScript(k)} style={{flex:1,textAlign:"left" as const,padding:18,borderRadius:10,border:`1px solid ${bd}`,background:inputBg,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                <div style={{fontSize:15,fontWeight:700,color:C.t1,marginBottom:6}}>{t}</div>
+                <div style={{fontSize:12.5,color:C.t2,lineHeight:1.5}}>{d}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>}
+    </div>
+  );
+
+  /* ---------- EDITOR ---------- */
+  const workH=isMobile?"auto":"calc(100vh - 230px)";
+  return(
+    <div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:16,flexWrap:"wrap" as const}}>
+        <button onClick={()=>setView("list")} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",color:C.t2,fontSize:13,fontWeight:500,padding:0}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Все сценарии
+        </button>
+        <span style={{fontSize:11,fontWeight:700,color:accent,background:"rgba(135,135,135,0.12)",padding:"4px 11px",borderRadius:10}}>{kind==="long"?"Long Form Video":"Short Form Video"}</span>
+      </div>
+
+      <div style={{display:"flex",gap:16,flexDirection:isMobile?"column":"row",alignItems:"stretch"}}>
+        {/* LEFT — editor */}
+        <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",height:workH,background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:16}}>
+          <input value={name} onChange={e=>setName(e.target.value)} placeholder="Название сценария"
+            style={{border:"none",outline:"none",background:"transparent",fontSize:18,fontWeight:800,color:C.t1,marginBottom:10,fontFamily:"'Inter',sans-serif",letterSpacing:"-0.01em"}}/>
+          <textarea value={content} onChange={e=>setContent(e.target.value)} placeholder="Пишите сценарий здесь… или попросите AI справа написать его за вас."
+            style={{flex:1,minHeight:isMobile?300:200,width:"100%",border:`1px solid ${bd}`,borderRadius:8,padding:"14px 16px",fontSize:15,lineHeight:1.7,background:inputBg,color:C.t1,outline:"none",resize:"none" as const,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginTop:12,flexWrap:"wrap" as const}}>
+            <div style={{fontSize:11,color:C.t2}}>{content.length} симв.</div>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={()=>setShowHist(true)} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 13px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 106 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
+                История{versions.length?` (${versions.length})`:""}
+              </button>
+              <button onClick={()=>exportScriptPDF(name,content)} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 13px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                PDF
+              </button>
+            </div>
+          </div>
+          <button onClick={doImprove} disabled={improving}
+            style={{marginTop:12,width:"100%",padding:"14px",borderRadius:8,border:"none",background:"#7A7A7A",color:"#fff",fontSize:15,fontWeight:700,cursor:improving?"default":"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+            {improving?<><div style={{width:17,height:17,border:"2.5px solid rgba(255,255,255,0.4)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Улучшаю…</>:"✨ Улучшить сценарий"}
+          </button>
+        </div>
+
+        {/* RIGHT — AI assistant */}
+        <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",height:workH,background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:16}}>
+          <div style={{fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8}}>ICP / Целевая аудитория</div>
+          <textarea value={icp} onChange={e=>setIcp(e.target.value)} placeholder="Опишите аудиторию: сегмент, уровень осведомлённости, боли, желания. AI учтёт это при генерации."
+            style={{width:"100%",minHeight:64,maxHeight:120,border:`1px solid ${bd}`,borderRadius:8,padding:"11px 13px",fontSize:13.5,lineHeight:1.55,background:inputBg,color:C.t1,outline:"none",resize:"vertical" as const,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const,marginBottom:14}}/>
+
+          <div style={{fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8}}>AI-ассистент</div>
+          <div style={{flex:1,minHeight:isMobile?260:120,overflowY:"auto" as const,display:"flex",flexDirection:"column",gap:10,paddingRight:4}}>
+            {chat.length===0&&<div style={{fontSize:13,color:C.t2,lineHeight:1.6,padding:"8px 0"}}>Попросите написать сценарий, усилить хук, добавить историю, сделать короче/длиннее. Контекст — ваш текст слева.</div>}
+            {chat.map(m=>(
+              <div key={m.id} style={{alignSelf:m.role==="user"?"flex-end":"flex-start",maxWidth:"88%"}}>
+                <div style={{padding:"10px 13px",borderRadius:m.role==="user"?"14px 14px 4px 14px":"4px 14px 14px 14px",background:m.role==="user"?"#7A7A7A":(dark?"rgba(255,255,255,0.05)":"#F1F5F9"),color:m.role==="user"?"#fff":C.t1,fontSize:13.5,lineHeight:1.6,whiteSpace:"pre-wrap" as const}}>{m.content}</div>
+                {m.role==="assistant"&&<div style={{display:"flex",gap:8,marginTop:5}}>
+                  <button onClick={()=>navigator.clipboard.writeText(m.content)} style={{fontSize:11,color:C.t2,background:"none",border:"none",cursor:"pointer",padding:0,fontWeight:600}}>Копировать</button>
+                  <button onClick={()=>applyToEditor(m.content)} style={{fontSize:11,color:accent,background:"none",border:"none",cursor:"pointer",padding:0,fontWeight:600}}>Заменить сценарий</button>
+                </div>}
+              </div>
+            ))}
+            {chatting&&<div style={{alignSelf:"flex-start",padding:"10px 13px",borderRadius:"4px 14px 14px 14px",background:dark?"rgba(255,255,255,0.05)":"#F1F5F9",display:"flex",gap:4}}>
+              {[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:C.t2,animation:`sbounce 1.2s ease-in-out ${i*0.15}s infinite`}}/>)}
+              <style>{`@keyframes sbounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-5px)}}`}</style>
+            </div>}
+            <div ref={chatEnd}/>
+          </div>
+
+          <div style={{display:"flex",gap:8,alignItems:"flex-end",marginTop:12}}>
+            <textarea value={chatInput} onChange={e=>setChatInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendChat();}}}
+              placeholder="Напишите AI…" rows={1}
+              style={{flex:1,border:`1px solid ${bd}`,borderRadius:8,padding:"11px 13px",fontSize:13.5,lineHeight:1.5,background:inputBg,color:C.t1,outline:"none",resize:"none" as const,maxHeight:100,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
+            <button onClick={sendChat} disabled={!chatInput.trim()||chatting} style={{width:40,height:40,borderRadius:8,border:"none",background:chatInput.trim()?accent:inputBg,color:chatInput.trim()?"#fff":C.t2,cursor:chatInput.trim()?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* history modal */}
+      {showHist&&<div onClick={()=>setShowHist(false)} style={{position:"fixed" as const,inset:0,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(4px)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+        <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:560,maxHeight:"84vh",overflowY:"auto",background:dark?"#161616":"#fff",border:`1px solid ${bd}`,borderRadius:10,padding:22}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+            <div style={{fontSize:17,fontWeight:800,color:C.t1}}>История изменений</div>
+            <button onClick={()=>setShowHist(false)} style={{width:30,height:30,borderRadius:8,border:"none",background:"transparent",color:C.t2,cursor:"pointer"}}>✕</button>
+          </div>
+          {versions.length===0?<div style={{fontSize:13,color:C.t2,padding:"20px 0",textAlign:"center" as const}}>Пока нет сохранённых версий. Они появляются после «Улучшить сценарий».</div>:
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {versions.map((v,i)=>(
+              <div key={i} style={{border:`1px solid ${bd}`,borderRadius:8,padding:14}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                  <div style={{fontSize:12,color:C.t2}}>{new Date(v.at).toLocaleString("ru-RU")}</div>
+                  <button onClick={()=>{setVersions(prev=>[{content,at:new Date().toISOString()},...prev].slice(0,20));setContent(v.content);setShowHist(false);}} style={{fontSize:12,color:accent,background:"none",border:"none",cursor:"pointer",fontWeight:600}}>Восстановить</button>
+                </div>
+                <div style={{fontSize:12.5,color:C.t1,opacity:0.8,lineHeight:1.5,maxHeight:90,overflow:"hidden"}}>{(v.content||"").slice(0,240)}…</div>
+              </div>
+            ))}
+          </div>}
+        </div>
+      </div>}
+    </div>
+  );
 }
 
 /* ============ STORIES CAROUSEL ============ */
@@ -5682,7 +6055,7 @@ function StoriesCarouselTab({userId}:{userId:string}){
   };
 
   const IG_COLOR="#E1306C";
-  const TG_COLOR="#0088CC";
+  const TG_COLOR="#676767";
 
   const RetentionRing=({pct,color,size=80}:{pct:number,color:string,size?:number})=>{
     const r=size*0.4;
@@ -5701,7 +6074,7 @@ function StoriesCarouselTab({userId}:{userId:string}){
     const an=calcAnalytics(slots,key);
     const bg=color+"10";
     const border=color+"30";
-    return <div style={{borderRadius:12,border:`1px solid ${border}`,overflow:"hidden"}}>
+    return <div style={{borderRadius:8,border:`1px solid ${border}`,overflow:"hidden"}}>
       <div style={{padding:"8px 12px",background:bg,display:"flex",alignItems:"center",gap:6,borderBottom:`1px solid ${border}`}}>
         {icon}
         <span style={{fontSize:11,fontWeight:700,color}}>{platform==="ig"?"Instagram":"Telegram"}</span>
@@ -5741,7 +6114,7 @@ function StoriesCarouselTab({userId}:{userId:string}){
         <div style={{fontSize:18,fontWeight:700}}>Карусели историй</div>
         <div style={{fontSize:13,color:C.t2,marginTop:2}}>Аналитика удержания внимания — Instagram & Telegram</div>
       </div>
-      <button onClick={addCarousel} style={{padding:"10px 20px",background:C.a,color:"#fff",border:"none",borderRadius:12,fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
+      <button onClick={addCarousel} style={{padding:"10px 20px",background:C.a,color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Новая карусель
       </button>
@@ -5761,7 +6134,7 @@ function StoriesCarouselTab({userId}:{userId:string}){
         const maxIgViews=Math.max(...slots.map((s:any)=>s.ig_view_count||0),1);
         const maxTgViews=Math.max(...slots.map((s:any)=>s.tg_view_count||0),1);
 
-        return <div key={car.id} style={{background:C.w,borderRadius:20,boxShadow:C.sh,border:"1px solid "+C.bd,overflow:"hidden"}}>
+        return <div key={car.id} style={{background:C.w,borderRadius:10,boxShadow:C.sh,border:"1px solid "+C.bd,overflow:"hidden"}}>
           {/* Header */}
           <div style={{padding:"14px 20px",borderBottom:"1px solid "+C.bd,display:"flex",alignItems:"center",justifyContent:"space-between",background:C.ib}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -5771,7 +6144,7 @@ function StoriesCarouselTab({userId}:{userId:string}){
                     style={{...iS(),padding:"6px 10px",fontSize:15,fontWeight:700,width:240}}/>
                 : <span style={{fontSize:15,fontWeight:700,color:C.t1,cursor:"pointer"}} onDoubleClick={()=>{setEditTitleId(car.id);setEditTitleVal(car.title);}}>{car.title}</span>
               }
-              <span style={{fontSize:11,color:C.t2,background:C.bd,borderRadius:20,padding:"2px 8px"}}>{slots.length}/15 сторис</span>
+              <span style={{fontSize:11,color:C.t2,background:C.bd,borderRadius:10,padding:"2px 8px"}}>{slots.length}/15 сторис</span>
               <span style={{fontSize:11,color:C.t2,cursor:"pointer"}} onClick={()=>{setEditTitleId(car.id);setEditTitleVal(car.title);}}>✏️</span>
             </div>
             <div style={{display:"flex",gap:8,alignItems:"center"}}>
@@ -5816,7 +6189,7 @@ function StoriesCarouselTab({userId}:{userId:string}){
                     </div>
 
                     {/* Story card */}
-                    <div style={{width:140,borderRadius:16,overflow:"hidden",
+                    <div style={{width:140,borderRadius:10,overflow:"hidden",
                       border:`2px solid ${borderColor}`,
                       boxShadow:(anyMax||anyAfter)?"0 0 0 3px "+borderColor+"22":C.sh,
                       transition:"border 0.2s",background:C.w}}>
@@ -5837,7 +6210,7 @@ function StoriesCarouselTab({userId}:{userId:string}){
                           : (slot.image_url&&slot.image_url.startsWith("http"))
                           ? <img src={slot.image_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt={`Сторис ${idx+1}`}/>
                           : <label style={{cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:8,width:"100%",height:"100%",justifyContent:"center"}}>
-                              <div style={{width:44,height:44,borderRadius:12,background:C.bd,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                              <div style={{width:44,height:44,borderRadius:8,background:C.bd,display:"flex",alignItems:"center",justifyContent:"center"}}>
                                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                               </div>
                               <span style={{fontSize:11,color:C.t2,textAlign:"center",fontWeight:500}}>Загрузить фото</span>
@@ -5880,7 +6253,7 @@ function StoriesCarouselTab({userId}:{userId:string}){
 
                 {/* Add slot */}
                 {slots.length<15&&<div style={{display:"flex",alignItems:"center",justifyContent:"center",width:140,height:48+4+190+10+48+10}}>
-                  <button onClick={()=>addSlot(car.id)} style={{width:56,height:56,borderRadius:16,border:"2px dashed "+C.bd,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.t2,fontSize:24,transition:"all 0.15s"}}
+                  <button onClick={()=>addSlot(car.id)} style={{width:56,height:56,borderRadius:10,border:"2px dashed "+C.bd,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.t2,fontSize:24,transition:"all 0.15s"}}
                     onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.a;(e.currentTarget as HTMLElement).style.color=C.a;}}
                     onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.color=C.t2;}}>+</button>
                 </div>}
@@ -5910,7 +6283,7 @@ function StoriesCarouselTab({userId}:{userId:string}){
 
     {/* Lightbox */}
     {lightbox&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}} onClick={()=>setLightbox(null)}>
-      <img src={lightbox} style={{maxWidth:"80vw",maxHeight:"90vh",borderRadius:16,objectFit:"contain",boxShadow:"0 24px 80px rgba(0,0,0,0.5)"}} alt="preview"/>
+      <img src={lightbox} style={{maxWidth:"80vw",maxHeight:"90vh",borderRadius:10,objectFit:"contain",boxShadow:"0 24px 80px rgba(0,0,0,0.5)"}} alt="preview"/>
       <button onClick={()=>setLightbox(null)} style={{position:"absolute",top:20,right:24,width:40,height:40,borderRadius:"50%",background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",fontSize:20,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
     </div>}
   </>;
@@ -6043,7 +6416,7 @@ function MediaPage({userId}:{userId:string}){
   const chartW=260;
 
   return <>
-    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:"24px 32px",marginBottom:24,color:"#fff",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:10,padding:"24px 32px",marginBottom:24,color:"#fff",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <div><div style={{fontSize:20,fontWeight:700}}>Медийность</div><div style={{fontSize:13,opacity:0.6,marginTop:4}}>Динамика аудитории и охватов</div></div>
       <Btn onClick={()=>setShow(!show)} style={{background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.25)"}}>+ Данные</Btn>
     </div>
@@ -6196,7 +6569,7 @@ function CallsPage({userId}:{userId:string}){
   const td=today();
   const HOURS=Array.from({length:17},(_,i)=>i+7);
   const SLOT_H=64;
-  const COLORS_CALL=[C.a,"#8B5CF6",C.g,C.r,C.y,C.pk];
+  const COLORS_CALL=[C.a,"#7C7C7C",C.g,C.r,C.y,C.pk];
 
   const openCreate=(date:string,hour?:number)=>{
     const ts=hour!==undefined?String(hour).padStart(2,"0")+":00":"10:00";
@@ -6375,7 +6748,7 @@ function CallsPage({userId}:{userId:string}){
   return <>
     {/* Stats bar */}
     <div style={{display:"grid",gridTemplateColumns:isMobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:isMobile?10:12,marginBottom:isMobile?12:20}}>
-      {[{l:"Всего",v:stats.total,c:C.a},{l:"Сегодня",v:stats.today,c:C.y},{l:"Выполнено",v:stats.done,c:C.g},{l:"Предстоит",v:stats.upcoming,c:"#8B5CF6"}].map((s,i)=><div key={i} style={{background:C.w,borderRadius:14,padding:"14px 18px",boxShadow:C.sh}}>
+      {[{l:"Всего",v:stats.total,c:C.a},{l:"Сегодня",v:stats.today,c:C.y},{l:"Выполнено",v:stats.done,c:C.g},{l:"Предстоит",v:stats.upcoming,c:"#7C7C7C"}].map((s,i)=><div key={i} style={{background:C.w,borderRadius:10,padding:"14px 18px",boxShadow:C.sh}}>
         <div style={{fontSize:22,fontWeight:700,color:s.c}}>{s.v}</div>
         <div style={{fontSize:12,color:C.t2,marginTop:2}}>{s.l}</div>
       </div>)}
@@ -6383,7 +6756,7 @@ function CallsPage({userId}:{userId:string}){
 
     <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 300px",gap:16}}>
       {/* Main calendar */}
-      <div style={{background:C.w,borderRadius:16,boxShadow:C.sh,overflow:"hidden"}}>
+      <div style={{background:C.w,borderRadius:10,boxShadow:C.sh,overflow:"hidden"}}>
         {/* Calendar header */}
         <div style={{padding:"14px 16px",borderBottom:"1px solid "+C.bd,display:"flex",alignItems:"center",gap:8}}>
           <button onClick={()=>changeDay(-1)} style={{width:32,height:32,border:"1px solid "+C.bd,borderRadius:8,background:C.bg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg></button>
@@ -6402,13 +6775,13 @@ function CallsPage({userId}:{userId:string}){
       {/* Sidebar */}
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
         {/* Add button */}
-        <button onClick={()=>openCreate(td)} style={{width:"100%",padding:"12px",background:`linear-gradient(135deg,${C.dk},${C.da})`,color:"#fff",border:"none",borderRadius:14,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+        <button onClick={()=>openCreate(td)} style={{width:"100%",padding:"12px",background:`linear-gradient(135deg,${C.dk},${C.da})`,color:"#fff",border:"none",borderRadius:10,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Новый созвон
         </button>
 
         {/* Upcoming */}
-        <div style={{background:C.w,borderRadius:14,boxShadow:C.sh,padding:"14px 16px"}}>
+        <div style={{background:C.w,borderRadius:10,boxShadow:C.sh,padding:"14px 16px"}}>
           <div style={{fontSize:13,fontWeight:700,marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <span>Ближайшие созвоны</span>
             <span style={{fontSize:11,color:C.t2,fontWeight:400}}>{upcoming5.length} из 5</span>
@@ -6431,7 +6804,7 @@ function CallsPage({userId}:{userId:string}){
         </div>
 
         {/* Quick stats: conversion */}
-        {calls.length>0&&<div style={{background:C.w,borderRadius:14,boxShadow:C.sh,padding:"14px 16px"}}>
+        {calls.length>0&&<div style={{background:C.w,borderRadius:10,boxShadow:C.sh,padding:"14px 16px"}}>
           <div style={{fontSize:13,fontWeight:700,marginBottom:10}}>Конверсия</div>
           <div style={{fontSize:24,fontWeight:800,color:C.g,marginBottom:4}}>{calls.length>0?Math.round(stats.done/calls.length*100):0}%</div>
           <div style={{fontSize:12,color:C.t2,marginBottom:10}}>созвонов проведено</div>
@@ -6444,7 +6817,7 @@ function CallsPage({userId}:{userId:string}){
 
     {/* Modal */}
     {modal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={e=>{if(e.target===e.currentTarget){setModal(false);setEditCall(null);}}}>
-      <div style={{background:C.w,borderRadius:22,padding:isMobile?"20px 16px 16px":"28px 28px 24px",width:"100%",maxWidth:500,boxShadow:"0 32px 80px rgba(0,0,0,0.22)",maxHeight:"90vh",overflowY:"auto"}}>
+      <div style={{background:C.w,borderRadius:12,padding:isMobile?"20px 16px 16px":"28px 28px 24px",width:"100%",maxWidth:500,boxShadow:"0 32px 80px rgba(0,0,0,0.22)",maxHeight:"90vh",overflowY:"auto"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:22}}>
           <div style={{fontSize:17,fontWeight:700}}>{editCall?"Редактировать созвон":"Новый созвон"}</div>
           {editCall&&<button onClick={()=>{if(confirm("Удалить созвон?"))remove(editCall.id).then(()=>setModal(false));}} style={{fontSize:12,color:C.r,background:C.r+"10",border:"none",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontWeight:600}}>Удалить</button>}
@@ -6468,13 +6841,13 @@ function CallsPage({userId}:{userId:string}){
           {f.goal==="Своя цель"&&<div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Название</label><input value={f.custom_goal} onChange={e=>sF({...f,custom_goal:e.target.value})} placeholder="Введи название..." style={iS()}/></div>}
           <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Ссылка на встречу</label><input value={f.link} onChange={e=>sF({...f,link:e.target.value})} placeholder="zoom.us/j/..." style={iS()}/></div>
           <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Комментарий</label><textarea value={f.description} onChange={e=>sF({...f,description:e.target.value})} rows={2} style={{...iS(),resize:"none"}}/></div>
-          {editCall&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:C.bg,borderRadius:10}}>
+          {editCall&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:C.bg,borderRadius:8}}>
             <button onClick={()=>{update(editCall.id,{completed:!editCall.completed});setEditCall({...editCall,completed:!editCall.completed});}} style={{width:22,height:22,borderRadius:6,border:`2px solid ${editCall.completed?C.g:C.bd}`,background:editCall.completed?C.g:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
               {editCall.completed&&<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
             </button>
             <span style={{fontSize:13,fontWeight:500,color:editCall.completed?C.g:C.t2}}>{editCall.completed?"Созвон проведён":"Отметить как проведённый"}</span>
           </div>}
-          {f.link&&<a href={f.link} target="_blank" rel="noreferrer" style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",background:C.a+"0F",borderRadius:10,color:C.a,fontSize:13,fontWeight:600,textDecoration:"none"}}>
+          {f.link&&<a href={f.link} target="_blank" rel="noreferrer" style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",background:C.a+"0F",borderRadius:8,color:C.a,fontSize:13,fontWeight:600,textDecoration:"none"}}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
             Открыть ссылку на встречу
           </a>}
@@ -6501,7 +6874,7 @@ function CalcPage(){
     {label:"Оптимист",pr:{...p,convCall:Math.min(p.convCall*1.4,100),convLead:Math.min(p.convLead*1.4,100),convTraffic:Math.min(p.convTraffic*1.4,100)}},
   ];
   return <>
-    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:"28px 36px",marginBottom:24,color:"#fff"}}><div style={{fontSize:20,fontWeight:700}}>Калькулятор конверсий</div><div style={{fontSize:14,opacity:0.7,marginTop:4}}>Введи цель - платформа посчитает</div></div>
+    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:10,padding:"28px 36px",marginBottom:24,color:"#fff"}}><div style={{fontSize:20,fontWeight:700}}>Калькулятор конверсий</div><div style={{fontSize:14,opacity:0.7,marginTop:4}}>Введи цель - платформа посчитает</div></div>
     <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:isMobile?12:20,marginBottom:isMobile?16:24}}>
       <Card><div style={{fontSize:16,fontWeight:600,marginBottom:16}}>Цель</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
         <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6}}>Сумма</label><input type="number" value={goal.amount} onChange={e=>sGoal({...goal,amount:+e.target.value})} style={iS()}/></div>
@@ -6533,7 +6906,7 @@ function LinksPage({userId}:{userId:string}){
   const[activeCategory,setActiveCategory]=useState("Все");
   const[f,sF]=useState({title:"",url:"",description:"",category:"Общее",color:C.a});
 
-  const LINK_COLORS=[C.a,"#8B5CF6","#10B981","#EF4444","#F59E0B","#EC4899","#06B6D4","#F97316","#1F1F1F"];
+  const LINK_COLORS=[C.a,"#7C7C7C","#808080","#777777","#A7A7A7","#828282","#858585","#909090","#1F1F1F"];
   const DEFAULT_CATS=["Общее","Работа","Соцсети","Инструменты","Обучение"];
 
   const allCategories=useMemo(()=>{
@@ -6585,19 +6958,19 @@ function LinksPage({userId}:{userId:string}){
 
   return <>
     {/* Header */}
-    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:"24px 32px",marginBottom:24,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:10,padding:"24px 32px",marginBottom:24,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <div>
         <div style={{fontSize:20,fontWeight:700,color:"#fff"}}>База ссылок</div>
         <div style={{fontSize:13,color:"rgba(255,255,255,0.5)",marginTop:4}}>{links.length} сохранено · Быстрый доступ к нужным сайтам</div>
       </div>
-      <button onClick={()=>{setShowForm(!showForm);setEditId(null);resetForm();}} style={{padding:"10px 20px",background:"rgba(255,255,255,0.15)",color:"#fff",border:"1px solid rgba(255,255,255,0.25)",borderRadius:12,fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
+      <button onClick={()=>{setShowForm(!showForm);setEditId(null);resetForm();}} style={{padding:"10px 20px",background:"rgba(255,255,255,0.15)",color:"#fff",border:"1px solid rgba(255,255,255,0.25)",borderRadius:8,fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Добавить ссылку
       </button>
     </div>
 
     {/* Add/Edit form */}
-    {showForm&&<div style={{background:C.w,borderRadius:16,padding:"22px 24px",marginBottom:24,boxShadow:"0 4px 24px rgba(0,0,0,0.08)",border:"1px solid "+C.bd}}>
+    {showForm&&<div style={{background:C.w,borderRadius:10,padding:"22px 24px",marginBottom:24,boxShadow:"0 4px 24px rgba(0,0,0,0.08)",border:"1px solid "+C.bd}}>
       <div style={{fontSize:15,fontWeight:700,marginBottom:18,color:C.t1}}>{editId?"Редактировать ссылку":"Новая ссылка"}</div>
       <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:14,marginBottom:14}}>
         <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Название *</label><input value={f.title} onChange={e=>sF({...f,title:e.target.value})} placeholder="Google Analytics" style={iS()}/></div>
@@ -6614,9 +6987,9 @@ function LinksPage({userId}:{userId:string}){
         </div>
       </div>
       <div style={{display:"flex",gap:10}}>
-        <button onClick={sub} disabled={!f.title.trim()||!f.url.trim()} style={{padding:"10px 22px",background:C.a,color:"#fff",border:"none",borderRadius:10,fontSize:14,fontWeight:600,cursor:f.title.trim()&&f.url.trim()?"pointer":"not-allowed",opacity:f.title.trim()&&f.url.trim()?1:0.5}}>{editId?"Сохранить":"Добавить"}</button>
-        <button onClick={()=>{setShowForm(false);setEditId(null);resetForm();}} style={{padding:"10px 16px",background:C.bg,color:C.t2,border:"1px solid "+C.bd,borderRadius:10,fontSize:14,cursor:"pointer"}}>Отмена</button>
-        {editId&&<button onClick={()=>{remove(editId);setShowForm(false);setEditId(null);resetForm();}} style={{padding:"10px 16px",background:C.r+"10",color:C.r,border:"1px solid "+C.r+"22",borderRadius:10,fontSize:14,cursor:"pointer",marginLeft:"auto"}}>Удалить</button>}
+        <button onClick={sub} disabled={!f.title.trim()||!f.url.trim()} style={{padding:"10px 22px",background:C.a,color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:600,cursor:f.title.trim()&&f.url.trim()?"pointer":"not-allowed",opacity:f.title.trim()&&f.url.trim()?1:0.5}}>{editId?"Сохранить":"Добавить"}</button>
+        <button onClick={()=>{setShowForm(false);setEditId(null);resetForm();}} style={{padding:"10px 16px",background:C.bg,color:C.t2,border:"1px solid "+C.bd,borderRadius:8,fontSize:14,cursor:"pointer"}}>Отмена</button>
+        {editId&&<button onClick={()=>{remove(editId);setShowForm(false);setEditId(null);resetForm();}} style={{padding:"10px 16px",background:C.r+"10",color:C.r,border:"1px solid "+C.r+"22",borderRadius:8,fontSize:14,cursor:"pointer",marginLeft:"auto"}}>Удалить</button>}
       </div>
     </div>}
 
@@ -6627,7 +7000,7 @@ function LinksPage({userId}:{userId:string}){
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Поиск по ссылкам..." style={{...iS(),paddingLeft:34}}/>
       </div>
       <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-        {allCategories.map(cat=><button key={cat} onClick={()=>setActiveCategory(cat)} style={{padding:"7px 14px",borderRadius:20,border:"1px solid "+(activeCategory===cat?C.a:C.bd),background:activeCategory===cat?C.a:"transparent",color:activeCategory===cat?"#fff":C.t2,fontSize:12,fontWeight:activeCategory===cat?600:400,cursor:"pointer",whiteSpace:"nowrap"}}>{cat}</button>)}
+        {allCategories.map(cat=><button key={cat} onClick={()=>setActiveCategory(cat)} style={{padding:"7px 14px",borderRadius:10,border:"1px solid "+(activeCategory===cat?C.a:C.bd),background:activeCategory===cat?C.a:"transparent",color:activeCategory===cat?"#fff":C.t2,fontSize:12,fontWeight:activeCategory===cat?600:400,cursor:"pointer",whiteSpace:"nowrap"}}>{cat}</button>)}
       </div>
     </div>
 
@@ -6641,14 +7014,14 @@ function LinksPage({userId}:{userId:string}){
       : Object.entries(grouped).map(([category,items])=><div key={category} style={{marginBottom:28}}>
           {activeCategory==="Все"&&<div style={{fontSize:12,fontWeight:700,color:C.t2,letterSpacing:0.8,textTransform:"uppercase",marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
             {category}
-            <span style={{fontSize:11,fontWeight:500,color:C.t2,background:C.bd,borderRadius:20,padding:"1px 8px",textTransform:"none",letterSpacing:0}}>{(items as any[]).length}</span>
+            <span style={{fontSize:11,fontWeight:500,color:C.t2,background:C.bd,borderRadius:10,padding:"1px 8px",textTransform:"none",letterSpacing:0}}>{(items as any[]).length}</span>
           </div>}
           <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(260px,1fr))",gap:12}}>
             {(items as any[]).map((l:any)=>{
               const favicon=getFavicon(l.url);
               const domain=formatDomain(l.url);
               const accent=l.color||C.a;
-              return <div key={l.id} style={{background:C.w,borderRadius:14,overflow:"hidden",boxShadow:"0 2px 10px rgba(0,0,0,0.06)",border:"1px solid "+C.bd,display:"flex",flexDirection:"column",transition:"box-shadow 0.2s, transform 0.15s"}}
+              return <div key={l.id} style={{background:C.w,borderRadius:10,overflow:"hidden",boxShadow:"0 2px 10px rgba(0,0,0,0.06)",border:"1px solid "+C.bd,display:"flex",flexDirection:"column",transition:"box-shadow 0.2s, transform 0.15s"}}
                 onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 6px 24px rgba(0,0,0,0.12)";(e.currentTarget as HTMLElement).style.transform="translateY(-2px)";}}
                 onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 2px 10px rgba(0,0,0,0.06)";(e.currentTarget as HTMLElement).style.transform="translateY(0)";}}>
                 {/* Top accent bar */}
@@ -6657,7 +7030,7 @@ function LinksPage({userId}:{userId:string}){
                 <div style={{padding:"16px 16px 12px",flex:1,display:"flex",flexDirection:"column",gap:8}}>
                   <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
                     {/* Favicon */}
-                    <div style={{width:36,height:36,borderRadius:10,background:accent+"15",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden"}}>
+                    <div style={{width:36,height:36,borderRadius:8,background:accent+"15",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,overflow:"hidden"}}>
                       {favicon
                         ? <img src={favicon} width={20} height={20} style={{objectFit:"contain"}} onError={e=>{(e.target as HTMLImageElement).style.display="none";}}/>
                         : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
@@ -6702,15 +7075,15 @@ function FilesPage({userId}:{userId:string}){
   const[search,setSearch]=useState("");
 
   const FILE_ICONS:Record<string,{color:string,label:string}>={
-    pdf:{color:"#EF4444",label:"PDF"},
-    doc:{color:"#2563EB",label:"DOC"},docx:{color:"#2563EB",label:"DOC"},
-    xls:{color:"#10B981",label:"XLS"},xlsx:{color:"#10B981",label:"XLS"},
-    ppt:{color:"#F59E0B",label:"PPT"},pptx:{color:"#F59E0B",label:"PPT"},
-    jpg:{color:"#EC4899",label:"IMG"},jpeg:{color:"#EC4899",label:"IMG"},png:{color:"#EC4899",label:"IMG"},
-    gif:{color:"#8B5CF6",label:"GIF"},webp:{color:"#EC4899",label:"IMG"},
-    mp4:{color:"#06B6D4",label:"MP4"},mov:{color:"#06B6D4",label:"VID"},
-    zip:{color:"#6B7280",label:"ZIP"},rar:{color:"#6B7280",label:"RAR"},
-    txt:{color:"#9CA3AF",label:"TXT"},csv:{color:"#10B981",label:"CSV"},
+    pdf:{color:"#777777",label:"PDF"},
+    doc:{color:"#606060",label:"DOC"},docx:{color:"#606060",label:"DOC"},
+    xls:{color:"#808080",label:"XLS"},xlsx:{color:"#808080",label:"XLS"},
+    ppt:{color:"#A7A7A7",label:"PPT"},pptx:{color:"#A7A7A7",label:"PPT"},
+    jpg:{color:"#828282",label:"IMG"},jpeg:{color:"#828282",label:"IMG"},png:{color:"#828282",label:"IMG"},
+    gif:{color:"#7C7C7C",label:"GIF"},webp:{color:"#828282",label:"IMG"},
+    mp4:{color:"#858585",label:"MP4"},mov:{color:"#858585",label:"VID"},
+    zip:{color:"#727272",label:"ZIP"},rar:{color:"#727272",label:"RAR"},
+    txt:{color:"#9CA3AF",label:"TXT"},csv:{color:"#808080",label:"CSV"},
   };
 
   const getExt=(name:string)=>name.split(".").pop()?.toLowerCase()||"";
@@ -6741,19 +7114,19 @@ function FilesPage({userId}:{userId:string}){
   const filtered=files.filter((f:any)=>f.name.toLowerCase().includes(search.toLowerCase()));
 
   return <>
-    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:16,padding:isMobile?"16px":"24px 32px",marginBottom:isMobile?16:24,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:10,padding:isMobile?"16px":"24px 32px",marginBottom:isMobile?16:24,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <div>
         <div style={{fontSize:20,fontWeight:700,color:"#fff"}}>База файлов</div>
         <div style={{fontSize:13,color:"rgba(255,255,255,0.5)",marginTop:4}}>{files.length} файлов · Облачное хранилище</div>
       </div>
-      <button onClick={()=>setShowForm(!showForm)} style={{padding:"10px 20px",background:"rgba(255,255,255,0.15)",color:"#fff",border:"1px solid rgba(255,255,255,0.25)",borderRadius:12,fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
+      <button onClick={()=>setShowForm(!showForm)} style={{padding:"10px 20px",background:"rgba(255,255,255,0.15)",color:"#fff",border:"1px solid rgba(255,255,255,0.25)",borderRadius:8,fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Добавить файл
       </button>
     </div>
 
     {/* Upload form */}
-    {showForm&&<div style={{background:C.w,borderRadius:16,padding:22,marginBottom:20,boxShadow:C.sh,border:"1px solid "+C.bd}}>
+    {showForm&&<div style={{background:C.w,borderRadius:10,padding:22,marginBottom:20,boxShadow:C.sh,border:"1px solid "+C.bd}}>
       <div style={{fontSize:15,fontWeight:700,marginBottom:14}}>Загрузить файл</div>
       <div style={{marginBottom:12}}>
         <label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Название (необязательно)</label>
@@ -6763,7 +7136,7 @@ function FilesPage({userId}:{userId:string}){
         onDragOver={e=>{e.preventDefault();setDragging(true);}}
         onDragLeave={()=>setDragging(false)}
         onDrop={handleDrop}
-        style={{border:`2px dashed ${dragging?C.a:C.bd}`,borderRadius:12,padding:"32px 20px",textAlign:"center",background:dragging?C.a+"06":C.bg,transition:"all 0.2s"}}>
+        style={{border:`2px dashed ${dragging?C.a:C.bd}`,borderRadius:8,padding:"32px 20px",textAlign:"center",background:dragging?C.a+"06":C.bg,transition:"all 0.2s"}}>
         {uploading
           ? <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
               <div style={{width:28,height:28,border:"3px solid "+C.bd,borderTopColor:C.a,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
@@ -6773,7 +7146,7 @@ function FilesPage({userId}:{userId:string}){
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.5" style={{marginBottom:8}}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               <div style={{fontSize:14,color:C.t1,fontWeight:500,marginBottom:4}}>Перетащи файл сюда</div>
               <div style={{fontSize:12,color:C.t2,marginBottom:12}}>или</div>
-              <label style={{padding:"9px 20px",background:C.a,color:"#fff",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer",display:"inline-block"}}>
+              <label style={{padding:"9px 20px",background:C.a,color:"#fff",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",display:"inline-block"}}>
                 Выбрать файл
                 <input type="file" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0])uploadFile(e.target.files[0],fName||undefined);}}/>
               </label>
@@ -6790,7 +7163,7 @@ function FilesPage({userId}:{userId:string}){
     </div>
 
     {/* Table */}
-    <div style={{background:C.w,borderRadius:16,boxShadow:C.sh,overflow:"hidden"}}>
+    <div style={{background:C.w,borderRadius:10,boxShadow:C.sh,overflow:"hidden"}}>
       {filtered.length===0
         ? <div style={{padding:"60px 20px",textAlign:"center",color:C.t2}}>
             <div style={{fontSize:40,marginBottom:12}}>📁</div>
@@ -6863,44 +7236,44 @@ interface AIChatTheme{
 
 const AI_THEMES:Record<string,AIChatTheme>={
   ai:{
-    bg:"#0A0E1A",sbBg:"#080D18",sbActiveBg:"#111827",sbActiveBorder:"#00C2FF",
-    headerBg:"linear-gradient(180deg,#0D1533,#0A0E1A)",headerGlow:"0 4px 30px rgba(0,194,255,0.15)",headerBorderColor:"rgba(0,194,255,0.15)",
-    avatarBorder:"#00C2FF",avatarGlow:"0 0 16px rgba(0,194,255,0.5)",
-    userMsgBg:"#1A2744",userMsgBorder:"rgba(0,194,255,0.3)",userMsgText:"#E8F4FF",userMsgGlow:"0 2px 12px rgba(0,194,255,0.12)",
-    aiMsgBg:"#0F1628",aiMsgBorder:"rgba(0,194,255,0.15)",aiMsgGlow:"0 2px 20px rgba(0,194,255,0.08)",
-    inputBg:"#111827",inputBorderFocus:"#00C2FF",inputGlow:"0 0 12px rgba(0,194,255,0.25)",
-    btnBg:"linear-gradient(135deg,#0066FF,#00C2FF)",btnGlow:"0 4px 16px rgba(0,194,255,0.4)",
-    dotColor:"#00C2FF",accentColor:"#00C2FF",textColor:"#fff",onlineDot:"#00C2FF",
+    bg:"#0A0E1A",sbBg:"#080D18",sbActiveBg:"#181818",sbActiveBorder:"#8F8F8F",
+    headerBg:"linear-gradient(180deg,#161616,#0A0E1A)",headerGlow:"0 4px 30px rgba(143,143,143,0.15)",headerBorderColor:"rgba(143,143,143,0.15)",
+    avatarBorder:"#8F8F8F",avatarGlow:"0 0 16px rgba(143,143,143,0.5)",
+    userMsgBg:"#262626",userMsgBorder:"rgba(143,143,143,0.3)",userMsgText:"#F2F2F2",userMsgGlow:"0 2px 12px rgba(143,143,143,0.12)",
+    aiMsgBg:"#161616",aiMsgBorder:"rgba(143,143,143,0.15)",aiMsgGlow:"0 2px 20px rgba(143,143,143,0.08)",
+    inputBg:"#181818",inputBorderFocus:"#8F8F8F",inputGlow:"0 0 12px rgba(143,143,143,0.25)",
+    btnBg:"linear-gradient(135deg,#595959,#8F8F8F)",btnGlow:"0 4px 16px rgba(143,143,143,0.4)",
+    dotColor:"#8F8F8F",accentColor:"#8F8F8F",textColor:"#fff",onlineDot:"#8F8F8F",
   },
   script:{
-    bg:"#130A00",sbBg:"#0A0500",sbActiveBg:"#1A0D00",sbActiveBorder:"#FF8C00",
-    headerBg:"linear-gradient(180deg,#1F0F00,#130A00)",headerGlow:"0 4px 30px rgba(255,100,0,0.2)",headerBorderColor:"rgba(255,140,0,0.2)",
-    avatarBorder:"#FF8C00",avatarGlow:"0 0 16px rgba(255,140,0,0.5)",
-    userMsgBg:"linear-gradient(135deg,#2A1500,#1F1000)",userMsgBorder:"rgba(255,140,0,0.35)",userMsgText:"#FFE8CC",userMsgGlow:"0 2px 15px rgba(255,100,0,0.15)",
-    aiMsgBg:"#1A0D00",aiMsgBorder:"rgba(255,140,0,0.15)",aiMsgGlow:"0 2px 12px rgba(255,100,0,0.08)",
-    inputBg:"#0F0800",inputBorderFocus:"#FF8C00",inputGlow:"0 0 12px rgba(255,140,0,0.3)",
-    btnBg:"linear-gradient(135deg,#FF8C00,#FF5500)",btnGlow:"0 4px 16px rgba(255,100,0,0.4)",
-    dotColor:"#FF8C00",accentColor:"#FF8C00",textColor:"#fff",onlineDot:"#FF8C00",
+    bg:"#130A00",sbBg:"#0A0500",sbActiveBg:"#0F0F0F",sbActiveBorder:"#9E9E9E",
+    headerBg:"linear-gradient(180deg,#121212,#130A00)",headerGlow:"0 4px 30px rgba(135,135,135,0.2)",headerBorderColor:"rgba(158,158,158,0.2)",
+    avatarBorder:"#9E9E9E",avatarGlow:"0 0 16px rgba(158,158,158,0.5)",
+    userMsgBg:"linear-gradient(135deg,#191919,#131313)",userMsgBorder:"rgba(158,158,158,0.35)",userMsgText:"#ECECEC",userMsgGlow:"0 2px 15px rgba(135,135,135,0.15)",
+    aiMsgBg:"#0F0F0F",aiMsgBorder:"rgba(158,158,158,0.15)",aiMsgGlow:"0 2px 12px rgba(135,135,135,0.08)",
+    inputBg:"#0F0800",inputBorderFocus:"#9E9E9E",inputGlow:"0 0 12px rgba(158,158,158,0.3)",
+    btnBg:"linear-gradient(135deg,#9E9E9E,#7E7E7E)",btnGlow:"0 4px 16px rgba(135,135,135,0.4)",
+    dotColor:"#9E9E9E",accentColor:"#9E9E9E",textColor:"#fff",onlineDot:"#9E9E9E",
   },
   product:{
-    bg:"#0C0A1A",sbBg:"#08061A",sbActiveBg:"#13103A",sbActiveBorder:"#7B61FF",
-    headerBg:"linear-gradient(180deg,#130F2A,#0C0A1A)",headerGlow:"0 4px 30px rgba(123,97,255,0.2)",headerBorderColor:"rgba(123,97,255,0.2)",
-    avatarBorder:"#7B61FF",avatarGlow:"0 0 16px rgba(168,255,0,0.3), 0 0 32px rgba(123,97,255,0.3)",
-    userMsgBg:"linear-gradient(135deg,#1A1535,#0F1A10)",userMsgBorder:"rgba(123,97,255,0.4)",userMsgText:"#EEE8FF",userMsgGlow:"0 2px 16px rgba(123,97,255,0.15)",
-    aiMsgBg:"#100E20",aiMsgBorder:"rgba(168,255,0,0.15)",aiMsgGlow:"0 2px 12px rgba(168,255,0,0.08)",
-    inputBg:"#0A0818",inputBorderFocus:"#7B61FF",inputGlow:"0 0 12px rgba(123,97,255,0.3)",
-    btnBg:"linear-gradient(135deg,#7B61FF,#A8FF00)",btnGlow:"0 4px 16px rgba(123,97,255,0.4)",
-    dotColor:"#7B61FF",accentColor:"#A8FF00",textColor:"#fff",onlineDot:"#A8FF00",
+    bg:"#0C0A1A",sbBg:"#08061A",sbActiveBg:"#161616",sbActiveBorder:"#7B7B7B",
+    headerBg:"linear-gradient(180deg,#131313,#0C0A1A)",headerGlow:"0 4px 30px rgba(123,123,123,0.2)",headerBorderColor:"rgba(123,123,123,0.2)",
+    avatarBorder:"#7B7B7B",avatarGlow:"0 0 16px rgba(200,200,200,0.3), 0 0 32px rgba(123,123,123,0.3)",
+    userMsgBg:"linear-gradient(135deg,#1A1A1A,#0F1A10)",userMsgBorder:"rgba(123,123,123,0.4)",userMsgText:"#ECECEC",userMsgGlow:"0 2px 16px rgba(123,123,123,0.15)",
+    aiMsgBg:"#100E20",aiMsgBorder:"rgba(200,200,200,0.15)",aiMsgGlow:"0 2px 12px rgba(200,200,200,0.08)",
+    inputBg:"#0A0818",inputBorderFocus:"#7B7B7B",inputGlow:"0 0 12px rgba(123,123,123,0.3)",
+    btnBg:"linear-gradient(135deg,#7B7B7B,#C8C8C8)",btnGlow:"0 4px 16px rgba(123,123,123,0.4)",
+    dotColor:"#7B7B7B",accentColor:"#C8C8C8",textColor:"#fff",onlineDot:"#C8C8C8",
   },
   stories:{
-    bg:"#120018",sbBg:"#0A0010",sbActiveBg:"#1A0025",sbActiveBorder:"#CC00FF",
-    headerBg:"linear-gradient(180deg,#200030,#120018)",headerGlow:"0 4px 40px rgba(204,0,255,0.25)",headerBorderColor:"rgba(204,0,255,0.2)",
-    avatarBorder:"#CC00FF",avatarGlow:"0 0 20px rgba(204,0,255,0.6)",
-    userMsgBg:"linear-gradient(135deg,#2A0040,#1A0030)",userMsgBorder:"rgba(204,0,255,0.4)",userMsgText:"#F5CCFF",userMsgGlow:"0 2px 20px rgba(204,0,255,0.2)",
-    aiMsgBg:"#180025",aiMsgBorder:"rgba(255,68,204,0.2)",aiMsgGlow:"0 2px 16px rgba(204,0,255,0.1)",
-    inputBg:"#0E0018",inputBorderFocus:"#CC00FF",inputGlow:"0 0 16px rgba(204,0,255,0.35)",
-    btnBg:"linear-gradient(135deg,#CC00FF,#FF44CC)",btnGlow:"0 4px 16px rgba(204,0,255,0.5)",
-    dotColor:"#CC00FF",accentColor:"#FF44CC",textColor:"#fff",onlineDot:"#CC00FF",
+    bg:"#080808",sbBg:"#0A0010",sbActiveBg:"#0C0C0C",sbActiveBorder:"#5A5A5A",
+    headerBg:"linear-gradient(180deg,#0F0F0F,#080808)",headerGlow:"0 4px 40px rgba(90,90,90,0.25)",headerBorderColor:"rgba(90,90,90,0.2)",
+    avatarBorder:"#5A5A5A",avatarGlow:"0 0 20px rgba(90,90,90,0.6)",
+    userMsgBg:"linear-gradient(135deg,#141414,#0D0D0D)",userMsgBorder:"rgba(90,90,90,0.4)",userMsgText:"#DEDEDE",userMsgGlow:"0 2px 20px rgba(90,90,90,0.2)",
+    aiMsgBg:"#0B0B0B",aiMsgBorder:"rgba(139,139,139,0.2)",aiMsgGlow:"0 2px 16px rgba(90,90,90,0.1)",
+    inputBg:"#070707",inputBorderFocus:"#5A5A5A",inputGlow:"0 0 16px rgba(90,90,90,0.35)",
+    btnBg:"linear-gradient(135deg,#5A5A5A,#8B8B8B)",btnGlow:"0 4px 16px rgba(90,90,90,0.5)",
+    dotColor:"#5A5A5A",accentColor:"#8B8B8B",textColor:"#fff",onlineDot:"#5A5A5A",
   },
 };
 
@@ -6920,7 +7293,7 @@ const AI_CONFIG:{[k:string]:{name:string,avatar:string,storageKey:string,welcome
 
 const AI_BETA_WARNING="AI-функции работают только при открытом окне. Они всё ещё в beta-версии, поэтому ответы могут глючить, теряться или работать нестабильно.";
 
-function AiBetaNotice({theme}:{theme:AIChatTheme}){return <div style={{margin:"10px 16px 0",padding:"10px 12px",borderRadius:10,background:"rgba(245,158,11,0.10)",border:"1px solid rgba(245,158,11,0.25)",color:"#FBBF24",fontSize:11,lineHeight:1.45,fontWeight:500}}>
+function AiBetaNotice({theme}:{theme:AIChatTheme}){return <div style={{margin:"10px 16px 0",padding:"10px 12px",borderRadius:8,background:"rgba(167,167,167,0.10)",border:"1px solid rgba(167,167,167,0.25)",color:"#BFBFBF",fontSize:11,lineHeight:1.45,fontWeight:500}}>
   ⚠️ {AI_BETA_WARNING}
 </div>;}
 
@@ -7015,7 +7388,7 @@ function AIChatBase({pageId,system}:{pageId:string,system?:string}){
 
   const ac=theme.accentColor;
 
-  return <div style={{display:"flex",height:isMobile?"calc(100vh - 136px)":"calc(100vh - 120px)",overflow:"hidden",borderRadius:16,border:"1px solid rgba(255,255,255,0.06)",background:theme.bg,boxShadow:"0 8px 40px rgba(0,0,0,0.4)"}}>
+  return <div style={{display:"flex",height:isMobile?"calc(100vh - 136px)":"calc(100vh - 120px)",overflow:"hidden",borderRadius:10,border:"1px solid rgba(255,255,255,0.06)",background:theme.bg,boxShadow:"0 8px 40px rgba(0,0,0,0.4)"}}>
     <style>{`
       @keyframes avatarPulse{0%,100%{opacity:0.6}50%{opacity:1}}
       @keyframes dotBlink{0%,100%{opacity:1}50%{opacity:0.3}}
@@ -7057,8 +7430,8 @@ function AIChatBase({pageId,system}:{pageId:string,system?:string}){
             <div style={{fontSize:9,color:"rgba(255,255,255,0.25)",marginTop:1}}>{chat.msgs.length} сообщ.</div>
           </div>
           <button className="ai-delete-btn" onClick={e=>deleteChat(chat.id,e)}
-            style={{width:18,height:18,border:"none",background:"rgba(255,59,48,0.15)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:0,flexShrink:0,borderRadius:4,transition:"opacity 0.15s"}}>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#FF3B30" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            style={{width:18,height:18,border:"none",background:"rgba(116,116,116,0.15)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:0,flexShrink:0,borderRadius:4,transition:"opacity 0.15s"}}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#747474" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
           </button>
         </div>)}
       </div>
@@ -7072,7 +7445,7 @@ function AIChatBase({pageId,system}:{pageId:string,system?:string}){
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>}
         <div style={{position:"relative",flexShrink:0}}>
-          <img src={config.avatar} style={{width:36,height:36,borderRadius:10,objectFit:"cover",border:"2px solid "+theme.avatarBorder,boxShadow:theme.avatarGlow,animation:"avatarPulse 2s ease-in-out infinite"}} alt=""/>
+          <img src={config.avatar} style={{width:36,height:36,borderRadius:8,objectFit:"cover",border:"2px solid "+theme.avatarBorder,boxShadow:theme.avatarGlow,animation:"avatarPulse 2s ease-in-out infinite"}} alt=""/>
           <div style={{position:"absolute",bottom:0,right:0,width:9,height:9,borderRadius:"50%",background:theme.onlineDot,border:"2px solid "+theme.bg,animation:"dotBlink 2s ease-in-out infinite"}}/>
         </div>
         <div style={{flex:1,minWidth:0}}>
@@ -7092,14 +7465,14 @@ function AIChatBase({pageId,system}:{pageId:string,system?:string}){
       {/* Messages */}
       <div style={{flex:1,overflowY:"auto",padding:"16px",display:"flex",flexDirection:"column",gap:12}}>
         {!activeChat&&<div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16,padding:"20px 0",minHeight:"60%"}}>
-          <img src={config.avatar} style={{width:68,height:68,borderRadius:18,objectFit:"cover",border:"2px solid "+theme.avatarBorder,boxShadow:theme.avatarGlow}} alt=""/>
+          <img src={config.avatar} style={{width:68,height:68,borderRadius:12,objectFit:"cover",border:"2px solid "+theme.avatarBorder,boxShadow:theme.avatarGlow}} alt=""/>
           <div style={{textAlign:"center"}}>
             <div style={{fontSize:17,fontWeight:700,color:"#fff",marginBottom:4}}>{config.name}</div>
             <div style={{fontSize:12,color:"rgba(255,255,255,0.4)",lineHeight:1.6}}>Начни новый диалог или выбери из истории</div>
           </div>
           {config.suggestions&&<div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:7,width:"100%",maxWidth:520}}>
             {config.suggestions.map((s,i)=><button key={i} className="ai-suggestion-btn" onClick={()=>send(s)}
-              style={{padding:"9px 12px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,fontSize:11,color:"rgba(255,255,255,0.65)",cursor:"pointer",textAlign:"left",lineHeight:1.4,fontFamily:"'Inter',sans-serif",transition:"all 0.15s"}}>
+              style={{padding:"9px 12px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:8,fontSize:11,color:"rgba(255,255,255,0.65)",cursor:"pointer",textAlign:"left",lineHeight:1.4,fontFamily:"'Inter',sans-serif",transition:"all 0.15s"}}>
               {s}
             </button>)}
           </div>}
@@ -7112,7 +7485,7 @@ function AIChatBase({pageId,system}:{pageId:string,system?:string}){
             {formatMsg(config.welcome)}
             {config.suggestions&&pageId!=="ai"&&<div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:10}}>
               {config.suggestions.map((s,i)=><button key={i} onClick={()=>send(s)}
-                style={{padding:"6px 12px",background:ac+"15",border:"1px solid "+ac+"30",borderRadius:20,fontSize:11,color:ac,cursor:"pointer",fontWeight:500,fontFamily:"'Inter',sans-serif",transition:"all 0.15s"}}>
+                style={{padding:"6px 12px",background:ac+"15",border:"1px solid "+ac+"30",borderRadius:10,fontSize:11,color:ac,cursor:"pointer",fontWeight:500,fontFamily:"'Inter',sans-serif",transition:"all 0.15s"}}>
                 {s}
               </button>)}
             </div>}
@@ -7150,7 +7523,7 @@ function AIChatBase({pageId,system}:{pageId:string,system?:string}){
           </div>
         </div>}
 
-        {err&&<div style={{padding:"10px 14px",background:"rgba(255,59,48,0.1)",borderRadius:10,fontSize:12,color:"#FF3B30",border:"1px solid rgba(255,59,48,0.2)"}}>{err}</div>}
+        {err&&<div style={{padding:"10px 14px",background:"rgba(116,116,116,0.1)",borderRadius:8,fontSize:12,color:"#747474",border:"1px solid rgba(116,116,116,0.2)"}}>{err}</div>}
         <div ref={bottomRef}/>
       </div>
 
@@ -7171,7 +7544,7 @@ function AIChatBase({pageId,system}:{pageId:string,system?:string}){
             onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}}
             placeholder="Напиши сообщение... (Enter — отправить)"
             rows={1} className="ai-chat-input"
-            style={{flex:1,border:"1px solid rgba(255,255,255,0.1)",outline:"none",resize:"none",fontSize:13,fontFamily:"'Inter',sans-serif",color:"#fff",background:theme.inputBg,lineHeight:1.5,maxHeight:120,overflowY:"auto",borderRadius:10,padding:"9px 12px",transition:"border-color 0.2s,box-shadow 0.2s"}}
+            style={{flex:1,border:"1px solid rgba(255,255,255,0.1)",outline:"none",resize:"none",fontSize:13,fontFamily:"'Inter',sans-serif",color:"#fff",background:theme.inputBg,lineHeight:1.5,maxHeight:120,overflowY:"auto",borderRadius:8,padding:"9px 12px",transition:"border-color 0.2s,box-shadow 0.2s"}}
             onInput={e=>{const t=e.currentTarget;t.style.height="auto";t.style.height=Math.min(t.scrollHeight,120)+"px";}}
           />
           <button className="ai-send-btn" onClick={()=>send()} disabled={(!input.trim()&&!fileData)||loading}
@@ -7241,7 +7614,1933 @@ const PRODUCT_SYSTEM=`Ты — Vizzy Product AI. Твоя единственна
 
 const PRODUCT_QUESTIONS=["Что ты умеешь делать лучше всего? В какой теме ты эксперт?","Кто твоя аудитория? Кому ты хочешь помочь?","Какую главную проблему решает твой продукт?","Какой результат получит человек после прохождения?","Какой формат выбираем?","Сколько времени у аудитории на прохождение?","Какой уровень аудитории?"];
 
-function ProductAIPage(){return <AIChatBase pageId="product" system={PRODUCT_SYSTEM}/>;}
+function ProductAIChatLegacy(){return <AIChatBase pageId="product" system={PRODUCT_SYSTEM}/>;}
+
+/* ============ VIZZY PRODUCT AI ============ */
+const PA_QUESTIONS=[
+  {id:"activity",q:"Чем вы занимаетесь?",hint:"Ваша ниша, экспертиза — в чём вы сильны и чем помогаете людям"},
+  {id:"client",q:"Кто ваш клиент?",hint:"Опишите вашу аудиторию максимально конкретно: кто эти люди, чем живут"},
+  {id:"result",q:"Какой результат вы помогаете получать?",hint:"Главная трансформация, которую получает клиент после работы с вами"},
+  {id:"experience",q:"Есть ли у вас опыт работы с клиентами?",hint:"Сколько клиентов, в каком формате, как долго вы этим занимаетесь"},
+  {id:"cases",q:"Есть ли у вас кейсы?",hint:"Конкретные результаты клиентов: цифры, истории, до/после"},
+];
+
+async function generateProductVariants(answers:Record<string,string>):Promise<any[]>{
+  const ctx=PA_QUESTIONS.map(q=>`${q.q}\n${(answers[q.id]||"").trim()}`).join("\n\n");
+  const system="Ты — продуктовый архитектор и маркетолог, специалист по упаковке экспертизы в цифровые продукты. По данным эксперта ты предлагаешь форматы продукта. Возвращаешь СТРОГО валидный JSON-массив без markdown, без пояснений, без текста вокруг.";
+  const user=`Данные эксперта:\n\n${ctx}\n\nНа основе этих данных предложи РОВНО 10 вариантов цифрового продукта, которые этот эксперт мог бы создать и продавать. Каждый вариант обязан относиться строго к одному из 5 типов, и поле "format" должно быть ТОЧНО одной из этих строк: "Онлайн-курс", "Закрытое сообщество", "Коучинг", "Консалтинг", "Мастермайнд". Распредели 10 вариантов по этим типам (примерно по 2 на тип), различающихся темой, содержанием и позиционированием.\n\nВерни JSON-массив из 10 объектов строго такой структуры:\n[{"format":"формат продукта одним-двумя словами","title":"цепляющее название продукта","description":"1-2 предложения о сути продукта","why":"почему этот формат подходит именно этому эксперту","price":"ориентировочная вилка цены в рублях"}]`;
+
+  const res=await fetch("https://api.deepseek.com/v1/chat/completions",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","Authorization":`Bearer ${process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY}`},
+    body:JSON.stringify({model:"deepseek-chat",max_tokens:2600,temperature:0.8,messages:[{role:"system",content:system},{role:"user",content:user}]}),
+  });
+  const data=await res.json();
+  let raw=data.choices?.[0]?.message?.content||"";
+  raw=raw.replace(/```json/gi,"").replace(/```/g,"").trim();
+  const start=raw.indexOf("["),end=raw.lastIndexOf("]");
+  if(start>=0&&end>start)raw=raw.slice(start,end+1);
+  const arr=JSON.parse(raw);
+  if(!Array.isArray(arr))throw new Error("bad shape");
+  return arr.slice(0,10);
+}
+
+function paParseJSON(raw:string):any{
+  let s=(raw||"").replace(/```json/gi,"").replace(/```/g,"").trim();
+  const a=s.indexOf("["),b=s.lastIndexOf("]");
+  const c=s.indexOf("{"),d=s.lastIndexOf("}");
+  if(a>=0&&b>a&&(c<0||a<c))s=s.slice(a,b+1);
+  else if(c>=0&&d>c)s=s.slice(c,d+1);
+  return JSON.parse(s);
+}
+
+function paContext(answers:Record<string,string>){
+  return PA_QUESTIONS.map(q=>`${q.q}\n${(answers[q.id]||"").trim()}`).join("\n\n");
+}
+
+async function paChat(system:string,user:string,maxTokens=4000,temperature=0.7){
+  const res=await fetch("https://api.deepseek.com/v1/chat/completions",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","Authorization":`Bearer ${process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY}`},
+    body:JSON.stringify({model:"deepseek-chat",max_tokens:maxTokens,temperature,messages:[{role:"system",content:system},{role:"user",content:user}]}),
+  });
+  const data=await res.json();
+  return data.choices?.[0]?.message?.content||"";
+}
+
+async function generateCourseLessons(answers:Record<string,string>,product:any,count:number):Promise<any[]>{
+  const system="Ты — методолог и архитектор образовательных продуктов с опытом создания курсов, которые доводят учеников до результата. Проектируешь профессиональную, логичную программу. Возвращаешь строго валидный JSON без markdown и без пояснений.";
+  const user=`Данные эксперта:\n\n${paContext(answers)}\n\nВыбранный продукт:\nФормат: ${product.format}\nНазвание: ${product.title}\nОписание: ${product.description||""}\n\nСоставь программу онлайн-курса из РОВНО ${count} уроков. Уроки идут логично от основ к финальному результату, без воды, с опорой на целевую аудиторию, её боли и желаемый результат.\n\nВерни JSON-массив из ${count} объектов строго такой структуры:\n[{"title":"название урока","description":"одно ёмкое предложение о содержании урока","scenario":"подробный план урока — 5-8 коротких пунктов, каждый с новой строки: что разбирается, какая практика, какой результат получает ученик"}]`;
+  const arr=paParseJSON(await paChat(system,user,4000,0.7));
+  if(!Array.isArray(arr))throw new Error("bad shape");
+  return arr.slice(0,count).map((l:any,i:number)=>({
+    id:"l"+i+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+    title:l.title||`Урок ${i+1}`,
+    description:l.description||"",
+    scenario:l.scenario||"",
+  }));
+}
+
+async function regenCourseLesson(answers:Record<string,string>,product:any,lessons:any[],idx:number,hint:string):Promise<any>{
+  const titles=lessons.map((l,i)=>`${i+1}. ${l.title}`).join("\n");
+  const system="Ты — методолог образовательных продуктов. Возвращаешь строго валидный JSON без markdown и пояснений.";
+  const user=`Данные эксперта:\n\n${paContext(answers)}\n\nПродукт: ${product.title} (${product.format})\n\nТекущая программа курса:\n${titles}\n\nПерегенерируй урок №${idx+1}.${hint?(" Пожелание автора: "+hint+".") :""} Он не должен дублировать другие уроки и должен вписываться в общую логику программы.\n\nВерни ОДИН JSON-объект строго такой структуры:\n{"title":"название урока","description":"одно ёмкое предложение","scenario":"подробный план урока: 5-8 коротких пунктов, каждый с новой строки"}`;
+  const obj=paParseJSON(await paChat(system,user,1400,0.8));
+  return {
+    id:lessons[idx].id,
+    title:obj.title||lessons[idx].title,
+    description:obj.description||lessons[idx].description,
+    scenario:obj.scenario||lessons[idx].scenario,
+  };
+}
+
+function CourseLessonEditor({lesson,index,total,dark,busy,onSave,onRegen,onClose,unitLabel="Урок"}:{lesson:any,index:number,total:number,dark:boolean,busy:boolean,onSave:(p:any)=>void,onRegen:(hint:string)=>void,onClose:()=>void,unitLabel?:string}){
+  const[title,setTitle]=useState(lesson.title||"");
+  const[description,setDescription]=useState(lesson.description||"");
+  const[scenario,setScenario]=useState(lesson.scenario||"");
+  const[hint,setHint]=useState("");
+  useEffect(()=>{setTitle(lesson.title||"");setDescription(lesson.description||"");setScenario(lesson.scenario||"");},[lesson]);
+  const bd=C.bd;
+  const inputBg=dark?"#1C1C1C":"#F8FAFC";
+  const lbl:React.CSSProperties={fontSize:11,fontWeight:700,color:C.t2,letterSpacing:0.3,textTransform:"uppercase" as const,marginBottom:8,display:"block"};
+  const fld:React.CSSProperties={width:"100%",padding:"12px 14px",border:`1px solid ${bd}`,borderRadius:8,fontSize:14,background:inputBg,color:C.t1,outline:"none",lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const};
+  return(
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(4px)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:660,maxHeight:"88vh",overflowY:"auto",background:dark?"#161616":"#fff",border:`1px solid ${bd}`,borderRadius:10,padding:26,boxShadow:"0 24px 60px rgba(0,0,0,0.5)"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:22}}>
+          <div style={{display:"flex",alignItems:"center",gap:12}}>
+            <div style={{width:34,height:34,borderRadius:8,background:"#666666",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:14,fontWeight:800}}>{index+1}</div>
+            <div style={{fontSize:12,fontWeight:600,color:C.t2}}>{unitLabel} {index+1} из {total}</div>
+          </div>
+          <button onClick={onClose} style={{width:32,height:32,borderRadius:9,border:"none",background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <label style={lbl}>Название урока</label>
+        <input value={title} onChange={e=>setTitle(e.target.value)} style={{...fld,marginBottom:18,fontWeight:600}}/>
+
+        <label style={lbl}>Краткое описание</label>
+        <textarea value={description} onChange={e=>setDescription(e.target.value)} style={{...fld,minHeight:64,resize:"vertical" as const,marginBottom:18}}/>
+
+        <label style={lbl}>Сценарий урока</label>
+        <textarea value={scenario} onChange={e=>setScenario(e.target.value)} style={{...fld,minHeight:200,resize:"vertical" as const,marginBottom:20}}/>
+
+        <div style={{background:dark?"rgba(255,255,255,0.03)":"#F8FAFC",border:`1px solid ${bd}`,borderRadius:10,padding:16,marginBottom:22}}>
+          <label style={lbl}>Перегенерировать урок</label>
+          <div style={{display:"flex",gap:10,alignItems:"stretch"}}>
+            <input value={hint} onChange={e=>setHint(e.target.value)} placeholder="Что изменить? (необязательно)" style={{...fld,flex:1}}/>
+            <button onClick={()=>onRegen(hint)} disabled={busy}
+              style={{padding:"0 18px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:13,fontWeight:600,cursor:busy?"default":"pointer",display:"flex",alignItems:"center",gap:8,whiteSpace:"nowrap",fontFamily:"'Inter',sans-serif"}}>
+              {busy
+                ?<><div style={{width:14,height:14,border:"2px solid rgba(150,150,150,0.3)",borderTopColor:C.t1,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Генерирую</>
+                :<><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Перегенерировать</>}
+            </button>
+          </div>
+        </div>
+
+        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+          <button onClick={onClose} style={{padding:"11px 20px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Отмена</button>
+          <button onClick={()=>onSave({title,description,scenario})} disabled={busy}
+            style={{padding:"11px 24px",borderRadius:8,border:"none",background:"#666666",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>Сохранить</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+async function generateMastermind(answers:Record<string,string>,product:any,sessionCount:number):Promise<any>{
+  const system="Ты — архитектор офлайн-мастермайндов и премиальных групповых программ. Мастермайнд — это ЖИВОЕ офлайн-мероприятие: встречи, разборы, hot seats, работа в группе, нетворкинг. Ты продумываешь концепцию, локацию, организацию и программу встреч на профессиональном уровне. Возвращаешь строго валидный JSON без markdown и пояснений.";
+  const user=`Данные эксперта:\n\n${paContext(answers)}\n\nВыбранный продукт:\nФормат: ${product.format}\nНазвание: ${product.title}\nОписание: ${product.description||""}\n\nСпроектируй офлайн-мастермайнд из ${sessionCount} встреч. Это живое мероприятие — место встречи, атмосфера и логистика важны так же, как содержание.\n\nВерни JSON строго такой структуры:\n{\n"concept":"Концепция: для кого этот мастермайнд, главное обещание, ключевая ценность и чем он отличается от курса. 4-6 предложений.",\n"location":"Локация и место встречи: рекомендуемый тип площадки (загородная резиденция, премиум-коворкинг, отель и т.п.), нужная атмосфера, вместимость, 2-3 конкретных варианта формата локации и на что обратить внимание при выборе. Каждый пункт с новой строки.",\n"organization":"Организация: число участников, длительность и периодичность встреч, что входит (проживание, питание, трансфер, материалы), pre-work до встреч, поддержка между встречами, ориентир по стоимости участия. Каждый пункт с новой строки.",\n"sessions":[{"title":"название встречи","description":"одно предложение о цели встречи","scenario":"подробная повестка встречи: формат работы (разборы, hot seats, групповая работа), тайминг по блокам, что происходит и какой результат уносит участник — 5-8 пунктов, каждый с новой строки"}]\n}\nМассив sessions должен содержать РОВНО ${sessionCount} встреч, идущих логично от старта к финальному результату.`;
+  const obj=paParseJSON(await paChat(system,user,4000,0.7));
+  const sessions=(obj.sessions||[]).slice(0,sessionCount).map((s:any,i:number)=>({
+    id:"s"+i+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+    title:s.title||`Встреча ${i+1}`,
+    description:s.description||"",
+    scenario:s.scenario||"",
+  }));
+  return {type:"mastermind",sessionCount,concept:obj.concept||"",location:obj.location||"",organization:obj.organization||"",sessions};
+}
+
+async function regenMMSection(answers:Record<string,string>,product:any,key:string,hint:string):Promise<string>{
+  const labels:Record<string,string>={concept:"Концепция",location:"Локация и место встречи",organization:"Организация"};
+  const system="Ты — архитектор офлайн-мастермайндов. Возвращаешь только текст раздела: без markdown-заголовков, без пояснений вокруг.";
+  const user=`Данные эксперта:\n\n${paContext(answers)}\n\nМастермайнд: ${product.title} (${product.format})\n\nПерепиши раздел «${labels[key]||key}» для этого офлайн-мастермайнда.${hint?(" Пожелание автора: "+hint+".") :""} Верни только текст раздела, каждый пункт с новой строки.`;
+  return (await paChat(system,user,1300,0.8)).replace(/```/g,"").trim();
+}
+
+async function regenMMSession(answers:Record<string,string>,product:any,sessions:any[],idx:number,hint:string):Promise<any>{
+  const titles=sessions.map((s,i)=>`${i+1}. ${s.title}`).join("\n");
+  const system="Ты — архитектор офлайн-мастермайндов. Возвращаешь строго валидный JSON без markdown и пояснений.";
+  const user=`Данные эксперта:\n\n${paContext(answers)}\n\nМастермайнд: ${product.title}\n\nТекущая программа встреч:\n${titles}\n\nПерегенерируй встречу №${idx+1}.${hint?(" Пожелание автора: "+hint+".") :""} Она не должна дублировать другие встречи и должна вписываться в логику программы.\n\nВерни ОДИН JSON-объект строго такой структуры:\n{"title":"название встречи","description":"одно предложение о цели","scenario":"повестка встречи: формат работы, тайминг по блокам, результат — 5-8 пунктов, каждый с новой строки"}`;
+  const obj=paParseJSON(await paChat(system,user,1400,0.8));
+  return {
+    id:sessions[idx].id,
+    title:obj.title||sessions[idx].title,
+    description:obj.description||sessions[idx].description,
+    scenario:obj.scenario||sessions[idx].scenario,
+  };
+}
+
+function SectionEditor({title,text,dark,busy,onSave,onRegen,onClose}:{title:string,text:string,dark:boolean,busy:boolean,onSave:(t:string)=>void,onRegen:(hint:string)=>void,onClose:()=>void}){
+  const[val,setVal]=useState(text||"");
+  const[hint,setHint]=useState("");
+  useEffect(()=>{setVal(text||"");},[text]);
+  const bd=C.bd;
+  const inputBg=dark?"#1C1C1C":"#F8FAFC";
+  const lbl:React.CSSProperties={fontSize:11,fontWeight:700,color:C.t2,letterSpacing:0.3,textTransform:"uppercase" as const,marginBottom:8,display:"block"};
+  const fld:React.CSSProperties={width:"100%",padding:"12px 14px",border:`1px solid ${bd}`,borderRadius:8,fontSize:14,background:inputBg,color:C.t1,outline:"none",lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const};
+  return(
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(4px)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:660,maxHeight:"88vh",overflowY:"auto",background:dark?"#161616":"#fff",border:`1px solid ${bd}`,borderRadius:10,padding:26,boxShadow:"0 24px 60px rgba(0,0,0,0.5)"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:22}}>
+          <div style={{fontSize:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em"}}>{title}</div>
+          <button onClick={onClose} style={{width:32,height:32,borderRadius:9,border:"none",background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <textarea value={val} onChange={e=>setVal(e.target.value)} style={{...fld,minHeight:240,resize:"vertical" as const,marginBottom:20}}/>
+        <div style={{background:dark?"rgba(255,255,255,0.03)":"#F8FAFC",border:`1px solid ${bd}`,borderRadius:10,padding:16,marginBottom:22}}>
+          <label style={lbl}>Перегенерировать раздел</label>
+          <div style={{display:"flex",gap:10,alignItems:"stretch"}}>
+            <input value={hint} onChange={e=>setHint(e.target.value)} placeholder="Что изменить? (необязательно)" style={{...fld,flex:1}}/>
+            <button onClick={()=>onRegen(hint)} disabled={busy}
+              style={{padding:"0 18px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:13,fontWeight:600,cursor:busy?"default":"pointer",display:"flex",alignItems:"center",gap:8,whiteSpace:"nowrap",fontFamily:"'Inter',sans-serif"}}>
+              {busy
+                ?<><div style={{width:14,height:14,border:"2px solid rgba(150,150,150,0.3)",borderTopColor:C.t1,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Генерирую</>
+                :<><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Перегенерировать</>}
+            </button>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+          <button onClick={onClose} style={{padding:"11px 20px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Отмена</button>
+          <button onClick={()=>onSave(val)} disabled={busy}
+            style={{padding:"11px 24px",borderRadius:8,border:"none",background:"#666666",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>Сохранить</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+async function generateCommunity(answers:Record<string,string>,product:any,days:number):Promise<any>{
+  const system="Ты — архитектор закрытых онлайн-сообществ и клубов (чаще всего это закрытый Telegram-канал или чат, но не обязательно). Ты продумываешь identity, позиционирование, структуру, систему удержания и контент. Возвращаешь строго валидный JSON без markdown и пояснений.";
+  const user=`Данные эксперта:\n\n${paContext(answers)}\n\nВыбранный продукт:\nФормат: ${product.format}\nНазвание: ${product.title}\nОписание: ${product.description||""}\n\nСпроектируй закрытое сообщество с нуля. Чаще всего это закрытый Telegram-канал или чат — выбери оптимальную платформу под аудиторию и обоснуй. Продумай identity, структуру, стартовый набор контента (чтобы новый участник при входе не разочаровался) и систему постоянного напоминания о себе. Затем составь контент-план на ${days} дней.\n\nВерни JSON строго такой структуры:\n{\n"identity":"Identity и позиционирование: название сообщества, суть в одном предложении, для кого, tone of voice, главное обещание, чем отличается от бесплатных чатов. Каждый пункт с новой строки.",\n"structure":"Структура и организация: платформа (Telegram-канал / чат / связка — обоснуй выбор), рубрики и разделы, навигация и закреплённые сообщения, роли (админ/модератор/эксперты), правила, онбординг нового участника. Каждый пункт с новой строки.",\n"starter":"Минимальный стартовый набор контента, который обязан быть в сообществе к моменту входа первого участника, чтобы он не разочаровался: приветственный пост, закреплённый гайд-навигация, стартовая база материалов, 5-7 первых ценных постов. Каждый пункт с новой строки.",\n"retention":"Как постоянно напоминать о себе и удерживать участников: регулярные рубрики и ритуалы по дням недели, триггеры вовлечения (опросы, разборы, эфиры, челленджи), поводы вернуться, работа с молчунами. Каждый пункт с новой строки.",\n"plan":[{"day":1,"format":"Пост","title":"заголовок публикации","description":"о чём эта публикация в одном предложении","scenario":"короткая структура публикации: 2-4 пункта, каждый с новой строки"}]\n}\nМассив plan должен содержать РОВНО ${days} публикаций (по одной на день, day от 1 до ${days}), разнообразных по формату (пост, видео, опрос, эфир, разбор, кейс) и рубрикам, работающих на удержание и мягкий прогрев к продукту. Пиши компактно.`;
+  const obj=paParseJSON(await paChat(system,user,4096,0.7));
+  const plan=(obj.plan||[]).slice(0,days).map((p:any,i:number)=>({
+    id:"d"+i+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+    day:p.day||i+1,
+    format:p.format||"Пост",
+    title:p.title||`День ${i+1}`,
+    description:p.description||"",
+    scenario:p.scenario||"",
+  }));
+  return {type:"community",days,identity:obj.identity||"",structure:obj.structure||"",starter:obj.starter||"",retention:obj.retention||"",plan};
+}
+
+async function regenCommSection(answers:Record<string,string>,product:any,key:string,hint:string):Promise<string>{
+  const labels:Record<string,string>={identity:"Identity и позиционирование",structure:"Структура и организация",starter:"Стартовый набор контента",retention:"Как напоминать о себе"};
+  const system="Ты — архитектор закрытых онлайн-сообществ. Возвращаешь только текст раздела: без markdown-заголовков, без пояснений вокруг.";
+  const user=`Данные эксперта:\n\n${paContext(answers)}\n\nСообщество: ${product.title} (${product.format})\n\nПерепиши раздел «${labels[key]||key}» для этого закрытого сообщества.${hint?(" Пожелание автора: "+hint+".") :""} Верни только текст раздела, каждый пункт с новой строки.`;
+  return (await paChat(system,user,1300,0.8)).replace(/```/g,"").trim();
+}
+
+async function regenCommDay(answers:Record<string,string>,product:any,plan:any[],idx:number,hint:string):Promise<any>{
+  const around=plan.slice(Math.max(0,idx-3),idx+4).map(p=>`День ${p.day}: ${p.title}`).join("\n");
+  const system="Ты — контент-стратег закрытого сообщества. Возвращаешь строго валидный JSON без markdown и пояснений.";
+  const user=`Данные эксперта:\n\n${paContext(answers)}\n\nСообщество: ${product.title}\n\nСоседние публикации плана:\n${around}\n\nПерегенерируй публикацию Дня ${plan[idx].day}.${hint?(" Пожелание автора: "+hint+".") :""} Она не должна дублировать соседние.\n\nВерни ОДИН JSON-объект: {"format":"Пост/Видео/Опрос/Эфир/Разбор","title":"заголовок","description":"о чём в одном предложении","scenario":"структура публикации: 2-4 пункта, каждый с новой строки"}`;
+  const obj=paParseJSON(await paChat(system,user,1200,0.85));
+  return {
+    id:plan[idx].id,
+    day:plan[idx].day,
+    format:obj.format||plan[idx].format,
+    title:obj.title||plan[idx].title,
+    description:obj.description||plan[idx].description,
+    scenario:obj.scenario||plan[idx].scenario,
+  };
+}
+
+
+async function generateProgram(answers:Record<string,string>,product:any,months:number,kind:string):Promise<any>{
+  const isCoach=kind==="coaching";
+  const role=isCoach
+    ?"персональный коучинг: сопровождение 1-на-1, работа над трансформацией и результатом клиента через регулярные сессии"
+    :"консалтинг: решение конкретных задач клиента, экспертные рекомендации и внедрение изменений под ключ";
+  const system=`Ты — архитектор премиальных программ сопровождения. Проектируешь ${role}. Продумываешь онбординг, приветственный подарок и содержание программы по месяцам на профессиональном уровне. Возвращаешь строго валидный JSON без markdown и пояснений.`;
+  const user=`Данные эксперта:\n\n${paContext(answers)}\n\nВыбранный продукт:\nФормат: ${product.format}\nНазвание: ${product.title}\nОписание: ${product.description||""}\n\nСпроектируй программу «${product.title}» длительностью ${months} мес.\n\nВерни JSON строго такой структуры:\n{\n"onboarding":"Онбординг-процесс: как проходит первое касание сразу после оплаты, welcome-сообщение, установочная встреча, что заполняет клиент (анкета целей и точки А), как ставятся ожидания и регламент работы, доступы и материалы. Пошагово, каждый пункт с новой строки.",\n"gift":"Приветственный подарок при покупке, который сразу показывает заботу о клиенте: что именно подарить (гайд, шаблон, бонус-сессия, чек-лист, доступ), почему это ценно и уместно, как красиво вручить. Каждый пункт с новой строки.",\n"program":[{"title":"тема и фокус месяца","description":"главный результат месяца в одном предложении","scenario":"содержание месяца: цели, ключевые темы, задачи и практики клиента, точки контроля, результат месяца — 5-8 пунктов, каждый с новой строки"}]\n}\nМассив program должен содержать РОВНО ${months} месяцев, логично ведущих клиента от старта к финальному результату.`;
+  const obj=paParseJSON(await paChat(system,user,4096,0.7));
+  const program=(obj.program||[]).slice(0,months).map((m:any,i:number)=>({
+    id:"mo"+i+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+    month:i+1,
+    title:m.title||`Месяц ${i+1}`,
+    description:m.description||"",
+    scenario:m.scenario||"",
+  }));
+  return {type:kind,months,onboarding:obj.onboarding||"",gift:obj.gift||"",program};
+}
+
+async function regenProgSection(answers:Record<string,string>,product:any,key:string,hint:string,kind:string):Promise<string>{
+  const labels:Record<string,string>={onboarding:"Онбординг-процесс",gift:"Приветственный подарок"};
+  const role=kind==="coaching"?"персонального коучинга":"консалтинга";
+  const system=`Ты — архитектор программ ${role}. Возвращаешь только текст раздела: без markdown-заголовков, без пояснений вокруг.`;
+  const user=`Данные эксперта:\n\n${paContext(answers)}\n\nПрограмма: ${product.title} (${product.format})\n\nПерепиши раздел «${labels[key]||key}».${hint?(" Пожелание автора: "+hint+".") :""} Верни только текст раздела, каждый пункт с новой строки.`;
+  return (await paChat(system,user,1300,0.8)).replace(/```/g,"").trim();
+}
+
+async function regenProgMonth(answers:Record<string,string>,product:any,program:any[],idx:number,hint:string,kind:string):Promise<any>{
+  const titles=program.map((m,i)=>`Месяц ${i+1}: ${m.title}`).join("\n");
+  const role=kind==="coaching"?"персонального коучинга":"консалтинга";
+  const system=`Ты — архитектор программ ${role}. Возвращаешь строго валидный JSON без markdown и пояснений.`;
+  const user=`Данные эксперта:\n\n${paContext(answers)}\n\nПрограмма: ${product.title}\n\nТекущая структура по месяцам:\n${titles}\n\nПерегенерируй Месяц ${idx+1}.${hint?(" Пожелание автора: "+hint+".") :""} Он не должен дублировать другие месяцы и должен вписываться в логику программы.\n\nВерни ОДИН JSON-объект: {"title":"тема месяца","description":"главный результат месяца одним предложением","scenario":"содержание месяца: цели, темы, задачи, точки контроля, результат — 5-8 пунктов, каждый с новой строки"}`;
+  const obj=paParseJSON(await paChat(system,user,1500,0.8));
+  return {
+    id:program[idx].id,
+    month:program[idx].month,
+    title:obj.title||program[idx].title,
+    description:obj.description||program[idx].description,
+    scenario:obj.scenario||program[idx].scenario,
+  };
+}
+
+function exportProductPDF(product:any){
+  const b=product?.build||{};
+  const esc=(s:any)=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const br=(s:any)=>esc(s).replace(/\n/g,"<br>");
+
+  let sections:any[]=[];
+  let group:any=null;
+  if(b.type==="course"){group={heading:"Программа курса",unit:"Урок",list:b.lessons||[]};}
+  else if(b.type==="mastermind"){sections=[["Концепция",b.concept],["Локация и место встречи",b.location],["Организация",b.organization]];group={heading:"Программа встреч",unit:"Встреча",list:b.sessions||[]};}
+  else if(b.type==="community"){sections=[["Identity и позиционирование",b.identity],["Структура и организация",b.structure],["Стартовый набор контента",b.starter],["Как напоминать о себе",b.retention]];group={heading:"Контент-план",unit:"День",list:b.plan||[]};}
+  else if(b.type==="coaching"||b.type==="consulting"){sections=[["Онбординг-процесс",b.onboarding],["Приветственный подарок",b.gift]];group={heading:"Программа по месяцам",unit:"Месяц",list:b.program||[]};}
+
+  const secHTML=sections.filter(s=>s[1]).map(s=>`<section class="block"><h2>${esc(s[0])}</h2><p>${br(s[1])}</p></section>`).join("");
+  const itemsHTML=group?`<h2 class="group">${esc(group.heading)}</h2>`+ (group.list||[]).map((it:any,i:number)=>{
+    const lead=it.month||it.day||(i+1);
+    const fmt=it.format?`<span class="fmt">${esc(it.format)}</span>`:"";
+    return `<section class="item"><div class="ihead"><span class="num">${esc(group.unit)} ${esc(lead)}</span>${fmt}</div><h3>${esc(it.title)}</h3>${it.description?`<p class="desc">${br(it.description)}</p>`:""}${it.scenario?`<p class="scn">${br(it.scenario)}</p>`:""}</section>`;
+  }).join("") : "";
+
+  const html=`<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>${esc(product.title||"Продукт")}</title>
+<style>
+@page{size:A4;margin:20mm 18mm}
+*{box-sizing:border-box}
+body{font-family:-apple-system,'Segoe UI',Inter,Roboto,Arial,sans-serif;color:#111;line-height:1.6;margin:0}
+.tag{display:inline-block;font-size:11px;font-weight:700;color:#666666;background:#ECFDF5;padding:4px 12px;border-radius:20px;letter-spacing:.3px}
+h1{font-size:26px;font-weight:800;letter-spacing:-.02em;margin:14px 0 8px}
+.lead{font-size:14px;color:#404040;margin:0 0 6px;max-width:640px}
+.rule{height:2px;background:linear-gradient(90deg,#808080,#666666);border-radius:2px;margin:18px 0 26px;width:70px}
+h2{font-size:16px;font-weight:800;letter-spacing:-.01em;margin:0 0 8px;color:#424242}
+h2.group{margin:34px 0 14px;padding-bottom:8px;border-bottom:1px solid #E5E7EB}
+.block{margin-bottom:20px}
+.block p{margin:0;font-size:13.5px;color:#282828;white-space:pre-wrap}
+.item{border:1px solid #E5E7EB;border-radius:12px;padding:16px 18px;margin-bottom:12px;page-break-inside:avoid}
+.ihead{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.num{font-size:11px;font-weight:800;color:#666666;background:#ECFDF5;padding:3px 10px;border-radius:20px}
+.fmt{font-size:10px;font-weight:700;color:#727272;background:#F3F4F6;padding:2px 8px;border-radius:12px;text-transform:uppercase;letter-spacing:.3px}
+.item h3{font-size:15px;font-weight:700;margin:0 0 5px}
+.desc{font-size:13px;color:#545454;margin:0 0 8px}
+.scn{font-size:12.5px;color:#404040;margin:0;white-space:pre-wrap}
+.foot{margin-top:32px;padding-top:14px;border-top:1px solid #E5E7EB;font-size:11px;color:#9CA3AF;text-align:center}
+</style></head><body>
+<span class="tag">${esc(product.format||"Продукт")}</span>
+<h1>${esc(product.title||"Продукт")}</h1>
+${product.description?`<p class="lead">${esc(product.description)}</p>`:""}
+<div class="rule"></div>
+${secHTML}
+${itemsHTML}
+<div class="foot">Создано в Vizzy Product AI</div>
+</body></html>`;
+
+  const w=window.open("","_blank");
+  if(!w){alert("Разреши всплывающие окна, чтобы скачать PDF.");return;}
+  w.document.open();w.document.write(html);w.document.close();w.focus();
+  setTimeout(()=>{try{w.print();}catch(e){}},350);
+}
+
+
+/* ============ VIZZY STORIES AI ============ */
+type SImg={id:string,url:string};
+type OverlayEl={id:string,type:"arrow"|"line"|"image",x:number,y:number,rot:number,len?:number,thickness?:number,color?:string,w?:number,imgUrl?:string};
+type SStory={id:string,text:string,imgUrl:string,gradientPosition:"top"|"bottom",fontId:string,textY:number,textAlign:"left"|"center"|"right",fontScale:number,grayscale:boolean,overlays?:OverlayEl[]};
+
+const STORY_FONTS:{id:string,label:string,family:string,weight:number}[]=[
+  {id:"mont-black",label:"Montserrat Чёрный",family:"Montserrat",weight:900},
+  {id:"mont-bold",label:"Montserrat Жирный",family:"Montserrat",weight:700},
+  {id:"mont-thin",label:"Montserrat Тонкий",family:"Montserrat",weight:300},
+  {id:"inter-black",label:"Inter Чёрный",family:"Inter",weight:900},
+  {id:"inter-bold",label:"Inter Жирный",family:"Inter",weight:700},
+  {id:"inter-reg",label:"Inter",family:"Inter",weight:400},
+  {id:"inter-thin",label:"Inter Тонкий",family:"Inter",weight:300},
+  {id:"times",label:"Times",family:"Times New Roman",weight:700},
+  {id:"coolvetica",label:"Coolvetica",family:"Coolvetica",weight:400},
+  {id:"instagram",label:"Instagram",family:"Poppins",weight:700},
+];
+const STORY_GOALS=["Продажа","Прогрев","Личный бренд","Вовлечение","Кейсы","Анонс","Контент","Свой вариант"];
+
+const _imgCache=new Map<string,Promise<HTMLImageElement>>();
+function loadStoryImg(url:string):Promise<HTMLImageElement>{
+  if(_imgCache.has(url))return _imgCache.get(url)!;
+  const p=(async()=>{
+    try{
+      const res=await fetch(url,{mode:"cors"});
+      const blob=await res.blob();
+      const obj=URL.createObjectURL(blob);
+      return await new Promise<HTMLImageElement>((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=reject;im.src=obj;});
+    }catch(e){
+      return await new Promise<HTMLImageElement>((resolve,reject)=>{const im=new Image();im.crossOrigin="anonymous";im.onload=()=>resolve(im);im.onerror=reject;im.src=url;});
+    }
+  })();
+  _imgCache.set(url,p);
+  return p;
+}
+
+function storyWrap(ctx:CanvasRenderingContext2D,text:string,maxW:number):string[]{
+  const out:string[]=[];
+  for(const para of String(text||"").split("\n")){
+    const words=para.split(/\s+/).filter(Boolean);
+    let line="";
+    for(const w of words){
+      const t=line?line+" "+w:w;
+      if(ctx.measureText(t).width>maxW&&line){out.push(line);line=w;}
+      else line=t;
+    }
+    out.push(line);
+  }
+  return out.length?out:[""];
+}
+
+function drawStory(ctx:CanvasRenderingContext2D,W:number,H:number,o:SStory,img:HTMLImageElement|null,oimgs?:Record<string,HTMLImageElement>){
+  ctx.clearRect(0,0,W,H);
+  if(img){
+    const ir=img.width/img.height,cr=W/H;let dw,dh,dx,dy;
+    if(ir>cr){dh=H;dw=H*ir;dx=(W-dw)/2;dy=0;}else{dw=W;dh=W/ir;dx=0;dy=(H-dh)/2;}
+    if(o.grayscale)ctx.filter="grayscale(1)";
+    ctx.drawImage(img,dx,dy,dw,dh);
+    ctx.filter="none";
+  }else{ctx.fillStyle="#1a1a1a";ctx.fillRect(0,0,W,H);}
+  const g=ctx.createLinearGradient(0,0,0,H);
+  if(o.gradientPosition==="top"){g.addColorStop(0,"rgba(0,0,0,0.82)");g.addColorStop(0.45,"rgba(0,0,0,0.18)");g.addColorStop(1,"rgba(0,0,0,0)");}
+  else{g.addColorStop(0,"rgba(0,0,0,0)");g.addColorStop(0.55,"rgba(0,0,0,0.18)");g.addColorStop(1,"rgba(0,0,0,0.85)");}
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  const pad=W*0.075,maxW=W-pad*2,availH=H-pad*2;
+  const font=STORY_FONTS.find(f=>f.id===o.fontId)||STORY_FONTS[0];
+  const family=font.family,weight=font.weight;
+  let size=Math.round(W*0.064*(o.fontScale||1));
+  const minSize=Math.round(W*0.028);
+  const setF=(fs:number)=>{ctx.font=`${weight} ${fs}px "${family}",sans-serif`;};
+  setF(size);let lines=storyWrap(ctx,o.text,maxW);let lineH=size*1.22;
+  while(lines.length*lineH>availH&&size>minSize){size-=2;setF(size);lines=storyWrap(ctx,o.text,maxW);lineH=size*1.22;}
+  const blockH=lines.length*lineH;
+  const top0=pad,bottom0=H-pad-blockH;
+  const ty=Math.min(1,Math.max(0,o.textY==null?0.5:o.textY));
+  const y0=bottom0>top0?top0+ty*(bottom0-top0):top0;
+  const align=o.textAlign||"left";
+  const x=align==="center"?W/2:align==="right"?W-pad:pad;
+  ctx.fillStyle="#FFFFFF";ctx.textAlign=align as CanvasTextAlign;ctx.textBaseline="alphabetic";
+  ctx.shadowColor="rgba(0,0,0,0.4)";ctx.shadowBlur=W*0.012;ctx.shadowOffsetY=W*0.002;
+  let y=y0+size;
+  for(const ln of lines){ctx.fillText(ln,x,y);y+=lineH;}
+  ctx.shadowColor="transparent";ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+  if(o.overlays&&o.overlays.length){
+    for(const el of o.overlays){
+      ctx.save();
+      ctx.translate(el.x*W,el.y*H);
+      ctx.rotate((el.rot||0)*Math.PI/180);
+      if(el.type==="image"){
+        const im=oimgs?oimgs[el.imgUrl||""]:null;
+        if(im){const w=(el.w||0.4)*W;const h=w*(im.height/Math.max(1,im.width));ctx.drawImage(im,-w/2,-h/2,w,h);}
+      }else{
+        const len=(el.len||0.4)*W;const th=Math.max(2,(el.thickness||0.014)*W);
+        ctx.fillStyle=el.color||"#FFFFFF";
+        ctx.fillRect(-len/2,-th/2,len,th);
+        if(el.type==="arrow"){const ah=th*1.9;ctx.beginPath();ctx.moveTo(len/2+ah*0.7,0);ctx.lineTo(len/2-ah*0.4,-ah);ctx.lineTo(len/2-ah*0.4,ah);ctx.closePath();ctx.fill();}
+      }
+      ctx.restore();
+    }
+  }
+}
+
+function StoryCanvas({story,width,height,radius=0,rev=0}:{story:SStory,width:number,height:number,radius?:number,rev?:number}){
+  const ref=useRef<HTMLCanvasElement>(null);
+  useEffect(()=>{
+    let alive=true;
+    (async()=>{
+      const img=story.imgUrl?await loadStoryImg(story.imgUrl).catch(()=>null):null;
+      const oimgs:Record<string,HTMLImageElement>={};
+      for(const el of story.overlays||[]){if(el.type==="image"&&el.imgUrl&&!oimgs[el.imgUrl]){try{oimgs[el.imgUrl]=await loadStoryImg(el.imgUrl);}catch{}}}
+      if(!alive)return;
+      const c=ref.current;if(!c)return;
+      const ctx=c.getContext("2d");if(!ctx)return;
+      drawStory(ctx,width,height,story,img,oimgs);
+    })();
+    return ()=>{alive=false;};
+  },[story.imgUrl,story.text,story.gradientPosition,story.fontId,story.textY,story.textAlign,story.fontScale,story.grayscale,story.overlays,width,height,rev]);
+  return <canvas ref={ref} width={width} height={height} style={{width,height,borderRadius:radius,display:"block"}}/>;
+}
+
+async function exportStoryBlob(story:SStory):Promise<Blob>{
+  const W=1080,H=1920;
+  const c=document.createElement("canvas");c.width=W;c.height=H;
+  const ctx=c.getContext("2d")!;
+  const img=story.imgUrl?await loadStoryImg(story.imgUrl).catch(()=>null):null;
+  const oimgs:Record<string,HTMLImageElement>={};
+  for(const el of story.overlays||[]){if(el.type==="image"&&el.imgUrl&&!oimgs[el.imgUrl]){try{oimgs[el.imgUrl]=await loadStoryImg(el.imgUrl);}catch{}}}
+  drawStory(ctx,W,H,story,img,oimgs);
+  return await new Promise<Blob>((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(new Error("blob")),"image/png"));
+}
+
+function crc32(buf:Uint8Array):number{
+  let c=~0;
+  for(let i=0;i<buf.length;i++){c^=buf[i];for(let k=0;k<8;k++)c=(c>>>1)^(0xEDB88320&(-(c&1)));}
+  return (~c)>>>0;
+}
+function makeZip(files:{name:string,data:Uint8Array}[]):Blob{
+  const enc=new TextEncoder();
+  const u16=(n:number)=>[n&255,(n>>8)&255];
+  const u32=(n:number)=>[n&255,(n>>8)&255,(n>>16)&255,(n>>24)&255];
+  const locals:Uint8Array[]=[];const centrals:Uint8Array[]=[];let offset=0;
+  for(const f of files){
+    const name=enc.encode(f.name);const data=f.data;const crc=crc32(data);
+    const lh=[0x50,0x4b,0x03,0x04,...u16(20),...u16(0),...u16(0),...u16(0),...u16(0),...u32(crc),...u32(data.length),...u32(data.length),...u16(name.length),...u16(0)];
+    const local=new Uint8Array(lh.length+name.length+data.length);
+    local.set(lh,0);local.set(name,lh.length);local.set(data,lh.length+name.length);
+    locals.push(local);
+    const ch=[0x50,0x4b,0x01,0x02,...u16(20),...u16(20),...u16(0),...u16(0),...u16(0),...u16(0),...u16(0),...u32(crc),...u32(data.length),...u32(data.length),...u16(name.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(offset)];
+    const central=new Uint8Array(ch.length+name.length);
+    central.set(ch,0);central.set(name,ch.length);
+    centrals.push(central);
+    offset+=local.length;
+  }
+  const cenSize=centrals.reduce((a,c)=>a+c.length,0);
+  const end=new Uint8Array([0x50,0x4b,0x05,0x06,...u16(0),...u16(0),...u16(files.length),...u16(files.length),...u32(cenSize),...u32(offset),...u16(0)]);
+  const total=offset+cenSize+end.length;
+  const out=new Uint8Array(total);let p=0;
+  for(const l of locals){out.set(l,p);p+=l.length;}
+  for(const c of centrals){out.set(c,p);p+=c.length;}
+  out.set(end,p);
+  return new Blob([out],{type:"application/zip"});
+}
+function dlBlob(blob:Blob,name:string){
+  const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);
+}
+
+async function generateStoryScript(form:any):Promise<{text:string}[]>{
+  const sell=form.sell,val=form.value,count=form.count;
+  const system="Ты — сценарист продающих и контентных сторис для соцсетей (формат 9:16). Пишешь короткие, цепляющие, живые тексты для серии сторис. Возвращаешь строго валидный JSON без markdown и пояснений.";
+  const user=`Задача: сценарий карусели из ${count} сторис.\n\nЦель: ${form.goal}\nТема: ${form.theme}\nЦелевая аудитория: ${form.audience}\nГлавный посыл: ${form.message}\nУровень продажности (1 — чистый контент, 10 — жёсткая продажа): ${sell}\nУровень пользы (1 — эмоции, 10 — обучение): ${val}\n\nПострой драматургию карусели (например: боль → усиление проблемы → причина → решение → пример/кейс → призыв к действию), адаптируя под цель, продажность и пользу. Каждый текст — короткий и хлёсткий, максимум ~12 слов, можно разбить на 2 строки через \\n. Первая сторис цепляет, последняя — призыв к действию.\n\nВерни строго JSON:\n{"stories":[{"slide":1,"text":"..."}]}\nМассив должен содержать РОВНО ${count} элементов.`;
+  const data=paParseJSON(await paChat(system,user,1800,0.85));
+  const arr=(data.stories||data||[]).slice(0,count);
+  return arr.map((s:any)=>({text:(typeof s==="string"?s:s.text)||""}));
+}
+
+async function generateMoreStoryText(form:any,cur:string,idx:number,total:number):Promise<string>{
+  const system="Ты — сценарист сторис для соцсетей. Возвращаешь только текст слайда, без пояснений и кавычек.";
+  const user=`Карусель сторис. Цель: ${form.goal}. Тема: ${form.theme}. Аудитория: ${form.audience}. Посыл: ${form.message}.\n\nЭто слайд ${idx+1} из ${total}. Текущий текст слайда:\n"${cur}"\n\nРасширь и усиль текст ИМЕННО этого слайда: добавь ещё одну мысль, деталь или эмоцию, сохрани стиль и смысл, сделай убедительнее. 2–6 коротких строк, можно перенос строки. Верни только новый текст слайда.`;
+  const t=await paChat(system,user,600,0.9);
+  return t.replace(/```/g,"").replace(/^["']|["']$/g,"").trim();
+}
+
+function StoryProEditor({story,dark,fontsRev,onClose,onSave}:{story:SStory,dark:boolean,fontsRev:number,onClose:()=>void,onSave:(ov:OverlayEl[])=>void}){
+  const[overlays,setOverlays]=useState<OverlayEl[]>(()=>JSON.parse(JSON.stringify(story.overlays||[])));
+  const[sel,setSel]=useState<string|null>(null);
+  const stageRef=useRef<HTMLDivElement>(null);
+  const dragRef=useRef<any>(null);
+  const Wp=300,Hp=Math.round(Wp*16/9);
+  const bd=C.bd;
+  const base:SStory={...story,overlays:[]};
+  const cur=overlays.find(o=>o.id===sel)||null;
+  const uid=()=>"o"+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+
+  useEffect(()=>{
+    const move=(e:PointerEvent)=>{
+      const d=dragRef.current;if(!d)return;
+      const nx=Math.min(1,Math.max(0,d.ox+(e.clientX-d.sx)/d.w));
+      const ny=Math.min(1,Math.max(0,d.oy+(e.clientY-d.sy)/d.h));
+      setOverlays(o=>o.map(x=>x.id===d.id?{...x,x:nx,y:ny}:x));
+    };
+    const up=()=>{dragRef.current=null;};
+    window.addEventListener("pointermove",move);window.addEventListener("pointerup",up);
+    return ()=>{window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up);};
+  },[]);
+
+  const onDown=(e:React.PointerEvent,el:OverlayEl)=>{
+    e.stopPropagation();setSel(el.id);
+    const r=stageRef.current?.getBoundingClientRect();if(!r)return;
+    dragRef.current={id:el.id,sx:e.clientX,sy:e.clientY,ox:el.x,oy:el.y,w:r.width,h:r.height};
+  };
+
+  const addArrow=()=>{const el:OverlayEl={id:uid(),type:"arrow",x:0.5,y:0.5,rot:0,len:0.45,thickness:0.014,color:"#FFFFFF"};setOverlays(o=>[...o,el]);setSel(el.id);};
+  const addLine=()=>{const el:OverlayEl={id:uid(),type:"line",x:0.5,y:0.55,rot:0,len:0.4,thickness:0.022,color:"#D7D7D7"};setOverlays(o=>[...o,el]);setSel(el.id);};
+  const addImage=(file:File)=>{
+    const img=new Image();const o=URL.createObjectURL(file);
+    img.onload=()=>{const MAX=900;const s=Math.min(1,MAX/Math.max(img.width,img.height));const w=Math.round(img.width*s),h=Math.round(img.height*s);const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d")!.drawImage(img,0,0,w,h);URL.revokeObjectURL(o);const url=c.toDataURL("image/png");const el:OverlayEl={id:uid(),type:"image",x:0.5,y:0.5,rot:0,w:0.4,imgUrl:url};setOverlays(ov=>[...ov,el]);setSel(el.id);};
+    img.src=o;
+  };
+  const patch=(p:Partial<OverlayEl>)=>{if(sel)setOverlays(o=>o.map(x=>x.id===sel?{...x,...p}:x));};
+  const delSel=()=>{if(sel){setOverlays(o=>o.filter(x=>x.id!==sel));setSel(null);}};
+
+  const tool:React.CSSProperties={display:"flex",alignItems:"center",gap:7,padding:"9px 14px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"};
+  const lbl:React.CSSProperties={fontSize:11,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:6,display:"block"};
+
+  return(
+    <div onClick={onClose} style={{position:"fixed" as const,inset:0,background:"rgba(0,0,0,0.6)",backdropFilter:"blur(4px)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:16,overflowY:"auto" as const}}>
+      <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:720,background:dark?"#141414":"#fff",border:`1px solid ${bd}`,borderRadius:10,padding:22,boxShadow:"0 24px 60px rgba(0,0,0,0.5)"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+          <div style={{fontSize:17,fontWeight:800,color:C.t1}}>Pro-редактор истории</div>
+          <button onClick={onClose} style={{width:32,height:32,borderRadius:9,border:"none",background:"transparent",color:C.t2,cursor:"pointer"}}>✕</button>
+        </div>
+
+        <div style={{display:"flex",gap:22,flexDirection:"column",alignItems:"center"}}>
+          {/* stage */}
+          <div ref={stageRef} onPointerDown={()=>setSel(null)} style={{position:"relative" as const,width:Wp,height:Hp,borderRadius:10,overflow:"hidden",flexShrink:0,boxShadow:"0 10px 30px rgba(0,0,0,0.35)",touchAction:"none" as const}}>
+            <StoryCanvas story={base} width={Wp} height={Hp} rev={fontsRev}/>
+            {overlays.map(el=>{
+              const common:React.CSSProperties={position:"absolute" as const,left:el.x*Wp,top:el.y*Hp,transform:`translate(-50%,-50%) rotate(${el.rot||0}deg)`,cursor:"grab",boxShadow:sel===el.id?"0 0 0 2px #7C7C7C":"none"};
+              if(el.type==="image")return <img key={el.id} src={el.imgUrl} alt="" draggable={false} onPointerDown={e=>onDown(e,el)} style={{...common,width:(el.w||0.4)*Wp,borderRadius:4}}/>;
+              const w=(el.len||0.4)*Wp,th=Math.max(2,(el.thickness||0.014)*Wp);
+              return(
+                <div key={el.id} onPointerDown={e=>onDown(e,el)} style={{...common,width:w,height:th,background:el.color||"#fff",borderRadius:2}}>
+                  {el.type==="arrow"&&<div style={{position:"absolute" as const,right:-th*1.4,top:"50%",transform:"translateY(-50%)",width:0,height:0,borderTop:`${th*1.6}px solid transparent`,borderBottom:`${th*1.6}px solid transparent`,borderLeft:`${th*2.4}px solid ${el.color||"#fff"}`}}/>}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* tools + controls */}
+          <div style={{width:"100%",maxWidth:400,display:"flex",flexDirection:"column",gap:16}}>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap" as const,justifyContent:"center"}}>
+              <button onClick={addArrow} style={tool}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>Стрелка
+              </button>
+              <button onClick={addLine} style={tool}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="12" x2="20" y2="12"/></svg>Линия
+              </button>
+              <label style={{...tool}}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Фото
+                <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const f=e.target.files?.[0];if(f)addImage(f);e.currentTarget.value="";}}/>
+              </label>
+            </div>
+
+            {cur?(
+              <div style={{background:dark?"rgba(255,255,255,0.03)":"#F8FAFC",border:`1px solid ${bd}`,borderRadius:10,padding:16,display:"flex",flexDirection:"column",gap:14}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  <div style={{fontSize:13,fontWeight:700,color:C.t1}}>{cur.type==="image"?"Фото":cur.type==="arrow"?"Стрелка":"Линия"}</div>
+                  <button onClick={delSel} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:9,border:"none",background:"rgba(119,119,119,0.12)",color:"#777777",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>Удалить
+                  </button>
+                </div>
+                <div>
+                  <label style={lbl}>Поворот · {Math.round(cur.rot||0)}°</label>
+                  <input type="range" min={-180} max={180} value={cur.rot||0} onChange={e=>patch({rot:+e.target.value})} style={{width:"100%",accentColor:"#7C7C7C"}}/>
+                </div>
+                <div>
+                  <label style={lbl}>Размер</label>
+                  {cur.type==="image"
+                    ?<input type="range" min={10} max={90} value={Math.round((cur.w||0.4)*100)} onChange={e=>patch({w:+e.target.value/100})} style={{width:"100%",accentColor:"#7C7C7C"}}/>
+                    :<input type="range" min={10} max={90} value={Math.round((cur.len||0.4)*100)} onChange={e=>patch({len:+e.target.value/100})} style={{width:"100%",accentColor:"#7C7C7C"}}/>}
+                </div>
+                {cur.type!=="image"&&<>
+                  <div>
+                    <label style={lbl}>Толщина</label>
+                    <input type="range" min={5} max={40} value={Math.round((cur.thickness||0.014)*1000)} onChange={e=>patch({thickness:+e.target.value/1000})} style={{width:"100%",accentColor:"#7C7C7C"}}/>
+                  </div>
+                  <div>
+                    <label style={lbl}>Цвет</label>
+                    <div style={{display:"flex",gap:8}}>
+                      {["#FFFFFF","#000000","#777777","#D7D7D7","#7C7C7C"].map(col=><button key={col} onClick={()=>patch({color:col})} style={{width:28,height:28,borderRadius:8,border:cur.color===col?"2px solid #7C7C7C":`1px solid ${bd}`,background:col,cursor:"pointer"}}/>)}
+                    </div>
+                  </div>
+                </>}
+              </div>
+            ):(
+              <div style={{fontSize:13,color:C.t2,textAlign:"center" as const,lineHeight:1.6}}>Добавь стрелку, линию или фото поверх истории. Перетаскивай элементы пальцем/мышью, выбери элемент для настройки.</div>
+            )}
+
+            <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+              <button onClick={onClose} style={{padding:"11px 20px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Отмена</button>
+              <button onClick={()=>onSave(overlays)} style={{padding:"11px 24px",borderRadius:8,border:"none",background:"#757575",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>Сохранить</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StoriesAIPage({userId}:{userId:string}){
+  const{dark}=useTheme();
+  const isMobile=useIsMobile();
+  const[view,setView]=useState<"library"|"wizard"|"generating"|"editor">("library");
+  const[images,setImages]=useState<SImg[]>([]);
+  const[libLoading,setLibLoading]=useState(true);
+  const[uploading,setUploading]=useState(0);
+  const[fontsRev,setFontsRev]=useState(0);
+
+  const[form,setForm]=useState<any>({goal:"Продажа",goalCustom:"",theme:"",audience:"",message:"",sell:6,value:5,count:8});
+  const[stories,setStories]=useState<SStory[]>([]);
+  const[sel,setSel]=useState(0);
+  const[picker,setPicker]=useState(false);
+  const[exporting,setExporting]=useState(false);
+  const[moreBusyIdx,setMoreBusyIdx]=useState<number|null>(null);
+  const[delIdx,setDelIdx]=useState<number|null>(null);
+  const[proIdx,setProIdx]=useState<number|null>(null);
+
+  const bd=C.bd;
+  const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
+  const inputBg=dark?"#1C1C1C":"#F8FAFC";
+  const GRAD="#757575";
+
+  // load fonts for canvas
+  useEffect(()=>{
+    if(!document.getElementById("ks-story-fonts")){
+      const l=document.createElement("link");l.id="ks-story-fonts";l.rel="stylesheet";
+      l.href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;700;900&family=Inter:wght@300;400;700;900&family=Poppins:wght@700&display=swap";
+      document.head.appendChild(l);
+    }
+    if(!document.getElementById("ks-story-fonts-cv")){
+      const l=document.createElement("link");l.id="ks-story-fonts-cv";l.rel="stylesheet";
+      l.href="https://fonts.cdnfonts.com/css/coolvetica";
+      document.head.appendChild(l);
+    }
+    const fonts:any=(document as any).fonts;
+    if(fonts&&fonts.load){
+      const jobs=['300 100px Montserrat','700 100px Montserrat','900 100px Montserrat','300 100px Inter','400 100px Inter','700 100px Inter','900 100px Inter','700 100px Poppins','400 100px Coolvetica'].map(s=>fonts.load(s).catch(()=>{}));
+      Promise.allSettled(jobs).then(()=>setFontsRev(r=>r+1));
+    }
+  },[]);
+
+  // restore media library from storage
+  useEffect(()=>{
+    (async()=>{
+      try{
+        const{data}=await supabase.storage.from("stories").list(`${userId}/storiesai`,{limit:500,sortBy:{column:"created_at",order:"asc"}});
+        const imgs:SImg[]=(data||[]).filter(f=>f.name&&!f.name.startsWith(".")).map(f=>{
+          const path=`${userId}/storiesai/${f.name}`;
+          return{id:f.name,url:supabase.storage.from("stories").getPublicUrl(path).data.publicUrl};
+        });
+        setImages(imgs);
+      }catch(e){}
+      setLibLoading(false);
+    })();
+  },[userId]);
+
+  const compress=(file:File)=>new Promise<Blob>((resolve,reject)=>{
+    const img=new Image();const o=URL.createObjectURL(file);
+    img.onload=()=>{
+      const MAX=1400;const scale=Math.min(1,MAX/Math.max(img.width,img.height));
+      const w=Math.round(img.width*scale),h=Math.round(img.height*scale);
+      const c=document.createElement("canvas");c.width=w;c.height=h;
+      c.getContext("2d")!.drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(o);
+      c.toBlob(b=>b?resolve(b):reject(new Error("blob")),"image/jpeg",0.82);
+    };
+    img.onerror=reject;img.src=o;
+  });
+
+  const onUpload=async(files:FileList|null)=>{
+    if(!files)return;
+    const list=Array.from(files).filter(f=>/image\/(jpeg|png|webp|jpg)/.test(f.type)).slice(0,500-images.length);
+    if(!list.length)return;
+    setUploading(list.length);
+    let done=0;
+    for(const file of list){
+      try{
+        const blob=await compress(file);
+        const id=`${Date.now()}_${Math.random().toString(36).slice(2,7)}.jpg`;
+        const path=`${userId}/storiesai/${id}`;
+        const{error}=await supabase.storage.from("stories").upload(path,blob,{contentType:"image/jpeg"});
+        if(!error){
+          const url=supabase.storage.from("stories").getPublicUrl(path).data.publicUrl;
+          setImages(prev=>[...prev,{id,url}]);
+        }
+      }catch(e){}
+      done++;setUploading(list.length-done);
+    }
+    setUploading(0);
+  };
+
+  const removeImg=async(im:SImg)=>{
+    setImages(prev=>prev.filter(x=>x.id!==im.id));
+    try{await supabase.storage.from("stories").remove([`${userId}/storiesai/${im.id}`]);}catch(e){}
+  };
+
+  const pickImages=(n:number)=>{
+    const pool=[...images];
+    const out:string[]=[];
+    for(let i=0;i<n;i++){
+      if(pool.length===0)pool.push(...images);
+      const idx=Math.floor(Math.random()*pool.length);
+      out.push(pool.splice(idx,1)[0].url);
+    }
+    return out;
+  };
+
+  const runGenerate=async()=>{
+    if(images.length<5)return;
+    setView("generating");
+    try{
+      const goal=form.goal==="Свой вариант"?(form.goalCustom||"Контент"):form.goal;
+      const scripts=await generateStoryScript({...form,goal});
+      const imgs=pickImages(scripts.length);
+      const built:SStory[]=scripts.map((s,i)=>{
+        const gp:SStory["gradientPosition"]=Math.random()<0.5?"top":"bottom";
+        return{id:"st"+i+Date.now().toString(36),text:s.text,imgUrl:imgs[i],gradientPosition:gp,fontId:"mont-black",textY:gp==="top"?0:1,textAlign:"left",fontScale:1,grayscale:false};
+      });
+      setStories(built);setSel(0);setView("editor");
+    }catch(e){
+      alert("Не удалось сгенерировать сценарий. Проверь API-ключ и попробуй ещё раз.");
+      setView("wizard");
+    }
+  };
+
+  const patchStory=(idx:number,patch:Partial<SStory>)=>setStories(prev=>prev.map((s,i)=>i===idx?{...s,...patch}:s));
+
+  const moreText=async(idx:number)=>{
+    setMoreBusyIdx(idx);
+    try{
+      const goal=form.goal==="Свой вариант"?(form.goalCustom||"Контент"):form.goal;
+      const t=await generateMoreStoryText({...form,goal},stories[idx].text,idx,stories.length);
+      if(t)patchStory(idx,{text:t});
+    }catch(e){alert("Не удалось догенерировать текст. Попробуй ещё раз.");}
+    setMoreBusyIdx(null);
+  };
+
+  const downloadPNG=async(story:SStory,idx:number)=>{
+    try{const blob=await exportStoryBlob(story);dlBlob(blob,`story_${String(idx+1).padStart(2,"0")}.png`);}
+    catch(e){alert("Не удалось экспортировать PNG.");}
+  };
+  const downloadZIP=async()=>{
+    setExporting(true);
+    try{
+      const files:{name:string,data:Uint8Array}[]=[];
+      for(let i=0;i<stories.length;i++){
+        const blob=await exportStoryBlob(stories[i]);
+        const buf=new Uint8Array(await blob.arrayBuffer());
+        files.push({name:`story_${String(i+1).padStart(2,"0")}.png`,data:buf});
+      }
+      dlBlob(makeZip(files),"stories.zip");
+    }catch(e){alert("Не удалось собрать ZIP.");}
+    setExporting(false);
+  };
+
+  const segBtn=(active:boolean)=>({padding:"8px 14px",borderRadius:9,border:`1px solid ${active?"transparent":bd}`,background:active?"rgba(124,124,124,0.16)":"transparent",color:active?"#7C7C7C":C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"} as React.CSSProperties);
+
+  /* ---------- LIBRARY ---------- */
+  if(view==="library")return(
+    <div style={{maxWidth:960,margin:"0 auto",padding:"36px 24px"}}>
+      <div style={{marginBottom:8}}>
+        <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.025em",marginBottom:4}}>Vizzy Stories AI</div>
+        <div style={{fontSize:14,color:C.t2,lineHeight:1.6,maxWidth:560}}>Загрузи фото — AI напишет сценарий, а движок соберёт готовую серию сторис 9:16 для Instagram, Telegram, TikTok и др.</div>
+      </div>
+
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,margin:"24px 0 16px",flexWrap:"wrap" as const}}>
+        <div style={{fontSize:15,fontWeight:700,color:C.t1}}>Медиабаза проекта <span style={{color:C.t2,fontWeight:500}}>· {images.length}/500</span></div>
+        <div style={{display:"flex",gap:10,alignItems:"center"}}>
+          <label style={{display:"inline-flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+            Загрузить фото
+            <input type="file" accept="image/jpeg,image/png,image/webp" multiple style={{display:"none"}} onChange={e=>{onUpload(e.target.files);e.currentTarget.value="";}}/>
+          </label>
+          <button onClick={()=>setView("wizard")} disabled={images.length<5}
+            style={{display:"flex",alignItems:"center",gap:8,padding:"10px 20px",borderRadius:8,border:"none",background:images.length>=5?GRAD:inputBg,color:images.length>=5?"#fff":C.t2,fontSize:14,fontWeight:700,cursor:images.length>=5?"pointer":"default",fontFamily:"'Inter',sans-serif",boxShadow:images.length>=5?"0 4px 20px rgba(124,124,124,0.3)":"none"}}>
+            Создать карусель Stories
+          </button>
+        </div>
+      </div>
+
+      {uploading>0&&<div style={{fontSize:13,color:"#7C7C7C",marginBottom:12}}>Загрузка… осталось {uploading}</div>}
+      {images.length<5&&<div style={{fontSize:13,color:C.t2,marginBottom:16}}>Загрузите минимум 5 фото, чтобы начать (JPG, PNG, WEBP).</div>}
+
+      {libLoading?(
+        <div style={{padding:60,textAlign:"center" as const,color:C.t2,fontSize:14}}>Загрузка библиотеки…</div>
+      ):images.length===0?(
+        <label style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:14,background:cardBg,border:`1px dashed ${bd}`,borderRadius:10,padding:"64px 24px",cursor:"pointer",textAlign:"center" as const}}>
+          <div style={{width:60,height:60,borderRadius:10,background:dark?"rgba(124,124,124,0.12)":"#F5F3FF",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7C7C7C" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          </div>
+          <div>
+            <div style={{fontSize:17,fontWeight:700,color:C.t1,marginBottom:4}}>Загрузите фотографии</div>
+            <div style={{fontSize:13,color:C.t2}}>от 5 до 500 изображений · JPG, PNG, WEBP</div>
+          </div>
+          <input type="file" accept="image/jpeg,image/png,image/webp" multiple style={{display:"none"}} onChange={e=>{onUpload(e.target.files);e.currentTarget.value="";}}/>
+        </label>
+      ):(
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(110px,1fr))",gap:10}}>
+          {images.map(im=>(
+            <div key={im.id} style={{position:"relative" as const,aspectRatio:"9/16",borderRadius:8,overflow:"hidden",border:`1px solid ${bd}`}}>
+              <img src={im.url} alt="" style={{width:"100%",height:"100%",objectFit:"cover" as const,display:"block"}}/>
+              <button onClick={()=>removeImg(im)} style={{position:"absolute" as const,top:6,right:6,width:26,height:26,borderRadius:8,border:"none",background:"rgba(0,0,0,0.55)",color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  /* ---------- WIZARD ---------- */
+  if(view==="wizard"){
+    const canGen=form.theme.trim()&&form.audience.trim()&&form.message.trim();
+    const fld:React.CSSProperties={width:"100%",padding:"12px 14px",border:`1px solid ${bd}`,borderRadius:8,fontSize:14,background:inputBg,color:C.t1,outline:"none",lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box",resize:"vertical" as const};
+    const lbl:React.CSSProperties={fontSize:14,fontWeight:700,color:C.t1,marginBottom:8,display:"block"};
+    return(
+      <div style={{maxWidth:640,margin:"0 auto",padding:"36px 24px"}}>
+        <button onClick={()=>setView("library")} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",color:C.t2,fontSize:13,fontWeight:500,marginBottom:24,padding:0}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Медиабаза
+        </button>
+        <div style={{fontSize:24,fontWeight:800,color:C.t1,letterSpacing:"-0.02em",marginBottom:24}}>Настройка карусели</div>
+
+        <div style={{display:"flex",flexDirection:"column",gap:22}}>
+          <div>
+            <label style={lbl}>Какая цель сторис?</label>
+            <div style={{display:"flex",flexWrap:"wrap" as const,gap:8}}>
+              {STORY_GOALS.map(g=><button key={g} onClick={()=>setForm((f:any)=>({...f,goal:g}))} style={{padding:"8px 15px",borderRadius:10,border:`1px solid ${form.goal===g?"transparent":bd}`,background:form.goal===g?"rgba(124,124,124,0.16)":"transparent",color:form.goal===g?"#7C7C7C":C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>{g}</button>)}
+            </div>
+            {form.goal==="Свой вариант"&&<input value={form.goalCustom} onChange={e=>setForm((f:any)=>({...f,goalCustom:e.target.value}))} placeholder="Ваша цель" style={{...fld,marginTop:10}}/>}
+          </div>
+
+          <div><label style={lbl}>Тема сторис</label><input value={form.theme} onChange={e=>setForm((f:any)=>({...f,theme:e.target.value}))} placeholder="Напр.: как увеличить продажи" style={fld}/></div>
+          <div><label style={lbl}>Целевая аудитория</label><input value={form.audience} onChange={e=>setForm((f:any)=>({...f,audience:e.target.value}))} placeholder="Напр.: предприниматели с оборотом от 1 млн ₽" style={fld}/></div>
+          <div><label style={lbl}>Главный посыл</label><textarea value={form.message} onChange={e=>setForm((f:any)=>({...f,message:e.target.value}))} placeholder="Напр.: бизнесы теряют деньги из-за отсутствия системы продаж" style={{...fld,minHeight:70}}/></div>
+
+          <div>
+            <label style={lbl}>Уровень продажности <span style={{color:"#7C7C7C"}}>{form.sell}</span></label>
+            <input type="range" min={1} max={10} value={form.sell} onChange={e=>setForm((f:any)=>({...f,sell:+e.target.value}))} style={{width:"100%",accentColor:"#7C7C7C"}}/>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:C.t2,marginTop:4}}><span>чистый контент</span><span>жёсткая продажа</span></div>
+          </div>
+          <div>
+            <label style={lbl}>Уровень пользы <span style={{color:"#7C7C7C"}}>{form.value}</span></label>
+            <input type="range" min={1} max={10} value={form.value} onChange={e=>setForm((f:any)=>({...f,value:+e.target.value}))} style={{width:"100%",accentColor:"#7C7C7C"}}/>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:C.t2,marginTop:4}}><span>эмоции</span><span>обучение</span></div>
+          </div>
+          <div>
+            <label style={lbl}>Количество сторис <span style={{color:"#7C7C7C"}}>{form.count}</span></label>
+            <input type="range" min={5} max={20} value={form.count} onChange={e=>setForm((f:any)=>({...f,count:+e.target.value}))} style={{width:"100%",accentColor:"#7C7C7C"}}/>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:C.t2,marginTop:4}}><span>5</span><span>20</span></div>
+          </div>
+        </div>
+
+        <button onClick={runGenerate} disabled={!canGen}
+          style={{width:"100%",marginTop:26,padding:"15px",borderRadius:10,border:"none",background:canGen?GRAD:inputBg,color:canGen?"#fff":C.t2,fontSize:15,fontWeight:700,cursor:canGen?"pointer":"default",fontFamily:"'Inter',sans-serif",boxShadow:canGen?"0 4px 20px rgba(124,124,124,0.3)":"none"}}>
+          Сгенерировать сценарий
+        </button>
+      </div>
+    );
+  }
+
+  /* ---------- GENERATING ---------- */
+  if(view==="generating")return(
+    <div style={{maxWidth:640,margin:"0 auto",padding:"36px 24px",minHeight:"60vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:22}}>
+      <div style={{width:72,height:72,borderRadius:10,background:GRAD,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
+        <div style={{width:30,height:30,border:"3px solid rgba(255,255,255,0.35)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      </div>
+      <div style={{textAlign:"center" as const}}>
+        <div style={{fontSize:22,fontWeight:800,color:C.t1,letterSpacing:"-0.02em",marginBottom:8}}>Собираем карусель</div>
+        <div style={{fontSize:14,color:C.t2,lineHeight:1.6,maxWidth:400}}>AI пишет сценарий, движок подбирает фото и собирает сторис. Пара секунд…</div>
+      </div>
+    </div>
+  );
+
+  /* ---------- EDITOR ---------- */
+  const cur=stories[sel];
+  return(
+    <div style={{maxWidth:1080,margin:"0 auto",padding:"28px 24px"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,marginBottom:20,flexWrap:"wrap" as const}}>
+        <button onClick={()=>setView("wizard")} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",color:C.t2,fontSize:13,fontWeight:500,padding:0}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Настройки
+        </button>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          <button onClick={runGenerate} style={{display:"flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Новый сценарий
+          </button>
+          <button onClick={downloadZIP} disabled={exporting} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 18px",borderRadius:8,border:"none",background:GRAD,color:"#fff",fontSize:14,fontWeight:700,cursor:exporting?"default":"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
+            {exporting?"Собираю ZIP…":"Скачать ZIP"}
+          </button>
+        </div>
+      </div>
+
+      <div style={{display:"flex",gap:24,alignItems:"flex-start",flexDirection:isMobile?"column":"row"}}>
+        {/* thumbnails */}
+        <div style={{display:"flex",flexDirection:isMobile?"row":"column",gap:10,overflowX:isMobile?"auto":"visible",maxHeight:isMobile?"none":600,overflowY:isMobile?"visible":"auto",paddingRight:4,flexShrink:0}}>
+          {stories.map((s,i)=>(
+            <div key={s.id} onClick={()=>setSel(i)} style={{position:"relative" as const,cursor:"pointer",borderRadius:8,overflow:"hidden",border:`2px solid ${i===sel?"#7C7C7C":"transparent"}`,flexShrink:0}}>
+              <StoryCanvas story={s} width={72} height={128} radius={8} rev={fontsRev}/>
+              <div style={{position:"absolute" as const,top:4,left:4,width:18,height:18,borderRadius:6,background:"rgba(0,0,0,0.6)",color:"#fff",fontSize:10,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>{i+1}</div>
+              <button onClick={e=>{e.stopPropagation();if(stories.length<=1){alert("Нельзя удалить последнюю историю.");return;}setDelIdx(i);}} title="Удалить историю" style={{position:"absolute" as const,top:4,right:4,width:20,height:20,borderRadius:6,border:"none",background:"rgba(0,0,0,0.6)",color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* preview */}
+        <div style={{flexShrink:0,margin:isMobile?"0 auto":0}}>
+          {cur&&<div style={{borderRadius:12,overflow:"hidden",boxShadow:"0 12px 40px rgba(0,0,0,0.35)"}}>
+            <StoryCanvas story={cur} width={300} height={533} rev={fontsRev}/>
+          </div>}
+          {cur&&<button onClick={()=>downloadPNG(cur,sel)} style={{width:"100%",marginTop:12,padding:"11px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            Скачать PNG
+          </button>}
+          {cur&&<button onClick={()=>setProIdx(sel)} style={{width:"100%",marginTop:8,padding:"11px",borderRadius:8,border:"none",background:"#757575",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            Перейти в Pro-редактор
+          </button>}
+        </div>
+
+        {/* controls */}
+        {cur&&<div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",gap:20,width:isMobile?"100%":"auto"}}>
+          <div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:8}}>
+              <div style={{fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3}}>Текст сторис {sel+1}</div>
+              <button onClick={()=>moreText(sel)} disabled={moreBusyIdx===sel} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:"#7C7C7C",fontSize:12,fontWeight:600,cursor:moreBusyIdx===sel?"default":"pointer",fontFamily:"'Inter',sans-serif"}}>
+                <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+                {moreBusyIdx===sel
+                  ?<><div style={{width:12,height:12,border:"2px solid rgba(124,124,124,0.3)",borderTopColor:"#7C7C7C",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>Генерирую</>
+                  :<><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Больше текста</>}
+              </button>
+            </div>
+            <textarea value={cur.text} onChange={e=>patchStory(sel,{text:e.target.value})} style={{width:"100%",minHeight:90,padding:"12px 14px",border:`1px solid ${bd}`,borderRadius:8,fontSize:14,background:inputBg,color:C.t1,outline:"none",lineHeight:1.6,resize:"vertical" as const,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
+          </div>
+          <div>
+            <div style={{fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8}}>Фото</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap" as const}}>
+              <button onClick={()=>setPicker(true)} style={{display:"flex",alignItems:"center",gap:8,padding:"9px 16px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                Заменить фото
+              </button>
+              <button onClick={()=>patchStory(sel,{grayscale:!cur.grayscale})} style={segBtn(!!cur.grayscale)}>Ч/Б фото</button>
+            </div>
+          </div>
+          <div>
+            <div style={{fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8}}>Шрифт</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap" as const}}>
+              {STORY_FONTS.map(f=><button key={f.id} onClick={()=>patchStory(sel,{fontId:f.id})} style={{...segBtn(cur.fontId===f.id),fontFamily:`"${f.family}",sans-serif`,fontWeight:f.weight}}>{f.label}</button>)}
+            </div>
+          </div>
+          <div>
+            <div style={{fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8}}>Размер шрифта · {Math.round((cur.fontScale||1)*100)}%</div>
+            <div style={{display:"flex",gap:8,alignItems:"center"}}>
+              <button onClick={()=>patchStory(sel,{fontScale:Math.max(0.6,Math.round(((cur.fontScale||1)-0.1)*10)/10)})} style={segBtn(false)}>A −</button>
+              <button onClick={()=>patchStory(sel,{fontScale:1})} style={segBtn(false)}>Сброс</button>
+              <button onClick={()=>patchStory(sel,{fontScale:Math.min(1.8,Math.round(((cur.fontScale||1)+0.1)*10)/10)})} style={segBtn(false)}>A +</button>
+            </div>
+          </div>
+          <div>
+            <div style={{fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8}}>Положение текста</div>
+            <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap" as const}}>
+              {([[0,"Верх"],[0.5,"Центр"],[1,"Низ"]] as const).map(([val,l])=><button key={l} onClick={()=>patchStory(sel,{textY:val})} style={segBtn(Math.abs((cur.textY==null?0.5:cur.textY)-val)<0.02)}>{l}</button>)}
+              <div style={{display:"flex",gap:4,marginLeft:2}}>
+                <button title="Выше" onClick={()=>patchStory(sel,{textY:Math.max(0,Math.round(((cur.textY==null?0.5:cur.textY)-0.03)*100)/100)})} style={{width:40,height:36,borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:C.t1,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M18 15l-6-6-6 6"/></svg>
+                </button>
+                <button title="Ниже" onClick={()=>patchStory(sel,{textY:Math.min(1,Math.round(((cur.textY==null?0.5:cur.textY)+0.03)*100)/100)})} style={{width:40,height:36,borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:C.t1,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div style={{fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8}}>Выравнивание</div>
+            <div style={{display:"flex",gap:8}}>
+              {([["left","Слева"],["center","По центру"],["right","Справа"]] as const).map(([p,l])=><button key={p} onClick={()=>patchStory(sel,{textAlign:p})} style={segBtn((cur.textAlign||"left")===p)}>{l}</button>)}
+            </div>
+          </div>
+          <div>
+            <div style={{fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8}}>Градиент</div>
+            <div style={{display:"flex",gap:8}}>
+              {(["top","bottom"] as const).map(p=><button key={p} onClick={()=>patchStory(sel,{gradientPosition:p})} style={segBtn(cur.gradientPosition===p)}>{p==="top"?"Сверху":"Снизу"}</button>)}
+            </div>
+          </div>
+        </div>}
+      </div>
+
+      {/* confirm delete */}
+      {delIdx!=null&&<div onClick={()=>setDelIdx(null)} style={{position:"fixed" as const,inset:0,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(4px)",zIndex:450,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+        <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:400,background:dark?"#161616":"#fff",border:`1px solid ${bd}`,borderRadius:12,padding:24,textAlign:"center" as const}}>
+          <div style={{fontSize:17,fontWeight:800,color:C.t1,marginBottom:8}}>Удалить историю?</div>
+          <div style={{fontSize:14,color:C.t2,lineHeight:1.6,marginBottom:22}}>Вы действительно хотите удалить историю {delIdx+1}? Действие необратимо.</div>
+          <div style={{display:"flex",gap:10,justifyContent:"center"}}>
+            <button onClick={()=>setDelIdx(null)} style={{flex:1,padding:"12px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Отмена</button>
+            <button onClick={()=>{const d=delIdx;setStories(prev=>prev.filter((_,i)=>i!==d));setSel(s=>{let n=s;if(d<s)n=s-1;const max=stories.length-2;if(n>max)n=max;return Math.max(0,n);});setProIdx(null);setDelIdx(null);}} style={{flex:1,padding:"12px",borderRadius:8,border:"none",background:"#777777",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Да, удалить</button>
+          </div>
+        </div>
+      </div>}
+
+      {proIdx!=null&&stories[proIdx]&&<StoryProEditor story={stories[proIdx]} dark={dark} fontsRev={fontsRev} onClose={()=>setProIdx(null)} onSave={(ov)=>{patchStory(proIdx,{overlays:ov});setProIdx(null);}}/>}
+
+      {/* image picker */}
+      {picker&&<div onClick={()=>setPicker(false)} style={{position:"fixed" as const,inset:0,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(4px)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+        <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:680,maxHeight:"84vh",overflowY:"auto",background:dark?"#161616":"#fff",border:`1px solid ${bd}`,borderRadius:10,padding:22}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+            <div style={{fontSize:16,fontWeight:800,color:C.t1}}>Выберите фото</div>
+            <button onClick={()=>setPicker(false)} style={{width:32,height:32,borderRadius:9,border:"none",background:"transparent",color:C.t2,cursor:"pointer"}}>✕</button>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(90px,1fr))",gap:8}}>
+            {images.map(im=>(
+              <div key={im.id} onClick={()=>{patchStory(sel,{imgUrl:im.url});setPicker(false);}} style={{aspectRatio:"9/16",borderRadius:8,overflow:"hidden",cursor:"pointer",border:`2px solid ${cur&&cur.imgUrl===im.url?"#7C7C7C":"transparent"}`}}>
+                <img src={im.url} alt="" style={{width:"100%",height:"100%",objectFit:"cover" as const,display:"block"}}/>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>}
+    </div>
+  );
+}
+
+function ProductAIPage({userId}:{userId:string}){
+  const{dark}=useTheme();
+  const{data:products,loading,add,update,remove}=useTable("products",userId);
+
+  const[view,setView]=useState<"list"|"quiz"|"generating"|"variants"|"building">("list");
+  const[draft,setDraft]=useState<any>(null);
+  const[answers,setAnswers]=useState<Record<string,string>>({});
+  const[files,setFiles]=useState<Record<string,string>>({});
+  const[genError,setGenError]=useState<string|null>(null);
+  const[busy,setBusy]=useState(false);
+  const[lessonCount,setLessonCount]=useState(8);
+  const[courseBusy,setCourseBusy]=useState(false);
+  const[editIdx,setEditIdx]=useState<number|null>(null);
+  const[lessonBusy,setLessonBusy]=useState(false);
+  const[mmCount,setMmCount]=useState(6);
+  const[editSection,setEditSection]=useState<string|null>(null);
+  const[sectionBusy,setSectionBusy]=useState(false);
+  const[commDays,setCommDays]=useState(30);
+  const[monthsCount,setMonthsCount]=useState(3);
+
+  const bd=C.bd;
+  const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
+  const inputBg=dark?"#1C1C1C":"#F8FAFC";
+  const GRAD="#666666";
+
+  const allAnswered=PA_QUESTIONS.every(q=>(answers[q.id]||"").trim().length>0);
+
+  const deriveName=(a:Record<string,string>)=>{
+    const s=(a.activity||"").trim();
+    return s?(s.length>44?s.slice(0,44)+"…":s):"Новый продукт";
+  };
+
+  const statusMeta=(s:string)=>{
+    if(s==="variants")return{label:"Готовы варианты",color:"#A7A7A7"};
+    if(s==="building")return{label:"В сборке",color:"#808080"};
+    return{label:"Черновик",color:C.t2};
+  };
+
+  const openCreate=async()=>{
+    setBusy(true);
+    const row=await add({name:"Новый продукт",status:"quiz",answers:{},variants:[],selected:null});
+    setBusy(false);
+    if(!row){alert("Не удалось создать продукт. Проверь, что в базе создана таблица products (см. инструкцию).");return;}
+    setDraft(row);setAnswers({});setFiles({});setGenError(null);setView("quiz");
+  };
+
+  const openExisting=(row:any)=>{
+    setDraft(row);
+    setAnswers(row.answers||{});
+    setFiles({});
+    setGenError(null);
+    setEditIdx(null);
+    setEditSection(null);
+    setView(row.status==="variants"?"variants":row.status==="building"?"building":"quiz");
+  };
+
+  const attachFile=(qid:string,file:File)=>{
+    const ext=(file.name.split(".").pop()||"").toLowerCase();
+    const okText=["txt","md","markdown","csv","json","text","rtf","log"];
+    if(file.type.startsWith("text/")||okText.includes(ext)){
+      const r=new FileReader();
+      r.onload=()=>{
+        const text=String(r.result||"").trim();
+        setAnswers(p=>({...p,[qid]:text}));
+        setFiles(p=>({...p,[qid]:file.name}));
+      };
+      r.readAsText(file);
+    }else{
+      alert("Пока читаются только текстовые файлы (.txt, .md, .csv, .json). Для PDF/Word вставь текст вручную — поддержку PDF добавим позже.");
+    }
+  };
+
+  const generate=async()=>{
+    if(!allAnswered||!draft)return;
+    setGenError(null);
+    const name=deriveName(answers);
+    await update(draft.id,{answers,name,status:"quiz"});
+    setDraft((d:any)=>({...d,answers,name}));
+    setView("generating");
+    try{
+      const variants=await generateProductVariants(answers);
+      await update(draft.id,{variants,status:"variants"});
+      setDraft((d:any)=>({...d,variants,status:"variants"}));
+      setView("variants");
+    }catch(e){
+      setGenError("Не удалось сгенерировать варианты. Проверь API-ключ и попробуй ещё раз.");
+      setView("variants");
+    }
+  };
+
+  const selectVariant=async(v:any)=>{
+    if(!draft)return;
+    await update(draft.id,{selected:v,status:"building",name:v.title||draft.name});
+    setDraft((d:any)=>({...d,selected:v,status:"building",name:v.title||d.name}));
+    setView("building");
+  };
+
+  const buildCourse=async(count:number)=>{
+    if(!draft)return;
+    setCourseBusy(true);
+    try{
+      const lessons=await generateCourseLessons(answers,draft.selected,count);
+      const selected={...draft.selected,build:{type:"course",lessonCount:count,lessons}};
+      await update(draft.id,{selected});
+      setDraft((d:any)=>({...d,selected}));
+    }catch(e){alert("Не удалось сгенерировать программу курса. Проверь API-ключ и попробуй ещё раз.");}
+    setCourseBusy(false);
+  };
+
+  const saveLesson=async(idx:number,patch:any)=>{
+    if(!draft?.selected?.build)return;
+    const build=draft.selected.build;
+    const lessons=build.lessons.map((l:any,i:number)=>i===idx?{...l,...patch}:l);
+    const selected={...draft.selected,build:{...build,lessons}};
+    await update(draft.id,{selected});
+    setDraft((d:any)=>({...d,selected}));
+  };
+
+  const regenLesson=async(idx:number,hint:string)=>{
+    if(!draft?.selected?.build)return;
+    setLessonBusy(true);
+    try{
+      const fresh=await regenCourseLesson(answers,draft.selected,draft.selected.build.lessons,idx,hint);
+      await saveLesson(idx,fresh);
+    }catch(e){alert("Не удалось перегенерировать урок. Попробуй ещё раз.");}
+    setLessonBusy(false);
+  };
+
+  const buildMastermind=async(count:number)=>{
+    if(!draft)return;
+    setCourseBusy(true);
+    try{
+      const build=await generateMastermind(answers,draft.selected,count);
+      const selected={...draft.selected,build};
+      await update(draft.id,{selected});
+      setDraft((d:any)=>({...d,selected}));
+    }catch(e){alert("Не удалось сгенерировать мастермайнд. Проверь API-ключ и попробуй ещё раз.");}
+    setCourseBusy(false);
+  };
+
+  const saveSession=async(idx:number,patch:any)=>{
+    if(!draft?.selected?.build)return;
+    const build=draft.selected.build;
+    const sessions=build.sessions.map((s:any,i:number)=>i===idx?{...s,...patch}:s);
+    const selected={...draft.selected,build:{...build,sessions}};
+    await update(draft.id,{selected});
+    setDraft((d:any)=>({...d,selected}));
+  };
+
+  const regenSession=async(idx:number,hint:string)=>{
+    if(!draft?.selected?.build)return;
+    setLessonBusy(true);
+    try{
+      const fresh=await regenMMSession(answers,draft.selected,draft.selected.build.sessions,idx,hint);
+      await saveSession(idx,fresh);
+    }catch(e){alert("Не удалось перегенерировать встречу. Попробуй ещё раз.");}
+    setLessonBusy(false);
+  };
+
+  const saveSection=async(key:string,text:string)=>{
+    if(!draft?.selected?.build)return;
+    const selected={...draft.selected,build:{...draft.selected.build,[key]:text}};
+    await update(draft.id,{selected});
+    setDraft((d:any)=>({...d,selected}));
+  };
+
+  const regenSection=async(key:string,hint:string)=>{
+    if(!draft?.selected?.build)return;
+    setSectionBusy(true);
+    try{
+      const t=draft.selected.build.type;
+      const text=t==="community"?await regenCommSection(answers,draft.selected,key,hint)
+        :(t==="coaching"||t==="consulting")?await regenProgSection(answers,draft.selected,key,hint,t)
+        :await regenMMSection(answers,draft.selected,key,hint);
+      await saveSection(key,text);
+    }catch(e){alert("Не удалось перегенерировать раздел. Попробуй ещё раз.");}
+    setSectionBusy(false);
+  };
+
+  const buildCommunity=async(days:number)=>{
+    if(!draft)return;
+    setCourseBusy(true);
+    try{
+      const build=await generateCommunity(answers,draft.selected,days);
+      const selected={...draft.selected,build};
+      await update(draft.id,{selected});
+      setDraft((d:any)=>({...d,selected}));
+    }catch(e){alert("Не удалось сгенерировать сообщество. Проверь API-ключ и попробуй ещё раз.");}
+    setCourseBusy(false);
+  };
+
+  const savePlanDay=async(idx:number,patch:any)=>{
+    if(!draft?.selected?.build)return;
+    const build=draft.selected.build;
+    const plan=build.plan.map((p:any,i:number)=>i===idx?{...p,...patch}:p);
+    const selected={...draft.selected,build:{...build,plan}};
+    await update(draft.id,{selected});
+    setDraft((d:any)=>({...d,selected}));
+  };
+
+  const regenPlanDay=async(idx:number,hint:string)=>{
+    if(!draft?.selected?.build)return;
+    setLessonBusy(true);
+    try{
+      const fresh=await regenCommDay(answers,draft.selected,draft.selected.build.plan,idx,hint);
+      await savePlanDay(idx,fresh);
+    }catch(e){alert("Не удалось перегенерировать публикацию. Попробуй ещё раз.");}
+    setLessonBusy(false);
+  };
+
+  const buildProgram=async(kind:string,months:number)=>{
+    if(!draft)return;
+    setCourseBusy(true);
+    try{
+      const build=await generateProgram(answers,draft.selected,months,kind);
+      const selected={...draft.selected,build};
+      await update(draft.id,{selected});
+      setDraft((d:any)=>({...d,selected}));
+    }catch(e){alert("Не удалось сгенерировать программу. Проверь API-ключ и попробуй ещё раз.");}
+    setCourseBusy(false);
+  };
+
+  const saveMonth=async(idx:number,patch:any)=>{
+    if(!draft?.selected?.build)return;
+    const build=draft.selected.build;
+    const program=build.program.map((m:any,i:number)=>i===idx?{...m,...patch}:m);
+    const selected={...draft.selected,build:{...build,program}};
+    await update(draft.id,{selected});
+    setDraft((d:any)=>({...d,selected}));
+  };
+
+  const regenMonth=async(idx:number,hint:string)=>{
+    if(!draft?.selected?.build)return;
+    setLessonBusy(true);
+    try{
+      const fresh=await regenProgMonth(answers,draft.selected,draft.selected.build.program,idx,hint,draft.selected.build.type);
+      await saveMonth(idx,fresh);
+    }catch(e){alert("Не удалось перегенерировать месяц. Попробуй ещё раз.");}
+    setLessonBusy(false);
+  };
+
+  const deleteProduct=async(id:string,e:React.MouseEvent)=>{
+    e.stopPropagation();
+    if(confirm("Удалить этот продукт? Действие необратимо."))await remove(id);
+  };
+
+  /* ---------- QUIZ ---------- */
+  if(view==="quiz")return(
+    <div style={{maxWidth:720,margin:"0 auto",padding:"36px 24px"}}>
+      <button onClick={()=>setView("list")} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",color:C.t2,fontSize:13,fontWeight:500,marginBottom:24,padding:0}}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Мои продукты
+      </button>
+      <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.025em",marginBottom:6}}>Расскажите о себе</div>
+      <div style={{fontSize:14,color:C.t2,lineHeight:1.6,marginBottom:28,maxWidth:560}}>Ответьте на 5 вопросов — на их основе AI предложит 10 вариантов продукта. Отвечайте сами: текстом или прикрепите файл. Чем конкретнее ответы, тем точнее варианты.</div>
+
+      <div style={{display:"flex",flexDirection:"column",gap:16}}>
+        {PA_QUESTIONS.map((q,idx)=>{
+          const filled=(answers[q.id]||"").trim().length>0;
+          return(
+            <div key={q.id} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:20}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
+                <div style={{width:22,height:22,borderRadius:7,background:filled?GRAD:inputBg,border:filled?"none":`1px solid ${bd}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  {filled
+                    ?<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                    :<span style={{fontSize:11,fontWeight:700,color:C.t2}}>{idx+1}</span>}
+                </div>
+                <div style={{fontSize:15,fontWeight:700,color:C.t1}}>{q.q}</div>
+              </div>
+              <div style={{fontSize:12,color:C.t2,marginBottom:12,marginLeft:32,lineHeight:1.5}}>{q.hint}</div>
+              <textarea
+                value={answers[q.id]||""}
+                onChange={e=>{setAnswers(p=>({...p,[q.id]:e.target.value}));if(files[q.id])setFiles(p=>{const n={...p};delete n[q.id];return n;});}}
+                placeholder="Напишите ваш ответ..."
+                style={{width:"100%",minHeight:88,padding:"12px 14px",border:`1px solid ${bd}`,borderRadius:8,fontSize:14,background:inputBg,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginTop:10}}>
+                <label style={{display:"inline-flex",alignItems:"center",gap:6,padding:"7px 12px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:12,fontWeight:500,cursor:"pointer"}}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+                  Прикрепить файл
+                  <input type="file" style={{display:"none"}} onChange={e=>{const f=e.target.files?.[0];if(f)attachFile(q.id,f);e.currentTarget.value="";}}/>
+                </label>
+                {files[q.id]&&<span style={{fontSize:12,color:"#808080",display:"inline-flex",alignItems:"center",gap:5}}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  {files[q.id]}
+                </span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <button onClick={generate} disabled={!allAnswered||busy}
+        style={{width:"100%",marginTop:24,padding:"15px",borderRadius:10,border:"none",background:allAnswered?GRAD:inputBg,color:allAnswered?"#fff":C.t2,fontSize:15,fontWeight:700,cursor:allAnswered?"pointer":"default",fontFamily:"'Inter',sans-serif",boxShadow:allAnswered?"0 4px 20px rgba(128,128,128,0.3)":"none",transition:"all 0.2s"}}>
+        {allAnswered?"Сгенерировать продукт":`Заполните все вопросы (${PA_QUESTIONS.filter(q=>(answers[q.id]||"").trim()).length}/5)`}
+      </button>
+    </div>
+  );
+
+  /* ---------- GENERATING ---------- */
+  if(view==="generating")return(
+    <div style={{width:"100%",padding:"36px 44px",minHeight:"calc(100vh - 140px)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:24}}>
+      <img src="/icon-product.png" width={104} height={104} style={{objectFit:"cover" as const,borderRadius:26,animation:"vpBounce 1.05s ease-in-out infinite"}} alt="Vizzy Product AI"/>
+      <style>{`@keyframes vpBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-22px)}}`}</style>
+      <div style={{textAlign:"center" as const}}>
+        <div style={{fontSize:22,fontWeight:800,color:C.t1,letterSpacing:"-0.02em",marginBottom:8}}>Генерируем варианты продукта</div>
+        <div style={{fontSize:14,color:C.t2,lineHeight:1.6,maxWidth:400}}>AI анализирует ваши ответы и подбирает 10 форматов продукта под вашу экспертизу. Это займёт 10–20 секунд.</div>
+      </div>
+    </div>
+  );
+
+  /* ---------- VARIANTS ---------- */
+  if(view==="variants"){
+    const variants:any[]=draft?.variants||[];
+    return(
+      <div style={{maxWidth:960,margin:"0 auto",padding:"36px 24px"}}>
+        <button onClick={()=>setView("quiz")} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",color:C.t2,fontSize:13,fontWeight:500,marginBottom:24,padding:0}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Назад к ответам
+        </button>
+        <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.025em",marginBottom:6}}>Выберите продукт</div>
+        <div style={{fontSize:14,color:C.t2,lineHeight:1.6,marginBottom:28}}>AI предложил 10 вариантов на основе ваших ответов. Выберите тот, который хотите создать.</div>
+
+        {genError&&<div style={{background:dark?"rgba(119,119,119,0.1)":"#FEF2F2",border:"1px solid rgba(119,119,119,0.3)",borderRadius:10,padding:"16px 18px",marginBottom:20,display:"flex",alignItems:"center",justifyContent:"space-between",gap:16}}>
+          <span style={{fontSize:14,color:"#777777"}}>{genError}</span>
+          <button onClick={generate} style={{padding:"8px 16px",borderRadius:9,border:"none",background:"#777777",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",flexShrink:0}}>Повторить</button>
+        </div>}
+
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:16}}>
+          {variants.map((v,i)=>(
+            <div key={i} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:12,padding:22,display:"flex",flexDirection:"column",gap:12,transition:"all 0.2s"}}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(128,128,128,0.4)";(e.currentTarget as HTMLElement).style.transform="translateY(-2px)";}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=bd;(e.currentTarget as HTMLElement).style.transform="translateY(0)";}}>
+              <span style={{alignSelf:"flex-start",fontSize:11,fontWeight:700,color:"#808080",background:"rgba(128,128,128,0.12)",padding:"4px 10px",borderRadius:10}}>{v.format}</span>
+              <div style={{fontSize:17,fontWeight:800,color:C.t1,letterSpacing:"-0.01em",lineHeight:1.3}}>{v.title}</div>
+              <div style={{fontSize:13,color:C.t1,lineHeight:1.6,opacity:0.85}}>{v.description}</div>
+              {v.why&&<div style={{fontSize:12,color:C.t2,lineHeight:1.55,borderLeft:`2px solid ${bd}`,paddingLeft:10}}>{v.why}</div>}
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:"auto",paddingTop:8}}>
+                {v.price&&<span style={{fontSize:13,fontWeight:700,color:C.t1}}>{v.price}</span>}
+                <button onClick={()=>selectVariant(v)}
+                  style={{marginLeft:"auto",padding:"8px 18px",borderRadius:8,border:"none",background:GRAD,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                  Выбрать
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  /* ---------- BUILDING ---------- */
+  if(view==="building"){
+    const v=draft?.selected;
+    const isCourse=/курс/i.test(v?.format||"");
+    const isMM=/мастермайнд/i.test(v?.format||"");
+    const course=(v&&v.build&&v.build.type==="course")?v.build:null;
+    const mm=(v&&v.build&&v.build.type==="mastermind")?v.build:null;
+    const isCommunity=/сообществ/i.test(v?.format||"");
+    const comm=(v&&v.build&&v.build.type==="community")?v.build:null;
+    const isCoaching=/коучинг/i.test(v?.format||"");
+    const isConsulting=/консалтинг/i.test(v?.format||"");
+    const isProgram=isCoaching||isConsulting;
+    const kind=isCoaching?"coaching":"consulting";
+    const prog=(v&&v.build&&(v.build.type==="coaching"||v.build.type==="consulting"))?v.build:null;
+
+    const Back=(
+      <button onClick={()=>{setEditIdx(null);setEditSection(null);setView("list");}} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",color:C.t2,fontSize:13,fontWeight:500,marginBottom:24,padding:0}}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Мои продукты
+      </button>
+    );
+    const ProductHead=v?(
+      <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:12,padding:20,marginBottom:20}}>
+        <span style={{fontSize:11,fontWeight:700,color:"#808080",background:"rgba(128,128,128,0.12)",padding:"4px 10px",borderRadius:10}}>{v.format}</span>
+        <div style={{fontSize:22,fontWeight:800,color:C.t1,letterSpacing:"-0.02em",margin:"12px 0 8px"}}>{v.title}</div>
+        <div style={{fontSize:14,color:C.t1,lineHeight:1.6,opacity:0.85}}>{v.description}</div>
+      </div>
+    ):null;
+
+    // Типы без конструктора — заглушка
+    if(!isCourse&&!isMM&&!isCommunity&&!isProgram)return(
+      <div style={{maxWidth:720,margin:"0 auto",padding:"36px 24px"}}>
+        {Back}{ProductHead}
+        <div style={{background:cardBg,border:`1px dashed ${bd}`,borderRadius:12,padding:"48px 24px",textAlign:"center" as const}}>
+          <div style={{width:56,height:56,borderRadius:10,background:"#666666",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",opacity:0.9}}>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7.4L12 17l-6.3 4.4L8 14 2 9.4h7.6z"/></svg>
+          </div>
+          <div style={{fontSize:17,fontWeight:700,color:C.t1,marginBottom:6}}>Сборка для этого типа — скоро</div>
+          <div style={{fontSize:14,color:C.t2,lineHeight:1.6,maxWidth:400,margin:"0 auto"}}>Сейчас готовы конструкторы онлайн-курса, мастермайнда и закрытого сообщества. Коучинг и консалтинг добавим следующими. Выбор уже сохранён на сервере.</div>
+        </div>
+      </div>
+    );
+
+    // ===== ОНЛАЙН-КУРС =====
+    if(isCourse&&!course)return(
+      <div style={{maxWidth:640,margin:"0 auto",padding:"36px 24px"}}>
+        {Back}{ProductHead}
+        <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:12,padding:28}}>
+          <div style={{fontSize:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em",marginBottom:6}}>Сколько уроков в курсе?</div>
+          <div style={{fontSize:13,color:C.t2,lineHeight:1.6,marginBottom:24}}>Выберите количество уроков (минимум 5). AI составит программу по вашим ответам и теме продукта — вы сможете отредактировать каждый урок.</div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:24,marginBottom:28}}>
+            <button onClick={()=>setLessonCount(c=>Math.max(5,c-1))} style={{width:48,height:48,borderRadius:10,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:24,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
+            <div style={{minWidth:80,textAlign:"center" as const}}>
+              <div style={{fontSize:44,fontWeight:800,color:C.t1,lineHeight:1}}>{lessonCount}</div>
+              <div style={{fontSize:12,color:C.t2,marginTop:4}}>уроков</div>
+            </div>
+            <button onClick={()=>setLessonCount(c=>Math.min(30,c+1))} style={{width:48,height:48,borderRadius:10,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:24,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+          </div>
+          <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:28,flexWrap:"wrap" as const}}>
+            {[5,8,10,12].map(n=>(
+              <button key={n} onClick={()=>setLessonCount(n)} style={{padding:"7px 16px",borderRadius:10,border:`1px solid ${lessonCount===n?"transparent":bd}`,background:lessonCount===n?"rgba(128,128,128,0.14)":"transparent",color:lessonCount===n?"#808080":C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>{n}</button>
+            ))}
+          </div>
+          <button onClick={()=>buildCourse(lessonCount)} disabled={courseBusy} style={{width:"100%",padding:"15px",borderRadius:10,border:"none",background:"#666666",color:"#fff",fontSize:15,fontWeight:700,cursor:courseBusy?"default":"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+            {courseBusy?<><div style={{width:18,height:18,border:"2.5px solid rgba(255,255,255,0.35)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Составляю программу…</>:"Сгенерировать программу курса"}
+          </button>
+        </div>
+      </div>
+    );
+
+    if(isCourse&&course){
+      const lessons:any[]=course.lessons||[];
+      const editing=editIdx!=null?lessons[editIdx]:null;
+      return(
+        <div style={{maxWidth:840,margin:"0 auto",padding:"36px 24px"}}>
+          {Back}
+          <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16,marginBottom:8,flexWrap:"wrap" as const}}>
+            <div>
+              <span style={{fontSize:11,fontWeight:700,color:"#808080",background:"rgba(128,128,128,0.12)",padding:"4px 10px",borderRadius:10}}>{v.format}</span>
+              <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.025em",margin:"12px 0 4px"}}>{v.title}</div>
+              <div style={{fontSize:14,color:C.t2}}>Программа курса · {lessons.length} уроков</div>
+            </div>
+            <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
+              <button onClick={()=>exportProductPDF(v)} style={{display:"flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                Скачать PDF
+              </button>
+              <button onClick={()=>{if(confirm("Пересобрать программу заново? Текущие уроки будут заменены."))setDraft((d:any)=>({...d,selected:{...d.selected,build:null}}));}} style={{display:"flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif",}}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              Пересобрать
+            </button>
+            </div>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:12,marginTop:24}}>
+            {lessons.map((l,i)=>(
+              <div key={l.id||i} onClick={()=>setEditIdx(i)} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:18,cursor:"pointer",display:"flex",gap:16,alignItems:"flex-start",transition:"all 0.15s"}}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(128,128,128,0.35)";}}
+                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=bd;}}>
+                <div style={{width:36,height:36,borderRadius:8,background:dark?"rgba(128,128,128,0.12)":"#F0FDF4",color:"#808080",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:800,flexShrink:0}}>{i+1}</div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:16,fontWeight:700,color:C.t1,lineHeight:1.35,marginBottom:5}}>{l.title}</div>
+                  <div style={{fontSize:13,color:C.t2,lineHeight:1.55}}>{l.description}</div>
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.8" style={{flexShrink:0,marginTop:8}}><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </div>
+            ))}
+          </div>
+          {editing&&<CourseLessonEditor lesson={editing} index={editIdx as number} total={lessons.length} unitLabel="Урок" dark={dark} busy={lessonBusy}
+            onClose={()=>setEditIdx(null)} onSave={(p)=>{saveLesson(editIdx as number,p);setEditIdx(null);}} onRegen={(hint)=>regenLesson(editIdx as number,hint)}/>}
+        </div>
+      );
+    }
+
+    // ===== МАСТЕРМАЙНД =====
+    if(isMM&&!mm)return(
+      <div style={{maxWidth:640,margin:"0 auto",padding:"36px 24px"}}>
+        {Back}{ProductHead}
+        <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:12,padding:28}}>
+          <div style={{fontSize:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em",marginBottom:6}}>Сколько встреч в мастермайнде?</div>
+          <div style={{fontSize:13,color:C.t2,lineHeight:1.6,marginBottom:24}}>Мастермайнд — офлайн-формат. Выберите количество живых встреч (минимум 3). AI продумает концепцию, локацию, организацию и программу встреч — всё можно отредактировать.</div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:24,marginBottom:28}}>
+            <button onClick={()=>setMmCount(c=>Math.max(3,c-1))} style={{width:48,height:48,borderRadius:10,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:24,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
+            <div style={{minWidth:80,textAlign:"center" as const}}>
+              <div style={{fontSize:44,fontWeight:800,color:C.t1,lineHeight:1}}>{mmCount}</div>
+              <div style={{fontSize:12,color:C.t2,marginTop:4}}>встреч</div>
+            </div>
+            <button onClick={()=>setMmCount(c=>Math.min(24,c+1))} style={{width:48,height:48,borderRadius:10,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:24,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+          </div>
+          <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:28,flexWrap:"wrap" as const}}>
+            {[3,4,6,8].map(n=>(
+              <button key={n} onClick={()=>setMmCount(n)} style={{padding:"7px 16px",borderRadius:10,border:`1px solid ${mmCount===n?"transparent":bd}`,background:mmCount===n?"rgba(128,128,128,0.14)":"transparent",color:mmCount===n?"#808080":C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>{n}</button>
+            ))}
+          </div>
+          <button onClick={()=>buildMastermind(mmCount)} disabled={courseBusy} style={{width:"100%",padding:"15px",borderRadius:10,border:"none",background:"#666666",color:"#fff",fontSize:15,fontWeight:700,cursor:courseBusy?"default":"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+            {courseBusy?<><div style={{width:18,height:18,border:"2.5px solid rgba(255,255,255,0.35)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Проектирую мастермайнд…</>:"Сгенерировать мастермайнд"}
+          </button>
+        </div>
+      </div>
+    );
+
+    if(isMM&&mm){
+      const sessions:any[]=mm.sessions||[];
+      const editing=editIdx!=null?sessions[editIdx]:null;
+      const SECTIONS=[
+        {key:"concept",label:"Концепция",ic:"M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"},
+        {key:"location",label:"Локация и место встречи",ic:"M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z"},
+        {key:"organization",label:"Организация",ic:"M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"},
+      ];
+      const secTitle=editSection?(SECTIONS.find(s=>s.key===editSection)?.label||""):"";
+      return(
+        <div style={{maxWidth:840,margin:"0 auto",padding:"36px 24px"}}>
+          {Back}
+          <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16,marginBottom:8,flexWrap:"wrap" as const}}>
+            <div>
+              <span style={{fontSize:11,fontWeight:700,color:"#808080",background:"rgba(128,128,128,0.12)",padding:"4px 10px",borderRadius:10}}>{v.format}</span>
+              <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.025em",margin:"12px 0 4px"}}>{v.title}</div>
+              <div style={{fontSize:14,color:C.t2}}>Офлайн-мастермайнд · {sessions.length} встреч</div>
+            </div>
+            <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
+              <button onClick={()=>exportProductPDF(v)} style={{display:"flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                Скачать PDF
+              </button>
+              <button onClick={()=>{if(confirm("Пересобрать мастермайнд заново? Текущий план будет заменён."))setDraft((d:any)=>({...d,selected:{...d.selected,build:null}}));}} style={{display:"flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif",}}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              Пересобрать
+            </button>
+            </div>
+          </div>
+
+          {/* Информационные разделы */}
+          <div style={{display:"flex",flexDirection:"column",gap:14,marginTop:24}}>
+            {SECTIONS.map(sec=>(
+              <div key={sec.key} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:20}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <div style={{width:32,height:32,borderRadius:9,background:dark?"rgba(128,128,128,0.12)":"#F0FDF4",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#808080" strokeWidth="1.7"><path d={sec.ic}/></svg>
+                    </div>
+                    <div style={{fontSize:15,fontWeight:700,color:C.t1}}>{sec.label}</div>
+                  </div>
+                  <button onClick={()=>setEditSection(sec.key)} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Изменить
+                  </button>
+                </div>
+                <div style={{fontSize:14,color:C.t1,lineHeight:1.7,opacity:0.9,whiteSpace:"pre-wrap" as const}}>{mm[sec.key]||"—"}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Программа встреч */}
+          <div style={{fontSize:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em",margin:"28px 0 4px"}}>Программа встреч</div>
+          <div style={{fontSize:13,color:C.t2,marginBottom:16}}>Нажмите на встречу, чтобы изменить повестку или перегенерировать её.</div>
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            {sessions.map((s,i)=>(
+              <div key={s.id||i} onClick={()=>setEditIdx(i)} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:18,cursor:"pointer",display:"flex",gap:16,alignItems:"flex-start",transition:"all 0.15s"}}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(128,128,128,0.35)";}}
+                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=bd;}}>
+                <div style={{width:36,height:36,borderRadius:8,background:dark?"rgba(128,128,128,0.12)":"#F0FDF4",color:"#808080",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:800,flexShrink:0}}>{i+1}</div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:16,fontWeight:700,color:C.t1,lineHeight:1.35,marginBottom:5}}>{s.title}</div>
+                  <div style={{fontSize:13,color:C.t2,lineHeight:1.55}}>{s.description}</div>
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.8" style={{flexShrink:0,marginTop:8}}><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </div>
+            ))}
+          </div>
+
+          {editing&&<CourseLessonEditor lesson={editing} index={editIdx as number} total={sessions.length} unitLabel="Встреча" dark={dark} busy={lessonBusy}
+            onClose={()=>setEditIdx(null)} onSave={(p)=>{saveSession(editIdx as number,p);setEditIdx(null);}} onRegen={(hint)=>regenSession(editIdx as number,hint)}/>}
+          {editSection&&<SectionEditor title={secTitle} text={mm[editSection]||""} dark={dark} busy={sectionBusy}
+            onClose={()=>setEditSection(null)} onSave={(t)=>{saveSection(editSection,t);setEditSection(null);}} onRegen={(hint)=>regenSection(editSection,hint)}/>}
+        </div>
+      );
+    }
+
+    // ===== ЗАКРЫТОЕ СООБЩЕСТВО =====
+    if(isCommunity&&!comm)return(
+      <div style={{maxWidth:640,margin:"0 auto",padding:"36px 24px"}}>
+        {Back}{ProductHead}
+        <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:12,padding:28}}>
+          <div style={{fontSize:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em",marginBottom:6}}>На сколько дней контент-план?</div>
+          <div style={{fontSize:13,color:C.t2,lineHeight:1.6,marginBottom:24}}>AI оформит закрытое сообщество полностью: identity, структуру, стартовый набор контента и систему удержания — плюс контент-план на выбранное число дней. Всё можно отредактировать.</div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:24,marginBottom:28}}>
+            <button onClick={()=>setCommDays(c=>Math.max(7,c-1))} style={{width:48,height:48,borderRadius:10,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:24,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
+            <div style={{minWidth:80,textAlign:"center" as const}}>
+              <div style={{fontSize:44,fontWeight:800,color:C.t1,lineHeight:1}}>{commDays}</div>
+              <div style={{fontSize:12,color:C.t2,marginTop:4}}>дней</div>
+            </div>
+            <button onClick={()=>setCommDays(c=>Math.min(30,c+1))} style={{width:48,height:48,borderRadius:10,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:24,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+          </div>
+          <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:28,flexWrap:"wrap" as const}}>
+            {[7,14,30].map(n=>(
+              <button key={n} onClick={()=>setCommDays(n)} style={{padding:"7px 16px",borderRadius:10,border:`1px solid ${commDays===n?"transparent":bd}`,background:commDays===n?"rgba(128,128,128,0.14)":"transparent",color:commDays===n?"#808080":C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>{n}</button>
+            ))}
+          </div>
+          <button onClick={()=>buildCommunity(commDays)} disabled={courseBusy} style={{width:"100%",padding:"15px",borderRadius:10,border:"none",background:"#666666",color:"#fff",fontSize:15,fontWeight:700,cursor:courseBusy?"default":"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+            {courseBusy?<><div style={{width:18,height:18,border:"2.5px solid rgba(255,255,255,0.35)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Оформляю сообщество…</>:"Сгенерировать сообщество"}
+          </button>
+        </div>
+      </div>
+    );
+
+    if(isCommunity&&comm){
+      const plan:any[]=comm.plan||[];
+      const editing=editIdx!=null?plan[editIdx]:null;
+      const CSECTIONS=[
+        {key:"identity",label:"Identity и позиционирование",ic:"M12 2l7 4v6c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-4z"},
+        {key:"structure",label:"Структура и организация",ic:"M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"},
+        {key:"starter",label:"Стартовый набор контента",ic:"M12 2l2.4 7.4H22l-6 4.6 2.3 7.4L12 17l-6.3 4.4L8 14 2 9.4h7.6z"},
+        {key:"retention",label:"Как напоминать о себе",ic:"M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"},
+      ];
+      const csecTitle=editSection?(CSECTIONS.find(s=>s.key===editSection)?.label||""):"";
+      return(
+        <div style={{maxWidth:840,margin:"0 auto",padding:"36px 24px"}}>
+          {Back}
+          <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16,marginBottom:8,flexWrap:"wrap" as const}}>
+            <div>
+              <span style={{fontSize:11,fontWeight:700,color:"#808080",background:"rgba(128,128,128,0.12)",padding:"4px 10px",borderRadius:10}}>{v.format}</span>
+              <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.025em",margin:"12px 0 4px"}}>{v.title}</div>
+              <div style={{fontSize:14,color:C.t2}}>Закрытое сообщество · контент-план на {plan.length} дней</div>
+            </div>
+            <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
+              <button onClick={()=>exportProductPDF(v)} style={{display:"flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                Скачать PDF
+              </button>
+              <button onClick={()=>{if(confirm("Пересобрать сообщество заново? Текущее оформление и план будут заменены."))setDraft((d:any)=>({...d,selected:{...d.selected,build:null}}));}} style={{display:"flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif",}}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              Пересобрать
+            </button>
+            </div>
+          </div>
+
+          {/* Оформление сообщества */}
+          <div style={{display:"flex",flexDirection:"column",gap:14,marginTop:24}}>
+            {CSECTIONS.map(sec=>(
+              <div key={sec.key} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:20}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <div style={{width:32,height:32,borderRadius:9,background:dark?"rgba(128,128,128,0.12)":"#F0FDF4",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#808080" strokeWidth="1.7"><path d={sec.ic}/></svg>
+                    </div>
+                    <div style={{fontSize:15,fontWeight:700,color:C.t1}}>{sec.label}</div>
+                  </div>
+                  <button onClick={()=>setEditSection(sec.key)} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Изменить
+                  </button>
+                </div>
+                <div style={{fontSize:14,color:C.t1,lineHeight:1.7,opacity:0.9,whiteSpace:"pre-wrap" as const}}>{comm[sec.key]||"—"}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Контент-план */}
+          <div style={{fontSize:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em",margin:"28px 0 4px"}}>Контент-план на {plan.length} дней</div>
+          <div style={{fontSize:13,color:C.t2,marginBottom:16}}>Нажмите на день, чтобы изменить публикацию или перегенерировать её.</div>
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {plan.map((p,i)=>(
+              <div key={p.id||i} onClick={()=>setEditIdx(i)} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:16,cursor:"pointer",display:"flex",gap:14,alignItems:"flex-start",transition:"all 0.15s"}}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(128,128,128,0.35)";}}
+                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=bd;}}>
+                <div style={{width:44,height:44,borderRadius:8,background:dark?"rgba(128,128,128,0.12)":"#F0FDF4",color:"#808080",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0,lineHeight:1}}>
+                  <span style={{fontSize:9,fontWeight:600,opacity:0.7}}>ДЕНЬ</span>
+                  <span style={{fontSize:16,fontWeight:800}}>{p.day}</span>
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,flexWrap:"wrap" as const}}>
+                    <span style={{fontSize:10,fontWeight:700,color:C.t2,background:dark?"rgba(255,255,255,0.06)":"#F1F5F9",padding:"2px 8px",borderRadius:8,textTransform:"uppercase" as const,letterSpacing:0.3}}>{p.format}</span>
+                    <div style={{fontSize:15,fontWeight:700,color:C.t1,lineHeight:1.3}}>{p.title}</div>
+                  </div>
+                  <div style={{fontSize:13,color:C.t2,lineHeight:1.5}}>{p.description}</div>
+                </div>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.8" style={{flexShrink:0,marginTop:6}}><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </div>
+            ))}
+          </div>
+
+          {editing&&<CourseLessonEditor lesson={editing} index={editIdx as number} total={plan.length} unitLabel="День" dark={dark} busy={lessonBusy}
+            onClose={()=>setEditIdx(null)} onSave={(pt)=>{savePlanDay(editIdx as number,pt);setEditIdx(null);}} onRegen={(hint)=>regenPlanDay(editIdx as number,hint)}/>}
+          {editSection&&<SectionEditor title={csecTitle} text={comm[editSection]||""} dark={dark} busy={sectionBusy}
+            onClose={()=>setEditSection(null)} onSave={(t)=>{saveSection(editSection,t);setEditSection(null);}} onRegen={(hint)=>regenSection(editSection,hint)}/>}
+        </div>
+      );
+    }
+
+    // ===== КОУЧИНГ / КОНСАЛТИНГ =====
+    if(isProgram&&!prog)return(
+      <div style={{maxWidth:640,margin:"0 auto",padding:"36px 24px"}}>
+        {Back}{ProductHead}
+        <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:12,padding:28}}>
+          <div style={{fontSize:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em",marginBottom:6}}>Сколько месяцев длится программа?</div>
+          <div style={{fontSize:13,color:C.t2,lineHeight:1.6,marginBottom:24}}>AI продумает онбординг, приветственный подарок и содержание программы по месяцам — под вашу аудиторию и тему. Всё можно отредактировать.</div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:24,marginBottom:28}}>
+            <button onClick={()=>setMonthsCount(c=>Math.max(1,c-1))} style={{width:48,height:48,borderRadius:10,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:24,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
+            <div style={{minWidth:80,textAlign:"center" as const}}>
+              <div style={{fontSize:44,fontWeight:800,color:C.t1,lineHeight:1}}>{monthsCount}</div>
+              <div style={{fontSize:12,color:C.t2,marginTop:4}}>мес.</div>
+            </div>
+            <button onClick={()=>setMonthsCount(c=>Math.min(12,c+1))} style={{width:48,height:48,borderRadius:10,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:24,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+          </div>
+          <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:28,flexWrap:"wrap" as const}}>
+            {[3,6,9,12].map(n=>(
+              <button key={n} onClick={()=>setMonthsCount(n)} style={{padding:"7px 16px",borderRadius:10,border:`1px solid ${monthsCount===n?"transparent":bd}`,background:monthsCount===n?"rgba(128,128,128,0.14)":"transparent",color:monthsCount===n?"#808080":C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>{n}</button>
+            ))}
+          </div>
+          <button onClick={()=>buildProgram(kind,monthsCount)} disabled={courseBusy} style={{width:"100%",padding:"15px",borderRadius:10,border:"none",background:"#666666",color:"#fff",fontSize:15,fontWeight:700,cursor:courseBusy?"default":"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+            {courseBusy?<><div style={{width:18,height:18,border:"2.5px solid rgba(255,255,255,0.35)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Проектирую программу…</>:"Сгенерировать программу"}
+          </button>
+        </div>
+      </div>
+    );
+
+    if(isProgram&&prog){
+      const program:any[]=prog.program||[];
+      const editing=editIdx!=null?program[editIdx]:null;
+      const PSECTIONS=[
+        {key:"onboarding",label:"Онбординг-процесс",ic:"M22 11.08V12a10 10 0 11-5.93-9.14M22 4L12 14.01l-3-3"},
+        {key:"gift",label:"Приветственный подарок",ic:"M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"},
+      ];
+      const psecTitle=editSection?(PSECTIONS.find(s=>s.key===editSection)?.label||""):"";
+      return(
+        <div style={{maxWidth:840,margin:"0 auto",padding:"36px 24px"}}>
+          {Back}
+          <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16,marginBottom:8,flexWrap:"wrap" as const}}>
+            <div>
+              <span style={{fontSize:11,fontWeight:700,color:"#808080",background:"rgba(128,128,128,0.12)",padding:"4px 10px",borderRadius:10}}>{v.format}</span>
+              <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.025em",margin:"12px 0 4px"}}>{v.title}</div>
+              <div style={{fontSize:14,color:C.t2}}>{v.format} · программа на {program.length} мес.</div>
+            </div>
+            <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
+              <button onClick={()=>exportProductPDF(v)} style={{display:"flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                Скачать PDF
+              </button>
+              <button onClick={()=>{if(confirm("Пересобрать программу заново? Текущее содержание будет заменено."))setDraft((d:any)=>({...d,selected:{...d.selected,build:null}}));}} style={{display:"flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                Пересобрать
+              </button>
+            </div>
+          </div>
+
+          {/* Онбординг + подарок */}
+          <div style={{display:"flex",flexDirection:"column",gap:14,marginTop:24}}>
+            {PSECTIONS.map(sec=>(
+              <div key={sec.key} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:20}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <div style={{width:32,height:32,borderRadius:9,background:dark?"rgba(128,128,128,0.12)":"#F0FDF4",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#808080" strokeWidth="1.7"><path d={sec.ic}/></svg>
+                    </div>
+                    <div style={{fontSize:15,fontWeight:700,color:C.t1}}>{sec.label}</div>
+                  </div>
+                  <button onClick={()=>setEditSection(sec.key)} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Изменить
+                  </button>
+                </div>
+                <div style={{fontSize:14,color:C.t1,lineHeight:1.7,opacity:0.9,whiteSpace:"pre-wrap" as const}}>{prog[sec.key]||"—"}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Программа по месяцам */}
+          <div style={{fontSize:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em",margin:"28px 0 4px"}}>Программа по месяцам</div>
+          <div style={{fontSize:13,color:C.t2,marginBottom:16}}>Нажмите на месяц, чтобы изменить содержание или перегенерировать его.</div>
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            {program.map((m,i)=>(
+              <div key={m.id||i} onClick={()=>setEditIdx(i)} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:18,cursor:"pointer",display:"flex",gap:16,alignItems:"flex-start",transition:"all 0.15s"}}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(128,128,128,0.35)";}}
+                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=bd;}}>
+                <div style={{width:52,height:44,borderRadius:8,background:dark?"rgba(128,128,128,0.12)":"#F0FDF4",color:"#808080",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0,lineHeight:1}}>
+                  <span style={{fontSize:9,fontWeight:600,opacity:0.7}}>МЕСЯЦ</span>
+                  <span style={{fontSize:16,fontWeight:800}}>{m.month}</span>
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:16,fontWeight:700,color:C.t1,lineHeight:1.35,marginBottom:5}}>{m.title}</div>
+                  <div style={{fontSize:13,color:C.t2,lineHeight:1.55}}>{m.description}</div>
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.8" style={{flexShrink:0,marginTop:8}}><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </div>
+            ))}
+          </div>
+
+          {editing&&<CourseLessonEditor lesson={editing} index={editIdx as number} total={program.length} unitLabel="Месяц" dark={dark} busy={lessonBusy}
+            onClose={()=>setEditIdx(null)} onSave={(p)=>{saveMonth(editIdx as number,p);setEditIdx(null);}} onRegen={(hint)=>regenMonth(editIdx as number,hint)}/>}
+          {editSection&&<SectionEditor title={psecTitle} text={prog[editSection]||""} dark={dark} busy={sectionBusy}
+            onClose={()=>setEditSection(null)} onSave={(t)=>{saveSection(editSection,t);setEditSection(null);}} onRegen={(hint)=>regenSection(editSection,hint)}/>}
+        </div>
+      );
+    }
+
+
+  }
+
+
+  /* ---------- LIST ---------- */
+  return(
+    <div style={{maxWidth:1360,margin:"0 auto",width:"100%",padding:"32px 44px"}}>
+      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:28,gap:16,flexWrap:"wrap" as const}}>
+        <div>
+          <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.025em",marginBottom:4}}>Мои продукты</div>
+          <div style={{fontSize:14,color:C.t2}}>Создавайте цифровые продукты из вашей экспертизы</div>
+        </div>
+        {products.length>0&&<button onClick={openCreate} disabled={busy}
+          style={{display:"flex",alignItems:"center",gap:8,padding:"11px 20px",borderRadius:8,border:"none",background:GRAD,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",flexShrink:0}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Создать продукт
+        </button>}
+      </div>
+
+      {loading?(
+        <div style={{padding:60,textAlign:"center" as const,color:C.t2,fontSize:14}}>Загрузка...</div>
+      ):products.length===0?(
+        <div style={{background:cardBg,border:`1px dashed ${bd}`,borderRadius:12,padding:"48px 24px",textAlign:"center" as const,minHeight:"calc(100vh - 220px)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+          <img src="/icon-product.png" width={84} height={84} style={{objectFit:"cover" as const,borderRadius:20,margin:"0 auto 22px",display:"block"}} alt="Vizzy Product AI"/>
+          <div style={{fontSize:20,fontWeight:800,color:C.t1,marginBottom:8,letterSpacing:"-0.02em"}}>У вас пока нет продуктов</div>
+          <div style={{fontSize:14,color:C.t2,lineHeight:1.6,maxWidth:360,margin:"0 auto 24px"}}>Создайте свой первый цифровой продукт за 15 минут — ответьте на 5 вопросов, остальное сделает AI.</div>
+          <button onClick={openCreate} disabled={busy}
+            style={{display:"inline-flex",alignItems:"center",gap:8,padding:"13px 26px",borderRadius:8,border:"none",background:GRAD,color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Создать продукт
+          </button>
+        </div>
+      ):(
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:16}}>
+          {products.map(p=>{
+            const sm=statusMeta(p.status);
+            return(
+              <div key={p.id} onClick={()=>openExisting(p)}
+                style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:12,padding:20,cursor:"pointer",transition:"all 0.2s",position:"relative" as const}}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="rgba(128,128,128,0.35)";}}
+                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=bd;}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+                  <img src="/icon-product.png" width={40} height={40} style={{objectFit:"cover" as const,borderRadius:11,display:"block"}} alt=""/>
+                  <button onClick={e=>deleteProduct(p.id,e)} title="Удалить"
+                    style={{width:28,height:28,borderRadius:8,border:"none",background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}
+                    onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color="#777777";}}
+                    onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.color=C.t2;}}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                  </button>
+                </div>
+                <div style={{fontSize:16,fontWeight:700,color:C.t1,lineHeight:1.35,marginBottom:10,overflow:"hidden",textOverflow:"ellipsis",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical" as const}}>{p.name||"Новый продукт"}</div>
+                <span style={{fontSize:11,fontWeight:600,color:sm.color,background:`${sm.color}1A`,padding:"3px 10px",borderRadius:10}}>{sm.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 /* ============ STORIES AI PAGE ============ */
 const STORIES_SYSTEM_V2=`Ты — Vizzy Stories AI. Специализируешься ТОЛЬКО на создании сценариев для Stories и каруселей. На любые другие запросы отвечай: «Я создаю сценарии для Stories и каруселей. Давай создадим твой!»
@@ -7287,10 +9586,10 @@ const STORIES_QUESTIONS=[
   {id:"rules",label:"Ограничения",placeholder:"Например: на «ты», без обещаний (необязательно)"},
 ];
 
-function StoriesAIPage(){
+function StoriesAILegacy(){
   const isMobile=useIsMobile();
   const theme=AI_THEMES.stories;
-  const ac="#CC00FF";
+  const ac="#5A5A5A";
 
   const[step,setStep]=useState<"form"|"chat">("form");
   const[form,setForm]=useState<Record<string,string>>({slides:"7"});
@@ -7400,22 +9699,22 @@ function StoriesAIPage(){
     return <span key={i} style={isLabel?{color:ac,fontWeight:600}:isBold?{color:ac}:{}}>{parts}{i<arr.length-1&&<br/>}</span>;
   });
 
-  const GRAD="linear-gradient(135deg,#200030,#120018)";
+  const GRAD="linear-gradient(135deg,#0F0F0F,#080808)";
 
-  return <div style={{display:"flex",height:isMobile?"calc(100vh - 136px)":"calc(100vh - 120px)",overflow:"hidden",borderRadius:16,border:"1px solid rgba(204,0,255,0.15)",background:theme.bg,boxShadow:"0 8px 40px rgba(0,0,0,0.4)"}}>
-    <style>{`.stories-input:focus{border-color:${ac}!important;box-shadow:0 0 12px rgba(204,0,255,0.3)!important;}.stories-send:hover{transform:scale(1.05);}.stories-chat-item:hover .stories-del{opacity:1!important;}.stories-opt:hover{border-color:${ac}!important;background:rgba(204,0,255,0.1)!important;}`}</style>
+  return <div style={{display:"flex",height:isMobile?"calc(100vh - 136px)":"calc(100vh - 120px)",overflow:"hidden",borderRadius:10,border:"1px solid rgba(90,90,90,0.15)",background:theme.bg,boxShadow:"0 8px 40px rgba(0,0,0,0.4)"}}>
+    <style>{`.stories-input:focus{border-color:${ac}!important;box-shadow:0 0 12px rgba(90,90,90,0.3)!important;}.stories-send:hover{transform:scale(1.05);}.stories-chat-item:hover .stories-del{opacity:1!important;}.stories-opt:hover{border-color:${ac}!important;background:rgba(90,90,90,0.1)!important;}`}</style>
 
     {/* Sidebar */}
     {(sidebarOpen||!isMobile)&&<div style={{width:isMobile?"100%":220,flexShrink:0,background:theme.sbBg,borderRight:"1px solid rgba(255,255,255,0.06)",display:"flex",flexDirection:"column",overflow:"hidden"}}>
       <div style={{padding:"14px 12px 10px",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-          <img src="/icon-stories.png" style={{width:30,height:30,borderRadius:8,objectFit:"cover",border:"1.5px solid "+ac,boxShadow:"0 0 12px rgba(204,0,255,0.4)"}} alt=""/>
+          <img src="/icon-stories.png" style={{width:30,height:30,borderRadius:8,objectFit:"cover",border:"1.5px solid "+ac,boxShadow:"0 0 12px rgba(90,90,90,0.4)"}} alt=""/>
           <div>
             <div style={{fontSize:12,fontWeight:700,color:"#fff"}}>Vizzy Stories AI</div>
             <div style={{fontSize:9,color:"rgba(255,255,255,0.35)"}}>Сценарии сторис</div>
           </div>
         </div>
-        <button onClick={newScenario} style={{width:"100%",padding:"8px",background:"linear-gradient(135deg,#CC00FF,#FF44CC)",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,boxShadow:"0 4px 16px rgba(204,0,255,0.4)"}}>
+        <button onClick={newScenario} style={{width:"100%",padding:"8px",background:"linear-gradient(135deg,#5A5A5A,#8B8B8B)",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,boxShadow:"0 4px 16px rgba(90,90,90,0.4)"}}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Новый сценарий
         </button>
@@ -7433,8 +9732,8 @@ function StoriesAIPage(){
             <div style={{fontSize:9,color:"rgba(255,255,255,0.25)",marginTop:1}}>{chat.msgs.length} сообщ.</div>
           </div>
           <button className="stories-del" onClick={e=>{e.stopPropagation();setChats(prev=>prev.filter(c=>c.id!==chat.id));if(activeChatId===chat.id){setActiveChatId(null);setStep("form");}}}
-            style={{width:18,height:18,border:"none",background:"rgba(255,59,48,0.15)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:0,flexShrink:0,borderRadius:4,transition:"opacity 0.15s"}}>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#FF3B30" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            style={{width:18,height:18,border:"none",background:"rgba(116,116,116,0.15)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:0,flexShrink:0,borderRadius:4,transition:"opacity 0.15s"}}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#747474" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
           </button>
         </div>)}
       </div>
@@ -7443,12 +9742,12 @@ function StoriesAIPage(){
     {/* Main */}
     {(!isMobile||!sidebarOpen)&&<div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",background:theme.bg}}>
       {/* Header */}
-      <div style={{padding:"12px 16px",background:GRAD,borderBottom:"1px solid rgba(204,0,255,0.15)",display:"flex",alignItems:"center",gap:10,flexShrink:0,boxShadow:"0 4px 40px rgba(204,0,255,0.25)"}}>
+      <div style={{padding:"12px 16px",background:GRAD,borderBottom:"1px solid rgba(90,90,90,0.15)",display:"flex",alignItems:"center",gap:10,flexShrink:0,boxShadow:"0 4px 40px rgba(90,90,90,0.25)"}}>
         {isMobile&&<button onClick={()=>setSidebarOpen(true)} style={{width:30,height:30,border:"1px solid rgba(255,255,255,0.1)",borderRadius:7,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>}
         <div style={{position:"relative",flexShrink:0}}>
-          <img src="/icon-stories.png" style={{width:36,height:36,borderRadius:10,objectFit:"cover",border:"2px solid "+ac,boxShadow:"0 0 20px rgba(204,0,255,0.6)",animation:"avatarPulse 2s ease-in-out infinite"}} alt=""/>
+          <img src="/icon-stories.png" style={{width:36,height:36,borderRadius:8,objectFit:"cover",border:"2px solid "+ac,boxShadow:"0 0 20px rgba(90,90,90,0.6)",animation:"avatarPulse 2s ease-in-out infinite"}} alt=""/>
           <div style={{position:"absolute",bottom:0,right:0,width:9,height:9,borderRadius:"50%",background:ac,border:"2px solid "+theme.bg,animation:"dotBlink 2s ease-in-out infinite"}}/>
         </div>
         <div style={{flex:1}}>
@@ -7458,7 +9757,7 @@ function StoriesAIPage(){
           </div>
         </div>
         {step==="chat"&&lastScript&&<div style={{display:"flex",gap:6}}>
-          <button onClick={copy} style={{padding:"5px 10px",background:copied?"rgba(16,185,129,0.2)":"rgba(255,255,255,0.06)",color:copied?"#10B981":"rgba(255,255,255,0.6)",border:"1px solid "+(copied?"rgba(16,185,129,0.3)":"rgba(255,255,255,0.1)"),borderRadius:7,fontSize:10,cursor:"pointer",fontWeight:500}}>{copied?"✓ Скопировано":"Скопировать"}</button>
+          <button onClick={copy} style={{padding:"5px 10px",background:copied?"rgba(128,128,128,0.2)":"rgba(255,255,255,0.06)",color:copied?"#808080":"rgba(255,255,255,0.6)",border:"1px solid "+(copied?"rgba(128,128,128,0.3)":"rgba(255,255,255,0.1)"),borderRadius:7,fontSize:10,cursor:"pointer",fontWeight:500}}>{copied?"✓ Скопировано":"Скопировать"}</button>
           {!isMobile&&<button onClick={download} style={{padding:"5px 10px",background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.5)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:7,fontSize:10,cursor:"pointer"}}>Скачать</button>}
         </div>}
       </div>
@@ -7469,7 +9768,7 @@ function StoriesAIPage(){
         ? <div style={{flex:1,overflowY:"auto",padding:"20px"}}>
             <div style={{maxWidth:560,margin:"0 auto"}}>
               <div style={{textAlign:"center",marginBottom:24}}>
-                <img src="/icon-stories.png" style={{width:56,height:56,borderRadius:14,objectFit:"cover",border:"2px solid "+ac,boxShadow:"0 0 20px rgba(204,0,255,0.5)",marginBottom:12}} alt=""/>
+                <img src="/icon-stories.png" style={{width:56,height:56,borderRadius:10,objectFit:"cover",border:"2px solid "+ac,boxShadow:"0 0 20px rgba(90,90,90,0.5)",marginBottom:12}} alt=""/>
                 <div style={{fontSize:18,fontWeight:800,color:"#fff",marginBottom:4}}>Визzy Stories AI</div>
                 <div style={{fontSize:12,color:"rgba(255,255,255,0.4)"}}>Заполни форму — получи готовый сценарий по слайдам</div>
               </div>
@@ -7479,20 +9778,20 @@ function StoriesAIPage(){
                 {q.options
                   ? <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                       {q.options.map(opt=><button key={opt} className="stories-opt" onClick={()=>setForm(f=>({...f,[q.id]:opt}))}
-                        style={{padding:"7px 14px",background:form[q.id]===opt?"rgba(204,0,255,0.2)":"rgba(255,255,255,0.04)",border:"1px solid "+(form[q.id]===opt?ac:"rgba(255,255,255,0.1)"),borderRadius:20,fontSize:12,color:form[q.id]===opt?ac:"rgba(255,255,255,0.6)",cursor:"pointer",transition:"all 0.15s",fontFamily:"'Inter',sans-serif",fontWeight:form[q.id]===opt?600:400}}>
+                        style={{padding:"7px 14px",background:form[q.id]===opt?"rgba(90,90,90,0.2)":"rgba(255,255,255,0.04)",border:"1px solid "+(form[q.id]===opt?ac:"rgba(255,255,255,0.1)"),borderRadius:10,fontSize:12,color:form[q.id]===opt?ac:"rgba(255,255,255,0.6)",cursor:"pointer",transition:"all 0.15s",fontFamily:"'Inter',sans-serif",fontWeight:form[q.id]===opt?600:400}}>
                         {opt}
                       </button>)}
                     </div>
                   : <input value={form[q.id]||""} onChange={e=>setForm(f=>({...f,[q.id]:e.target.value}))}
                       placeholder={q.placeholder} className="stories-input"
-                      style={{width:"100%",padding:"10px 14px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,fontSize:13,color:"#fff",outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box",transition:"all 0.2s"}}/>
+                      style={{width:"100%",padding:"10px 14px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,fontSize:13,color:"#fff",outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box",transition:"all 0.2s"}}/>
                 }
               </div>)}
 
-              {err&&<div style={{padding:"10px 14px",background:"rgba(255,59,48,0.1)",borderRadius:10,fontSize:12,color:"#FF3B30",border:"1px solid rgba(255,59,48,0.2)",marginBottom:12}}>{err}</div>}
+              {err&&<div style={{padding:"10px 14px",background:"rgba(116,116,116,0.1)",borderRadius:8,fontSize:12,color:"#747474",border:"1px solid rgba(116,116,116,0.2)",marginBottom:12}}>{err}</div>}
 
               <button onClick={startGeneration} disabled={loading||!form.topic?.trim()}
-                style={{width:"100%",padding:"14px",background:"linear-gradient(135deg,#CC00FF,#FF44CC)",color:"#fff",border:"none",borderRadius:12,fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 8px 24px rgba(204,0,255,0.4)",transition:"all 0.15s",opacity:loading||!form.topic?.trim()?0.5:1}}>
+                style={{width:"100%",padding:"14px",background:"linear-gradient(135deg,#5A5A5A,#8B8B8B)",color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 8px 24px rgba(90,90,90,0.4)",transition:"all 0.15s",opacity:loading||!form.topic?.trim()?0.5:1}}>
                 {loading?"Генерирую сценарий...":"✨ Сгенерировать сценарий"}
               </button>
             </div>
@@ -7503,14 +9802,14 @@ function StoriesAIPage(){
               {m.role==="assistant"&&<img src="/icon-stories.png" style={{width:26,height:26,borderRadius:7,objectFit:"cover",flexShrink:0,marginTop:2,border:"1.5px solid "+ac}} alt=""/>}
               <div style={{maxWidth:"82%",padding:"11px 14px",
                 borderRadius:m.role==="user"?"18px 18px 4px 18px":"18px 18px 18px 4px",
-                background:m.role==="user"?"linear-gradient(135deg,#2A0040,#1A0030)":theme.aiMsgBg,
-                border:"1px solid "+(m.role==="user"?"rgba(204,0,255,0.4)":theme.aiMsgBorder),
-                color:m.role==="user"?"#F5CCFF":"#fff",fontSize:13,lineHeight:1.7,wordBreak:"break-word",
-                boxShadow:m.role==="user"?"0 2px 20px rgba(204,0,255,0.2)":theme.aiMsgGlow,
+                background:m.role==="user"?"linear-gradient(135deg,#141414,#0D0D0D)":theme.aiMsgBg,
+                border:"1px solid "+(m.role==="user"?"rgba(90,90,90,0.4)":theme.aiMsgBorder),
+                color:m.role==="user"?"#DEDEDE":"#fff",fontSize:13,lineHeight:1.7,wordBreak:"break-word",
+                boxShadow:m.role==="user"?"0 2px 20px rgba(90,90,90,0.2)":theme.aiMsgGlow,
               }}>
                 {m.role==="assistant"?formatMsg(m.content):m.content}
               </div>
-              {m.role==="user"&&<div style={{width:26,height:26,borderRadius:7,background:"rgba(204,0,255,0.15)",border:"1.5px solid rgba(204,0,255,0.3)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>
+              {m.role==="user"&&<div style={{width:26,height:26,borderRadius:7,background:"rgba(90,90,90,0.15)",border:"1.5px solid rgba(90,90,90,0.3)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={ac} strokeWidth="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               </div>}
             </div>)}
@@ -7521,30 +9820,30 @@ function StoriesAIPage(){
                 {[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:ac,animation:`pulse 1.2s ease-in-out ${i*0.15}s infinite`}}/>)}
               </div>
             </div>}
-            {err&&<div style={{padding:"10px 14px",background:"rgba(255,59,48,0.1)",borderRadius:10,fontSize:12,color:"#FF3B30",border:"1px solid rgba(255,59,48,0.2)"}}>{err}</div>}
+            {err&&<div style={{padding:"10px 14px",background:"rgba(116,116,116,0.1)",borderRadius:8,fontSize:12,color:"#747474",border:"1px solid rgba(116,116,116,0.2)"}}>{err}</div>}
             <div ref={bottomRef}/>
           </div>
 
           {/* Quick actions */}
           {lastScript&&!loading&&<div style={{padding:"8px 12px",borderTop:"1px solid rgba(255,255,255,0.06)",display:"flex",gap:6,flexWrap:"wrap",background:"rgba(255,255,255,0.02)"}}>
             {["Перепиши хук","Другой CTA","Добавь интерактив","Измени тон"].map(a=><button key={a} onClick={()=>{setInput(a);}}
-              style={{padding:"5px 12px",background:"rgba(204,0,255,0.1)",border:"1px solid rgba(204,0,255,0.25)",borderRadius:20,fontSize:11,color:ac,cursor:"pointer",fontWeight:500}}>
+              style={{padding:"5px 12px",background:"rgba(90,90,90,0.1)",border:"1px solid rgba(90,90,90,0.25)",borderRadius:10,fontSize:11,color:ac,cursor:"pointer",fontWeight:500}}>
               {a}
             </button>)}
           </div>}
 
           {/* Input */}
-          <div style={{padding:"10px 12px",borderTop:"1px solid rgba(255,255,255,0.06)",background:"linear-gradient(180deg,#200030,#120018)",flexShrink:0}}>
+          <div style={{padding:"10px 12px",borderTop:"1px solid rgba(255,255,255,0.06)",background:"linear-gradient(180deg,#0F0F0F,#080808)",flexShrink:0}}>
             <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
               <textarea value={input} onChange={e=>setInput(e.target.value)}
                 onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}}
                 placeholder="Доработай слайд, измени тон, добавь интерактив..."
                 rows={1} className="stories-input"
-                style={{flex:1,border:"1px solid rgba(255,255,255,0.1)",outline:"none",resize:"none",fontSize:13,fontFamily:"'Inter',sans-serif",color:"#fff",background:"rgba(255,255,255,0.04)",lineHeight:1.5,maxHeight:100,overflowY:"auto",borderRadius:10,padding:"9px 12px",transition:"all 0.2s"}}
+                style={{flex:1,border:"1px solid rgba(255,255,255,0.1)",outline:"none",resize:"none",fontSize:13,fontFamily:"'Inter',sans-serif",color:"#fff",background:"rgba(255,255,255,0.04)",lineHeight:1.5,maxHeight:100,overflowY:"auto",borderRadius:8,padding:"9px 12px",transition:"all 0.2s"}}
                 onInput={e=>{const t=e.currentTarget;t.style.height="auto";t.style.height=Math.min(t.scrollHeight,100)+"px";}}
               />
               <button className="stories-send" onClick={send} disabled={!input.trim()||loading}
-                style={{width:34,height:34,borderRadius:8,border:"none",background:input.trim()&&!loading?"linear-gradient(135deg,#CC00FF,#FF44CC)":"rgba(255,255,255,0.08)",cursor:input.trim()&&!loading?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.15s"}}>
+                style={{width:34,height:34,borderRadius:8,border:"none",background:input.trim()&&!loading?"linear-gradient(135deg,#5A5A5A,#8B8B8B)":"rgba(255,255,255,0.08)",cursor:input.trim()&&!loading?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.15s"}}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
               </button>
             </div>
@@ -7559,8 +9858,8 @@ function StoriesAIPage(){
 const MAILING_GOALS_AI=["Знакомство с новым лидом","Презентация продукта/услуги","Реактивация «уснувшего» клиента","Специальное предложение/акция","Напоминание о событии/вебинаре","Запрос обратной связи"];
 const MAILING_TONES=["Дружелюбный","Официальный","Продающий","Информационный","Нейтральный"];
 const MAILING_CHANNELS=["Личные сообщения (Соцсети)","Email"];
-const MAILING_STATUSES=[{id:"planned",label:"Запланирована",color:"#F59E0B"},{id:"sent",label:"Отправлена",color:"#10B981"}];
-const msCol=(s:string)=>(MAILING_STATUSES.find(x=>x.id===s)||{color:"#6B7280"}).color;
+const MAILING_STATUSES=[{id:"planned",label:"Запланирована",color:"#A7A7A7"},{id:"sent",label:"Отправлена",color:"#808080"}];
+const msCol=(s:string)=>(MAILING_STATUSES.find(x=>x.id===s)||{color:"#727272"}).color;
 const msLbl=(s:string)=>(MAILING_STATUSES.find(x=>x.id===s)||{label:s}).label;
 const EMPTY_MAILING={recipient:"",goal:"",scheduled_at:"",status:"planned",chat_url:"",content:""};
 
@@ -7578,7 +9877,7 @@ function MailingsPage({userId}:{userId:string}){
   const[aiLoading,setAiLoading]=useState(false);
   const[aiResult,setAiResult]=useState<string[]>([]);
   const[copied,setCopied]=useState<number|null>(null);
-  const AI_ACCENT="#A78BFA";
+  const AI_ACCENT="#A0A0A0";
 
   const openNew=(prefill?:any)=>{setForm(prefill||{...EMPTY_MAILING});setModal("new");};
   const openEdit=(m:any)=>{setForm({...m,scheduled_at:m.scheduled_at?m.scheduled_at.slice(0,16):""});setModal(m);};
@@ -7702,27 +10001,27 @@ function MailingsPage({userId}:{userId:string}){
       </div>
 
       {/* AI TAB */}
-      <div onClick={()=>setAiOpen(!aiOpen)} style={{position:"fixed",right:aiOpen?360:0,top:"50%",transform:"translateY(-50%)",background:`linear-gradient(135deg,${AI_ACCENT},#7C3AED)`,width:32,height:120,borderRadius:"12px 0 0 12px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,boxShadow:"-4px 0 20px rgba(167,139,250,0.35)",zIndex:110,transition:"right 0.3s ease"}}>
+      <div onClick={()=>setAiOpen(!aiOpen)} style={{position:"fixed",right:aiOpen?360:0,top:"50%",transform:"translateY(-50%)",background:`linear-gradient(135deg,${AI_ACCENT},#626262)`,width:32,height:120,borderRadius:"12px 0 0 12px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",zIndex:110,transition:"right 0.3s ease"}}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
         <div style={{writingMode:"vertical-rl",textOrientation:"mixed",transform:"rotate(180deg)",fontSize:10,fontWeight:700,color:"#fff",letterSpacing:1}}>VIZZY AI</div>
       </div>
 
       {/* AI PANEL */}
-      <div style={{position:"fixed",right:0,top:0,bottom:0,width:360,background:"#1A1030",borderLeft:"1px solid rgba(167,139,250,0.2)",transform:aiOpen?"translateX(0)":"translateX(100%)",transition:"transform 0.3s ease",zIndex:105,display:"flex",flexDirection:"column",fontFamily:"'Inter',sans-serif",overflowY:"auto"}}>
-        <div style={{padding:"20px 20px 16px",borderBottom:"1px solid rgba(167,139,250,0.15)",flexShrink:0}}>
+      <div style={{position:"fixed",right:0,top:0,bottom:0,width:360,background:"#171717",borderLeft:"1px solid rgba(160,160,160,0.2)",transform:aiOpen?"translateX(0)":"translateX(100%)",transition:"transform 0.3s ease",zIndex:105,display:"flex",flexDirection:"column",fontFamily:"'Inter',sans-serif",overflowY:"auto"}}>
+        <div style={{padding:"20px 20px 16px",borderBottom:"1px solid rgba(160,160,160,0.15)",flexShrink:0}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <div style={{width:32,height:32,borderRadius:8,background:"linear-gradient(135deg,#A78BFA,#7C3AED)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <div style={{width:32,height:32,borderRadius:8,background:"linear-gradient(135deg,#A0A0A0,#626262)",display:"flex",alignItems:"center",justifyContent:"center"}}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
               </div>
               <div>
                 <div style={{fontSize:14,fontWeight:700,color:"#fff"}}>Vizzy AI</div>
-                <div style={{fontSize:11,color:"rgba(167,139,250,0.7)"}}>Генератор рассылок</div>
+                <div style={{fontSize:11,color:"rgba(160,160,160,0.7)"}}>Генератор рассылок</div>
               </div>
             </div>
             <button onClick={()=>setAiOpen(false)} style={{width:28,height:28,borderRadius:7,border:"none",background:"rgba(255,255,255,0.07)",cursor:"pointer",color:"rgba(255,255,255,0.5)",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
           </div>
-          <div style={{marginTop:10,padding:"10px 14px",background:"rgba(167,139,250,0.1)",borderRadius:10,fontSize:13,color:"rgba(255,255,255,0.75)",lineHeight:1.5}}>
+          <div style={{marginTop:10,padding:"10px 14px",background:"rgba(160,160,160,0.1)",borderRadius:8,fontSize:13,color:"rgba(255,255,255,0.75)",lineHeight:1.5}}>
             👋 Я помогу сделать рассылку! Заполни параметры и нажми «Сгенерировать».
           </div>
         </div>
@@ -7731,9 +10030,9 @@ function MailingsPage({userId}:{userId:string}){
           {/* Goal */}
           <div>
             <label style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.5)",letterSpacing:0.5,textTransform:"uppercase",display:"block",marginBottom:6}}>Цель рассылки *</label>
-            <select value={aiGoal} onChange={e=>setAiGoal(e.target.value)} style={{width:"100%",padding:"10px 12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(167,139,250,0.25)",borderRadius:10,fontSize:13,color:aiGoal?"#fff":"rgba(255,255,255,0.4)",outline:"none",fontFamily:"'Inter',sans-serif"}}>
-              <option value="" style={{background:"#1A1030"}}>Выберите цель...</option>
-              {MAILING_GOALS_AI.map(g=><option key={g} value={g} style={{background:"#1A1030"}}>{g}</option>)}
+            <select value={aiGoal} onChange={e=>setAiGoal(e.target.value)} style={{width:"100%",padding:"10px 12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(160,160,160,0.25)",borderRadius:8,fontSize:13,color:aiGoal?"#fff":"rgba(255,255,255,0.4)",outline:"none",fontFamily:"'Inter',sans-serif"}}>
+              <option value="" style={{background:"#171717"}}>Выберите цель...</option>
+              {MAILING_GOALS_AI.map(g=><option key={g} value={g} style={{background:"#171717"}}>{g}</option>)}
             </select>
           </div>
           {/* Channel */}
@@ -7753,9 +10052,9 @@ function MailingsPage({userId}:{userId:string}){
           {/* Tone */}
           <div>
             <label style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.5)",letterSpacing:0.5,textTransform:"uppercase",display:"block",marginBottom:6}}>Тон рассылки *</label>
-            <select value={aiTone} onChange={e=>setAiTone(e.target.value)} style={{width:"100%",padding:"10px 12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(167,139,250,0.25)",borderRadius:10,fontSize:13,color:aiTone?"#fff":"rgba(255,255,255,0.4)",outline:"none",fontFamily:"'Inter',sans-serif"}}>
-              <option value="" style={{background:"#1A1030"}}>Выберите тон...</option>
-              {MAILING_TONES.map(t=><option key={t} value={t} style={{background:"#1A1030"}}>{t}</option>)}
+            <select value={aiTone} onChange={e=>setAiTone(e.target.value)} style={{width:"100%",padding:"10px 12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(160,160,160,0.25)",borderRadius:8,fontSize:13,color:aiTone?"#fff":"rgba(255,255,255,0.4)",outline:"none",fontFamily:"'Inter',sans-serif"}}>
+              <option value="" style={{background:"#171717"}}>Выберите тон...</option>
+              {MAILING_TONES.map(t=><option key={t} value={t} style={{background:"#171717"}}>{t}</option>)}
             </select>
           </div>
           {/* Count */}
@@ -7763,7 +10062,7 @@ function MailingsPage({userId}:{userId:string}){
             <label style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.5)",letterSpacing:0.5,textTransform:"uppercase",display:"block",marginBottom:8}}>Кол-во сообщений: <span style={{color:AI_ACCENT}}>{aiCount}</span></label>
             <div style={{display:"flex",gap:8}}>
               {[1,2,3,4,5].map(n=>(
-                <button key={n} onClick={()=>setAiCount(n)} style={{flex:1,padding:"8px 0",borderRadius:8,border:"2px solid "+(aiCount===n?AI_ACCENT:"rgba(255,255,255,0.12)"),background:aiCount===n?"rgba(167,139,250,0.2)":"transparent",color:aiCount===n?AI_ACCENT:"rgba(255,255,255,0.5)",fontWeight:700,fontSize:14,cursor:"pointer",transition:"all 0.15s"}}>{n}</button>
+                <button key={n} onClick={()=>setAiCount(n)} style={{flex:1,padding:"8px 0",borderRadius:8,border:"2px solid "+(aiCount===n?AI_ACCENT:"rgba(255,255,255,0.12)"),background:aiCount===n?"rgba(160,160,160,0.2)":"transparent",color:aiCount===n?AI_ACCENT:"rgba(255,255,255,0.5)",fontWeight:700,fontSize:14,cursor:"pointer",transition:"all 0.15s"}}>{n}</button>
               ))}
             </div>
           </div>
@@ -7772,11 +10071,11 @@ function MailingsPage({userId}:{userId:string}){
             <label style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.5)",letterSpacing:0.5,textTransform:"uppercase",display:"block",marginBottom:6}}>Доп. информация</label>
             <textarea value={aiExtra} onChange={e=>setAiExtra(e.target.value)} rows={3}
               placeholder="Имя клиента, название продукта, условия акции..."
-              style={{width:"100%",padding:"10px 12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(167,139,250,0.2)",borderRadius:10,fontSize:12,color:"#fff",outline:"none",resize:"vertical",fontFamily:"'Inter',sans-serif",lineHeight:1.5}}/>
+              style={{width:"100%",padding:"10px 12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(160,160,160,0.2)",borderRadius:8,fontSize:12,color:"#fff",outline:"none",resize:"vertical",fontFamily:"'Inter',sans-serif",lineHeight:1.5}}/>
           </div>
 
           <button onClick={generateAI} disabled={!aiGoal||!aiTone||aiLoading}
-            style={{padding:"12px 0",background:(!aiGoal||!aiTone||aiLoading)?"rgba(167,139,250,0.2)":`linear-gradient(135deg,${AI_ACCENT},#7C3AED)`,border:"none",borderRadius:12,fontSize:14,fontWeight:700,color:(!aiGoal||!aiTone||aiLoading)?"rgba(255,255,255,0.4)":"#fff",cursor:(!aiGoal||!aiTone||aiLoading)?"not-allowed":"pointer",transition:"all 0.2s"}}>
+            style={{padding:"12px 0",background:(!aiGoal||!aiTone||aiLoading)?"rgba(160,160,160,0.2)":`linear-gradient(135deg,${AI_ACCENT},#626262)`,border:"none",borderRadius:8,fontSize:14,fontWeight:700,color:(!aiGoal||!aiTone||aiLoading)?"rgba(255,255,255,0.4)":"#fff",cursor:(!aiGoal||!aiTone||aiLoading)?"not-allowed":"pointer",transition:"all 0.2s"}}>
             {aiLoading
               ?<span style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{animation:"spin 0.8s linear infinite"}}><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
@@ -7790,11 +10089,11 @@ function MailingsPage({userId}:{userId:string}){
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               <div style={{fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:0.5}}>Результат</div>
               {aiResult.map((txt,i)=>(
-                <div key={i} style={{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(167,139,250,0.2)",borderRadius:12,padding:"14px 14px 10px"}}>
+                <div key={i} style={{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(160,160,160,0.2)",borderRadius:8,padding:"14px 14px 10px"}}>
                   {aiResult.length>1&&<div style={{fontSize:11,fontWeight:700,color:AI_ACCENT,marginBottom:8,textTransform:"uppercase",letterSpacing:0.5}}>Сообщение {i+1}</div>}
                   <div style={{fontSize:13,color:"rgba(255,255,255,0.85)",lineHeight:1.7,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{txt}</div>
                   <button onClick={()=>copyText(i)}
-                    style={{marginTop:10,display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:"rgba(167,139,250,0.12)",border:"1px solid rgba(167,139,250,0.2)",borderRadius:7,fontSize:11,color:copied===i?"#10B981":AI_ACCENT,cursor:"pointer",fontWeight:500}}>
+                    style={{marginTop:10,display:"flex",alignItems:"center",gap:6,padding:"5px 10px",background:"rgba(160,160,160,0.12)",border:"1px solid rgba(160,160,160,0.2)",borderRadius:7,fontSize:11,color:copied===i?"#808080":AI_ACCENT,cursor:"pointer",fontWeight:500}}>
                     {copied===i
                       ?<><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Скопировано</>
                       :<><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Копировать</>
@@ -7803,7 +10102,7 @@ function MailingsPage({userId}:{userId:string}){
                 </div>
               ))}
               <button onClick={useGeneratedForNew}
-                style={{padding:"11px 0",background:"rgba(16,185,129,0.15)",border:"1px solid rgba(16,185,129,0.3)",borderRadius:12,fontSize:13,fontWeight:600,color:"#10B981",cursor:"pointer",marginTop:4}}>
+                style={{padding:"11px 0",background:"rgba(128,128,128,0.15)",border:"1px solid rgba(128,128,128,0.3)",borderRadius:8,fontSize:13,fontWeight:600,color:"#808080",cursor:"pointer",marginTop:4}}>
                 📋 Создать рассылку на основе этого
               </button>
             </div>
@@ -7814,7 +10113,7 @@ function MailingsPage({userId}:{userId:string}){
       {/* MODAL CREATE/EDIT */}
       {modal&&(
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={closeModal}>
-          <div data-modal="" style={{background:C.w,borderRadius:20,padding:32,width:"100%",maxWidth:500,boxShadow:"0 24px 60px rgba(0,0,0,0.2)"}} onClick={e=>e.stopPropagation()}>
+          <div data-modal="" style={{background:C.w,borderRadius:10,padding:32,width:"100%",maxWidth:500,boxShadow:"0 24px 60px rgba(0,0,0,0.2)"}} onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:18,fontWeight:700,marginBottom:24}}>{modal==="new"?"Новая рассылка":"Редактировать рассылку"}</div>
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
               <div>
@@ -7857,7 +10156,7 @@ function MailingsPage({userId}:{userId:string}){
       {/* CONFIRM DELETE */}
       {deleteId&&(
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setDeleteId(null)}>
-          <div style={{background:C.w,borderRadius:16,padding:28,maxWidth:360,width:"100%",textAlign:"center",boxShadow:"0 16px 40px rgba(0,0,0,0.2)"}} onClick={e=>e.stopPropagation()}>
+          <div style={{background:C.w,borderRadius:10,padding:28,maxWidth:360,width:"100%",textAlign:"center",boxShadow:"0 16px 40px rgba(0,0,0,0.2)"}} onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:36,marginBottom:12}}>🗑️</div>
             <div style={{fontSize:16,fontWeight:700,marginBottom:8}}>Удалить рассылку?</div>
             <div style={{fontSize:14,color:C.t2,marginBottom:24}}>Это действие нельзя отменить.</div>
@@ -7879,11 +10178,11 @@ const VISITEXT_MAX_DOCS=30;
 const VISITEXT_MAX_PAGES=500;
 const VISITEXT_A4_HEIGHT=1123;
 const VISITEXT_HIGHLIGHTS=[
-  {name:"Лимон",color:"#FEF3C7"},
-  {name:"Мята",color:"#D1FAE5"},
-  {name:"Небо",color:"#DBEAFE"},
-  {name:"Роза",color:"#FCE7F3"},
-  {name:"Лаванда",color:"#EDE9FE"},
+  {name:"Лимон",color:"#F1F1F1"},
+  {name:"Мята",color:"#EBEBEB"},
+  {name:"Небо",color:"#E8E8E8"},
+  {name:"Роза",color:"#EFEFEF"},
+  {name:"Лаванда",color:"#EDEDED"},
 ];
 
 const visitextContent=(doc:Partial<VisiTextDoc>)=>JSON.stringify({
@@ -8040,7 +10339,7 @@ function VisiTextPage({userId}:{userId:string}){
     const reader=new FileReader();
     reader.onload=()=>{
       const src=String(reader.result||"");
-      const html=`<p><img src="${src}" style="max-width:100%;height:auto;border-radius:10px;display:block;margin:18px auto;box-shadow:0 8px 24px rgba(15,23,42,0.12);" /></p><p><br></p>`;
+      const html=`<p><img src="${src}" style="max-width:100%;height:auto;border-radius:10px;display:block;margin:18px auto;box-shadow:0 8px 24px rgba(23,23,23,0.12);" /></p><p><br></p>`;
       runCmd("insertHTML",html);
       requestAnimationFrame(()=>persistContent(true));
     };
@@ -8074,7 +10373,7 @@ function VisiTextPage({userId}:{userId:string}){
       <div style={{maxHeight:isMobile?220:"calc(100vh - 260px)",overflowY:"auto",padding:10}}>
         {docs.map(d=>{
           const isAct=d.id===activeDoc?.id;
-          return <button key={d.id} onClick={()=>setActiveId(d.id)} style={{width:"100%",textAlign:"left",border:"1px solid "+(isAct?C.a:C.bd),background:isAct?(dark?"rgba(79,142,247,0.16)":"#EFF6FF"):(dark?"rgba(255,255,255,0.025)":"#fff"),borderRadius:12,padding:12,marginBottom:8,cursor:"pointer"}}>
+          return <button key={d.id} onClick={()=>setActiveId(d.id)} style={{width:"100%",textAlign:"left",border:"1px solid "+(isAct?C.a:C.bd),background:isAct?(dark?"rgba(135,135,135,0.16)":"#EFF6FF"):(dark?"rgba(255,255,255,0.025)":"#fff"),borderRadius:8,padding:12,marginBottom:8,cursor:"pointer"}}>
             <div style={{display:"flex",gap:10,alignItems:"center"}}>
               <div style={{width:34,height:44,borderRadius:5,background:"#fff",border:"1px solid #E5E7EB",boxShadow:"0 2px 6px rgba(0,0,0,0.08)",flexShrink:0}}/>
               <div style={{minWidth:0,flex:1}}>
@@ -8113,12 +10412,12 @@ function VisiTextPage({userId}:{userId:string}){
         </div>
       </Card>
 
-      {notice&&<div style={{marginBottom:14,padding:"11px 14px",borderRadius:12,background:(notice.includes("Лимит")||notice.includes("максимум")||notice.includes("большой")||notice.includes("Не удалось")?C.r:C.a)+"12",color:notice.includes("Лимит")||notice.includes("максимум")||notice.includes("большой")||notice.includes("Не удалось")?C.r:C.a,fontSize:13,fontWeight:700,display:"flex",justifyContent:"space-between",gap:12}}><span>{notice}</span><button onClick={()=>setNotice("")} style={{border:"none",background:"transparent",color:"inherit",cursor:"pointer",fontWeight:900}}>×</button></div>}
+      {notice&&<div style={{marginBottom:14,padding:"11px 14px",borderRadius:8,background:(notice.includes("Лимит")||notice.includes("максимум")||notice.includes("большой")||notice.includes("Не удалось")?C.r:C.a)+"12",color:notice.includes("Лимит")||notice.includes("максимум")||notice.includes("большой")||notice.includes("Не удалось")?C.r:C.a,fontSize:13,fontWeight:700,display:"flex",justifyContent:"space-between",gap:12}}><span>{notice}</span><button onClick={()=>setNotice("")} style={{border:"none",background:"transparent",color:"inherit",cursor:"pointer",fontWeight:900}}>×</button></div>}
 
       <div style={{display:"flex",justifyContent:"center",padding:"10px 0 28px",overflowX:"auto"}}>
         <div style={{position:"relative"}}>
           <div style={{position:isMobile?"relative":"absolute",right:isMobile?"auto":-78,top:isMobile?0:10,display:"flex",flexDirection:isMobile?"row":"column",gap:8,alignItems:"center",justifyContent:isMobile?"center":"flex-start",marginBottom:isMobile?10:0}}>
-            <div style={{padding:"8px 10px",borderRadius:10,background:dark?"#0F1420":"#fff",border:"1px solid "+C.bd,boxShadow:C.sh,fontSize:11,fontWeight:800,color:pages>VISITEXT_MAX_PAGES?C.r:C.t2,whiteSpace:"nowrap"}}>{pages} / {VISITEXT_MAX_PAGES} стр.</div>
+            <div style={{padding:"8px 10px",borderRadius:8,background:dark?"#171717":"#fff",border:"1px solid "+C.bd,boxShadow:C.sh,fontSize:11,fontWeight:800,color:pages>VISITEXT_MAX_PAGES?C.r:C.t2,whiteSpace:"nowrap"}}>{pages} / {VISITEXT_MAX_PAGES} стр.</div>
             <div style={{fontSize:10,color:C.t2,writingMode:isMobile?"horizontal-tb":"vertical-rl",textTransform:"uppercase",letterSpacing:1}}>A4 лист</div>
           </div>
           <div
@@ -8133,9 +10432,9 @@ function VisiTextPage({userId}:{userId:string}){
               if(img){e.preventDefault();insertImage(img);return;}
             }}
             style={{
-              width:isMobile?"min(794px, calc(100vw - 48px))":794,minHeight:isMobile?Math.round(VISITEXT_A4_HEIGHT*0.72):VISITEXT_A4_HEIGHT,background:"#fff",color:"#111827",
+              width:isMobile?"min(794px, calc(100vw - 48px))":794,minHeight:isMobile?Math.round(VISITEXT_A4_HEIGHT*0.72):VISITEXT_A4_HEIGHT,background:"#fff",color:"#181818",
               padding:isMobile?"36px":"72px",outline:"none",borderRadius:2,
-              boxShadow:dark?"0 24px 80px rgba(0,0,0,0.55)":"0 20px 70px rgba(15,23,42,0.18)",
+              boxShadow:dark?"0 24px 80px rgba(0,0,0,0.55)":"0 20px 70px rgba(23,23,23,0.18)",
               border:"1px solid #E5E7EB",fontFamily:"'Inter',Arial,sans-serif",
               fontSize:activeDoc?.fontSize||16,lineHeight:activeDoc?.lineHeight||"1.5",
               overflowWrap:"break-word",wordBreak:"break-word",caretColor:C.a,
@@ -8587,14 +10886,14 @@ function SheetsPage({userId}:{userId:string}){
   },[editing,editVal,sel,selRange,wb,sheet,data]);
 
   // ── Colors ──
-  const bg=dark?"#080B12":"#F8FAFC";
-  const surfBg=dark?"#0C1019":"#FFFFFF";
-  const hdrBg=dark?"#0C1019":"#F1F5F9";
+  const bg=dark?"#0A0A0A":"#F8FAFC";
+  const surfBg=dark?"#141414":"#FFFFFF";
+  const hdrBg=dark?"#141414":"#F1F5F9";
   const cellBd=dark?"rgba(255,255,255,0.05)":"#E2E8F0";
-  const hdrBd=dark?"rgba(255,255,255,0.08)":"#CBD5E1";
-  const selBg=dark?"rgba(79,142,247,0.18)":"rgba(37,99,235,0.1)";
-  const selBd=dark?"#4F8EF7":"#2563EB";
-  const rangeBg=dark?"rgba(79,142,247,0.08)":"rgba(37,99,235,0.04)";
+  const hdrBd=dark?"rgba(255,255,255,0.08)":"#D3D3D3";
+  const selBg=dark?"rgba(135,135,135,0.18)":"rgba(96,96,96,0.1)";
+  const selBd=dark?"#878787":"#606060";
+  const rangeBg=dark?"rgba(135,135,135,0.08)":"rgba(96,96,96,0.04)";
   const formulaBarVal=editing?(editVal):(data[shKey(sel.r,sel.c)]?.f||data[shKey(sel.r,sel.c)]?.v||"");
   const selCell=getCell(sel.r,sel.c);
 
@@ -8634,7 +10933,7 @@ function SheetsPage({userId}:{userId:string}){
           <div style={{fontSize:13,color:C.t2,marginTop:2}}>{wbs.length}/{SH_MAX_WB} таблиц · Excel-совместимые с формулами</div>
         </div>
         <button onClick={()=>setNewWbModal(true)} disabled={wbs.length>=SH_MAX_WB}
-          style={{padding:"10px 20px",background:wbs.length>=SH_MAX_WB?"#374151":C.a,color:"#fff",border:"none",borderRadius:12,fontSize:13,fontWeight:700,cursor:wbs.length>=SH_MAX_WB?"not-allowed":"pointer",display:"flex",alignItems:"center",gap:8}}>
+          style={{padding:"10px 20px",background:wbs.length>=SH_MAX_WB?"#404040":C.a,color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:wbs.length>=SH_MAX_WB?"not-allowed":"pointer",display:"flex",alignItems:"center",gap:8}}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Новая таблица
         </button>
@@ -8642,24 +10941,24 @@ function SheetsPage({userId}:{userId:string}){
 
       {loading?<div style={{textAlign:"center",padding:60,color:C.t2}}>Загрузка...</div>
       :wbs.length===0
-      ?<div style={{textAlign:"center",padding:"80px 32px",background:surfBg,borderRadius:20,border:"1px solid "+C.bd}}>
+      ?<div style={{textAlign:"center",padding:"80px 32px",background:surfBg,borderRadius:10,border:"1px solid "+C.bd}}>
           <div style={{fontSize:48,marginBottom:12}}>📊</div>
           <div style={{fontSize:18,fontWeight:700,color:C.t1,marginBottom:8}}>Таблиц пока нет</div>
           <div style={{fontSize:14,color:C.t2,marginBottom:24}}>Формулы, fill handle, Ctrl+Z, экспорт в Excel</div>
-          <button onClick={()=>setNewWbModal(true)} style={{padding:"12px 28px",background:C.a,color:"#fff",border:"none",borderRadius:12,fontSize:14,fontWeight:700,cursor:"pointer"}}>+ Создать таблицу</button>
+          <button onClick={()=>setNewWbModal(true)} style={{padding:"12px 28px",background:C.a,color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:700,cursor:"pointer"}}>+ Создать таблицу</button>
         </div>
       :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:16}}>
           {wbs.map(w=>(
             <div key={w.id} onClick={()=>setActiveWbId(w.id)}
-              style={{background:surfBg,borderRadius:16,overflow:"hidden",border:"1px solid "+C.bd,cursor:"pointer",transition:"all 0.2s",boxShadow:dark?"0 4px 20px rgba(0,0,0,0.4)":C.sh}}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(-2px)";(e.currentTarget as HTMLElement).style.boxShadow=dark?"0 8px 32px rgba(79,142,247,0.12)":"0 8px 28px rgba(0,0,0,0.12)";}}
+              style={{background:surfBg,borderRadius:10,overflow:"hidden",border:"1px solid "+C.bd,cursor:"pointer",transition:"all 0.2s",boxShadow:dark?"0 4px 20px rgba(0,0,0,0.4)":C.sh}}
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(-2px)";(e.currentTarget as HTMLElement).style.boxShadow=dark?"0 8px 32px rgba(135,135,135,0.12)":"0 8px 28px rgba(0,0,0,0.12)";}}
               onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform="none";(e.currentTarget as HTMLElement).style.boxShadow=dark?"0 4px 20px rgba(0,0,0,0.4)":C.sh;}}>
-              <div style={{height:100,background:dark?"#0C1019":"#F0FDF4",padding:"10px",display:"flex",flexDirection:"column",gap:3,overflow:"hidden",borderBottom:"1px solid "+C.bd}}>
+              <div style={{height:100,background:dark?"#141414":"#F0FDF4",padding:"10px",display:"flex",flexDirection:"column",gap:3,overflow:"hidden",borderBottom:"1px solid "+C.bd}}>
                 {[0,1,2,3].map(r=><div key={r} style={{display:"flex",gap:2}}>
                   {[0,1,2,3,4].map(c=>{
                     const cell=w.sheets[0]?.data[shKey(r,c)];
                     const val=cell?(cell.f?shCalc(cell.f,w.sheets[0].data):cell.v):"";
-                    return <div key={c} style={{flex:1,height:14,borderRadius:2,border:"0.5px solid "+cellBd,background:val?(dark?"rgba(79,142,247,0.07)":"rgba(37,99,235,0.04)"):"transparent",fontSize:8,overflow:"hidden",padding:"0 2px",lineHeight:"14px",color:C.t2,fontFamily:"monospace"}}>{val}</div>;
+                    return <div key={c} style={{flex:1,height:14,borderRadius:2,border:"0.5px solid "+cellBd,background:val?(dark?"rgba(135,135,135,0.07)":"rgba(96,96,96,0.04)"):"transparent",fontSize:8,overflow:"hidden",padding:"0 2px",lineHeight:"14px",color:C.t2,fontFamily:"monospace"}}>{val}</div>;
                   })}
                 </div>)}
               </div>
@@ -8676,12 +10975,12 @@ function SheetsPage({userId}:{userId:string}){
         </div>}
 
       {newWbModal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setNewWbModal(false)}>
-        <div style={{background:surfBg,borderRadius:20,padding:32,width:380,border:"1px solid "+C.bd,boxShadow:"0 24px 60px rgba(0,0,0,0.4)"}} onClick={e=>e.stopPropagation()}>
+        <div style={{background:surfBg,borderRadius:10,padding:32,width:380,border:"1px solid "+C.bd,boxShadow:"0 24px 60px rgba(0,0,0,0.4)"}} onClick={e=>e.stopPropagation()}>
           <div style={{fontSize:18,fontWeight:700,marginBottom:16,color:C.t1}}>📊 Новая таблица</div>
           <input autoFocus value={newWbName} onChange={e=>setNewWbName(e.target.value)}
             onKeyDown={e=>{if(e.key==="Enter")createWb();if(e.key==="Escape")setNewWbModal(false);}}
             placeholder="Название таблицы..."
-            style={{width:"100%",padding:"11px 14px",border:"1px solid "+C.bd,borderRadius:10,fontSize:14,outline:"none",background:dark?"#141927":C.ib,color:C.t1,fontFamily:"'Inter',sans-serif",boxSizing:"border-box"}}/>
+            style={{width:"100%",padding:"11px 14px",border:"1px solid "+C.bd,borderRadius:8,fontSize:14,outline:"none",background:dark?"#1C1C1C":C.ib,color:C.t1,fontFamily:"'Inter',sans-serif",boxSizing:"border-box"}}/>
           <div style={{display:"flex",gap:10,marginTop:20,justifyContent:"flex-end"}}>
             <Btn onClick={()=>setNewWbModal(false)} primary={false}>Отмена</Btn>
             <Btn onClick={createWb}>Создать</Btn>
@@ -8689,7 +10988,7 @@ function SheetsPage({userId}:{userId:string}){
         </div>
       </div>}
 
-      {toast&&<div style={{position:"fixed",bottom:24,right:24,background:dark?"#1E293B":"#1F2937",color:"#fff",padding:"10px 18px",borderRadius:10,fontSize:13,fontWeight:500,zIndex:500,boxShadow:"0 4px 20px rgba(0,0,0,0.3)"}}>{toast}</div>}
+      {toast&&<div style={{position:"fixed",bottom:24,right:24,background:dark?"#1C1C1C":"#282828",color:"#fff",padding:"10px 18px",borderRadius:8,fontSize:13,fontWeight:500,zIndex:500,boxShadow:"0 4px 20px rgba(0,0,0,0.3)"}}>{toast}</div>}
     </div>;
   }
 
@@ -8702,7 +11001,7 @@ function SheetsPage({userId}:{userId:string}){
     }}>
 
     <style>{`
-      @keyframes excelGlow{0%,100%{box-shadow:0 0 14px rgba(22,163,74,0.4)}50%{box-shadow:0 0 24px rgba(22,163,74,0.7)}}
+      @keyframes excelGlow{0%,100%{box-shadow:0 0 14px rgba(111,111,111,0.4)}50%{box-shadow:0 0 24px rgba(111,111,111,0.7)}}
       @keyframes formulaDash{to{stroke-dashoffset:-12}}
       .fill-cursor{cursor:crosshair!important;}
       .resize-col-cursor{cursor:col-resize!important;}
@@ -8752,7 +11051,7 @@ function SheetsPage({userId}:{userId:string}){
       {/* Cell bg */}
       <div style={{display:"flex",gap:3,alignItems:"center",flexShrink:0}}>
         <span style={{fontSize:10,color:C.t2}}>Фон:</span>
-        {(["","#FEF08A","#BBF7D0","#BFDBFE","#FED7AA","#FECACA","#E9D5FF"] as string[]).map(c=>(
+        {(["","#E9E9E9","#E1E1E1","#D7D7D7","#DEDEDE","#DADADA","#E0E0E0"] as string[]).map(c=>(
           <button key={c} onClick={()=>fmt("bg",c||undefined)}
             style={{width:16,height:16,borderRadius:3,background:c||"transparent",border:selCell.fmt.bg===c?"2px solid "+C.a:"1px solid "+C.bd,cursor:"pointer",flexShrink:0}}/>
         ))}
@@ -8775,8 +11074,8 @@ function SheetsPage({userId}:{userId:string}){
 
       {/* Export Excel — glowing green */}
       <button onClick={exportExcel}
-        style={{display:"flex",alignItems:"center",gap:7,padding:"0 14px",height:32,borderRadius:8,border:"none",background:"linear-gradient(135deg,#16A34A,#15803D)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",animation:"excelGlow 2.5s ease-in-out infinite",whiteSpace:"nowrap",flexShrink:0}}
-        onMouseEnter={e=>{const el=e.currentTarget as HTMLElement;el.style.transform="translateY(-1px)";el.style.animationPlayState="paused";el.style.boxShadow="0 0 24px rgba(22,163,74,0.7)";}}
+        style={{display:"flex",alignItems:"center",gap:7,padding:"0 14px",height:32,borderRadius:8,border:"none",background:"linear-gradient(135deg,#6F6F6F,#585858)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",animation:"excelGlow 2.5s ease-in-out infinite",whiteSpace:"nowrap",flexShrink:0}}
+        onMouseEnter={e=>{const el=e.currentTarget as HTMLElement;el.style.transform="translateY(-1px)";el.style.animationPlayState="paused";el.style.boxShadow="0 0 24px rgba(111,111,111,0.7)";}}
         onMouseLeave={e=>{const el=e.currentTarget as HTMLElement;el.style.transform="none";el.style.animationPlayState="running";el.style.boxShadow="";}}>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Выгрузить в Excel
@@ -8917,10 +11216,10 @@ function SheetsPage({userId}:{userId:string}){
                     return <div key={c}
                       style={{
                         width:cw(c),height:rh(r),flexShrink:0,
-                        border:"1px solid "+(isFormulaRef?"#3B82F6":cellBd),
+                        border:"1px solid "+(isFormulaRef?"#7A7A7A":cellBd),
                         borderLeft:c===visC0?"1px solid "+cellBd:"none",
                         borderTop:"none",
-                        background:isFormulaRef?"rgba(59,130,246,0.1)":isSel2?selBg:inRange?rangeBg:inFillPreview?"rgba(180,180,180,0.15)":(cell.fmt.bg||"transparent"),
+                        background:isFormulaRef?"rgba(122,122,122,0.1)":isSel2?selBg:inRange?rangeBg:inFillPreview?"rgba(180,180,180,0.15)":(cell.fmt.bg||"transparent"),
                         outline:isSel2?`2px solid ${selBd}`:"none",
                         outlineOffset:-1,
                         position:"relative",
@@ -8963,8 +11262,8 @@ function SheetsPage({userId}:{userId:string}){
                               if(e.key==="Escape"){setEditing(false);setFormulaMode(false);setFormulaRef(null);}
                               e.stopPropagation();
                             }}
-                            style={{position:"absolute",inset:0,width:"100%",height:"100%",border:"none",outline:"none",background:dark?"#141927":"#fff",fontFamily:"monospace",fontSize:12,padding:"0 4px",color:C.t1,zIndex:10,fontWeight:cell.fmt.bold?700:400,fontStyle:cell.fmt.italic?"italic":"normal",textAlign:cell.fmt.align||"left"}}/>
-                        :<div style={{padding:"0 4px",fontSize:12,lineHeight:rh(r)+"px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontWeight:cell.fmt.bold?700:400,fontStyle:cell.fmt.italic?"italic":"normal",textAlign:cell.fmt.align||(val&&!isNaN(Number(val))?"right":"left"),color:isErr?"#EF4444":(cell.fmt.color||C.t1),fontFamily:"monospace"}}>
+                            style={{position:"absolute",inset:0,width:"100%",height:"100%",border:"none",outline:"none",background:dark?"#1C1C1C":"#fff",fontFamily:"monospace",fontSize:12,padding:"0 4px",color:C.t1,zIndex:10,fontWeight:cell.fmt.bold?700:400,fontStyle:cell.fmt.italic?"italic":"normal",textAlign:cell.fmt.align||"left"}}/>
+                        :<div style={{padding:"0 4px",fontSize:12,lineHeight:rh(r)+"px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontWeight:cell.fmt.bold?700:400,fontStyle:cell.fmt.italic?"italic":"normal",textAlign:cell.fmt.align||(val&&!isNaN(Number(val))?"right":"left"),color:isErr?"#777777":(cell.fmt.color||C.t1),fontFamily:"monospace"}}>
                             {val}
                           </div>
                       }
@@ -8976,7 +11275,7 @@ function SheetsPage({userId}:{userId:string}){
 
                       {/* Formula ref animated border */}
                       {isFormulaRef&&<svg style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none"}} xmlns="http://www.w3.org/2000/svg">
-                        <rect x="1" y="1" width="calc(100% - 2)" height="calc(100% - 2)" fill="none" stroke="#3B82F6" strokeWidth="2" strokeDasharray="6 3" style={{animation:"formulaDash 0.5s linear infinite"}}/>
+                        <rect x="1" y="1" width="calc(100% - 2)" height="calc(100% - 2)" fill="none" stroke="#7A7A7A" strokeWidth="2" strokeDasharray="6 3" style={{animation:"formulaDash 0.5s linear infinite"}}/>
                       </svg>}
                     </div>;
                   })}
@@ -8992,7 +11291,7 @@ function SheetsPage({userId}:{userId:string}){
     <div style={{height:34,background:surfBg,borderTop:"1px solid "+C.bd,display:"flex",alignItems:"center",overflowX:"auto",flexShrink:0}}>
       {wb.sheets.map((s,i)=>(
         <div key={s.id}
-          style={{display:"flex",alignItems:"center",gap:5,padding:"0 14px",height:"100%",fontSize:12,fontWeight:wb.si===i?600:400,color:wb.si===i?C.a:C.t2,borderRight:"1px solid "+C.bd,borderBottom:wb.si===i?"2px solid "+C.a:"2px solid transparent",cursor:"pointer",userSelect:"none",whiteSpace:"nowrap",background:wb.si===i?(dark?"rgba(79,142,247,0.08)":"rgba(37,99,235,0.05)"):"transparent",flexShrink:0}}
+          style={{display:"flex",alignItems:"center",gap:5,padding:"0 14px",height:"100%",fontSize:12,fontWeight:wb.si===i?600:400,color:wb.si===i?C.a:C.t2,borderRight:"1px solid "+C.bd,borderBottom:wb.si===i?"2px solid "+C.a:"2px solid transparent",cursor:"pointer",userSelect:"none",whiteSpace:"nowrap",background:wb.si===i?(dark?"rgba(135,135,135,0.08)":"rgba(96,96,96,0.05)"):"transparent",flexShrink:0}}
           onClick={()=>switchSheet(i)}
           onDoubleClick={()=>{const n=prompt("Переименовать:",s.name);if(n)updWbs(ws=>ws.map(w=>w.id===activeWbId?{...w,sheets:w.sheets.map((sh,j)=>j===i?{...sh,name:n}:sh)}:w));}}>
           {s.name}
@@ -9009,7 +11308,7 @@ function SheetsPage({userId}:{userId:string}){
       </div>
     </div>
 
-    {toast&&<div style={{position:"fixed",bottom:24,right:24,background:dark?"#1E293B":"#1F2937",color:"#fff",padding:"10px 18px",borderRadius:10,fontSize:13,fontWeight:500,zIndex:500,boxShadow:"0 4px 20px rgba(0,0,0,0.4)"}}>{toast}</div>}
+    {toast&&<div style={{position:"fixed",bottom:24,right:24,background:dark?"#1C1C1C":"#282828",color:"#fff",padding:"10px 18px",borderRadius:8,fontSize:13,fontWeight:500,zIndex:500,boxShadow:"0 4px 20px rgba(0,0,0,0.4)"}}>{toast}</div>}
   </div>;
 }
 
@@ -9056,7 +11355,7 @@ function ToolsPage(){
   const progress=isBreak?(1-(time/(5*60)))*100:(1-(time/(activeMins*60)))*100;
 
   return <div style={{maxWidth:520,margin:"0 auto"}}>
-    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:24,padding:"40px",textAlign:"center",marginBottom:24}}>
+    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:12,padding:"40px",textAlign:"center",marginBottom:24}}>
       <div style={{fontSize:13,color:"rgba(255,255,255,0.6)",marginBottom:6,letterSpacing:1}}>{isBreak?"ОТДЫХ":"ФОКУС"}</div>
       <div style={{position:"relative",display:"inline-flex",alignItems:"center",justifyContent:"center",marginBottom:28}}>
         <svg width="180" height="180" style={{transform:"rotate(-90deg)"}}>
@@ -9069,15 +11368,15 @@ function ToolsPage(){
         </div>
       </div>
       <div style={{display:"flex",gap:10,justifyContent:"center"}}>
-        <button onClick={()=>setRunning(!running)} disabled={running&&false} style={{padding:"14px 40px",background:running?"rgba(239,68,68,0.25)":C.a,color:running?"#fca5a5":"#fff",border:"none",borderRadius:14,fontSize:16,fontWeight:700,cursor:"pointer"}}>{running?"Пауза":"Старт"}</button>
-        <button onClick={resetTimer} disabled={running} style={{padding:"14px 24px",background:"rgba(255,255,255,0.1)",color:running?"rgba(255,255,255,0.3)":"rgba(255,255,255,0.6)",border:"none",borderRadius:14,fontSize:16,cursor:running?"not-allowed":"pointer"}}>Сброс</button>
+        <button onClick={()=>setRunning(!running)} disabled={running&&false} style={{padding:"14px 40px",background:running?"rgba(119,119,119,0.25)":C.a,color:running?"#BFBFBF":"#fff",border:"none",borderRadius:10,fontSize:16,fontWeight:700,cursor:"pointer"}}>{running?"Пауза":"Старт"}</button>
+        <button onClick={resetTimer} disabled={running} style={{padding:"14px 24px",background:"rgba(255,255,255,0.1)",color:running?"rgba(255,255,255,0.3)":"rgba(255,255,255,0.6)",border:"none",borderRadius:10,fontSize:16,cursor:running?"not-allowed":"pointer"}}>Сброс</button>
       </div>
     </div>
 
     <Card style={{marginBottom:16}}>
       <div style={{fontSize:14,fontWeight:600,marginBottom:12}}>Длительность</div>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
-        {PRESETS.map(m=><button key={m} onClick={()=>{if(!running){setSelectedPreset(m);setUseCustom(false);}}} disabled={running} style={{padding:"8px 16px",borderRadius:10,border:"2px solid "+((!useCustom&&selectedPreset===m)?C.a:C.bd),background:(!useCustom&&selectedPreset===m)?C.a+"12":"transparent",color:(!useCustom&&selectedPreset===m)?C.a:C.t1,fontWeight:600,fontSize:14,cursor:running?"not-allowed":"pointer",opacity:running?0.5:1}}>{m} мин</button>)}
+        {PRESETS.map(m=><button key={m} onClick={()=>{if(!running){setSelectedPreset(m);setUseCustom(false);}}} disabled={running} style={{padding:"8px 16px",borderRadius:8,border:"2px solid "+((!useCustom&&selectedPreset===m)?C.a:C.bd),background:(!useCustom&&selectedPreset===m)?C.a+"12":"transparent",color:(!useCustom&&selectedPreset===m)?C.a:C.t1,fontWeight:600,fontSize:14,cursor:running?"not-allowed":"pointer",opacity:running?0.5:1}}>{m} мин</button>)}
       </div>
       <div style={{display:"flex",gap:8,alignItems:"center"}}>
         <input type="number" placeholder="Свои минуты..." value={customMins} onChange={e=>{if(!running){setCustomMins(e.target.value);setUseCustom(true);}}} disabled={running} min={1} max={180} style={{...iS(),width:160,padding:"8px 12px",fontSize:14}}/>
@@ -9090,9 +11389,9 @@ function ToolsPage(){
 }
 
 /* ============ BOARD (MIRO-style v2) ============ */
-const BOARD_STICKY_PALETTE=["#FEF9A6","#FFE568","#FDBA74","#FB8B8F","#F5B7E6","#ED78D1","#A7C7F7","#9B8CF5","#89D9F0","#76A7EA","#6EDBD2","#54D37D","#C8EB8D","#A8E64F","#F8FAFC","#1F2937"];
-const BOARD_DRAW_COLORS=["#EF4444","#2563EB","#111827","#22C55E","#06B6D4","#FACC15","#7C3AED"];
-const BOARD_PALETTE=["#FEF08A","#BBF7D0","#BFDBFE","#FED7AA","#F9A8D4","#E9D5FF","#FECACA","#A7F3D0","#ffffff","#F1F5F9","#1E293B","#7C3AED","#2563EB","#DC2626","#16A34A","#D97706"];
+const BOARD_STICKY_PALETTE=["#F1F1F1","#DFDFDF","#C6C6C6","#ADADAD","#CFCFCF","#A5A5A5","#C3C3C3","#9C9C9C","#C4C4C4","#A0A0A0","#B9B9B9","#A3A3A3","#D6D6D6","#C2C2C2","#F8FAFC","#282828"];
+const BOARD_DRAW_COLORS=["#777777","#606060","#181818","#898989","#858585","#C5C5C5","#626262"];
+const BOARD_PALETTE=["#E9E9E9","#E1E1E1","#D7D7D7","#DEDEDE","#C5C5C5","#E0E0E0","#DADADA","#D8D8D8","#ffffff","#F1F5F9","#282828","#626262","#606060","#5C5C5C","#6F6F6F","#878787"];
 const BOARD_FONTS=[
   {id:"Inter",label:"Inter"},
   {id:"Inter, sans-serif",label:"Inter"},
@@ -9207,7 +11506,7 @@ const normalizeBoardLines=(raw:any[],validItemIds?:Set<string>):BLine[]=>{
       id:String(ln.id),
       fromId:String(ln.fromId),
       toId:String(ln.toId),
-      color:ln.color||"#64748B",
+      color:ln.color||"#727272",
       thickness:Math.max(1,safeNum(ln.thickness,2)),
       style:ln.style||"solid",
       arrow:ln.arrow||"arrow",
@@ -9232,7 +11531,7 @@ function externalCardPayload(it:BItem){
     subtitle:it.externalSubtitle||"",
     meta:it.externalMeta||"",
     status:it.externalStatus||"",
-    color:it.color||"#7C3AED",
+    color:it.color||"#626262",
     platform:it.externalPlatform||"",
   });
 }
@@ -9256,20 +11555,20 @@ function boardIconPayload(it:BItem){
 
 const BOARD_EMOJI_ICONS=[
   ["smile","Улыбка","😀","улыбка smile happy"],["joy","Радость","😃","радость joy happy"],["grin","Сильная радость","😄","радость grin happy"],["beaming","Довольный","😁","довольный beaming grin"],["laugh","Смех","😆","смех laugh"],["tears","Смех до слёз","😂","смех слез tears laugh"],["rofl","Ржёт","🤣","ржёт rofl laugh"],["blush","Милая улыбка","😊","милая улыбка blush"],["angel","Ангел","😇","ангел angel"],["slight","Спокойная улыбка","🙂","спокойная улыбка slight"],["upside","Ирония","🙃","ирония upside down"],["wink","Подмигивание","😉","подмигивание wink"],["relieved","Спокойствие","😌","спокойствие calm relieved"],["heart-eyes","Влюблённость","😍","влюблённость love heart eyes"],["loving","Любовь","🥰","любовь loving hearts"],["kiss","Поцелуй","😘","поцелуй kiss"],["cool","Крутой","😎","крутой cool"],["star-struck","Восторг","🤩","восторг star struck"],["party","Праздник","🥳","праздник party"],["smirk","Самодовольный","😏","самодовольный smirk"],["neutral","Нейтральный","😐","нейтральный neutral"],["expressionless","Без эмоций","😑","без эмоций expressionless"],["silent","Молчание","😶","молчание silence"],["thinking","Думает","🤔","думает thinking"],["salute","Салют","🫡","салют salute"],["raised-brow","Сомнение","🤨","сомнение raised brow"],["grimace","Неловкость","😬","неловкость grimace"],["roll-eyes","Закатил глаза","🙄","закатил глаза roll eyes"],["surprised","Удивление","😮","удивление surprised"],["hushed","Шок","😯","шок hushed"],["astonished","Сильное удивление","😲","сильное удивление astonished"],["flushed","Смущение","😳","смущение flushed"],["pleading","Просьба","🥺","просьба pleading"],["cry","Грусть","😢","грусть cry sad"],["sob","Плач","😭","плач sob cry"],["triumph","Злость","😤","злость angry"],["angry","Гнев","😡","гнев angry"],["mindblown","Взрыв мозга","🤯","взрыв мозга mind blown"],["sleep","Сон","😴","сон sleep"],["sick","Болезнь","🤒","болезнь sick"],["thumbsup","Лайк","👍","лайк like thumbs up"],["thumbsdown","Дизлайк","👎","дизлайк thumbs down"],["clap","Аплодисменты","👏","аплодисменты clap"],["hooray","Ура","🙌","ура hooray"],["handshake","Рукопожатие","🤝","рукопожатие handshake"],["muscle","Сила","💪","сила muscle"],["peace","Мир","✌️","мир peace"],["crossed","Надежда","🤞","надежда crossed fingers"],["ok","Окей","👌","окей ok"],["pinched","Акцент","🤌","акцент pinched fingers"],["call","Позвони","🤙","позвони call me"],["wave","Привет","👋","привет wave"],["point-right","Указание вправо","👉","вправо point right"],["point-left","Указание влево","👈","влево point left"],["up","Важно","☝️","важно up"],["down","Вниз","👇","вниз down"],["pray","Спасибо / просьба","🙏","спасибо просьба pray"],["heart-hands","Сердце руками","🫶","сердце руками heart hands"],["stop","Стоп","🖐️","стоп hand"],["write","Пишу","✍️","пишу write"],["heart-red","Сердце","❤️","сердце red heart"],["heart-orange","Оранжевое сердце","🧡","оранжевое сердце orange heart"],["heart-yellow","Жёлтое сердце","💛","желтое сердце yellow heart"],["heart-green","Зелёное сердце","💚","зеленое сердце green heart"],["heart-blue","Синее сердце","💙","синее сердце blue heart"],["heart-purple","Фиолетовое сердце","💜","фиолетовое сердце purple heart"],["heart-black","Чёрное сердце","🖤","черное сердце black heart"],["heart-white","Белое сердце","🤍","белое сердце white heart"],["heart-broken","Разбитое сердце","💔","разбитое сердце broken heart"],["fire","Огонь","🔥","огонь fire hot"],["sparkles","Искра","✨","искра sparkles"],["star","Звезда","⭐","звезда star"],["dizzy","Сияние","💫","сияние dizzy"],["zap","Молния","⚡","молния lightning"],["boom","Взрыв","💥","взрыв boom"],["hundred","Сто процентов","💯","сто процентов hundred"],["check","Готово","✅","готово check"],["cross","Ошибка","❌","ошибка cross"],["bang","Важно","❗","важно exclamation"],["question","Вопрос","❓","вопрос question"],["idea","Идея","💡","идея lightbulb"],["brain","Мозг","🧠","мозг brain"],["eyes","Внимание","👀","внимание eyes"],["target","Цель","🎯","цель target"],["rocket","Рост / запуск","🚀","рост запуск rocket"],["trophy","Победа","🏆","победа trophy"],["gold","Первое место","🥇","первое место gold"],["pin","Закрепить","📌","закрепить pin"],["location","Метка","📍","метка location"],["note","Заметка","📝","заметка note"],["document","Документ","📄","документ file"],["chart","График","📊","график chart"],["trend-up","Рост","📈","рост chart up"],["trend-down","Падение","📉","падение chart down"],["money","Деньги","💰","деньги money"],["diamond","Премиум","💎","премиум diamond"],["tools","Инструменты","🛠️","инструменты tools"],["settings","Настройки","⚙️","настройки settings"],["puzzle","Элемент","🧩","элемент puzzle"],["image","Изображение","🖼️","изображение image picture"]
-].map(([key,label,glyph,search])=>({key:`emoji-${key}`,label,glyph,search,category:"emoji" as const,style:"emoji" as const,defaultColor:"#111827"}));
+].map(([key,label,glyph,search])=>({key:`emoji-${key}`,label,glyph,search,category:"emoji" as const,style:"emoji" as const,defaultColor:"#181818"}));
 
 const BOARD_SOCIAL_ICONS=[
-  ["instagram","Instagram","IG","instagram инстаграм", "#111827"],["tiktok","TikTok","TT","tiktok тикток", "#111827"],["youtube","YouTube","YT","youtube ютуб", "#111827"],["telegram","Telegram","TG","telegram телеграм", "#111827"],["whatsapp","WhatsApp","WA","whatsapp ватсап", "#111827"],["facebook","Facebook","f","facebook фейсбук", "#111827"],["x","X / Twitter","X","x twitter твиттер", "#111827"],["linkedin","LinkedIn","in","linkedin линкедин", "#111827"],["vk","VK","VK","vk вконтакте", "#111827"],["discord","Discord","DS","discord дискорд", "#111827"],["twitch","Twitch","TW","twitch твич", "#111827"],["snapchat","Snapchat","SC","snapchat снапчат", "#111827"],["pinterest","Pinterest","P","pinterest пинтерест", "#111827"],["reddit","Reddit","R","reddit реддит", "#111827"],["threads","Threads","@","threads тредс", "#111827"],["behance","Behance","Be","behance беханс", "#111827"],["dribbble","Dribbble","Dr","dribbble дрибббл", "#111827"],["github","GitHub","GH","github гитхаб", "#111827"],["medium","Medium","M","medium медиум", "#111827"],["spotify","Spotify","SP","spotify спотифай", "#111827"]
+  ["instagram","Instagram","IG","instagram инстаграм", "#181818"],["tiktok","TikTok","TT","tiktok тикток", "#181818"],["youtube","YouTube","YT","youtube ютуб", "#181818"],["telegram","Telegram","TG","telegram телеграм", "#181818"],["whatsapp","WhatsApp","WA","whatsapp ватсап", "#181818"],["facebook","Facebook","f","facebook фейсбук", "#181818"],["x","X / Twitter","X","x twitter твиттер", "#181818"],["linkedin","LinkedIn","in","linkedin линкедин", "#181818"],["vk","VK","VK","vk вконтакте", "#181818"],["discord","Discord","DS","discord дискорд", "#181818"],["twitch","Twitch","TW","twitch твич", "#181818"],["snapchat","Snapchat","SC","snapchat снапчат", "#181818"],["pinterest","Pinterest","P","pinterest пинтерест", "#181818"],["reddit","Reddit","R","reddit реддит", "#181818"],["threads","Threads","@","threads тредс", "#181818"],["behance","Behance","Be","behance беханс", "#181818"],["dribbble","Dribbble","Dr","dribbble дрибббл", "#181818"],["github","GitHub","GH","github гитхаб", "#181818"],["medium","Medium","M","medium медиум", "#181818"],["spotify","Spotify","SP","spotify спотифай", "#181818"]
 ].map(([key,label,glyph,search,defaultColor])=>({key:`social-${key}`,label,glyph,search,category:"social" as const,style:"outline" as const,defaultColor}));
 
 const BOARD_BUSINESS_ICONS=[
   ["document","Документ","📄","документ file"],["table","Таблица","▦","таблица table grid"],["presentation","Презентация","▣","презентация slides"],["folder","Папка","🗂","папка folder"],["file","Файл","◫","файл file"],["note","Заметка","📝","заметка note"],["checklist","Чеклист","☑","чеклист checklist"],["calendar","Календарь","🗓","календарь calendar"],["clock","Часы","◷","часы clock time"],["bookmark","Закладка","🔖","закладка bookmark"],["money","Деньги","₽","деньги money ruble"],["card","Карта оплаты","💳","карта оплаты card"],["growth","График роста","↗","рост growth chart"],["decline","График падения","↘","падение decline chart"],["funnel","Воронка продаж","⏷","воронка funnel"],["target","Цель","◎","цель target"],["cup","Кубок","🏆","кубок trophy"],["diamond","Бриллиант","◆","бриллиант diamond"],["rocket","Ракета","🚀","ракета rocket"],["magnet","Магнит","🧲","магнит magnet"],["message","Сообщение","✉","сообщение message"],["chat","Чат","💬","чат chat"],["comment","Комментарий","🗨","комментарий comment"],["notification","Уведомление","🔔","уведомление notification bell"],["mail","Почта","✉️","почта mail"],["phone","Телефон","☎","телефон phone"],["microphone","Микрофон","🎤","микрофон microphone"],["camera","Камера","📷","камера camera"],["video","Видеозвонок","🎥","видеозвонок video"],["volume","Громкость","🔊","громкость volume"],["plus","Плюс","＋","плюс plus"],["minus","Минус","－","минус minus"],["check","Галочка","✓","галочка check"],["cross","Крестик","✕","крестик cross"],["arrow-right","Стрелка вправо","→","стрелка вправо arrow right"],["arrow-up","Стрелка вверх","↑","стрелка вверх arrow up"],["link","Ссылка","🔗","ссылка link"],["lock","Замок","🔒","замок lock"],["settings","Настройки","⚙","настройки settings"],["search","Поиск","⌕","поиск search"]
-].map(([key,label,glyph,search])=>({key:`business-${key}`,label,glyph,search,category:"business" as const,style:"glyph" as const,defaultColor:"#2563EB"}));
+].map(([key,label,glyph,search])=>({key:`business-${key}`,label,glyph,search,category:"business" as const,style:"glyph" as const,defaultColor:"#606060"}));
 
 const BOARD_ICON_LIBRARY=[...BOARD_EMOJI_ICONS,...BOARD_SOCIAL_ICONS,...BOARD_BUSINESS_ICONS];
 
 function renderBoardLibraryIcon(icon:{glyph?:string;label?:string;category?:"emoji"|"social"|"business";style?:"emoji"|"outline"|"glyph";defaultColor?:string},color?:string,size=28){
-  const col=color||icon.defaultColor||"#111827";
+  const col=color||icon.defaultColor||"#181818";
   if(icon.category==="emoji"||icon.style==="emoji"){
     return <span style={{fontSize:size,lineHeight:1,display:"inline-flex",alignItems:"center",justifyContent:"center"}}>{icon.glyph||"✨"}</span>;
   }
@@ -9308,7 +11607,7 @@ function BoardPage({userId}:{userId:string}){
   const[tool,setTool]=useState<"select"|"pan"|"sticky"|"text"|"image"|"link"|"shape"|"line"|"draw">("select");
   const[toolPanel,setToolPanel]=useState<null|"create"|"sticky"|"icons"|"shape"|"draw">(null);
   const[shapeKind,setShapeKind]=useState<"rect"|"circle"|"diamond"|"triangle"|"parallelogram"|"square"|"cloud"|"pentagon">("rect");
-  const[drawColor,setDrawColor]=useState("#2563EB");
+  const[drawColor,setDrawColor]=useState("#606060");
   const[drawThickness,setDrawThickness]=useState(3);
   const[drawMode,setDrawMode]=useState<DrawMode>("pen");
   const drawingRef=useRef<{path:string;startX:number;startY:number;pointCount:number}|null>(null);
@@ -9328,7 +11627,7 @@ function BoardPage({userId}:{userId:string}){
 
   // Custom color picker for sticky
   const[stickyColorPick,setStickyColorPick]=useState<string|null>(null);
-  const[customColorInput,setCustomColorInput]=useState("#FEF08A");
+  const[customColorInput,setCustomColorInput]=useState("#E9E9E9");
 
   // Selection
   const[selectedIds,setSelectedIds]=useState<Set<string>>(new Set());
@@ -9427,7 +11726,7 @@ function BoardPage({userId}:{userId:string}){
       const mappedItemIds=new Set(mappedItems.map(i=>i.id));
       const mappedLines=normalizeBoardLines((lns||[]).map((d:any):BLine=>({
         id:d?.id,fromId:d?.from_id,toId:d?.to_id,
-        color:d?.color||"#64748B",thickness:d?.thickness||2,
+        color:d?.color||"#727272",thickness:d?.thickness||2,
         style:d?.style||"solid",arrow:d?.arrow||"arrow",
       })),mappedItemIds);
       setItems(mappedItems);
@@ -9461,7 +11760,7 @@ function BoardPage({userId}:{userId:string}){
         const lineRows=cleanLines.map(ln=>({
           id:ln.id,board_id:activeBoardId,user_id:userId,
           from_id:ln.fromId,to_id:ln.toId,
-          color:ln.color||"#64748B",thickness:ln.thickness||2,style:ln.style||"solid",arrow:ln.arrow||"arrow",
+          color:ln.color||"#727272",thickness:ln.thickness||2,style:ln.style||"solid",arrow:ln.arrow||"arrow",
         }));
         // Fetch current IDs to find deleted ones
         const[{data:dbIt},{data:dbLn}]=await Promise.all([
@@ -9594,11 +11893,11 @@ function BoardPage({userId}:{userId:string}){
   const toggleFavoriteIcon=(key:string)=>setFavoriteIconKeys(prev=>prev.includes(key)?prev.filter(x=>x!==key):[key,...prev].slice(0,24));
   const addBoardIcon=(icon:any,cx=360,cy=260)=>{
     rememberRecentIcon(icon.key);
-    return addItem({type:"icon",text:icon.label,color:icon.defaultColor||"#111827",w:icon.category==="emoji"?92:96,h:icon.category==="emoji"?92:110,fontSize:icon.category==="emoji"?46:18,fontBold:true,iconKey:icon.key,iconLabel:icon.label,iconGlyph:icon.glyph,iconCategory:icon.category,iconStyle:icon.style},cx,cy);
+    return addItem({type:"icon",text:icon.label,color:icon.defaultColor||"#181818",w:icon.category==="emoji"?92:96,h:icon.category==="emoji"?92:110,fontSize:icon.category==="emoji"?46:18,fontBold:true,iconKey:icon.key,iconLabel:icon.label,iconGlyph:icon.glyph,iconCategory:icon.category,iconStyle:icon.style},cx,cy);
   };
   const addShapeFromMenu=(kind:BItem["shapeKind"],cx=400,cy=300)=>{
-    if(kind==="parallelogram"){return addItem({type:"shape",shapeKind:"parallelogram",color:"#60A5FA",w:190,h:95,text:""},cx,cy);}
-    return addItem({type:"shape",shapeKind:kind||"rect",color:"#60A5FA",w:kind==="circle"?130:kind==="triangle"?140:170,h:kind==="circle"?130:kind==="triangle"?120:100,text:""},cx,cy);
+    if(kind==="parallelogram"){return addItem({type:"shape",shapeKind:"parallelogram",color:"#9A9A9A",w:190,h:95,text:""},cx,cy);}
+    return addItem({type:"shape",shapeKind:kind||"rect",color:"#9A9A9A",w:kind==="circle"?130:kind==="triangle"?140:170,h:kind==="circle"?130:kind==="triangle"?120:100,text:""},cx,cy);
   };
 
   const updateSelectedShapeColor=(nextColor:string)=>{
@@ -9618,7 +11917,7 @@ function BoardPage({userId}:{userId:string}){
     if(p.includes("youtube"))return "#FF0000";
     if(p.includes("telegram"))return "#29B6F6";
     if(p.includes("vk"))return "#4C75A3";
-    return "#64748B";
+    return "#727272";
   };
 
   const externalCards=useMemo(()=>{
@@ -9635,7 +11934,7 @@ function BoardPage({userId}:{userId:string}){
           subtitle:lead.contact||lead.phone||lead.email||"CRM-лид",
           meta:[lead.source,lead.deal?`${lead.deal} ₽`:""].filter(Boolean).join(" · "),
           status:lead.status||"",
-          color:"#38BDF8",
+          color:"#9C9C9C",
           imageUrl:lead.avatar_url||lead.photo_url||lead.image_url||"",
           platform:"crm",
           raw:lead,
@@ -9651,7 +11950,7 @@ function BoardPage({userId}:{userId:string}){
         subtitle:[item.platform,item.type].filter(Boolean).join(" · ")||"Контент-карточка",
         meta:[item.status,item.date||item.publish_date].filter(Boolean).join(" · "),
         status:item.status||"",
-        color:platformColor(getContentPlatform(item))||"#A855F7",
+        color:platformColor(getContentPlatform(item))||"#808080",
         imageUrl:getContentImage(item),
         platform:getContentPlatform(item),
         raw:item,
@@ -9663,7 +11962,7 @@ function BoardPage({userId}:{userId:string}){
     const it=addItem({
       type:"external_card",
       w:card.imageUrl?286:260,h:card.imageUrl?176:138,
-      color:card.color||"#7C3AED",
+      color:card.color||"#626262",
       text:card.title,
       imageUrl:card.imageUrl||"",
       externalSource:card.source,
@@ -9713,10 +12012,10 @@ function BoardPage({userId}:{userId:string}){
       const it=addItem({type:"sticky",text:"",color:BOARD_PALETTE[0],w:200,h:180,fontFamily:"Inter"},x,y);
       if(it)setTimeout(()=>{setEditingId(it.id);setEditText("");},60);
     } else if(tool==="text"){
-      const it=addItem({type:"text",text:"Текст",color:"#1E293B",w:180,h:50,fontSize:16,fontFamily:"Inter"},x,y);
+      const it=addItem({type:"text",text:"Текст",color:"#282828",w:180,h:50,fontSize:16,fontFamily:"Inter"},x,y);
       if(it)setTimeout(()=>{setEditingId(it.id);setEditText("Текст");},60);
     } else if(tool==="shape"){
-      const it=addItem({type:"shape",shapeKind,color:"#3B82F6",w:160,h:110,text:"",shapeText:"",fontFamily:"Inter",fontSize:14},x,y);
+      const it=addItem({type:"shape",shapeKind,color:"#7A7A7A",w:160,h:110,text:"",shapeText:"",fontFamily:"Inter",fontSize:14},x,y);
       if(it)setTimeout(()=>{setEditingId(it.id);setEditText("");},60);
     } else if(tool==="link"){
       setLinkClickPos({x,y});setLinkModal(true);
@@ -9734,7 +12033,7 @@ function BoardPage({userId}:{userId:string}){
     if(tool==="line"){
       if(!lineFrom){setLineFrom(id);return;}
       if(lineFrom===id){setLineFrom(null);return;}
-      const nl:BLine={id:bid(),fromId:lineFrom,toId:id,color:"#64748B",thickness:2,style:"solid",arrow:"arrow"};
+      const nl:BLine={id:bid(),fromId:lineFrom,toId:id,color:"#727272",thickness:2,style:"solid",arrow:"arrow"};
       updLines([...lines,nl]);
       setLineFrom(null);setTool("select");
       return;
@@ -9864,7 +12163,7 @@ function BoardPage({userId}:{userId:string}){
         const maxX=Math.max(0,...xs),maxY=Math.max(0,...ys);
         const w=Math.max(40,maxX-minX),h=Math.max(40,maxY-minY);
         const base=normalizeBoardItems(itemsRef.current as any[]);
-        const it:BItem={id:bid(),type:"draw",x:startX+minX,y:startY+minY,w,h,drawPath:drawPreview.slice(0,MAX_DRAW_PATH_CHARS),drawColor:drawMode==="pencil"?"rgba(30,41,59,0.75)":drawColor,drawThickness:drawMode==="pencil"?Math.max(1,drawThickness-1):drawThickness,zIndex:base.length};
+        const it:BItem={id:bid(),type:"draw",x:startX+minX,y:startY+minY,w,h,drawPath:drawPreview.slice(0,MAX_DRAW_PATH_CHARS),drawColor:drawMode==="pencil"?"rgba(40,40,40,0.75)":drawColor,drawThickness:drawMode==="pencil"?Math.max(1,drawThickness-1):drawThickness,zIndex:base.length};
         updItems([...base,it]);
       }
     }
@@ -9881,7 +12180,7 @@ function BoardPage({userId}:{userId:string}){
       });
       if(best!==null){
         const b=best as AnchorHit;
-        const nl:BLine={id:bid(),fromId,toId:b.id,fromAnchor,toAnchor:b.side,color:"#64748B",thickness:2,style:"solid",arrow:"arrow"};
+        const nl:BLine={id:bid(),fromId,toId:b.id,fromAnchor,toAnchor:b.side,color:"#727272",thickness:2,style:"solid",arrow:"arrow"};
         updLines([...lines,nl]);
       }
       setConnectorDrag(null);
@@ -10090,7 +12389,7 @@ function BoardPage({userId}:{userId:string}){
       // Use anchor points if defined, else centers
       const a=ln.fromAnchor?anchorPos(from,ln.fromAnchor):itemCenter(from);
       const b=ln.toAnchor?anchorPos(to,ln.toAnchor):itemCenter(to);
-      const col=ln.color||"#64748B";
+      const col=ln.color||"#727272";
       const thick=ln.thickness||2;
       const dashArr=ln.style==="dashed"?`${thick*4} ${thick*3}`:ln.style==="dotted"?`${thick} ${thick*3}`:"none";
       const markerId=`arr-${ln.id}`;
@@ -10101,7 +12400,7 @@ function BoardPage({userId}:{userId:string}){
           {(ln.arrow==="arrow"||ln.arrow==="double")&&<defs><marker id={markerId} markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill={col}/></marker>{ln.arrow==="double"&&<marker id={markerStartId} markerWidth="10" markerHeight="7" refX="1" refY="3.5" orient="auto-start-reverse"><polygon points="10 0, 0 3.5, 10 7" fill={col}/></marker>}</defs>}
           {/* Hit area */}
           <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="transparent" strokeWidth={16} style={{cursor:"pointer"}} onClick={e=>{e.stopPropagation();setSelectedLineId(ln.id);setSelectedIds(new Set());}}/>
-          <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={isSel?"#2563EB":col} strokeWidth={isSel?thick+2:thick} strokeDasharray={dashArr} markerStart={ln.arrow==="double"?`url(#${markerStartId})`:"none"} markerEnd={(ln.arrow==="arrow"||ln.arrow==="double")?`url(#${markerId})`:"none"} strokeLinecap="round" style={{pointerEvents:"none"}}/>
+          <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={isSel?"#606060":col} strokeWidth={isSel?thick+2:thick} strokeDasharray={dashArr} markerStart={ln.arrow==="double"?`url(#${markerStartId})`:"none"} markerEnd={(ln.arrow==="arrow"||ln.arrow==="double")?`url(#${markerId})`:"none"} strokeLinecap="round" style={{pointerEvents:"none"}}/>
         </g>
       );
     });
@@ -10109,7 +12408,7 @@ function BoardPage({userId}:{userId:string}){
 
   // ── Render shape ──
   const renderShapeFill=(it:BItem)=>{
-    const c=it.color||"#3B82F6";
+    const c=it.color||"#7A7A7A";
     const textStyle:React.CSSProperties={
       position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",
       fontFamily:it.fontFamily||"Inter",fontSize:it.fontSize||13,fontWeight:it.fontBold?800:600,fontStyle:it.fontItalic?"italic":"normal",color:"#fff",
@@ -10139,7 +12438,7 @@ function BoardPage({userId}:{userId:string}){
       case"parallelogram":return<div style={{width:"100%",height:"100%",background:c,clipPath:"polygon(15% 0%,100% 0%,85% 100%,0% 100%)",boxShadow:"0 4px 20px "+c+"55",position:"relative"}}>
         {txt&&<div style={textStyle}>{txt}</div>}
       </div>;
-      default:return<div style={{width:"100%",height:"100%",background:c,borderRadius:10,boxShadow:"0 4px 20px "+c+"55",position:"relative"}}>
+      default:return<div style={{width:"100%",height:"100%",background:c,borderRadius:8,boxShadow:"0 4px 20px "+c+"55",position:"relative"}}>
         {txt&&<div style={textStyle}>{txt}</div>}
       </div>;
     }
@@ -10205,7 +12504,7 @@ function BoardPage({userId}:{userId:string}){
             <div style={{fontSize:13,color:C.t2,marginTop:2}}>{boards.length}/{MAX_BOARDS} досок использовано</div>
           </div>
           <button onClick={()=>boards.length>=MAX_BOARDS?alert(`Максимум ${MAX_BOARDS} досок`):setNewBoardModal(true)}
-            style={{padding:"10px 20px",background:boards.length>=MAX_BOARDS?"#E2E8F0":"#2563EB",color:boards.length>=MAX_BOARDS?C.t2:"#fff",border:"none",borderRadius:12,fontSize:13,fontWeight:700,cursor:boards.length>=MAX_BOARDS?"not-allowed":"pointer",display:"flex",alignItems:"center",gap:8}}>
+            style={{padding:"10px 20px",background:boards.length>=MAX_BOARDS?"#E2E8F0":"#606060",color:boards.length>=MAX_BOARDS?C.t2:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:boards.length>=MAX_BOARDS?"not-allowed":"pointer",display:"flex",alignItems:"center",gap:8}}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Новая доска
           </button>
@@ -10214,21 +12513,21 @@ function BoardPage({userId}:{userId:string}){
         {loadingBoards
           ?<div style={{textAlign:"center",padding:60,color:C.t2}}>Загрузка...</div>
           :boards.length===0
-          ?<div style={{textAlign:"center",padding:"80px 32px",background:"#fff",borderRadius:20,boxShadow:"0 2px 12px rgba(0,0,0,0.06)"}} className="empty-state">
+          ?<div style={{textAlign:"center",padding:"80px 32px",background:"#fff",borderRadius:10,boxShadow:"0 2px 12px rgba(0,0,0,0.06)"}} className="empty-state">
               <div style={{fontSize:48,marginBottom:12}}>🎨</div>
               <div style={{fontSize:18,fontWeight:700,color:C.t1,marginBottom:8}}>Досок пока нет</div>
               <div style={{fontSize:14,color:C.t2,marginBottom:24}}>Создай первую доску для мозговых штурмов и планирования</div>
-              <button onClick={()=>setNewBoardModal(true)} style={{padding:"12px 24px",background:"#2563EB",color:"#fff",border:"none",borderRadius:12,fontSize:14,fontWeight:700,cursor:"pointer"}}>+ Создать доску</button>
+              <button onClick={()=>setNewBoardModal(true)} style={{padding:"12px 24px",background:"#606060",color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:700,cursor:"pointer"}}>+ Создать доску</button>
             </div>
           :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:16}}>
               {boards.map(b=>(
                 <div key={b.id} onClick={()=>setActiveBoardId(b.id)}
                   className="board-preview-card"
-                  style={{background:"#fff",borderRadius:16,overflow:"hidden",boxShadow:"0 2px 12px rgba(0,0,0,0.07)",cursor:"pointer",transition:"box-shadow 0.2s,transform 0.15s"}}
+                  style={{background:"#fff",borderRadius:10,overflow:"hidden",boxShadow:"0 2px 12px rgba(0,0,0,0.07)",cursor:"pointer",transition:"box-shadow 0.2s,transform 0.15s"}}
                   onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 8px 28px rgba(0,0,0,0.13)";(e.currentTarget as HTMLElement).style.transform="translateY(-2px)";}}
                   onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 2px 12px rgba(0,0,0,0.07)";(e.currentTarget as HTMLElement).style.transform="translateY(0)";}}>
                   {/* Preview area */}
-                  <div style={{height:140,background:"linear-gradient(135deg,#F0F9FF,#E0F2FE)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:40}}>🎨</div>
+                  <div style={{height:140,background:"linear-gradient(135deg,#F0F9FF,#EEEEEE)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:40}}>🎨</div>
                   <div style={{padding:"14px 16px"}}>
                     {renamingId===b.id
                       ?<input autoFocus value={renameVal} onChange={e=>setRenameVal(e.target.value)}
@@ -10242,17 +12541,17 @@ function BoardPage({userId}:{userId:string}){
                       <button onClick={()=>{setRenamingId(b.id);setRenameVal(b.name);}}
                         style={{flex:1,padding:"7px 0",fontSize:12,fontWeight:600,background:"#F1F5F9",color:C.t2,border:"none",borderRadius:8,cursor:"pointer"}}>✎ Переим.</button>
                       <button onClick={()=>setDeletingId(b.id)}
-                        style={{padding:"7px 10px",fontSize:12,background:"#FFF1F1",color:"#EF4444",border:"1px solid #FCA5A5",borderRadius:8,cursor:"pointer"}}>🗑</button>
+                        style={{padding:"7px 10px",fontSize:12,background:"#FFF1F1",color:"#777777",border:"1px solid #BFBFBF",borderRadius:8,cursor:"pointer"}}>🗑</button>
                     </div>
                   </div>
                 </div>
               ))}
               {/* Add tile */}
               {boards.length<MAX_BOARDS&&<div onClick={()=>setNewBoardModal(true)}
-                style={{background:"transparent",borderRadius:16,border:"2px dashed #CBD5E1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,minHeight:240,cursor:"pointer",transition:"border-color 0.15s,background 0.15s"}}
-                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="#2563EB";(e.currentTarget as HTMLElement).style.background="#F0F6FF";}}
-                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor="#CBD5E1";(e.currentTarget as HTMLElement).style.background="transparent";}}>
-                <div style={{width:44,height:44,borderRadius:14,background:"#F1F5F9",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>+</div>
+                style={{background:"transparent",borderRadius:10,border:"2px dashed #D3D3D3",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,minHeight:240,cursor:"pointer",transition:"border-color 0.15s,background 0.15s"}}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor="#606060";(e.currentTarget as HTMLElement).style.background="#F0F6FF";}}
+                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor="#D3D3D3";(e.currentTarget as HTMLElement).style.background="transparent";}}>
+                <div style={{width:44,height:44,borderRadius:10,background:"#F1F5F9",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>+</div>
                 <div style={{fontSize:13,fontWeight:600,color:C.t2}}>Новая доска</div>
               </div>}
             </div>
@@ -10261,7 +12560,7 @@ function BoardPage({userId}:{userId:string}){
         {/* New board modal */}
         {newBoardModal&&(
           <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setNewBoardModal(false)}>
-            <div style={{background:"#fff",borderRadius:20,padding:32,width:380,boxShadow:"0 24px 60px rgba(0,0,0,0.2)"}} onClick={e=>e.stopPropagation()}>
+            <div style={{background:"#fff",borderRadius:10,padding:32,width:380,boxShadow:"0 24px 60px rgba(0,0,0,0.2)"}} onClick={e=>e.stopPropagation()}>
               <div style={{fontSize:18,fontWeight:700,marginBottom:16}}>Новая доска</div>
               <input autoFocus value={newBoardName} onChange={e=>setNewBoardName(e.target.value)}
                 onKeyDown={e=>{if(e.key==="Enter")createBoard();}}
@@ -10277,13 +12576,13 @@ function BoardPage({userId}:{userId:string}){
         {/* Delete confirm */}
         {deletingId&&(
           <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setDeletingId(null)}>
-            <div style={{background:"#fff",borderRadius:20,padding:28,width:360,textAlign:"center"}} onClick={e=>e.stopPropagation()}>
+            <div style={{background:"#fff",borderRadius:10,padding:28,width:360,textAlign:"center"}} onClick={e=>e.stopPropagation()}>
               <div style={{fontSize:36,marginBottom:12}}>🗑️</div>
               <div style={{fontSize:16,fontWeight:700,marginBottom:8}}>Удалить доску?</div>
               <div style={{fontSize:13,color:C.t2,marginBottom:20}}>Все элементы будут удалены навсегда.</div>
               <div style={{display:"flex",gap:10,justifyContent:"center"}}>
                 <Btn onClick={()=>setDeletingId(null)} primary={false}>Отмена</Btn>
-                <Btn onClick={deleteBoard} style={{background:"#EF4444"}}>Удалить</Btn>
+                <Btn onClick={deleteBoard} style={{background:"#777777"}}>Удалить</Btn>
               </div>
             </div>
           </div>
@@ -10308,30 +12607,30 @@ function BoardPage({userId}:{userId:string}){
         <div style={{fontSize:14,fontWeight:700,color:C.t1,flex:1}}>{activeBoard.name}</div>
 
         <button onClick={()=>setExternalPanel(true)}
-          style={{display:"flex",alignItems:"center",gap:7,padding:"8px 12px",border:"1px solid #DDD6FE",background:"linear-gradient(135deg,#F5F3FF,#EEF2FF)",color:"#6D28D9",borderRadius:10,fontSize:12,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap",boxShadow:"0 0 14px rgba(124,58,237,0.12)"}}>
+          style={{display:"flex",alignItems:"center",gap:7,padding:"8px 12px",border:"1px solid #DDDDDD",background:"linear-gradient(135deg,#F5F3FF,#EEF2FF)",color:"#515151",borderRadius:8,fontSize:12,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
           ＋ Добавить карточку
         </button>
         <button onClick={refreshExternalCards} title="Обновить данные внешних карточек"
-          style={{display:"flex",alignItems:"center",gap:6,padding:"8px 10px",border:"1px solid #E2E8F0",background:"#fff",color:C.t2,borderRadius:10,fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
+          style={{display:"flex",alignItems:"center",gap:6,padding:"8px 10px",border:"1px solid #E2E8F0",background:"#fff",color:C.t2,borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
           ↻ Обновить
         </button>
 
         {/* Main tools moved to the left Miro-style toolbar */}
         {/* Draw tool options */}
         {tool==="draw"&&(
-          <div style={{display:"flex",gap:6,alignItems:"center",background:"#F1F5F9",borderRadius:10,padding:"4px 8px"}}>
+          <div style={{display:"flex",gap:6,alignItems:"center",background:"#F1F5F9",borderRadius:8,padding:"4px 8px"}}>
             {([{id:"pen",label:"Ручка",icon:"🖊"},{id:"pencil",label:"Карандаш",icon:"✏️"},{id:"pointer",label:"Указка",icon:"☄️"}] as {id:DrawMode;label:string;icon:string}[]).map(m=>(
-              <button key={m.id} onClick={()=>setDrawMode(m.id)} title={m.label} style={{height:28,padding:"0 8px",borderRadius:7,border:"1px solid "+(drawMode===m.id?"#2563EB":"#E2E8F0"),background:drawMode===m.id?"#EFF6FF":"#fff",fontSize:12,fontWeight:700,color:drawMode===m.id?"#2563EB":C.t2,cursor:"pointer"}}>{m.icon}</button>
+              <button key={m.id} onClick={()=>setDrawMode(m.id)} title={m.label} style={{height:28,padding:"0 8px",borderRadius:7,border:"1px solid "+(drawMode===m.id?"#606060":"#E2E8F0"),background:drawMode===m.id?"#EFF6FF":"#fff",fontSize:12,fontWeight:700,color:drawMode===m.id?"#606060":C.t2,cursor:"pointer"}}>{m.icon}</button>
             ))}
             {/* Color swatch → opens picker */}
             <div style={{position:"relative"}}>
               <button onClick={()=>setStickyColorPick(stickyColorPick==="__draw__"?null:"__draw__")}
                 style={{width:24,height:24,borderRadius:6,background:drawColor,border:"2px solid rgba(0,0,0,0.15)",cursor:"pointer",flexShrink:0}}/>
               {stickyColorPick==="__draw__"&&(
-                <div style={{position:"absolute",top:"calc(100%+6px)",left:0,background:"#fff",borderRadius:12,padding:10,boxShadow:"0 8px 24px rgba(0,0,0,0.15)",zIndex:300,width:160,border:"1px solid #E2E8F0"}}>
+                <div style={{position:"absolute",top:"calc(100%+6px)",left:0,background:"#fff",borderRadius:8,padding:10,boxShadow:"0 8px 24px rgba(0,0,0,0.15)",zIndex:300,width:160,border:"1px solid #E2E8F0"}}>
                   <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:8}}>
                     {BOARD_PALETTE.map(c=><button key={c} onClick={()=>{setDrawColor(c);setStickyColorPick(null);}}
-                      style={{width:22,height:22,borderRadius:5,background:c,border:drawColor===c?"2px solid #2563EB":"1px solid #E2E8F0",cursor:"pointer"}}/>)}
+                      style={{width:22,height:22,borderRadius:5,background:c,border:drawColor===c?"2px solid #606060":"1px solid #E2E8F0",cursor:"pointer"}}/>)}
                   </div>
                   <input type="color" value={drawColor} onChange={e=>setDrawColor(e.target.value)} style={{width:"100%",height:26,border:"none",cursor:"pointer",borderRadius:5}}/>
                 </div>
@@ -10340,8 +12639,8 @@ function BoardPage({userId}:{userId:string}){
             <span style={{fontSize:10,color:C.t2}}>Толщина:</span>
             {([{v:2,label:"Тонкая"},{v:4,label:"Средняя"},{v:8,label:"Толстая"}] as {v:number,label:string}[]).map(t=>(
               <button key={t.v} onClick={()=>setDrawThickness(t.v)} title={t.label}
-                style={{width:30,height:28,borderRadius:7,border:"1px solid "+(drawThickness===t.v?"#2563EB":"#E2E8F0"),background:drawThickness===t.v?"#EFF6FF":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                <div style={{width:16,height:t.v,background:drawThickness===t.v?"#2563EB":"#64748B",borderRadius:t.v,transition:"all 0.15s"}}/>
+                style={{width:30,height:28,borderRadius:7,border:"1px solid "+(drawThickness===t.v?"#606060":"#E2E8F0"),background:drawThickness===t.v?"#EFF6FF":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <div style={{width:16,height:t.v,background:drawThickness===t.v?"#606060":"#727272",borderRadius:t.v,transition:"all 0.15s"}}/>
               </button>
             ))}
           </div>
@@ -10360,7 +12659,7 @@ function BoardPage({userId}:{userId:string}){
         )}
 
         {/* Line tool: show source hint */}
-        {tool==="line"&&<span style={{fontSize:12,color:"#2563EB",fontWeight:600}}>{lineFrom?"Клик по второму элементу":"Клик по первому элементу"}</span>}
+        {tool==="line"&&<span style={{fontSize:12,color:"#606060",fontWeight:600}}>{lineFrom?"Клик по второму элементу":"Клик по первому элементу"}</span>}
 
         {/* Zoom */}
         <div style={{display:"flex",alignItems:"center",gap:4,background:"#F1F5F9",borderRadius:9,padding:"3px 8px"}}>
@@ -10372,12 +12671,12 @@ function BoardPage({userId}:{userId:string}){
 
         {/* Save indicator */}
         <div style={{display:"flex",alignItems:"center",gap:8,fontSize:11,color:C.t2}}>
-          {imgUploading&&<div style={{display:"flex",alignItems:"center",gap:5,color:"#F59E0B"}}>
-            <div style={{width:12,height:12,border:"2px solid #F59E0B",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/>
+          {imgUploading&&<div style={{display:"flex",alignItems:"center",gap:5,color:"#A7A7A7"}}>
+            <div style={{width:12,height:12,border:"2px solid #A7A7A7",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/>
             Загрузка фото...
           </div>}
           {!imgUploading&&<>
-            <div style={{width:6,height:6,borderRadius:"50%",background:saved?"#10B981":"#F59E0B",transition:"background 0.3s"}}/>
+            <div style={{width:6,height:6,borderRadius:"50%",background:saved?"#808080":"#A7A7A7",transition:"background 0.3s"}}/>
             {saved?"Сохранено":"Сохранение..."}
           </>}
         </div>
@@ -10385,8 +12684,8 @@ function BoardPage({userId}:{userId:string}){
 
       {/* ── LEFT MIRO-STYLE TOOLBAR ── */}
       <div style={{position:"absolute",left:14,top:86,zIndex:130,display:"flex",flexDirection:"column",gap:10,alignItems:"center"}}>
-        <div style={{width:58,height:58,borderRadius:22,background:"linear-gradient(135deg,#4F46E5,#A855F7)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:24,boxShadow:"0 18px 36px rgba(79,70,229,0.28)",border:"1px solid rgba(255,255,255,0.7)"}}>✦</div>
-        <div style={{width:54,background:"rgba(255,255,255,0.96)",border:"1px solid rgba(15,23,42,0.08)",boxShadow:"0 14px 34px rgba(15,23,42,0.12)",borderRadius:16,padding:6,display:"flex",flexDirection:"column",gap:5,alignItems:"center"}}>
+        <div style={{width:58,height:58,borderRadius:12,background:"linear-gradient(135deg,#5B5B5B,#808080)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:24,boxShadow:"0 18px 36px rgba(91,91,91,0.28)",border:"1px solid rgba(255,255,255,0.7)"}}>✦</div>
+        <div style={{width:54,background:"rgba(255,255,255,0.96)",border:"1px solid rgba(23,23,23,0.08)",boxShadow:"0 14px 34px rgba(23,23,23,0.12)",borderRadius:10,padding:6,display:"flex",flexDirection:"column",gap:5,alignItems:"center"}}>
           {[
             {id:"select",label:"Курсор",icon:"➤",on:()=>{setTool("select");setToolPanel(null);}},
             {id:"create",label:"Документ / таблица",icon:"▣+",on:()=>{setTool("select");setToolPanel(toolPanel==="create"?null:"create");}},
@@ -10396,61 +12695,61 @@ function BoardPage({userId}:{userId:string}){
             {id:"shape",label:"Фигуры и стрелки",icon:"▧↗",on:()=>{setTool("shape");setToolPanel(toolPanel==="shape"?null:"shape");}},
             {id:"draw",label:"Рисование",icon:"✎",on:()=>{setTool("draw");setToolPanel(toolPanel==="draw"?null:"draw");}},
             {id:"image",label:"Изображение",icon:"＋",on:()=>{setTool("image");setToolPanel(null);setImgClickPos({x:400,y:300});imgInputRef.current?.click();}},
-          ].map((b:any)=><button key={b.id} title={b.label} onClick={b.on} style={{width:42,height:42,borderRadius:10,border:"none",background:(tool===b.id||toolPanel===b.id)?"#E8EDFF":"transparent",color:(tool===b.id||toolPanel===b.id)?"#3155E7":"#1F2937",cursor:"pointer",fontSize:b.id==="text"?27:20,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .12s"}}>{b.icon}</button>)}
+          ].map((b:any)=><button key={b.id} title={b.label} onClick={b.on} style={{width:42,height:42,borderRadius:8,border:"none",background:(tool===b.id||toolPanel===b.id)?"#EEEEEE":"transparent",color:(tool===b.id||toolPanel===b.id)?"#5B5B5B":"#282828",cursor:"pointer",fontSize:b.id==="text"?27:20,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .12s"}}>{b.icon}</button>)}
           <div style={{width:34,height:1,background:"#E5E7EB",margin:"4px 0"}}/>
-          <button title="Добавить внешнюю карточку" onClick={()=>setExternalPanel(true)} style={{width:42,height:42,borderRadius:10,border:"none",background:"#111827",color:"#fff",cursor:"pointer",fontSize:22,fontWeight:900}}>+</button>
+          <button title="Добавить внешнюю карточку" onClick={()=>setExternalPanel(true)} style={{width:42,height:42,borderRadius:8,border:"none",background:"#181818",color:"#fff",cursor:"pointer",fontSize:22,fontWeight:900}}>+</button>
         </div>
-        <div style={{width:54,background:"rgba(255,255,255,0.96)",border:"1px solid rgba(15,23,42,0.08)",boxShadow:"0 14px 34px rgba(15,23,42,0.12)",borderRadius:16,padding:6,display:"flex",flexDirection:"column",gap:5,alignItems:"center"}}>
-          <button title="Назад на 1 шаг" onClick={undoBoard} style={{width:42,height:42,borderRadius:10,border:"none",background:"transparent",cursor:"pointer",fontSize:24,color:historyPast.current.length?"#111827":"#A3AAB8"}}>↶</button>
-          <button title="Вперёд на 1 шаг" onClick={redoBoard} style={{width:42,height:42,borderRadius:10,border:"none",background:"transparent",cursor:"pointer",fontSize:24,color:historyFuture.current.length?"#111827":"#A3AAB8"}}>↷</button>
+        <div style={{width:54,background:"rgba(255,255,255,0.96)",border:"1px solid rgba(23,23,23,0.08)",boxShadow:"0 14px 34px rgba(23,23,23,0.12)",borderRadius:10,padding:6,display:"flex",flexDirection:"column",gap:5,alignItems:"center"}}>
+          <button title="Назад на 1 шаг" onClick={undoBoard} style={{width:42,height:42,borderRadius:8,border:"none",background:"transparent",cursor:"pointer",fontSize:24,color:historyPast.current.length?"#181818":"#AAAAAA"}}>↶</button>
+          <button title="Вперёд на 1 шаг" onClick={redoBoard} style={{width:42,height:42,borderRadius:8,border:"none",background:"transparent",cursor:"pointer",fontSize:24,color:historyFuture.current.length?"#181818":"#AAAAAA"}}>↷</button>
         </div>
       </div>
 
-      {toolPanel==="create"&&<div style={{position:"absolute",left:86,top:184,zIndex:135,width:250,background:"#fff",borderRadius:18,padding:14,boxShadow:"0 22px 55px rgba(15,23,42,.16)",border:"1px solid #E5E7EB"}}>
-        <button onClick={()=>{addBoardDoc();setToolPanel(null);}} style={{width:"100%",padding:"14px 14px",border:"none",borderRadius:13,background:"#EEF2FF",fontSize:14,fontWeight:800,color:"#3730A3",cursor:"pointer",marginBottom:10,textAlign:"left"}}>📄 Создать документ Docs</button>
-        <button onClick={()=>{addBoardTable();setToolPanel(null);}} style={{width:"100%",padding:"14px 14px",border:"none",borderRadius:13,background:"#ECFDF5",fontSize:14,fontWeight:800,color:"#047857",cursor:"pointer",textAlign:"left"}}>▦ Создать таблицу</button>
+      {toolPanel==="create"&&<div style={{position:"absolute",left:86,top:184,zIndex:135,width:250,background:"#fff",borderRadius:12,padding:14,boxShadow:"0 22px 55px rgba(23,23,23,.16)",border:"1px solid #E5E7EB"}}>
+        <button onClick={()=>{addBoardDoc();setToolPanel(null);}} style={{width:"100%",padding:"14px 14px",border:"none",borderRadius:10,background:"#EEF2FF",fontSize:14,fontWeight:800,color:"#3F3F3F",cursor:"pointer",marginBottom:10,textAlign:"left"}}>📄 Создать документ Docs</button>
+        <button onClick={()=>{addBoardTable();setToolPanel(null);}} style={{width:"100%",padding:"14px 14px",border:"none",borderRadius:10,background:"#ECFDF5",fontSize:14,fontWeight:800,color:"#525252",cursor:"pointer",textAlign:"left"}}>▦ Создать таблицу</button>
         <div style={{fontSize:11,color:C.t2,marginTop:10,lineHeight:1.45}}>Эти элементы появляются на доске как быстрые карточки и дальше могут быть связаны с Vizzy Text / Vizzy Tables.</div>
       </div>}
 
-      {toolPanel==="sticky"&&<div style={{position:"absolute",left:86,top:238,zIndex:135,width:216,background:"#fff",borderRadius:18,padding:14,boxShadow:"0 22px 55px rgba(15,23,42,.16)",border:"1px solid #E5E7EB"}}>
+      {toolPanel==="sticky"&&<div style={{position:"absolute",left:86,top:238,zIndex:135,width:216,background:"#fff",borderRadius:12,padding:14,boxShadow:"0 22px 55px rgba(23,23,23,.16)",border:"1px solid #E5E7EB"}}>
         <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:12}}>
-          {BOARD_STICKY_PALETTE.map(c=><button key={c} draggable onDragStart={e=>e.dataTransfer.setData("vizzy/sticky-color",c)} onClick={()=>addStickyWithColor(c)} title="Клик — добавить, перетащи — разместить" style={{height:72,borderRadius:2,background:c,border:"1px solid rgba(15,23,42,.18)",boxShadow:"0 7px 18px rgba(15,23,42,.12)",cursor:"grab"}}/>)}
+          {BOARD_STICKY_PALETTE.map(c=><button key={c} draggable onDragStart={e=>e.dataTransfer.setData("vizzy/sticky-color",c)} onClick={()=>addStickyWithColor(c)} title="Клик — добавить, перетащи — разместить" style={{height:72,borderRadius:2,background:c,border:"1px solid rgba(23,23,23,.18)",boxShadow:"0 7px 18px rgba(23,23,23,.12)",cursor:"grab"}}/>)}
         </div>
-        <button onClick={()=>addStickyWithColor(BOARD_STICKY_PALETTE[0])} style={{marginTop:12,width:"100%",height:42,border:"none",borderRadius:10,background:"#E5E7EB",fontSize:14,fontWeight:800,cursor:"pointer"}}>✦ Generate</button>
-        <button onClick={()=>addStickyWithColor(BOARD_STICKY_PALETTE[1])} style={{marginTop:8,width:"100%",height:42,border:"none",borderRadius:10,background:"#E5E7EB",fontSize:14,fontWeight:800,cursor:"pointer"}}>▱ Stack</button>
+        <button onClick={()=>addStickyWithColor(BOARD_STICKY_PALETTE[0])} style={{marginTop:12,width:"100%",height:42,border:"none",borderRadius:8,background:"#E5E7EB",fontSize:14,fontWeight:800,cursor:"pointer"}}>✦ Generate</button>
+        <button onClick={()=>addStickyWithColor(BOARD_STICKY_PALETTE[1])} style={{marginTop:8,width:"100%",height:42,border:"none",borderRadius:8,background:"#E5E7EB",fontSize:14,fontWeight:800,cursor:"pointer"}}>▱ Stack</button>
       </div>}
 
-      {toolPanel==="icons"&&<div style={{position:"absolute",left:86,top:292,zIndex:135,width:392,maxHeight:"72vh",overflow:"hidden",background:"#fff",borderRadius:20,padding:14,boxShadow:"0 22px 55px rgba(15,23,42,.16)",border:"1px solid #E5E7EB",display:"flex",flexDirection:"column",gap:12}}>
+      {toolPanel==="icons"&&<div style={{position:"absolute",left:86,top:292,zIndex:135,width:392,maxHeight:"72vh",overflow:"hidden",background:"#fff",borderRadius:10,padding:14,boxShadow:"0 22px 55px rgba(23,23,23,.16)",border:"1px solid #E5E7EB",display:"flex",flexDirection:"column",gap:12}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
           <div>
             <div style={{fontSize:16,fontWeight:900,color:C.t1}}>Иконки</div>
             <div style={{fontSize:11,color:C.t2,marginTop:3}}>Эмодзи, соцсети и бизнес-иконки. Клик — добавить, drag & drop — разместить.</div>
           </div>
-          <div style={{fontSize:11,fontWeight:800,color:"#6366F1",padding:"6px 10px",borderRadius:999,background:"#EEF2FF"}}>{filteredLibraryIcons.length}</div>
+          <div style={{fontSize:11,fontWeight:800,color:"#757575",padding:"6px 10px",borderRadius:999,background:"#EEF2FF"}}>{filteredLibraryIcons.length}</div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
-          {([{id:"emoji",label:"Эмодзи"},{id:"social",label:"Соцсети"},{id:"business",label:"Бизнес"}] as const).map(tab=><button key={tab.id} onClick={()=>setIconTab(tab.id)} style={{height:38,borderRadius:12,border:"1px solid "+(iconTab===tab.id?"#C7D2FE":"#E5E7EB"),background:iconTab===tab.id?"#EEF2FF":"#fff",color:iconTab===tab.id?"#3730A3":"#475569",fontSize:13,fontWeight:800,cursor:"pointer"}}>{tab.label}</button>)}
+          {([{id:"emoji",label:"Эмодзи"},{id:"social",label:"Соцсети"},{id:"business",label:"Бизнес"}] as const).map(tab=><button key={tab.id} onClick={()=>setIconTab(tab.id)} style={{height:38,borderRadius:8,border:"1px solid "+(iconTab===tab.id?"#D4D4D4":"#E5E7EB"),background:iconTab===tab.id?"#EEF2FF":"#fff",color:iconTab===tab.id?"#3F3F3F":"#535353",fontSize:13,fontWeight:800,cursor:"pointer"}}>{tab.label}</button>)}
         </div>
-        <input value={iconSearch} onChange={e=>setIconSearch(e.target.value)} placeholder="Поиск по названию..." style={{width:"100%",height:40,border:"1px solid #E2E8F0",borderRadius:12,padding:"0 12px",fontSize:13,outline:"none"}}/>
+        <input value={iconSearch} onChange={e=>setIconSearch(e.target.value)} placeholder="Поиск по названию..." style={{width:"100%",height:40,border:"1px solid #E2E8F0",borderRadius:8,padding:"0 12px",fontSize:13,outline:"none"}}/>
         <div style={{overflowY:"auto",paddingRight:4,display:"flex",flexDirection:"column",gap:12}}>
           {favoriteIcons.filter((icon:any)=>icon.category===iconTab).length>0&&<div>
-            <div style={{fontSize:11,fontWeight:900,color:"#64748B",textTransform:"uppercase",letterSpacing:.7,marginBottom:8}}>Избранные</div>
+            <div style={{fontSize:11,fontWeight:900,color:"#727272",textTransform:"uppercase",letterSpacing:.7,marginBottom:8}}>Избранные</div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(6,minmax(0,1fr))",gap:8}}>
-              {favoriteIcons.filter((icon:any)=>icon.category===iconTab).map((icon:any)=><button key={icon.key} draggable onDragStart={e=>e.dataTransfer.setData("application/x-vizzy-icon",JSON.stringify(icon))} onClick={()=>addBoardIcon(icon)} style={{height:52,borderRadius:12,border:"1px solid #E5E7EB",background:"#FFFBEB",display:"flex",alignItems:"center",justifyContent:"center",cursor:"grab",position:"relative"}} title={icon.label}><div style={{position:"absolute",top:4,right:5,fontSize:11,color:"#F59E0B"}}>★</div>{renderBoardLibraryIcon(icon,undefined,icon.category==="emoji"?28:26)}</button>)}
+              {favoriteIcons.filter((icon:any)=>icon.category===iconTab).map((icon:any)=><button key={icon.key} draggable onDragStart={e=>e.dataTransfer.setData("application/x-vizzy-icon",JSON.stringify(icon))} onClick={()=>addBoardIcon(icon)} style={{height:52,borderRadius:8,border:"1px solid #E5E7EB",background:"#FFFBEB",display:"flex",alignItems:"center",justifyContent:"center",cursor:"grab",position:"relative"}} title={icon.label}><div style={{position:"absolute",top:4,right:5,fontSize:11,color:"#A7A7A7"}}>★</div>{renderBoardLibraryIcon(icon,undefined,icon.category==="emoji"?28:26)}</button>)}
             </div>
           </div>}
 
           {recentIcons.filter((icon:any)=>icon.category===iconTab).length>0&&<div>
-            <div style={{fontSize:11,fontWeight:900,color:"#64748B",textTransform:"uppercase",letterSpacing:.7,marginBottom:8}}>Недавние</div>
+            <div style={{fontSize:11,fontWeight:900,color:"#727272",textTransform:"uppercase",letterSpacing:.7,marginBottom:8}}>Недавние</div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(6,minmax(0,1fr))",gap:8}}>
-              {recentIcons.filter((icon:any)=>icon.category===iconTab).map((icon:any)=><button key={icon.key} draggable onDragStart={e=>e.dataTransfer.setData("application/x-vizzy-icon",JSON.stringify(icon))} onClick={()=>addBoardIcon(icon)} style={{height:52,borderRadius:12,border:"1px solid #E5E7EB",background:"#F8FAFC",display:"flex",alignItems:"center",justifyContent:"center",cursor:"grab",position:"relative"}} title={icon.label}><button onClick={e=>{e.stopPropagation();toggleFavoriteIcon(icon.key);}} style={{position:"absolute",top:4,right:4,width:16,height:16,border:"none",background:"transparent",cursor:"pointer",fontSize:11,color:favoriteIconKeys.includes(icon.key)?"#F59E0B":"#CBD5E1",padding:0}}>★</button>{renderBoardLibraryIcon(icon,undefined,icon.category==="emoji"?28:26)}</button>)}
+              {recentIcons.filter((icon:any)=>icon.category===iconTab).map((icon:any)=><button key={icon.key} draggable onDragStart={e=>e.dataTransfer.setData("application/x-vizzy-icon",JSON.stringify(icon))} onClick={()=>addBoardIcon(icon)} style={{height:52,borderRadius:8,border:"1px solid #E5E7EB",background:"#F8FAFC",display:"flex",alignItems:"center",justifyContent:"center",cursor:"grab",position:"relative"}} title={icon.label}><button onClick={e=>{e.stopPropagation();toggleFavoriteIcon(icon.key);}} style={{position:"absolute",top:4,right:4,width:16,height:16,border:"none",background:"transparent",cursor:"pointer",fontSize:11,color:favoriteIconKeys.includes(icon.key)?"#A7A7A7":"#D3D3D3",padding:0}}>★</button>{renderBoardLibraryIcon(icon,undefined,icon.category==="emoji"?28:26)}</button>)}
             </div>
           </div>}
 
           <div>
-            <div style={{fontSize:11,fontWeight:900,color:"#64748B",textTransform:"uppercase",letterSpacing:.7,marginBottom:8}}>{iconTab==="emoji"?"Эмодзи":iconTab==="social"?"Соцсети":"Бизнес"}</div>
+            <div style={{fontSize:11,fontWeight:900,color:"#727272",textTransform:"uppercase",letterSpacing:.7,marginBottom:8}}>{iconTab==="emoji"?"Эмодзи":iconTab==="social"?"Соцсети":"Бизнес"}</div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(6,minmax(0,1fr))",gap:8}}>
-              {filteredLibraryIcons.map((icon:any)=><button key={icon.key} draggable onDragStart={e=>e.dataTransfer.setData("application/x-vizzy-icon",JSON.stringify(icon))} onClick={()=>addBoardIcon(icon)} style={{height:56,borderRadius:14,border:"1px solid #E5E7EB",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",cursor:"grab",position:"relative",boxShadow:"0 2px 8px rgba(15,23,42,0.04)"}} title={icon.label}><button onClick={e=>{e.stopPropagation();toggleFavoriteIcon(icon.key);}} style={{position:"absolute",top:4,right:4,width:16,height:16,border:"none",background:"transparent",cursor:"pointer",fontSize:11,color:favoriteIconKeys.includes(icon.key)?"#F59E0B":"#CBD5E1",padding:0}}>★</button>{renderBoardLibraryIcon(icon,undefined,icon.category==="emoji"?30:28)}</button>)}
+              {filteredLibraryIcons.map((icon:any)=><button key={icon.key} draggable onDragStart={e=>e.dataTransfer.setData("application/x-vizzy-icon",JSON.stringify(icon))} onClick={()=>addBoardIcon(icon)} style={{height:56,borderRadius:10,border:"1px solid #E5E7EB",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",cursor:"grab",position:"relative",boxShadow:"0 2px 8px rgba(23,23,23,0.04)"}} title={icon.label}><button onClick={e=>{e.stopPropagation();toggleFavoriteIcon(icon.key);}} style={{position:"absolute",top:4,right:4,width:16,height:16,border:"none",background:"transparent",cursor:"pointer",fontSize:11,color:favoriteIconKeys.includes(icon.key)?"#A7A7A7":"#D3D3D3",padding:0}}>★</button>{renderBoardLibraryIcon(icon,undefined,icon.category==="emoji"?30:28)}</button>)}
             </div>
           </div>
 
@@ -10459,7 +12758,7 @@ function BoardPage({userId}:{userId:string}){
       </div>}
 
 
-      {toolPanel==="shape"&&<div style={{position:"absolute",left:86,top:346,zIndex:135,width:284,background:"#fff",borderRadius:18,padding:12,boxShadow:"0 22px 55px rgba(15,23,42,.16)",border:"1px solid #E5E7EB"}}>
+      {toolPanel==="shape"&&<div style={{position:"absolute",left:86,top:346,zIndex:135,width:284,background:"#fff",borderRadius:12,padding:12,boxShadow:"0 22px 55px rgba(23,23,23,.16)",border:"1px solid #E5E7EB"}}>
         {[
           {label:"Line",icon:"╱",act:()=>{setTool("line");setShapeKind("rect");setToolPanel(null);}},
           {label:"Arrow",icon:"↗",act:()=>{setTool("line");setShapeKind("rect");setToolPanel(null);}},
@@ -10469,13 +12768,13 @@ function BoardPage({userId}:{userId:string}){
           {label:"Triangle",icon:"△",act:()=>{setTool("shape");setShapeKind("triangle");setToolPanel(null);}},
           {label:"Cloud",icon:"☁",act:()=>{setTool("shape");setShapeKind("cloud");setToolPanel(null);}},
           {label:"Pentagon",icon:"⬟",act:()=>{setTool("shape");setShapeKind("pentagon");setToolPanel(null);}},
-        ].map((s:any)=><button key={s.label} onClick={s.act} style={{width:"100%",height:42,border:"none",borderRadius:10,background:(tool==="shape"&&s.label.toLowerCase().includes(shapeKind||""))?"#E8EDFF":"transparent",display:"flex",alignItems:"center",gap:14,padding:"0 12px",fontSize:15,fontWeight:650,color:"#1F2937",cursor:"pointer",textAlign:"left"}}><span style={{width:24,fontSize:21}}>{s.icon}</span>{s.label}</button>)}
+        ].map((s:any)=><button key={s.label} onClick={s.act} style={{width:"100%",height:42,border:"none",borderRadius:8,background:(tool==="shape"&&s.label.toLowerCase().includes(shapeKind||""))?"#EEEEEE":"transparent",display:"flex",alignItems:"center",gap:14,padding:"0 12px",fontSize:15,fontWeight:650,color:"#282828",cursor:"pointer",textAlign:"left"}}><span style={{width:24,fontSize:21}}>{s.icon}</span>{s.label}</button>)}
       </div>}
 
-      {toolPanel==="draw"&&<div style={{position:"absolute",left:86,top:400,zIndex:135,width:78,background:"#fff",borderRadius:18,padding:10,boxShadow:"0 22px 55px rgba(15,23,42,.16)",border:"1px solid #E5E7EB",display:"flex",flexDirection:"column",gap:9,alignItems:"center"}}>
-        {([{id:"pencil",icon:"✐",label:"Карандаш"},{id:"pen",icon:"✎",label:"Ручка"},{id:"pointer",icon:"☄",label:"Указка"}] as {id:DrawMode;icon:string;label:string}[]).map(m=><button key={m.id} title={m.label} onClick={()=>{setTool("draw");setDrawMode(m.id);}} style={{width:46,height:46,borderRadius:12,border:"none",background:drawMode===m.id?"#E8EDFF":"transparent",color:drawMode===m.id?"#3155E7":"#1F2937",fontSize:24,cursor:"pointer"}}>{m.icon}</button>)}
+      {toolPanel==="draw"&&<div style={{position:"absolute",left:86,top:400,zIndex:135,width:78,background:"#fff",borderRadius:12,padding:10,boxShadow:"0 22px 55px rgba(23,23,23,.16)",border:"1px solid #E5E7EB",display:"flex",flexDirection:"column",gap:9,alignItems:"center"}}>
+        {([{id:"pencil",icon:"✐",label:"Карандаш"},{id:"pen",icon:"✎",label:"Ручка"},{id:"pointer",icon:"☄",label:"Указка"}] as {id:DrawMode;icon:string;label:string}[]).map(m=><button key={m.id} title={m.label} onClick={()=>{setTool("draw");setDrawMode(m.id);}} style={{width:46,height:46,borderRadius:8,border:"none",background:drawMode===m.id?"#EEEEEE":"transparent",color:drawMode===m.id?"#5B5B5B":"#282828",fontSize:24,cursor:"pointer"}}>{m.icon}</button>)}
         <div style={{width:38,height:1,background:"#E5E7EB",margin:"2px 0"}}/>
-        {BOARD_DRAW_COLORS.map(c=><button key={c} onClick={()=>setDrawColor(c)} style={{width:36,height:36,borderRadius:"50%",background:c,border:drawColor===c?"3px solid #3155E7":"2px solid #E5E7EB",boxShadow:"inset 0 0 0 3px #fff",cursor:"pointer"}}/>)}
+        {BOARD_DRAW_COLORS.map(c=><button key={c} onClick={()=>setDrawColor(c)} style={{width:36,height:36,borderRadius:"50%",background:c,border:drawColor===c?"3px solid #5B5B5B":"2px solid #E5E7EB",boxShadow:"inset 0 0 0 3px #fff",cursor:"pointer"}}/>)}
       </div>}
 
       {/* ── MULTI-SELECTION TOOLBAR — shown when 2+ items selected ── */}
@@ -10484,15 +12783,15 @@ function BoardPage({userId}:{userId:string}){
           position:"absolute",top:56,left:"50%",transform:"translateX(-50%)",
           zIndex:120,display:"flex",gap:6,alignItems:"center",
           background:"rgba(255,255,255,0.98)",backdropFilter:"blur(12px)",
-          borderRadius:12,padding:"8px 14px",
+          borderRadius:8,padding:"8px 14px",
           boxShadow:"0 4px 24px rgba(0,0,0,0.13)",border:"1px solid rgba(0,0,0,0.07)",
         }}>
-          <span style={{fontSize:12,fontWeight:700,color:"#2563EB",marginRight:4}}>
+          <span style={{fontSize:12,fontWeight:700,color:"#606060",marginRight:4}}>
             {selectedIds.size} объектов
           </span>
           <div style={{width:1,height:18,background:"#E2E8F0"}}/>
           <button onClick={duplicateSelected} title="Дублировать выбранное"
-            style={{padding:"4px 10px",border:"1px solid #E2E8F0",borderRadius:7,background:"transparent",cursor:"pointer",fontSize:11,fontWeight:600,color:"#1E293B",display:"flex",alignItems:"center",gap:4}}>
+            style={{padding:"4px 10px",border:"1px solid #E2E8F0",borderRadius:7,background:"transparent",cursor:"pointer",fontSize:11,fontWeight:600,color:"#282828",display:"flex",alignItems:"center",gap:4}}>
             ⧉ Дублировать
           </button>
           <button onClick={()=>{
@@ -10503,11 +12802,11 @@ function BoardPage({userId}:{userId:string}){
             // Already selectable, just show hint
           }} style={{display:"none"}}>_</button>
           <button onClick={deleteSelected}
-            style={{padding:"4px 10px",border:"1px solid #FCA5A5",borderRadius:7,background:"#FFF1F1",cursor:"pointer",fontSize:11,fontWeight:600,color:"#EF4444",display:"flex",alignItems:"center",gap:4}}>
+            style={{padding:"4px 10px",border:"1px solid #BFBFBF",borderRadius:7,background:"#FFF1F1",cursor:"pointer",fontSize:11,fontWeight:600,color:"#777777",display:"flex",alignItems:"center",gap:4}}>
             🗑 Удалить все
           </button>
           <button onClick={()=>{setSelectedIds(new Set());selRef.current=new Set();}}
-            style={{width:24,height:24,border:"1px solid #E2E8F0",borderRadius:6,background:"transparent",cursor:"pointer",fontSize:11,color:"#64748B",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            style={{width:24,height:24,border:"1px solid #E2E8F0",borderRadius:6,background:"transparent",cursor:"pointer",fontSize:11,color:"#727272",display:"flex",alignItems:"center",justifyContent:"center"}}>
             ✕
           </button>
         </div>
@@ -10526,10 +12825,10 @@ function BoardPage({userId}:{userId:string}){
           background:"rgba(255,255,255,0.98)",
           backdropFilter:"blur(14px)",
           WebkitBackdropFilter:"blur(14px)",
-          borderRadius:14,
+          borderRadius:10,
           padding:"7px 9px",
-          boxShadow:"0 12px 36px rgba(15,23,42,0.14), 0 2px 8px rgba(15,23,42,0.08)",
-          border:"1px solid rgba(15,23,42,0.08)",
+          boxShadow:"0 12px 36px rgba(23,23,23,0.14), 0 2px 8px rgba(23,23,23,0.08)",
+          border:"1px solid rgba(23,23,23,0.08)",
           alignItems:"center",
           flexWrap:"nowrap",
           maxWidth:"calc(100vw - 360px)",
@@ -10537,14 +12836,14 @@ function BoardPage({userId}:{userId:string}){
           scrollbarWidth:"none",
         }}>
 
-          {sel1&&["sticky","text","shape"].includes(sel1.type)&&<div style={{width:34,height:34,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,fontWeight:700,color:"#0F172A",background:"#F8FAFC",border:"1px solid #E2E8F0",flexShrink:0}}>T</div>}
+          {sel1&&["sticky","text","shape"].includes(sel1.type)&&<div style={{width:34,height:34,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,fontWeight:700,color:"#171717",background:"#F8FAFC",border:"1px solid #E2E8F0",flexShrink:0}}>T</div>}
 
           {/* Color */}
           <div style={{position:"relative",flexShrink:0}}>
             <button onClick={()=>{setColorTarget(colorTarget?null:sel1?"item":"line");setShapeColorOpen(false);}}
-              style={{width:34,height:34,borderRadius:10,background:sel1?sel1.color||"#FEF08A":selLine?.color||"#64748B",border:"2px solid rgba(0,0,0,0.12)",cursor:"pointer",boxShadow:"inset 0 0 0 1px rgba(255,255,255,0.45)",flexShrink:0}}/>
+              style={{width:34,height:34,borderRadius:8,background:sel1?sel1.color||"#E9E9E9":selLine?.color||"#727272",border:"2px solid rgba(0,0,0,0.12)",cursor:"pointer",boxShadow:"inset 0 0 0 1px rgba(255,255,255,0.45)",flexShrink:0}}/>
             {colorTarget&&(
-              <div style={{position:"absolute",top:"calc(100% + 6px)",left:0,background:"#fff",borderRadius:12,padding:10,boxShadow:"0 8px 24px rgba(0,0,0,0.14)",width:172,zIndex:200,border:"1px solid #E2E8F0"}}>
+              <div style={{position:"absolute",top:"calc(100% + 6px)",left:0,background:"#fff",borderRadius:8,padding:10,boxShadow:"0 8px 24px rgba(0,0,0,0.14)",width:172,zIndex:200,border:"1px solid #E2E8F0"}}>
                 <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:8}}>
                   {BOARD_PALETTE.map(c=>(
                     <button key={c} onClick={()=>{
@@ -10556,7 +12855,7 @@ function BoardPage({userId}:{userId:string}){
                 </div>
                 {/* HEX input */}
                 <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:6}}>
-                  <span style={{fontSize:10,color:"#64748B",fontWeight:500}}>HEX</span>
+                  <span style={{fontSize:10,color:"#727272",fontWeight:500}}>HEX</span>
                   <input value={customColorInput} onChange={e=>setCustomColorInput(e.target.value)}
                     onKeyDown={e=>{if(e.key==="Enter"){if(sel1)updItems(itemsRef.current.map(it=>it.id===sel1.id?{...it,color:customColorInput}:it));else if(selLine)updLines(linesRef.current.map(l=>l.id===selLine.id?{...l,color:customColorInput}:l));setColorTarget(null);}}}
                     style={{flex:1,padding:"4px 7px",border:"1px solid #E2E8F0",borderRadius:7,fontSize:12,outline:"none",fontFamily:"monospace"}} placeholder="#000000"/>
@@ -10574,8 +12873,8 @@ function BoardPage({userId}:{userId:string}){
           {sel1?.type==="shape"&&(
             <div style={{position:"relative",flexShrink:0}}>
               <button onClick={(e)=>{e.stopPropagation();setShapeColorOpen(v=>!v);setColorTarget(null);}} title="Цвет фигуры"
-                style={{height:34,padding:"0 12px",borderRadius:10,border:"1px solid #E2E8F0",background:shapeColorOpen?"#EFF6FF":"#fff",cursor:"pointer",display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:800,color:shapeColorOpen?"#2563EB":"#0F172A",whiteSpace:"nowrap",boxShadow:shapeColorOpen?"0 4px 14px rgba(37,99,235,0.12)":"none"}}>
-                <span style={{width:18,height:18,borderRadius:6,background:sel1.color||"#3B82F6",border:"2px solid rgba(15,23,42,0.14)",boxShadow:"inset 0 0 0 2px rgba(255,255,255,0.55)"}}/>
+                style={{height:34,padding:"0 12px",borderRadius:8,border:"1px solid #E2E8F0",background:shapeColorOpen?"#EFF6FF":"#fff",cursor:"pointer",display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:800,color:shapeColorOpen?"#606060":"#171717",whiteSpace:"nowrap",boxShadow:shapeColorOpen?"0 4px 14px rgba(96,96,96,0.12)":"none"}}>
+                <span style={{width:18,height:18,borderRadius:6,background:sel1.color||"#7A7A7A",border:"2px solid rgba(23,23,23,0.14)",boxShadow:"inset 0 0 0 2px rgba(255,255,255,0.55)"}}/>
                 Цвет фигуры
               </button>
             </div>
@@ -10584,18 +12883,18 @@ function BoardPage({userId}:{userId:string}){
           {/* Item-specific controls */}
           {sel1&&["sticky","text","shape"].includes(sel1.type)&&<>
             <select value={sel1.fontFamily||"Inter"} onChange={e=>updItems(items.map(it=>it.id===sel1.id?{...it,fontFamily:e.target.value}:it))}
-              style={{height:34,border:"1px solid #E2E8F0",borderRadius:10,background:"#fff",fontSize:13,fontWeight:500,color:C.t1,outline:"none",minWidth:132,maxWidth:160,padding:"0 8px",flexShrink:0}}>
+              style={{height:34,border:"1px solid #E2E8F0",borderRadius:8,background:"#fff",fontSize:13,fontWeight:500,color:C.t1,outline:"none",minWidth:132,maxWidth:160,padding:"0 8px",flexShrink:0}}>
               {BOARD_FONTS.map(f=><option key={f.id} value={f.id}>{f.label}</option>)}
             </select>
             <button onClick={()=>updItems(items.map(it=>it.id===sel1.id?{...it,fontSize:Math.max(8,(it.fontSize||14)-2)}:it))}
-              style={{width:32,height:34,border:"1px solid #E2E8F0",borderRadius:10,background:"#fff",cursor:"pointer",fontSize:12,fontWeight:700,flexShrink:0}}>A−</button>
-            <span style={{height:34,minWidth:36,padding:"0 8px",border:"1px solid #E2E8F0",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,color:C.t1,fontWeight:600,background:"#fff",flexShrink:0}}>{sel1.fontSize||14}</span>
+              style={{width:32,height:34,border:"1px solid #E2E8F0",borderRadius:8,background:"#fff",cursor:"pointer",fontSize:12,fontWeight:700,flexShrink:0}}>A−</button>
+            <span style={{height:34,minWidth:36,padding:"0 8px",border:"1px solid #E2E8F0",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,color:C.t1,fontWeight:600,background:"#fff",flexShrink:0}}>{sel1.fontSize||14}</span>
             <button onClick={()=>updItems(items.map(it=>it.id===sel1.id?{...it,fontSize:Math.min(72,(it.fontSize||14)+2)}:it))}
-              style={{width:32,height:34,border:"1px solid #E2E8F0",borderRadius:10,background:"#fff",cursor:"pointer",fontSize:12,fontWeight:700,flexShrink:0}}>A+</button>
+              style={{width:32,height:34,border:"1px solid #E2E8F0",borderRadius:8,background:"#fff",cursor:"pointer",fontSize:12,fontWeight:700,flexShrink:0}}>A+</button>
             <button onClick={()=>updItems(items.map(it=>it.id===sel1.id?{...it,fontBold:!it.fontBold}:it))}
-              style={{width:34,height:34,border:"1px solid #E2E8F0",borderRadius:10,background:sel1.fontBold?"#EFF6FF":"#fff",cursor:"pointer",fontSize:16,fontWeight:900,color:sel1.fontBold?"#2563EB":C.t1,flexShrink:0}}>B</button>
+              style={{width:34,height:34,border:"1px solid #E2E8F0",borderRadius:8,background:sel1.fontBold?"#EFF6FF":"#fff",cursor:"pointer",fontSize:16,fontWeight:900,color:sel1.fontBold?"#606060":C.t1,flexShrink:0}}>B</button>
             <button onClick={()=>updItems(items.map(it=>it.id===sel1.id?{...it,fontItalic:!it.fontItalic}:it))}
-              style={{width:34,height:34,border:"1px solid #E2E8F0",borderRadius:10,background:sel1.fontItalic?"#EFF6FF":"#fff",cursor:"pointer",fontSize:16,fontStyle:"italic",fontWeight:700,color:sel1.fontItalic?"#2563EB":C.t1,flexShrink:0}}>I</button>
+              style={{width:34,height:34,border:"1px solid #E2E8F0",borderRadius:8,background:sel1.fontItalic?"#EFF6FF":"#fff",cursor:"pointer",fontSize:16,fontStyle:"italic",fontWeight:700,color:sel1.fontItalic?"#606060":C.t1,flexShrink:0}}>I</button>
           </>}
 
           {/* Line controls */}
@@ -10604,18 +12903,18 @@ function BoardPage({userId}:{userId:string}){
             {([1,2,4] as number[]).map(th=>(
               <button key={th} onClick={()=>updLines(lines.map(l=>l.id===selLine.id?{...l,thickness:th}:l))}
                 style={{width:32,height:26,border:"1px solid #E2E8F0",borderRadius:7,background:selLine.thickness===th?"#EFF6FF":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                <div style={{height:th,width:20,background:selLine.thickness===th?"#2563EB":"#64748B",borderRadius:1}}/>
+                <div style={{height:th,width:20,background:selLine.thickness===th?"#606060":"#727272",borderRadius:1}}/>
               </button>
             ))}
             {(["solid","dashed","dotted"] as LineStyle[]).map(st=>(
               <button key={st} onClick={()=>updLines(lines.map(l=>l.id===selLine.id?{...l,style:st}:l))}
-                style={{padding:"4px 8px",border:"1px solid #E2E8F0",borderRadius:7,background:selLine.style===st?"#EFF6FF":"transparent",cursor:"pointer",fontSize:11,fontWeight:600,color:selLine.style===st?"#2563EB":C.t1}}>
+                style={{padding:"4px 8px",border:"1px solid #E2E8F0",borderRadius:7,background:selLine.style===st?"#EFF6FF":"transparent",cursor:"pointer",fontSize:11,fontWeight:600,color:selLine.style===st?"#606060":C.t1}}>
                 {st==="solid"?"—":st==="dashed"?"--":"··"}
               </button>
             ))}
             {(["none","arrow","double"] as ArrowTip[]).map(ar=>(
               <button key={ar} onClick={()=>updLines(lines.map(l=>l.id===selLine.id?{...l,arrow:ar}:l))}
-                style={{padding:"4px 8px",border:"1px solid #E2E8F0",borderRadius:7,background:selLine.arrow===ar?"#EFF6FF":"transparent",cursor:"pointer",fontSize:13,color:selLine.arrow===ar?"#2563EB":C.t1}}>
+                style={{padding:"4px 8px",border:"1px solid #E2E8F0",borderRadius:7,background:selLine.arrow===ar?"#EFF6FF":"transparent",cursor:"pointer",fontSize:13,color:selLine.arrow===ar?"#606060":C.t1}}>
                 {ar==="none"?"—":ar==="arrow"?"→":"↔"}
               </button>
             ))}
@@ -10631,14 +12930,14 @@ function BoardPage({userId}:{userId:string}){
           {/* Edit text */}
           {sel1&&!["image","link","draw"].includes(sel1.type)&&(
             <button onClick={()=>{if(editingId===sel1.id){setEditingId(null);return;}setEditingId(sel1.id);setEditText(sel1.type==="shape"?(sel1.shapeText||sel1.text||""):(sel1.text||""));}}
-              style={{height:34,padding:"0 12px",border:"1px solid #E2E8F0",borderRadius:10,background:editingId===sel1.id?"#EFF6FF":"#fff",cursor:"pointer",fontSize:12,fontWeight:700,color:editingId===sel1.id?"#2563EB":C.t1,whiteSpace:"nowrap",flexShrink:0}}>{editingId===sel1.id?"✓ Готово":"✏️ Текст"}</button>
+              style={{height:34,padding:"0 12px",border:"1px solid #E2E8F0",borderRadius:8,background:editingId===sel1.id?"#EFF6FF":"#fff",cursor:"pointer",fontSize:12,fontWeight:700,color:editingId===sel1.id?"#606060":C.t1,whiteSpace:"nowrap",flexShrink:0}}>{editingId===sel1.id?"✓ Готово":"✏️ Текст"}</button>
           )}
 
           {/* Duplicate */}
           {sel1&&<button onClick={duplicateSelected} title="Дублировать (Ctrl+D)" style={{width:26,height:26,border:"1px solid #E2E8F0",borderRadius:7,background:"transparent",cursor:"pointer",fontSize:14}}>⧉</button>}
 
           {/* Delete */}
-          <button onClick={deleteSelected} style={{width:26,height:26,border:"1px solid #FCA5A5",borderRadius:7,background:"#FFF1F1",cursor:"pointer",fontSize:12,color:"#EF4444"}}>🗑</button>
+          <button onClick={deleteSelected} style={{width:26,height:26,border:"1px solid #BFBFBF",borderRadius:7,background:"#FFF1F1",cursor:"pointer",fontSize:12,color:"#777777"}}>🗑</button>
         </div>
       )}
 
@@ -10654,27 +12953,27 @@ function BoardPage({userId}:{userId:string}){
             zIndex:520,
             background:"#fff",
             border:"1px solid #E2E8F0",
-            borderRadius:16,
+            borderRadius:10,
             padding:12,
-            boxShadow:"0 22px 55px rgba(15,23,42,0.22)",
+            boxShadow:"0 22px 55px rgba(23,23,23,0.22)",
           }}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:10}}>
             <div>
-              <div style={{fontSize:12,fontWeight:900,color:"#0F172A"}}>Цвет фигуры</div>
-              <div style={{fontSize:10,color:"#64748B",marginTop:2}}>Заливка выбранной фигуры</div>
+              <div style={{fontSize:12,fontWeight:900,color:"#171717"}}>Цвет фигуры</div>
+              <div style={{fontSize:10,color:"#727272",marginTop:2}}>Заливка выбранной фигуры</div>
             </div>
-            <button onClick={()=>setShapeColorOpen(false)} style={{width:24,height:24,border:"1px solid #E2E8F0",borderRadius:8,background:"#fff",cursor:"pointer",color:"#64748B",fontSize:14,lineHeight:1}}>×</button>
+            <button onClick={()=>setShapeColorOpen(false)} style={{width:24,height:24,border:"1px solid #E2E8F0",borderRadius:8,background:"#fff",cursor:"pointer",color:"#727272",fontSize:14,lineHeight:1}}>×</button>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:7,marginBottom:12}}>
             {BOARD_PALETTE.map(color=>(
               <button key={color} onClick={()=>{updateSelectedShapeColor(color);setShapeColorOpen(false);}} title={color}
-                style={{width:26,height:26,borderRadius:8,background:color,border:color.toLowerCase()===(sel1.color||"").toLowerCase()?"2px solid #2563EB":"1px solid rgba(15,23,42,0.16)",cursor:"pointer",boxShadow:color==="#ffffff"?"inset 0 0 0 1px #CBD5E1":"none"}}/>
+                style={{width:26,height:26,borderRadius:8,background:color,border:color.toLowerCase()===(sel1.color||"").toLowerCase()?"2px solid #606060":"1px solid rgba(23,23,23,0.16)",cursor:"pointer",boxShadow:color==="#ffffff"?"inset 0 0 0 1px #D3D3D3":"none"}}/>
             ))}
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <input type="color" value={sel1.color||"#3B82F6"} onChange={e=>updateSelectedShapeColor(e.target.value)} style={{width:42,height:34,border:"none",cursor:"pointer",borderRadius:8,padding:0,background:"transparent"}}/>
-            <input value={sel1.color||"#3B82F6"} onChange={e=>updateSelectedShapeColor(e.target.value)} placeholder="#3B82F6"
-              style={{flex:1,height:34,border:"1px solid #E2E8F0",borderRadius:10,padding:"0 10px",fontSize:12,fontFamily:"monospace",outline:"none",color:"#0F172A"}}/>
+            <input type="color" value={sel1.color||"#7A7A7A"} onChange={e=>updateSelectedShapeColor(e.target.value)} style={{width:42,height:34,border:"none",cursor:"pointer",borderRadius:8,padding:0,background:"transparent"}}/>
+            <input value={sel1.color||"#7A7A7A"} onChange={e=>updateSelectedShapeColor(e.target.value)} placeholder="#7A7A7A"
+              style={{flex:1,height:34,border:"1px solid #E2E8F0",borderRadius:8,padding:"0 10px",fontSize:12,fontFamily:"monospace",outline:"none",color:"#171717"}}/>
           </div>
         </div>
       )}
@@ -10697,7 +12996,7 @@ function BoardPage({userId}:{userId:string}){
         <svg className="board-bg-dot" style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none"}} xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="bgdots" x={(pan.x%(28*zoom))} y={(pan.y%(28*zoom))} width={28*zoom} height={28*zoom} patternUnits="userSpaceOnUse">
-              <circle cx={14*zoom} cy={14*zoom} r={Math.max(0.8,1.2*zoom)} fill="#CBD5E1" opacity="0.6"/>
+              <circle cx={14*zoom} cy={14*zoom} r={Math.max(0.8,1.2*zoom)} fill="#D3D3D3" opacity="0.6"/>
             </pattern>
           </defs>
           <rect className="board-bg-dot" width="100%" height="100%" fill="url(#bgdots)"/>
@@ -10717,8 +13016,8 @@ function BoardPage({userId}:{userId:string}){
                 if(!from)return null;
                 const a=anchorPos(from,connectorDrag.fromAnchor);
                 return <g>
-                  <line x1={a.x} y1={a.y} x2={connectorDrag.mx} y2={connectorDrag.my} stroke="#2563EB" strokeWidth="2" strokeDasharray="6 3" strokeLinecap="round"/>
-                  <circle cx={connectorDrag.mx} cy={connectorDrag.my} r="5" fill="#2563EB" opacity="0.7"/>
+                  <line x1={a.x} y1={a.y} x2={connectorDrag.mx} y2={connectorDrag.my} stroke="#606060" strokeWidth="2" strokeDasharray="6 3" strokeLinecap="round"/>
+                  <circle cx={connectorDrag.mx} cy={connectorDrag.my} r="5" fill="#606060" opacity="0.7"/>
                 </g>;
               })()}
 
@@ -10732,7 +13031,7 @@ function BoardPage({userId}:{userId:string}){
               {/* Draw preview */}
               {isDrawing&&drawPreview&&drawingRef.current&&(
                 <g transform={`translate(${drawingRef.current.startX},${drawingRef.current.startY})`}>
-                  <path d={drawPreview} fill="none" stroke={drawMode==="pencil"?"rgba(30,41,59,0.75)":drawColor} strokeWidth={drawMode==="pointer"?Math.max(4,drawThickness+2):drawMode==="pencil"?Math.max(1,drawThickness-1):drawThickness} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={drawMode==="pointer"?"10 6":"none"}/>
+                  <path d={drawPreview} fill="none" stroke={drawMode==="pencil"?"rgba(40,40,40,0.75)":drawColor} strokeWidth={drawMode==="pointer"?Math.max(4,drawThickness+2):drawMode==="pencil"?Math.max(1,drawThickness-1):drawThickness} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={drawMode==="pointer"?"10 6":"none"}/>
                 </g>
               )}
             </g>
@@ -10752,7 +13051,7 @@ function BoardPage({userId}:{userId:string}){
                   position:"absolute",left:it.x,top:it.y,width:it.w,height:it.h,
                   cursor:tool==="line"?"crosshair":(dragState.current&&Array.isArray(dragState.current.ids)&&dragState.current.ids.includes(it.id))?"grabbing":"grab",
                   zIndex:(it.zIndex||0)+5,
-                  outline:isSel?"2px solid #2563EB":isLineSrc?"2px solid #F59E0B":"none",
+                  outline:isSel?"2px solid #606060":isLineSrc?"2px solid #A7A7A7":"none",
                   outlineOffset:isSel||isLineSrc?3:0,
                   borderRadius:it.type==="sticky"?4:it.type==="shape"?0:10,
                   transition:"outline 0.1s",
@@ -10779,8 +13078,8 @@ function BoardPage({userId}:{userId:string}){
                       ?<textarea autoFocus value={editText} onChange={e=>setEditText(e.target.value)}
                           onBlur={()=>{const next=items.map(i=>i.id===it.id?{...i,text:editText}:i);updItems(next);setEditingId(null);}}
                           onKeyDown={e=>{if(e.key==="Escape"){const next=items.map(i=>i.id===it.id?{...i,text:editText}:i);updItems(next);setEditingId(null);}}}
-                          style={{flex:1,border:"none",background:"transparent",resize:"none",outline:"none",fontFamily:it.fontFamily||"Inter",fontSize:it.fontSize||16,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:it.color||"#1E293B",lineHeight:1.4,width:"100%",minHeight:"100%"}}/>
-                      :<div style={{fontFamily:it.fontFamily||"Inter",fontSize:it.fontSize||16,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:it.color||"#1E293B",lineHeight:1.4,wordBreak:"break-word",whiteSpace:"pre-wrap",width:"100%"}}>{it.text||"Текст"}</div>
+                          style={{flex:1,border:"none",background:"transparent",resize:"none",outline:"none",fontFamily:it.fontFamily||"Inter",fontSize:it.fontSize||16,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:it.color||"#282828",lineHeight:1.4,width:"100%",minHeight:"100%"}}/>
+                      :<div style={{fontFamily:it.fontFamily||"Inter",fontSize:it.fontSize||16,fontWeight:it.fontBold?700:400,fontStyle:it.fontItalic?"italic":"normal",color:it.color||"#282828",lineHeight:1.4,wordBreak:"break-word",whiteSpace:"pre-wrap",width:"100%"}}>{it.text||"Текст"}</div>
                     }
                   </div>
                 )}
@@ -10789,20 +13088,20 @@ function BoardPage({userId}:{userId:string}){
                 {(it.type==="doc"||it.type==="table")&&(
                   <div
                     onClick={e=>{e.stopPropagation();setDocPanelId(it.id);}}
-                    style={{width:"100%",height:"100%",borderRadius:16,
+                    style={{width:"100%",height:"100%",borderRadius:10,
                       background:it.type==="doc"?"linear-gradient(135deg,#EEF2FF,#FFFFFF)":"linear-gradient(135deg,#ECFDF5,#FFFFFF)",
-                      border:"1px solid "+(it.type==="doc"?"#C7D2FE":"#A7F3D0"),
-                      boxShadow:docPanelId===it.id?"0 0 0 2.5px #2563EB, 0 10px 26px rgba(15,23,42,.12)":"0 10px 26px rgba(15,23,42,.10)",
+                      border:"1px solid "+(it.type==="doc"?"#D4D4D4":"#D8D8D8"),
+                      boxShadow:docPanelId===it.id?"0 0 0 2.5px #606060, 0 10px 26px rgba(23,23,23,.12)":"0 10px 26px rgba(23,23,23,.10)",
                       padding:16,display:"flex",alignItems:"center",gap:12,
                       boxSizing:"border-box" as const,cursor:"pointer",transition:"box-shadow 0.15s"}}
-                    onMouseEnter={e=>{if(docPanelId!==it.id)(e.currentTarget as HTMLElement).style.boxShadow="0 14px 32px rgba(15,23,42,0.18)";}}
-                    onMouseLeave={e=>{if(docPanelId!==it.id)(e.currentTarget as HTMLElement).style.boxShadow="0 10px 26px rgba(15,23,42,0.10)";}}>
-                    <div style={{width:44,height:44,borderRadius:14,background:it.type==="doc"?"#4F46E5":"#10B981",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:23,flexShrink:0}}>{it.type==="doc"?"📄":"▦"}</div>
+                    onMouseEnter={e=>{if(docPanelId!==it.id)(e.currentTarget as HTMLElement).style.boxShadow="0 14px 32px rgba(23,23,23,0.18)";}}
+                    onMouseLeave={e=>{if(docPanelId!==it.id)(e.currentTarget as HTMLElement).style.boxShadow="0 10px 26px rgba(23,23,23,0.10)";}}>
+                    <div style={{width:44,height:44,borderRadius:10,background:it.type==="doc"?"#5B5B5B":"#808080",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:23,flexShrink:0}}>{it.type==="doc"?"📄":"▦"}</div>
                     <div style={{minWidth:0,flex:1}}>
                       <div style={{fontSize:15,fontWeight:900,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.text||(it.type==="doc"?"Документ":"Таблица")}</div>
                       <div style={{fontSize:11,color:C.t2,marginTop:4}}>{it.type==="doc"?"Нажми чтобы редактировать":"Нажми чтобы открыть таблицу"}</div>
                     </div>
-                    <div style={{fontSize:16,color:it.type==="doc"?"#4F46E5":"#10B981",opacity:0.5,flexShrink:0}}>→</div>
+                    <div style={{fontSize:16,color:it.type==="doc"?"#5B5B5B":"#808080",opacity:0.5,flexShrink:0}}>→</div>
                   </div>
                 )}
 
@@ -10810,17 +13109,17 @@ function BoardPage({userId}:{userId:string}){
                 {it.type==="icon"&&(
                   <div style={{width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,padding:6,boxSizing:"border-box"}}>
                     <div style={{display:"flex",alignItems:"center",justifyContent:"center",width:"100%",height:it.iconCategory==="emoji"?"100%":"auto",flex:it.iconCategory==="emoji"?1:undefined}}>
-                      {renderBoardLibraryIcon({glyph:it.iconGlyph,label:it.iconLabel,category:it.iconCategory,style:it.iconStyle,defaultColor:it.color||"#111827"},it.color||undefined,Math.max(24,Math.round(Math.min(it.w,it.h)*(it.iconCategory==="emoji"?0.62:0.48))))}
+                      {renderBoardLibraryIcon({glyph:it.iconGlyph,label:it.iconLabel,category:it.iconCategory,style:it.iconStyle,defaultColor:it.color||"#181818"},it.color||undefined,Math.max(24,Math.round(Math.min(it.w,it.h)*(it.iconCategory==="emoji"?0.62:0.48))))}
                     </div>
                     {it.iconCategory!=="emoji"&&it.iconLabel&&it.h>82&&(
-                      <div style={{fontSize:Math.max(9,Math.min(13,Math.round(it.w/8))),fontWeight:800,color:"#334155",textAlign:"center",lineHeight:1.15,maxWidth:"100%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.iconLabel}</div>
+                      <div style={{fontSize:Math.max(9,Math.min(13,Math.round(it.w/8))),fontWeight:800,color:"#3F3F3F",textAlign:"center",lineHeight:1.15,maxWidth:"100%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.iconLabel}</div>
                     )}
                   </div>
                 )}
 
                 {/* ── IMAGE ── */}
                 {it.type==="image"&&it.imageUrl&&(
-                  <div style={{width:"100%",height:"100%",borderRadius:10,overflow:"hidden",boxShadow:"0 4px 20px rgba(0,0,0,0.12)"}}>
+                  <div style={{width:"100%",height:"100%",borderRadius:8,overflow:"hidden",boxShadow:"0 4px 20px rgba(0,0,0,0.12)"}}>
                     <img src={it.imageUrl} alt="" style={{width:"100%",height:"100%",objectFit:"contain",display:"block",pointerEvents:"none",imageRendering:"auto"}}/>
                   </div>
                 )}
@@ -10828,36 +13127,36 @@ function BoardPage({userId}:{userId:string}){
                 {/* ── DRAW ── */}
                 {it.type==="draw"&&it.drawPath&&(
                   <svg width={it.w} height={it.h} viewBox={`0 0 ${it.w} ${it.h}`} style={{overflow:"visible",pointerEvents:"none"}}>
-                    <path d={it.drawPath} fill="none" stroke={it.drawColor||"#2563EB"} strokeWidth={it.drawThickness||3} strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d={it.drawPath} fill="none" stroke={it.drawColor||"#606060"} strokeWidth={it.drawThickness||3} strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 )}
 
                 {/* ── LINK ── */}
                 {it.type==="link"&&(
                   <a href={it.linkUrl} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}
-                    style={{width:"100%",height:"100%",borderRadius:12,background:"#fff",boxShadow:"0 3px 16px rgba(0,0,0,0.10)",display:"flex",alignItems:"center",gap:12,padding:"0 16px",textDecoration:"none",border:"1px solid #E2E8F0",overflow:"hidden"}}>
+                    style={{width:"100%",height:"100%",borderRadius:8,background:"#fff",boxShadow:"0 3px 16px rgba(0,0,0,0.10)",display:"flex",alignItems:"center",gap:12,padding:"0 16px",textDecoration:"none",border:"1px solid #E2E8F0",overflow:"hidden"}}>
                     {it.linkFavicon&&<img src={it.linkFavicon} alt="" style={{width:20,height:20,flexShrink:0,borderRadius:4}}/>}
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:12,fontWeight:600,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.linkTitle||it.linkUrl}</div>
-                      <div style={{fontSize:10,color:"#2563EB",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginTop:2}}>{it.linkUrl}</div>
+                      <div style={{fontSize:10,color:"#606060",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginTop:2}}>{it.linkUrl}</div>
                     </div>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#606060" strokeWidth="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                   </a>
                 )}
 
                 {/* ── EXTERNAL CARD ── */}
                 {it.type==="external_card"&&(
-                  <div style={{width:"100%",height:"100%",borderRadius:18,background:"#fff",border:"1px solid #E2E8F0",boxShadow:"0 12px 32px rgba(15,23,42,0.12)",overflow:"hidden",display:"flex",flexDirection:"column"}}>
-                    <div style={{height:6,background:`linear-gradient(90deg, ${it.color||"#7C3AED"}, #60A5FA)`}}/>
+                  <div style={{width:"100%",height:"100%",borderRadius:12,background:"#fff",border:"1px solid #E2E8F0",boxShadow:"0 12px 32px rgba(23,23,23,0.12)",overflow:"hidden",display:"flex",flexDirection:"column"}}>
+                    <div style={{height:6,background:`linear-gradient(90deg, ${it.color||"#626262"}, #9A9A9A)`}}/>
                     {it.imageUrl&&<div style={{height:54,position:"relative",background:"#F8FAFC",overflow:"hidden",flexShrink:0}}>
                       <img src={it.imageUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
-                      <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg, rgba(15,23,42,0.02), rgba(15,23,42,0.18))"}}/>
-                      <div style={{position:"absolute",right:8,bottom:8,width:28,height:28,borderRadius:10,background:"rgba(255,255,255,0.92)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 6px 18px rgba(15,23,42,0.18)",overflow:"hidden"}}>
+                      <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg, rgba(23,23,23,0.02), rgba(23,23,23,0.18))"}}/>
+                      <div style={{position:"absolute",right:8,bottom:8,width:28,height:28,borderRadius:8,background:"rgba(255,255,255,0.92)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 6px 18px rgba(23,23,23,0.18)",overflow:"hidden"}}>
                         {it.externalSource==="content"?<PlatformIcon pid={it.externalPlatform||"other"} size={18}/>:<span style={{fontSize:15}}>👤</span>}
                       </div>
                     </div>}
                     <div style={{padding:"12px 14px",display:"flex",gap:10,alignItems:"flex-start",flex:1,minHeight:0}}>
-                      <div style={{width:38,height:38,borderRadius:13,background:(it.color||"#7C3AED")+"18",border:"1px solid "+(it.color||"#7C3AED")+"30",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0,overflow:"hidden"}}>
+                      <div style={{width:38,height:38,borderRadius:10,background:(it.color||"#626262")+"18",border:"1px solid "+(it.color||"#626262")+"30",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0,overflow:"hidden"}}>
                         {it.imageUrl&&it.externalSource==="crm"?<img src={it.imageUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:it.externalSource==="content"?<PlatformIcon pid={it.externalPlatform||"other"} size={22}/>:<span>👤</span>}
                       </div>
                       <div style={{minWidth:0,flex:1}}>
@@ -10867,16 +13166,16 @@ function BoardPage({userId}:{userId:string}){
                       </div>
                     </div>
                     <div style={{padding:"8px 12px",borderTop:"1px solid #F1F5F9",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-                      <span style={{fontSize:9,fontWeight:900,textTransform:"uppercase",letterSpacing:.7,color:it.color||"#7C3AED",display:"flex",alignItems:"center",gap:5}}>
+                      <span style={{fontSize:9,fontWeight:900,textTransform:"uppercase",letterSpacing:.7,color:it.color||"#626262",display:"flex",alignItems:"center",gap:5}}>
                         {it.externalSource==="content"&&<PlatformIcon pid={it.externalPlatform||"other"} size={13}/>}
                         {it.externalSource==="crm"?"CRM":"Контент"}
                       </span>
                       <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:6,minWidth:0}}>
-                        {it.externalStatus&&<span style={{fontSize:9,fontWeight:800,padding:"3px 7px",borderRadius:999,background:(it.color||"#7C3AED")+"12",color:it.color||"#7C3AED",maxWidth:92,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.externalStatus}</span>}
+                        {it.externalStatus&&<span style={{fontSize:9,fontWeight:800,padding:"3px 7px",borderRadius:999,background:(it.color||"#626262")+"12",color:it.color||"#626262",maxWidth:92,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.externalStatus}</span>}
                         <button
                           onMouseDown={e=>e.stopPropagation()}
                           onClick={e=>{e.stopPropagation();setExpandedExternalItemId(it.id);}}
-                          style={{padding:"4px 8px",border:"1px solid #E2E8F0",borderRadius:999,background:"#fff",color:it.color||"#7C3AED",fontSize:9,fontWeight:900,cursor:"pointer",whiteSpace:"nowrap",boxShadow:"0 2px 8px rgba(15,23,42,0.06)"}}>Раскрыть</button>
+                          style={{padding:"4px 8px",border:"1px solid #E2E8F0",borderRadius:999,background:"#fff",color:it.color||"#626262",fontSize:9,fontWeight:900,cursor:"pointer",whiteSpace:"nowrap",boxShadow:"0 2px 8px rgba(23,23,23,0.06)"}}>Раскрыть</button>
                       </div>
                     </div>
                   </div>
@@ -10897,7 +13196,7 @@ function BoardPage({userId}:{userId:string}){
                 {/* Resize handle */}
                 {isSel&&!isEdit&&it.type!=="draw"&&(
                   <div onMouseDown={e=>{e.stopPropagation();resizeState.current={id:it.id,startMx:e.clientX,startMy:e.clientY,startW:it.w,startH:it.h};}}
-                    style={{position:"absolute",bottom:-5,right:-5,width:14,height:14,background:"#2563EB",borderRadius:3,cursor:"se-resize",zIndex:50,border:"2px solid #fff",boxShadow:"0 1px 4px rgba(0,0,0,0.2)"}}/>
+                    style={{position:"absolute",bottom:-5,right:-5,width:14,height:14,background:"#606060",borderRadius:3,cursor:"se-resize",zIndex:50,border:"2px solid #fff",boxShadow:"0 1px 4px rgba(0,0,0,0.2)"}}/>
                 )}
 
                 {/* Smart connector anchor points — show on hover/select */}
@@ -10919,10 +13218,10 @@ function BoardPage({userId}:{userId:string}){
                         style={{
                           position:"absolute",left:sx,top:sy,
                           width:14,height:14,borderRadius:"50%",
-                          background:isHov?"#2563EB":"#fff",
-                          border:"2px solid #2563EB",
+                          background:isHov?"#606060":"#fff",
+                          border:"2px solid #606060",
                           cursor:"crosshair",zIndex:60,
-                          boxShadow:isHov?"0 0 8px rgba(37,99,235,0.5)":"0 1px 3px rgba(0,0,0,0.2)",
+                          boxShadow:isHov?"0 0 8px rgba(96,96,96,0.5)":"0 1px 3px rgba(0,0,0,0.2)",
                           transition:"all 0.12s",
                         }}/>;
                     })}
@@ -10941,8 +13240,8 @@ function BoardPage({userId}:{userId:string}){
             top:marqueeRect.y*zoom+pan.y,
             width:marqueeRect.w*zoom,
             height:marqueeRect.h*zoom,
-            border:"1.5px dashed #2563EB",
-            background:"rgba(37,99,235,0.06)",
+            border:"1.5px dashed #606060",
+            background:"rgba(96,96,96,0.06)",
             borderRadius:3,
             pointerEvents:"none",
             zIndex:9998,
@@ -10953,8 +13252,8 @@ function BoardPage({userId}:{userId:string}){
         {normalizeBoardItems(items as any[]).length===0&&!loadingCanvas&&(
           <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
             <div style={{fontSize:48,marginBottom:12}}>🎨</div>
-            <div style={{fontSize:16,fontWeight:700,color:"#94A3B8",marginBottom:6}}>Доска пуста</div>
-            <div style={{fontSize:13,color:"#CBD5E1",maxWidth:260,textAlign:"center",lineHeight:1.6}}>Выбери инструмент в панели сверху и кликни на холст</div>
+            <div style={{fontSize:16,fontWeight:700,color:"#A1A1A1",marginBottom:6}}>Доска пуста</div>
+            <div style={{fontSize:13,color:"#D3D3D3",maxWidth:260,textAlign:"center",lineHeight:1.6}}>Выбери инструмент в панели сверху и кликни на холст</div>
           </div>
         )}
         {loadingCanvas&&(
@@ -11009,26 +13308,26 @@ function BoardPage({userId}:{userId:string}){
           width:Math.min(520,Math.round(window.innerWidth*0.42)),
           zIndex:95,background:"#fff",
           borderLeft:"1px solid #E2E8F0",
-          boxShadow:"-20px 0 50px rgba(15,23,42,0.12)",
+          boxShadow:"-20px 0 50px rgba(23,23,23,0.12)",
           display:"flex",flexDirection:"column",
         }}>
           {/* Header */}
           <div style={{padding:"12px 16px",borderBottom:"1px solid #E2E8F0",display:"flex",alignItems:"center",gap:10,background:"#FAFAFA",flexShrink:0}}>
-            <div style={{width:32,height:32,borderRadius:9,background:isDoc?"#4F46E5":"#10B981",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>
+            <div style={{width:32,height:32,borderRadius:9,background:isDoc?"#5B5B5B":"#808080",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>
               {isDoc?"📄":"▦"}
             </div>
             <input value={docItem.text||""} onChange={e=>{
               const next=normalizeBoardItems(items as any[]).map(i=>i.id===docItem.id?{...i,text:e.target.value}:i);
               setItems(next);clearTimeout((window as any)._titleTimer);
               (window as any)._titleTimer=setTimeout(()=>triggerSave(next,lines),1500);
-            }} style={{flex:1,border:"none",background:"transparent",fontSize:15,fontWeight:700,color:"#1E293B",outline:"none",fontFamily:"'Inter',sans-serif"}}
+            }} style={{flex:1,border:"none",background:"transparent",fontSize:15,fontWeight:700,color:"#282828",outline:"none",fontFamily:"'Inter',sans-serif"}}
             placeholder={isDoc?"Название документа":"Название таблицы"}/>
             <button onClick={exportPDF} title="Скачать PDF"
-              style={{padding:"5px 12px",background:"linear-gradient(135deg,#16A34A,#15803D)",color:"#fff",border:"none",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
+              style={{padding:"5px 12px",background:"linear-gradient(135deg,#6F6F6F,#585858)",color:"#fff",border:"none",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
               📄 PDF
             </button>
             <button onClick={()=>setDocPanelId(null)}
-              style={{width:28,height:28,border:"1px solid #E2E8F0",borderRadius:7,background:"transparent",cursor:"pointer",color:"#64748B",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✕</button>
+              style={{width:28,height:28,border:"1px solid #E2E8F0",borderRadius:7,background:"transparent",cursor:"pointer",color:"#727272",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✕</button>
           </div>
 
           {/* Doc editor */}
@@ -11036,18 +13335,18 @@ function BoardPage({userId}:{userId:string}){
             <div style={{padding:"6px 12px",borderBottom:"1px solid #F1F5F9",display:"flex",gap:3,flexWrap:"wrap",background:"#FAFAFA",flexShrink:0}}>
               {([{c:"bold",l:"B",s:{fontWeight:900}},{c:"italic",l:"I",s:{fontStyle:"italic"}},{c:"underline",l:"U",s:{textDecoration:"underline"}}] as {c:string;l:string;s:any}[]).map(b=>(
                 <button key={b.c} onMouseDown={e=>{e.preventDefault();document.execCommand(b.c);}}
-                  style={{width:26,height:26,borderRadius:5,border:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",fontSize:12,...b.s,color:"#1E293B"}}>{b.l}</button>
+                  style={{width:26,height:26,borderRadius:5,border:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",fontSize:12,...b.s,color:"#282828"}}>{b.l}</button>
               ))}
               <div style={{width:1,height:20,background:"#E2E8F0",margin:"0 3px",alignSelf:"center"}}/>
               {["h1","h2","p"].map(t=>(
                 <button key={t} onMouseDown={e=>{e.preventDefault();document.execCommand("formatBlock",false,t);}}
-                  style={{padding:"3px 7px",borderRadius:5,border:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",fontSize:10,fontWeight:600,color:"#64748B"}}>{t.toUpperCase()}</button>
+                  style={{padding:"3px 7px",borderRadius:5,border:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",fontSize:10,fontWeight:600,color:"#727272"}}>{t.toUpperCase()}</button>
               ))}
               <div style={{width:1,height:20,background:"#E2E8F0",margin:"0 3px",alignSelf:"center"}}/>
               <button onMouseDown={e=>{e.preventDefault();document.execCommand("insertUnorderedList");}}
-                style={{padding:"3px 7px",borderRadius:5,border:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",fontSize:10,color:"#64748B"}}>• Список</button>
+                style={{padding:"3px 7px",borderRadius:5,border:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",fontSize:10,color:"#727272"}}>• Список</button>
               <button onMouseDown={e=>{e.preventDefault();document.execCommand("insertOrderedList");}}
-                style={{padding:"3px 7px",borderRadius:5,border:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",fontSize:10,color:"#64748B"}}>1. Нум.</button>
+                style={{padding:"3px 7px",borderRadius:5,border:"1px solid #E2E8F0",background:"transparent",cursor:"pointer",fontSize:10,color:"#727272"}}>1. Нум.</button>
             </div>
             <div contentEditable suppressContentEditableWarning
               onInput={e=>{
@@ -11057,17 +13356,17 @@ function BoardPage({userId}:{userId:string}){
                 (window as any)._docTimer=setTimeout(()=>triggerSave(next,lines),1500);
               }}
               dangerouslySetInnerHTML={{__html:(docItem as any).docContent||"<p>Начни писать здесь...</p>"}}
-              style={{flex:1,padding:"20px 22px",outline:"none",fontSize:14,lineHeight:1.8,color:"#1E293B",overflowY:"auto",fontFamily:"'Inter',sans-serif"}}/>
+              style={{flex:1,padding:"20px 22px",outline:"none",fontSize:14,lineHeight:1.8,color:"#282828",overflowY:"auto",fontFamily:"'Inter',sans-serif"}}/>
           </div>}
 
           {/* Table editor */}
           {!isDoc&&<div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
             <div style={{padding:"7px 14px",borderBottom:"1px solid #F1F5F9",display:"flex",gap:6,flexWrap:"wrap",background:"#FAFAFA",flexShrink:0}}>
               {[
-                {l:"+ Строка",fn:()=>saveTable([...tableRows,Array(tableRows[0]?.length||4).fill("")]),color:"#10B981"},
-                {l:"+ Столбец",fn:()=>saveTable(tableRows.map(r=>[...r,""])),color:"#10B981"},
-                ...(tableRows.length>1?[{l:"− Строку",fn:()=>saveTable(tableRows.slice(0,-1)),color:"#EF4444"}]:[]),
-                ...((tableRows[0]?.length||0)>1?[{l:"− Столбец",fn:()=>saveTable(tableRows.map(r=>r.slice(0,-1))),color:"#EF4444"}]:[]),
+                {l:"+ Строка",fn:()=>saveTable([...tableRows,Array(tableRows[0]?.length||4).fill("")]),color:"#808080"},
+                {l:"+ Столбец",fn:()=>saveTable(tableRows.map(r=>[...r,""])),color:"#808080"},
+                ...(tableRows.length>1?[{l:"− Строку",fn:()=>saveTable(tableRows.slice(0,-1)),color:"#777777"}]:[]),
+                ...((tableRows[0]?.length||0)>1?[{l:"− Столбец",fn:()=>saveTable(tableRows.map(r=>r.slice(0,-1))),color:"#777777"}]:[]),
               ].map((btn,i)=>(
                 <button key={i} onClick={btn.fn}
                   style={{padding:"4px 10px",borderRadius:6,border:"1px solid #E2E8F0",background:"#fff",cursor:"pointer",fontSize:11,fontWeight:600,color:btn.color}}>
@@ -11085,7 +13384,7 @@ function BoardPage({userId}:{userId:string}){
                           <input value={cell} onChange={e=>{
                             const nr=tableRows.map((r,r2)=>r2===ri?r.map((c,c2)=>c2===ci?e.target.value:c):r);
                             saveTable(nr);
-                          }} style={{width:"100%",padding:"7px 9px",border:"none",background:"transparent",fontSize:12,fontFamily:"'Inter',sans-serif",fontWeight:ri===0?700:400,color:"#1E293B",outline:"none",boxSizing:"border-box" as const}}/>
+                          }} style={{width:"100%",padding:"7px 9px",border:"none",background:"transparent",fontSize:12,fontFamily:"'Inter',sans-serif",fontWeight:ri===0?700:400,color:"#282828",outline:"none",boxSizing:"border-box" as const}}/>
                         </td>
                       ))}
                     </tr>
@@ -11099,34 +13398,34 @@ function BoardPage({userId}:{userId:string}){
 
       {externalDropHint&&(
         <div style={{position:"absolute",inset:0,top:48,zIndex:55,pointerEvents:"none",display:"flex",alignItems:"center",justifyContent:"center"}}>
-          <div style={{padding:"18px 26px",borderRadius:18,background:"rgba(124,58,237,0.92)",color:"#fff",fontSize:15,fontWeight:900,boxShadow:"0 18px 50px rgba(124,58,237,0.35)"}}>Отпусти карточку на доску</div>
+          <div style={{padding:"18px 26px",borderRadius:12,background:"rgba(98,98,98,0.92)",color:"#fff",fontSize:15,fontWeight:900,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>Отпусти карточку на доску</div>
         </div>
       )}
 
       {externalPanel&&(
-        <div style={{position:"absolute",top:48,right:0,bottom:0,width:360,zIndex:90,background:"rgba(255,255,255,0.97)",backdropFilter:"blur(14px)",borderLeft:"1px solid #E2E8F0",boxShadow:"-16px 0 40px rgba(15,23,42,0.10)",display:"flex",flexDirection:"column"}}>
+        <div style={{position:"absolute",top:48,right:0,bottom:0,width:360,zIndex:90,background:"rgba(255,255,255,0.97)",backdropFilter:"blur(14px)",borderLeft:"1px solid #E2E8F0",boxShadow:"-16px 0 40px rgba(23,23,23,0.10)",display:"flex",flexDirection:"column"}}>
           <div style={{padding:18,borderBottom:"1px solid #E2E8F0"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:14}}>
               <div>
                 <div style={{fontSize:18,fontWeight:900,color:C.t1}}>Добавить карточку</div>
                 <div style={{fontSize:12,color:C.t2,marginTop:3}}>Перетащи или нажми «Добавить»</div>
               </div>
-              <button onClick={()=>setExternalPanel(false)} style={{width:32,height:32,borderRadius:10,border:"1px solid #E2E8F0",background:"#fff",cursor:"pointer",fontSize:16,color:C.t2}}>×</button>
+              <button onClick={()=>setExternalPanel(false)} style={{width:32,height:32,borderRadius:8,border:"1px solid #E2E8F0",background:"#fff",cursor:"pointer",fontSize:16,color:C.t2}}>×</button>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
               {([{"id":"crm","label":"CRM"},{"id":"content","label":"Контент"}] as const).map(s=>(
                 <button key={s.id} onClick={()=>{setExternalSource(s.id);setExternalSearch("");}}
-                  style={{padding:"10px 12px",borderRadius:12,border:"1px solid "+(externalSource===s.id?"#7C3AED":"#E2E8F0"),background:externalSource===s.id?"linear-gradient(135deg,#F5F3FF,#EEF2FF)":"#fff",color:externalSource===s.id?"#6D28D9":C.t2,fontSize:12,fontWeight:900,cursor:"pointer"}}>{s.label}</button>
+                  style={{padding:"10px 12px",borderRadius:8,border:"1px solid "+(externalSource===s.id?"#626262":"#E2E8F0"),background:externalSource===s.id?"linear-gradient(135deg,#F5F3FF,#EEF2FF)":"#fff",color:externalSource===s.id?"#515151":C.t2,fontSize:12,fontWeight:900,cursor:"pointer"}}>{s.label}</button>
               ))}
             </div>
             {externalSource==="crm"&&(
-              <select value={externalFunnelId} onChange={e=>setExternalFunnelId(e.target.value)} style={{width:"100%",padding:"10px 12px",border:"1px solid #E2E8F0",borderRadius:12,background:"#fff",fontSize:12,fontWeight:700,color:C.t1,outline:"none",marginBottom:10}}>
+              <select value={externalFunnelId} onChange={e=>setExternalFunnelId(e.target.value)} style={{width:"100%",padding:"10px 12px",border:"1px solid #E2E8F0",borderRadius:8,background:"#fff",fontSize:12,fontWeight:700,color:C.t1,outline:"none",marginBottom:10}}>
                 <option value="all">Все воронки</option>
                 {crmFunnels.data.map((f:any)=><option key={f.id} value={f.id}>{f.name||"Воронка"}</option>)}
               </select>
             )}
             <input value={externalSearch} onChange={e=>setExternalSearch(e.target.value)} placeholder={externalSource==="crm"?"Поиск лида...":"Поиск контента..."}
-              style={{width:"100%",boxSizing:"border-box",padding:"11px 13px",border:"1px solid #E2E8F0",borderRadius:12,outline:"none",fontSize:13,background:"#F8FAFC",color:C.t1}}/>
+              style={{width:"100%",boxSizing:"border-box",padding:"11px 13px",border:"1px solid #E2E8F0",borderRadius:8,outline:"none",fontSize:13,background:"#F8FAFC",color:C.t1}}/>
           </div>
           <div style={{padding:14,overflowY:"auto",flex:1,display:"grid",gap:10,alignContent:"start"}}>
             {(externalSource==="crm"?crmLeads.loading:contentRows.loading)
@@ -11136,11 +13435,11 @@ function BoardPage({userId}:{userId:string}){
               :externalCards.slice(0,80).map((card:any)=>(
                 <div key={`${card.source}_${card.id}`} draggable
                   onDragStart={e=>{e.dataTransfer.setData("application/x-vizzy-card",JSON.stringify(card));e.dataTransfer.effectAllowed="copy";}}
-                  style={{background:"#fff",border:"1px solid #E2E8F0",borderLeft:"4px solid "+card.color,borderRadius:14,padding:12,cursor:"grab",boxShadow:"0 4px 16px rgba(15,23,42,0.05)"}}>
+                  style={{background:"#fff",border:"1px solid #E2E8F0",borderLeft:"4px solid "+card.color,borderRadius:10,padding:12,cursor:"grab",boxShadow:"0 4px 16px rgba(23,23,23,0.05)"}}>
                   <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
-                    <div style={{width:42,height:42,borderRadius:13,background:card.color+"18",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0,overflow:"hidden",border:"1px solid "+card.color+"22",position:"relative"}}>
+                    <div style={{width:42,height:42,borderRadius:10,background:card.color+"18",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0,overflow:"hidden",border:"1px solid "+card.color+"22",position:"relative"}}>
                       {card.imageUrl?<img src={card.imageUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:card.source==="content"?<PlatformIcon pid={card.platform||"other"} size={24}/>:<span>👤</span>}
-                      {card.source==="content"&&card.imageUrl&&<div style={{position:"absolute",right:-1,bottom:-1,width:18,height:18,borderRadius:7,background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(15,23,42,0.16)"}}><PlatformIcon pid={card.platform||"other"} size={13}/></div>}
+                      {card.source==="content"&&card.imageUrl&&<div style={{position:"absolute",right:-1,bottom:-1,width:18,height:18,borderRadius:7,background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(23,23,23,0.16)"}}><PlatformIcon pid={card.platform||"other"} size={13}/></div>}
                     </div>
                     <div style={{minWidth:0,flex:1}}>
                       <div style={{fontSize:13,fontWeight:900,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{card.title}</div>
@@ -11149,8 +13448,8 @@ function BoardPage({userId}:{userId:string}){
                     </div>
                   </div>
                   <div style={{display:"flex",gap:8,marginTop:12}}>
-                    <button onClick={()=>addExternalCardToBoard(card)} style={{flex:1,padding:"8px 10px",border:"none",borderRadius:10,background:"linear-gradient(135deg,#7C3AED,#2563EB)",color:"#fff",fontSize:11,fontWeight:900,cursor:"pointer",boxShadow:"0 0 14px rgba(124,58,237,0.22)"}}>Добавить</button>
-                    <button onClick={()=>alert(card.source==="crm"?"Открой раздел CRM для полной карточки лида":"Открой раздел Контент для полной карточки")} style={{padding:"8px 10px",border:"1px solid #E2E8F0",borderRadius:10,background:"#fff",color:C.t2,fontSize:11,fontWeight:800,cursor:"pointer"}}>Источник</button>
+                    <button onClick={()=>addExternalCardToBoard(card)} style={{flex:1,padding:"8px 10px",border:"none",borderRadius:8,background:"linear-gradient(135deg,#626262,#606060)",color:"#fff",fontSize:11,fontWeight:900,cursor:"pointer",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>Добавить</button>
+                    <button onClick={()=>alert(card.source==="crm"?"Открой раздел CRM для полной карточки лида":"Открой раздел Контент для полной карточки")} style={{padding:"8px 10px",border:"1px solid #E2E8F0",borderRadius:8,background:"#fff",color:C.t2,fontSize:11,fontWeight:800,cursor:"pointer"}}>Источник</button>
                   </div>
                 </div>
               ))}
@@ -11159,37 +13458,37 @@ function BoardPage({userId}:{userId:string}){
         </div>
       )}
 
-      {expandedExternalItem&&(<div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.58)",zIndex:320,display:"flex",alignItems:"center",justifyContent:"center",padding:20,backdropFilter:"blur(8px)"}} onClick={()=>setExpandedExternalItemId(null)}>
-        <div style={{width:"min(620px,100%)",maxHeight:"86vh",overflow:"hidden",background:"#fff",borderRadius:24,boxShadow:"0 28px 80px rgba(15,23,42,0.34)",border:"1px solid rgba(226,232,240,0.9)",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
-          <div style={{height:8,background:`linear-gradient(90deg, ${expandedExternalItem.color||"#7C3AED"}, #60A5FA)`}}/>
+      {expandedExternalItem&&(<div style={{position:"fixed",inset:0,background:"rgba(23,23,23,0.58)",zIndex:320,display:"flex",alignItems:"center",justifyContent:"center",padding:20,backdropFilter:"blur(8px)"}} onClick={()=>setExpandedExternalItemId(null)}>
+        <div style={{width:"min(620px,100%)",maxHeight:"86vh",overflow:"hidden",background:"#fff",borderRadius:12,boxShadow:"0 28px 80px rgba(23,23,23,0.34)",border:"1px solid rgba(226,232,240,0.9)",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+          <div style={{height:8,background:`linear-gradient(90deg, ${expandedExternalItem.color||"#626262"}, #9A9A9A)`}}/>
           <div style={{padding:22,borderBottom:"1px solid #E2E8F0",display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16}}>
             <div style={{display:"flex",gap:14,minWidth:0,alignItems:"center"}}>
-              <div style={{width:58,height:58,borderRadius:18,background:(expandedExternalItem.color||"#7C3AED")+"16",border:"1px solid "+(expandedExternalItem.color||"#7C3AED")+"30",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",flexShrink:0}}>
+              <div style={{width:58,height:58,borderRadius:12,background:(expandedExternalItem.color||"#626262")+"16",border:"1px solid "+(expandedExternalItem.color||"#626262")+"30",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",flexShrink:0}}>
                 {expandedExternalImage?<img src={expandedExternalImage} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:expandedExternalItem.externalSource==="content"?<PlatformIcon pid={expandedExternalItem.externalPlatform||"other"} size={30}/>:<span style={{fontSize:24}}>👤</span>}
               </div>
               <div style={{minWidth:0}}>
-                <div style={{fontSize:11,fontWeight:900,textTransform:"uppercase",letterSpacing:.8,color:expandedExternalItem.color||"#7C3AED",marginBottom:5}}>{expandedExternalItem.externalSource==="crm"?"CRM-лид":"Контент-карточка"}</div>
+                <div style={{fontSize:11,fontWeight:900,textTransform:"uppercase",letterSpacing:.8,color:expandedExternalItem.color||"#626262",marginBottom:5}}>{expandedExternalItem.externalSource==="crm"?"CRM-лид":"Контент-карточка"}</div>
                 <div style={{fontSize:22,fontWeight:950,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{expandedExternalItem.externalTitle||expandedExternalItem.text||"Карточка"}</div>
                 <div style={{fontSize:13,color:C.t2,marginTop:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{expandedExternalItem.externalSubtitle||"Связанная карточка"}</div>
               </div>
             </div>
-            <button onClick={()=>setExpandedExternalItemId(null)} style={{width:34,height:34,borderRadius:12,border:"1px solid #E2E8F0",background:"#F8FAFC",cursor:"pointer",fontSize:18,color:C.t2,flexShrink:0}}>×</button>
+            <button onClick={()=>setExpandedExternalItemId(null)} style={{width:34,height:34,borderRadius:8,border:"1px solid #E2E8F0",background:"#F8FAFC",cursor:"pointer",fontSize:18,color:C.t2,flexShrink:0}}>×</button>
           </div>
           <div style={{padding:22,overflowY:"auto",display:"grid",gap:12}}>
-            {!expandedExternalRecord&&<div style={{padding:"12px 14px",borderRadius:14,background:"#FFFBEB",border:"1px solid #FDE68A",color:"#92400E",fontSize:12,lineHeight:1.5}}>Оригинальная запись не найдена или ещё не загружена. Ниже показаны данные, сохранённые в карточке на доске.</div>}
+            {!expandedExternalRecord&&<div style={{padding:"12px 14px",borderRadius:10,background:"#FFFBEB",border:"1px solid #E2E2E2",color:"#535353",fontSize:12,lineHeight:1.5}}>Оригинальная запись не найдена или ещё не загружена. Ниже показаны данные, сохранённые в карточке на доске.</div>}
             {externalDetailRows.map(row=>{
               const value=normalizeDetailValue(row.value);
               const isLong=value.length>90;
               const isLink=/^https?:\/\//i.test(value)||value.startsWith("mailto:");
-              return <div key={row.label} style={{display:"grid",gridTemplateColumns:"150px 1fr",gap:14,padding:"12px 14px",borderRadius:14,background:"#F8FAFC",border:"1px solid #E2E8F0"}}>
+              return <div key={row.label} style={{display:"grid",gridTemplateColumns:"150px 1fr",gap:14,padding:"12px 14px",borderRadius:10,background:"#F8FAFC",border:"1px solid #E2E8F0"}}>
                 <div style={{fontSize:11,fontWeight:900,color:C.t2,textTransform:"uppercase",letterSpacing:.5}}>{row.label}</div>
-                {isLink?<a href={value} target="_blank" rel="noreferrer" style={{fontSize:13,fontWeight:700,color:expandedExternalItem.color||"#2563EB",wordBreak:"break-all"}}>{value}</a>:<div style={{fontSize:13,fontWeight:600,color:C.t1,lineHeight:1.55,whiteSpace:isLong?"pre-wrap":"normal",wordBreak:"break-word"}}>{value}</div>}
+                {isLink?<a href={value} target="_blank" rel="noreferrer" style={{fontSize:13,fontWeight:700,color:expandedExternalItem.color||"#606060",wordBreak:"break-all"}}>{value}</a>:<div style={{fontSize:13,fontWeight:600,color:C.t1,lineHeight:1.55,whiteSpace:isLong?"pre-wrap":"normal",wordBreak:"break-word"}}>{value}</div>}
               </div>;
             })}
           </div>
           <div style={{padding:"14px 22px",borderTop:"1px solid #E2E8F0",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,background:"#F8FAFC"}}>
             <div style={{fontSize:11,color:C.t2}}>Данные подтягиваются из текущей CRM/Контент-таблицы по сохранённому ID.</div>
-            <button onClick={()=>setExpandedExternalItemId(null)} style={{padding:"10px 16px",border:"none",borderRadius:12,background:"linear-gradient(135deg,#7C3AED,#2563EB)",color:"#fff",fontSize:12,fontWeight:900,cursor:"pointer"}}>Закрыть</button>
+            <button onClick={()=>setExpandedExternalItemId(null)} style={{padding:"10px 16px",border:"none",borderRadius:8,background:"linear-gradient(135deg,#626262,#606060)",color:"#fff",fontSize:12,fontWeight:900,cursor:"pointer"}}>Закрыть</button>
           </div>
         </div>
       </div>)}
@@ -11197,7 +13496,7 @@ function BoardPage({userId}:{userId:string}){
       {/* ── Link modal ── */}
       {linkModal&&(
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setLinkModal(false)}>
-          <div style={{background:"#fff",borderRadius:16,padding:28,width:380}} onClick={e=>e.stopPropagation()}>
+          <div style={{background:"#fff",borderRadius:10,padding:28,width:380}} onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:16,fontWeight:700,marginBottom:14}}>🔗 Добавить ссылку</div>
             <input autoFocus value={linkUrl} onChange={e=>setLinkUrl(e.target.value)} placeholder="https://example.com"
               onKeyDown={e=>{if(e.key==="Enter")fetchLink();if(e.key==="Escape")setLinkModal(false);}}
@@ -11214,7 +13513,7 @@ function BoardPage({userId}:{userId:string}){
       <input ref={imgInputRef} type="file" accept="image/jpeg,image/png,image/gif" style={{display:"none"}} onChange={onImageFile}/>
 
       {/* Status bar */}
-      <div style={{position:"absolute",bottom:10,left:16,zIndex:50,background:"rgba(255,255,255,0.88)",backdropFilter:"blur(6px)",borderRadius:10,padding:"5px 12px",fontSize:10,color:C.t2,border:"1px solid rgba(0,0,0,0.06)",boxShadow:"0 2px 8px rgba(0,0,0,0.05)"}}>
+      <div style={{position:"absolute",bottom:10,left:16,zIndex:50,background:"rgba(255,255,255,0.88)",backdropFilter:"blur(6px)",borderRadius:8,padding:"5px 12px",fontSize:10,color:C.t2,border:"1px solid rgba(0,0,0,0.06)",boxShadow:"0 2px 8px rgba(0,0,0,0.05)"}}>
         V-выбор · H-пан · S-стикер · T-текст · I-фото · L-ссылка · F-фигура · C-линия · M-рисование · Иконки — в левой панели · Del-удалить · Ctrl+D-дублировать
       </div>
     </div>
@@ -11319,16 +13618,16 @@ function OfferPage({userId}:{userId:string}){
   );
 
   const CopyIcon=({done}:{done:boolean})=>done
-    ?<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+    ?<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#808080" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
     :<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>;
 
   const PrimaryBtn=({children,onClick,disabled,grad="blue"}:{children:React.ReactNode,onClick?:()=>void,disabled?:boolean,grad?:string})=>{
-    const bg=grad==="purple"?"linear-gradient(135deg,#7C3AED,#A855F7)":"linear-gradient(135deg,#2563EB,#4F46E5)";
-    return<button onClick={onClick} disabled={disabled} style={{width:"100%",padding:"16px",borderRadius:14,border:"none",background:disabled?"rgba(255,255,255,0.06)":bg,color:disabled?C.t2:"#fff",fontSize:15,fontWeight:700,cursor:disabled?"not-allowed":"pointer",boxShadow:disabled?"none":"0 4px 20px rgba(37,99,235,0.3)",transition:"all 0.2s",opacity:disabled?0.7:1}}>{children}</button>;
+    const bg=grad==="purple"?"linear-gradient(135deg,#626262,#808080)":"linear-gradient(135deg,#606060,#5B5B5B)";
+    return<button onClick={onClick} disabled={disabled} style={{width:"100%",padding:"16px",borderRadius:10,border:"none",background:disabled?"rgba(255,255,255,0.06)":bg,color:disabled?C.t2:"#fff",fontSize:15,fontWeight:700,cursor:disabled?"not-allowed":"pointer",boxShadow:disabled?"none":"0 4px 20px rgba(96,96,96,0.3)",transition:"all 0.2s",opacity:disabled?0.7:1}}>{children}</button>;
   };
 
   const SecondaryBtn=({children,onClick}:{children:React.ReactNode,onClick?:()=>void})=>(
-    <button onClick={onClick} style={{width:"100%",padding:"16px",borderRadius:14,border:`1.5px solid ${dark?"rgba(255,255,255,0.1)":C.bd}`,background:"transparent",color:C.t1,fontSize:15,fontWeight:600,cursor:"pointer"}}>{children}</button>
+    <button onClick={onClick} style={{width:"100%",padding:"16px",borderRadius:10,border:`1.5px solid ${dark?"rgba(255,255,255,0.1)":C.bd}`,background:"transparent",color:C.t1,fontSize:15,fontWeight:600,cursor:"pointer"}}>{children}</button>
   );
 
   if(loading)return<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"60vh",color:C.t2,fontSize:14}}>Загрузка...</div>;
@@ -11342,10 +13641,10 @@ function OfferPage({userId}:{userId:string}){
       </div>
 
       {/* Offer card */}
-      <div style={{background:dark?"rgba(79,142,247,0.06)":"#fff",border:`1.5px solid ${dark?"rgba(79,142,247,0.22)":"#BFDBFE"}`,borderRadius:20,padding:28,boxShadow:dark?"0 0 40px rgba(79,142,247,0.08)":C.sh,position:"relative"}}>
+      <div style={{background:dark?"rgba(135,135,135,0.06)":"#fff",border:`1.5px solid ${dark?"rgba(135,135,135,0.22)":"#D7D7D7"}`,borderRadius:10,padding:28,boxShadow:dark?"0 0 40px rgba(135,135,135,0.08)":C.sh,position:"relative"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-          <span style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#4F8EF7",textTransform:"uppercase"}}>YOUR OFFER</span>
-          {activeOffer?.offer_text&&<button onClick={()=>copyText(activeOffer.offer_text,setCopied)} style={{background:"none",border:"none",cursor:"pointer",padding:6,borderRadius:8,color:copied?"#10B981":C.t2}}><CopyIcon done={copied}/></button>}
+          <span style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#878787",textTransform:"uppercase"}}>YOUR OFFER</span>
+          {activeOffer?.offer_text&&<button onClick={()=>copyText(activeOffer.offer_text,setCopied)} style={{background:"none",border:"none",cursor:"pointer",padding:6,borderRadius:8,color:copied?"#808080":C.t2}}><CopyIcon done={copied}/></button>}
         </div>
         {activeOffer?.offer_text
           ?<div style={{fontSize:20,fontWeight:700,color:C.t1,lineHeight:1.6}}>{activeOffer.offer_text}</div>
@@ -11354,10 +13653,10 @@ function OfferPage({userId}:{userId:string}){
       </div>
 
       {/* Positioning card */}
-      <div style={{background:dark?"rgba(168,85,247,0.05)":"#fff",border:`1.5px solid ${dark?"rgba(168,85,247,0.18)":"#EDE9FE"}`,borderRadius:20,padding:28,boxShadow:dark?"0 0 30px rgba(168,85,247,0.06)":C.sh,position:"relative"}}>
+      <div style={{background:dark?"rgba(128,128,128,0.05)":"#fff",border:`1.5px solid ${dark?"rgba(128,128,128,0.18)":"#EDEDED"}`,borderRadius:10,padding:28,boxShadow:dark?"0 0 30px rgba(128,128,128,0.06)":C.sh,position:"relative"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-          <span style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#A855F7",textTransform:"uppercase"}}>YOUR POSITIONING</span>
-          {activeOffer?.positioning_text&&<button onClick={()=>copyText(activeOffer.positioning_text,setCopiedPos)} style={{background:"none",border:"none",cursor:"pointer",padding:6,borderRadius:8,color:copiedPos?"#10B981":C.t2}}><CopyIcon done={copiedPos}/></button>}
+          <span style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#808080",textTransform:"uppercase"}}>YOUR POSITIONING</span>
+          {activeOffer?.positioning_text&&<button onClick={()=>copyText(activeOffer.positioning_text,setCopiedPos)} style={{background:"none",border:"none",cursor:"pointer",padding:6,borderRadius:8,color:copiedPos?"#808080":C.t2}}><CopyIcon done={copiedPos}/></button>}
         </div>
         {activeOffer?.positioning_text
           ?<div style={{fontSize:16,fontWeight:500,color:C.t1,lineHeight:1.65}}>{activeOffer.positioning_text}</div>
@@ -11384,26 +13683,26 @@ function OfferPage({userId}:{userId:string}){
       <div style={{fontSize:14,color:C.t2,marginBottom:28}}>Выбери способ</div>
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
         {[
-          {id:"manual",icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,bg:"#DBEAFE",title:"Написать самостоятельно",sub:"Я знаю свой оффер. Просто введу его.",accent:false},
-          {id:"paste",icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>,bg:"#F3F4F6",title:"Вставить готовый текст",sub:"У меня есть текст. Просто вставлю его.",accent:false},
-          {id:"quiz",icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>,bg:"linear-gradient(135deg,#2563EB,#4F46E5)",title:"Сформировать с ИИ",sub:"Составить оффер с помощью ИИ — ответь на 8 вопросов.",accent:true},
+          {id:"manual",icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#606060" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,bg:"#E8E8E8",title:"Написать самостоятельно",sub:"Я знаю свой оффер. Просто введу его.",accent:false},
+          {id:"paste",icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#727272" strokeWidth="2"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>,bg:"#F3F4F6",title:"Вставить готовый текст",sub:"У меня есть текст. Просто вставлю его.",accent:false},
+          {id:"quiz",icon:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>,bg:"linear-gradient(135deg,#606060,#5B5B5B)",title:"Сформировать с ИИ",sub:"Составить оффер с помощью ИИ — ответь на 8 вопросов.",accent:true},
         ].map(opt=>(
           <button key={opt.id} onClick={()=>{
             if(opt.id==="manual"){setManualText(activeOffer?.offer_text||"");setMode("manual");}
             else if(opt.id==="paste"){setManualText("");setMode("paste");}
             else{setQuizStep(0);setQuizAnswers(Array(8).fill(""));setMode("quiz");}
           }} style={{
-            padding:24,borderRadius:18,cursor:"pointer",textAlign:"left",
+            padding:24,borderRadius:12,cursor:"pointer",textAlign:"left",
             display:"flex",gap:16,alignItems:"flex-start",
-            background:opt.accent?(dark?"rgba(79,142,247,0.1)":"#EFF6FF"):(dark?"#0F1420":"#fff"),
-            border:opt.accent?`1.5px solid rgba(79,142,247,0.3)`:`1px solid ${dark?"rgba(255,255,255,0.07)":C.bd}`,
-            boxShadow:opt.accent?"0 4px 24px rgba(79,142,247,0.12)":C.sh,
+            background:opt.accent?(dark?"rgba(135,135,135,0.1)":"#EFF6FF"):(dark?"#171717":"#fff"),
+            border:opt.accent?`1.5px solid rgba(135,135,135,0.3)`:`1px solid ${dark?"rgba(255,255,255,0.07)":C.bd}`,
+            boxShadow:opt.accent?"0 4px 24px rgba(135,135,135,0.12)":C.sh,
           }}>
-            <div style={{width:44,height:44,borderRadius:12,background:opt.bg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{opt.icon}</div>
+            <div style={{width:44,height:44,borderRadius:8,background:opt.bg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{opt.icon}</div>
             <div>
               <div style={{fontSize:15,fontWeight:700,color:C.t1,marginBottom:4}}>{opt.title}</div>
               <div style={{fontSize:13,color:C.t2}}>{opt.sub}</div>
-              {opt.id==="quiz"&&<div style={{fontSize:11,color:"#4F8EF7",fontWeight:700,marginTop:6}}>8 вопросов · ИИ составит оффер за тебя</div>}
+              {opt.id==="quiz"&&<div style={{fontSize:11,color:"#878787",fontWeight:700,marginTop:6}}>8 вопросов · ИИ составит оффер за тебя</div>}
             </div>
           </button>
         ))}
@@ -11419,7 +13718,7 @@ function OfferPage({userId}:{userId:string}){
       <div style={{fontSize:14,color:C.t2,marginBottom:24}}>{mode==="manual"?"Напиши текст оффера в поле ниже":"Скопируй и вставь свой оффер"}</div>
       <textarea value={manualText} onChange={e=>setManualText(e.target.value)} autoFocus
         placeholder={mode==="manual"?"Мы помогаем [кому] достичь [результат] за [срок] через [метод]...":"Вставь текст оффера сюда..."}
-        style={{width:"100%",minHeight:180,padding:16,border:`1.5px solid ${dark?"rgba(79,142,247,0.25)":"#BFDBFE"}`,borderRadius:14,fontSize:16,background:dark?"#0F1420":C.ib,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
+        style={{width:"100%",minHeight:180,padding:16,border:`1.5px solid ${dark?"rgba(135,135,135,0.25)":"#D7D7D7"}`,borderRadius:10,fontSize:16,background:dark?"#171717":C.ib,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
       <div style={{marginTop:14}}><PrimaryBtn onClick={()=>saveOffer(manualText.trim())} disabled={!manualText.trim()||saving}>{saving?"Сохраняем...":"Сохранить оффер"}</PrimaryBtn></div>
     </div>
   );
@@ -11432,7 +13731,7 @@ function OfferPage({userId}:{userId:string}){
       <div style={{fontSize:14,color:C.t2,marginBottom:24}}>Кто ты, для кого, чем отличаешься от других</div>
       <textarea value={posText} onChange={e=>setPosText(e.target.value)} autoFocus
         placeholder="Например: Я бизнес-стратег для онлайн-предпринимателей с доходом от 500к. Помогаю выйти из операционки. В отличие от коучей — работаю с цифрами и процессами."
-        style={{width:"100%",minHeight:160,padding:16,border:`1.5px solid ${dark?"rgba(168,85,247,0.25)":"#DDD6FE"}`,borderRadius:14,fontSize:15,background:dark?"#0F1420":C.ib,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
+        style={{width:"100%",minHeight:160,padding:16,border:`1.5px solid ${dark?"rgba(128,128,128,0.25)":"#DDDDDD"}`,borderRadius:10,fontSize:15,background:dark?"#171717":C.ib,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
       <div style={{marginTop:14}}><PrimaryBtn onClick={()=>savePositioning(posText.trim())} disabled={!posText.trim()||saving} grad="purple">{saving?"Сохраняем...":"Сохранить позиционирование"}</PrimaryBtn></div>
     </div>
   );
@@ -11454,14 +13753,14 @@ function OfferPage({userId}:{userId:string}){
         <div style={{marginBottom:32}}>
           <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
             <span style={{fontSize:11,color:C.t2,fontWeight:600}}>Вопрос {quizStep+1} из 8</span>
-            <span style={{fontSize:11,color:"#4F8EF7",fontWeight:700}}>{Math.round(((quizStep+1)/8)*100)}%</span>
+            <span style={{fontSize:11,color:"#878787",fontWeight:700}}>{Math.round(((quizStep+1)/8)*100)}%</span>
           </div>
           <div style={{height:4,background:dark?"rgba(255,255,255,0.06)":"#E5E7EB",borderRadius:4,overflow:"hidden"}}>
-            <div style={{height:"100%",width:`${((quizStep+1)/8)*100}%`,background:"linear-gradient(90deg,#2563EB,#4F46E5)",borderRadius:4,transition:"width 0.4s ease"}}/>
+            <div style={{height:"100%",width:`${((quizStep+1)/8)*100}%`,background:"linear-gradient(90deg,#606060,#5B5B5B)",borderRadius:4,transition:"width 0.4s ease"}}/>
           </div>
           <div style={{display:"flex",gap:4,marginTop:10}}>
             {QUESTIONS.map((_,i)=>(
-              <div key={i} style={{flex:1,height:3,borderRadius:3,background:i<quizStep?"#4F8EF7":i===quizStep?(dark?"rgba(79,142,247,0.4)":"#BFDBFE"):(dark?"rgba(255,255,255,0.05)":"#E5E7EB"),transition:"background 0.3s"}}/>
+              <div key={i} style={{flex:1,height:3,borderRadius:3,background:i<quizStep?"#878787":i===quizStep?(dark?"rgba(135,135,135,0.4)":"#D7D7D7"):(dark?"rgba(255,255,255,0.05)":"#E5E7EB"),transition:"background 0.3s"}}/>
             ))}
           </div>
         </div>
@@ -11471,13 +13770,13 @@ function OfferPage({userId}:{userId:string}){
 
         {q.multi
           ?<textarea value={answer} onChange={e=>setAnswer(e.target.value)} autoFocus placeholder="Твой ответ..."
-              style={{width:"100%",minHeight:130,padding:16,border:`1.5px solid ${dark?"rgba(79,142,247,0.28)":"#BFDBFE"}`,borderRadius:14,fontSize:15,background:dark?"#0F1420":C.ib,color:C.t1,outline:"none",resize:"none" as const,lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
+              style={{width:"100%",minHeight:130,padding:16,border:`1.5px solid ${dark?"rgba(135,135,135,0.28)":"#D7D7D7"}`,borderRadius:10,fontSize:15,background:dark?"#171717":C.ib,color:C.t1,outline:"none",resize:"none" as const,lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
           :<input value={answer} onChange={e=>setAnswer(e.target.value)} autoFocus placeholder="Твой ответ..."
               onKeyDown={e=>e.key==="Enter"&&canNext&&(isLast?generateWithAI():setQuizStep(s=>s+1))}
-              style={{width:"100%",padding:16,border:`1.5px solid ${dark?"rgba(79,142,247,0.28)":"#BFDBFE"}`,borderRadius:14,fontSize:15,background:dark?"#0F1420":C.ib,color:C.t1,outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
+              style={{width:"100%",padding:16,border:`1.5px solid ${dark?"rgba(135,135,135,0.28)":"#D7D7D7"}`,borderRadius:10,fontSize:15,background:dark?"#171717":C.ib,color:C.t1,outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
         }
 
-        {aiError&&<div style={{marginTop:12,padding:"10px 14px",borderRadius:10,background:"#FEF2F2",color:C.r,fontSize:13}}>{aiError}</div>}
+        {aiError&&<div style={{marginTop:12,padding:"10px 14px",borderRadius:8,background:"#FEF2F2",color:C.r,fontSize:13}}>{aiError}</div>}
 
         <div style={{marginTop:20}}>
           <PrimaryBtn disabled={!canNext} onClick={()=>isLast?generateWithAI():setQuizStep(s=>s+1)}>
@@ -11491,7 +13790,7 @@ function OfferPage({userId}:{userId:string}){
   /* ── GENERATING ── */
   if(mode==="generating")return(
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"65vh",gap:24}}>
-      <div style={{width:88,height:88,borderRadius:24,background:"linear-gradient(135deg,#2563EB,#4F46E5)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 0 48px rgba(37,99,235,0.4)",animation:"pulse 1.5s ease-in-out infinite"}}>
+      <div style={{width:88,height:88,borderRadius:12,background:"linear-gradient(135deg,#606060,#5B5B5B)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",animation:"pulse 1.5s ease-in-out infinite"}}>
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
       </div>
       <div style={{textAlign:"center"}}>
@@ -11504,15 +13803,15 @@ function OfferPage({userId}:{userId:string}){
   /* ── RESULT ── */
   if(mode==="result")return(
     <div style={{maxWidth:720,margin:"0 auto",padding:"32px 24px"}}>
-      <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#4F8EF7",textTransform:"uppercase",marginBottom:8}}>Готово ✨</div>
+      <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#878787",textTransform:"uppercase",marginBottom:8}}>Готово ✨</div>
       <div style={{fontSize:22,fontWeight:900,color:C.t1,marginBottom:24}}>ИИ составил твой оффер</div>
-      <div style={{background:dark?"rgba(79,142,247,0.06)":"#F0F7FF",border:`1.5px solid ${dark?"rgba(79,142,247,0.22)":"#BFDBFE"}`,borderRadius:20,padding:28,marginBottom:24,minHeight:120,boxShadow:"0 0 40px rgba(79,142,247,0.08)"}}>
+      <div style={{background:dark?"rgba(135,135,135,0.06)":"#F0F7FF",border:`1.5px solid ${dark?"rgba(135,135,135,0.22)":"#D7D7D7"}`,borderRadius:10,padding:28,marginBottom:24,minHeight:120,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
         <div style={{fontSize:17,fontWeight:600,color:C.t1,lineHeight:1.7,whiteSpace:"pre-wrap"}}>{displayedOffer}<span style={{opacity:displayedOffer.length<generatedOffer.length?1:0,animation:"pulse 0.8s infinite"}}>▌</span></div>
       </div>
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
         <PrimaryBtn onClick={()=>saveOffer(generatedOffer)} disabled={saving}>{saving?"Сохраняем...":"Сохранить оффер"}</PrimaryBtn>
         <SecondaryBtn onClick={()=>{setQuizStep(7);setMode("quiz");}}>Изменить ответы</SecondaryBtn>
-        <button onClick={generateWithAI} style={{width:"100%",padding:"14px",borderRadius:14,border:"none",background:"transparent",color:C.t2,fontSize:13,fontWeight:500,cursor:"pointer"}}>Переформулировать ещё раз</button>
+        <button onClick={generateWithAI} style={{width:"100%",padding:"14px",borderRadius:10,border:"none",background:"transparent",color:C.t2,fontSize:13,fontWeight:500,cursor:"pointer"}}>Переформулировать ещё раз</button>
       </div>
     </div>
   );
@@ -11524,12 +13823,12 @@ function OfferPage({userId}:{userId:string}){
       <div style={{fontSize:22,fontWeight:800,color:C.t1,marginBottom:20}}>История офферов</div>
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
         {history.map((h:any)=>(
-          <div key={h.id} style={{background:dark?"#0F1420":"#fff",border:`1px solid ${dark?"rgba(255,255,255,0.07)":C.bd}`,borderRadius:16,padding:20}}>
+          <div key={h.id} style={{background:dark?"#171717":"#fff",border:`1px solid ${dark?"rgba(255,255,255,0.07)":C.bd}`,borderRadius:10,padding:20}}>
             <div style={{fontSize:11,color:C.t2,marginBottom:8,fontWeight:600}}>
               {new Date(h.created_at).toLocaleDateString("ru-RU",{day:"numeric",month:"long",year:"numeric"})}
             </div>
             <div style={{fontSize:14,color:C.t1,lineHeight:1.6,marginBottom:12}}>{h.offer_text||"—"}</div>
-            <button onClick={()=>saveOffer(h.offer_text,h.positioning_text)} style={{fontSize:12,color:"#4F8EF7",background:"none",border:"none",cursor:"pointer",padding:0,fontWeight:700}}>
+            <button onClick={()=>saveOffer(h.offer_text,h.positioning_text)} style={{fontSize:12,color:"#878787",background:"none",border:"none",cursor:"pointer",padding:0,fontWeight:700}}>
               Восстановить этот оффер →
             </button>
           </div>
@@ -11664,7 +13963,7 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
   const C2=()=><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>;
   const PencilI=()=><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
 
-  const SectionLabel=({children,color="#4F8EF7"}:{children:React.ReactNode,color?:string})=>(
+  const SectionLabel=({children,color="#878787"}:{children:React.ReactNode,color?:string})=>(
     <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color,textTransform:"uppercase" as const,marginBottom:10}}>{children}</div>
   );
 
@@ -11673,9 +13972,9 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
     const done=type==="offer"?!!offer:type==="marketing"?!!marketing:!!funnel;
     return(
       <button onClick={()=>callAI(type)} disabled={loading}
-        style={{flex:1,padding:"13px 10px",borderRadius:12,border:`1.5px solid ${dark?"rgba(79,142,247,0.3)":"#BFDBFE"}`,
-          background:loading?(dark?"rgba(79,142,247,0.08)":"#EFF6FF"):(done?(dark?"rgba(16,185,129,0.08)":"#F0FDF4"):(dark?"rgba(79,142,247,0.06)":"#F8FAFF")),
-          color:done?"#10B981":C.a,cursor:loading?"not-allowed":"pointer",
+        style={{flex:1,padding:"13px 10px",borderRadius:8,border:`1.5px solid ${dark?"rgba(135,135,135,0.3)":"#D7D7D7"}`,
+          background:loading?(dark?"rgba(135,135,135,0.08)":"#EFF6FF"):(done?(dark?"rgba(128,128,128,0.08)":"#F0FDF4"):(dark?"rgba(135,135,135,0.06)":"#F8FAFF")),
+          color:done?"#808080":C.a,cursor:loading?"not-allowed":"pointer",
           display:"flex",flexDirection:"column" as const,alignItems:"center",gap:6,fontSize:12,fontWeight:700,transition:"all 0.2s"}}>
         <div style={{fontSize:18}}>{loading?"⏳":done?"✅":icon}</div>
         {loading?"Генерирую...":done?"Перегенерировать":label}
@@ -11687,7 +13986,7 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
     const setter=field==="offer"?setOffer:field==="marketing"?setMarketing:setFunnel;
     const[copied,setCopied]=useState(false);
     if(!full&&!display)return(
-      <div style={{padding:16,borderRadius:12,border:`1px dashed ${dark?"rgba(255,255,255,0.08)":C.bd}`,color:C.t2,fontSize:13,textAlign:"center" as const}}>
+      <div style={{padding:16,borderRadius:8,border:`1px dashed ${dark?"rgba(255,255,255,0.08)":C.bd}`,color:C.t2,fontSize:13,textAlign:"center" as const}}>
         Нажми кнопку выше чтобы сгенерировать
       </div>
     );
@@ -11696,12 +13995,12 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
           <span style={{fontSize:11,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:1}}>{label}</span>
           <button onClick={()=>{navigator.clipboard.writeText(full);setCopied(true);setTimeout(()=>setCopied(false),2000);}}
-            style={{background:"none",border:"none",cursor:"pointer",color:copied?"#10B981":C.t2,fontSize:11,display:"flex",alignItems:"center",gap:4,fontWeight:600}}>
+            style={{background:"none",border:"none",cursor:"pointer",color:copied?"#808080":C.t2,fontSize:11,display:"flex",alignItems:"center",gap:4,fontWeight:600}}>
             <C2/>{copied?"Скопировано":"Копировать"}
           </button>
         </div>
         <textarea value={full} onChange={e=>setter(e.target.value)}
-          style={{width:"100%",minHeight:110,padding:14,border:`1.5px solid ${dark?"rgba(79,142,247,0.2)":"#DBEAFE"}`,borderRadius:12,fontSize:14,background:dark?"#0A0F1A":C.ib,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.65,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
+          style={{width:"100%",minHeight:110,padding:14,border:`1.5px solid ${dark?"rgba(135,135,135,0.2)":"#E8E8E8"}`,borderRadius:8,fontSize:14,background:dark?"#121212":C.ib,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.65,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
       </div>
     );
   };
@@ -11712,8 +14011,8 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
   const active=products.filter(p=>!p.is_archived);
   if(mode==="list"&&active.length===0)return(
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"calc(100vh - 120px)",gap:20,padding:24}}>
-      <div style={{width:88,height:88,borderRadius:24,background:dark?"rgba(245,158,11,0.1)":"#FFFBEB",display:"flex",alignItems:"center",justifyContent:"center",border:`1.5px solid ${dark?"rgba(245,158,11,0.25)":"#FDE68A"}`}}>
-        <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="1.5"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+      <div style={{width:88,height:88,borderRadius:12,background:dark?"rgba(167,167,167,0.1)":"#FFFBEB",display:"flex",alignItems:"center",justifyContent:"center",border:`1.5px solid ${dark?"rgba(167,167,167,0.25)":"#E2E2E2"}`}}>
+        <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#A7A7A7" strokeWidth="1.5"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
       </div>
       <div style={{textAlign:"center"}}>
         <div style={{fontSize:24,fontWeight:900,color:C.t1,marginBottom:8}}>Products & Prices</div>
@@ -11721,11 +14020,11 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
       </div>
       <div style={{display:"flex",flexDirection:"column",gap:10,width:"100%",maxWidth:380}}>
         <button onClick={()=>{resetForm();setMode("add");}}
-          style={{padding:"16px",borderRadius:14,border:"none",background:"linear-gradient(135deg,#D97706,#F59E0B)",color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10,boxShadow:"0 4px 20px rgba(245,158,11,0.3)"}}>
+          style={{padding:"16px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#878787,#A7A7A7)",color:"#fff",fontSize:15,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
           <PencilI/>Добавить продукт вручную
         </button>
         <button onClick={()=>onNav("product")}
-          style={{padding:"16px",borderRadius:14,border:`1.5px solid ${dark?"rgba(52,211,153,0.3)":"#A7F3D0"}`,background:dark?"rgba(52,211,153,0.06)":"#F0FDF4",color:"#34D399",fontSize:15,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+          style={{padding:"16px",borderRadius:10,border:`1.5px solid ${dark?"rgba(157,157,157,0.3)":"#D8D8D8"}`,background:dark?"rgba(157,157,157,0.06)":"#F0FDF4",color:"#9D9D9D",fontSize:15,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
           Создать продукт с ИИ
         </button>
@@ -11742,24 +14041,24 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
           <div style={{fontSize:24,fontWeight:900,color:C.t1}}>Products & Prices</div>
         </div>
         <button onClick={()=>{resetForm();setMode("add");}}
-          style={{padding:"11px 20px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#D97706,#F59E0B)",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:8,boxShadow:"0 4px 16px rgba(245,158,11,0.3)"}}>
+          style={{padding:"11px 20px",borderRadius:8,border:"none",background:"linear-gradient(135deg,#878787,#A7A7A7)",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:8,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
           <span style={{fontSize:18}}>+</span>Добавить продукт
         </button>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:16}}>
         {active.map((p:any)=>(
           <button key={p.id} onClick={()=>{setSelected(p);setDetailPrices(p.prices||[]);setDetailPains(p.pains||[]);setMode("detail");}}
-            style={{background:dark?"#0F1420":"#fff",border:`1px solid ${dark?"rgba(255,255,255,0.07)":C.bd}`,borderRadius:18,padding:20,cursor:"pointer",textAlign:"left",boxShadow:C.sh,transition:"all 0.2s"}}
+            style={{background:dark?"#171717":"#fff",border:`1px solid ${dark?"rgba(255,255,255,0.07)":C.bd}`,borderRadius:12,padding:20,cursor:"pointer",textAlign:"left",boxShadow:C.sh,transition:"all 0.2s"}}
             onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(-2px)";(e.currentTarget as HTMLElement).style.boxShadow="0 8px 32px rgba(0,0,0,0.12)";}}
             onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(0)";(e.currentTarget as HTMLElement).style.boxShadow=C.sh;}}>
-            <div style={{width:52,height:52,borderRadius:14,background:dark?"rgba(245,158,11,0.1)":"#FFFBEB",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:14,overflow:"hidden",border:`1px solid ${dark?"rgba(245,158,11,0.2)":"#FDE68A"}`}}>
-              {p.logo_url?<img src={p.logo_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="1.5"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>}
+            <div style={{width:52,height:52,borderRadius:10,background:dark?"rgba(167,167,167,0.1)":"#FFFBEB",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:14,overflow:"hidden",border:`1px solid ${dark?"rgba(167,167,167,0.2)":"#E2E2E2"}`}}>
+              {p.logo_url?<img src={p.logo_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#A7A7A7" strokeWidth="1.5"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>}
             </div>
             <div style={{fontSize:16,fontWeight:800,color:C.t1,marginBottom:6,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</div>
             <div style={{fontSize:13,color:C.t2,lineHeight:1.5,marginBottom:12,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical" as any}}>{p.description}</div>
             {p.prices?.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:6}}>
               {p.prices.slice(0,2).map((pr:any,i:number)=>(
-                <span key={i} style={{fontSize:12,fontWeight:700,color:"#F59E0B",background:dark?"rgba(245,158,11,0.1)":"#FFFBEB",padding:"4px 10px",borderRadius:8,border:"1px solid rgba(245,158,11,0.2)"}}>{pr.name?`${pr.name}: `:""}{pr.price}</span>
+                <span key={i} style={{fontSize:12,fontWeight:700,color:"#A7A7A7",background:dark?"rgba(167,167,167,0.1)":"#FFFBEB",padding:"4px 10px",borderRadius:8,border:"1px solid rgba(167,167,167,0.2)"}}>{pr.name?`${pr.name}: `:""}{pr.price}</span>
               ))}
               {p.prices.length>2&&<span style={{fontSize:12,color:C.t2}}>+{p.prices.length-2}</span>}
             </div>}
@@ -11771,7 +14070,7 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
           <div style={{fontSize:11,color:C.t2,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",marginBottom:14}}>Архив</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:12}}>
             {products.filter((p:any)=>p.is_archived).map((p:any)=>(
-              <div key={p.id} style={{background:dark?"#080C14":"#F8FAFC",border:`1px solid ${dark?"rgba(255,255,255,0.04)":C.bd}`,borderRadius:16,padding:16,opacity:0.6,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <div key={p.id} style={{background:dark?"#0D0D0D":"#F8FAFC",border:`1px solid ${dark?"rgba(255,255,255,0.04)":C.bd}`,borderRadius:10,padding:16,opacity:0.6,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                 <div style={{fontSize:14,fontWeight:600,color:C.t2}}>{p.name}</div>
                 <button onClick={async()=>{await supabase.from("user_products").update({is_archived:false}).eq("id",p.id);loadProducts();}}
                   style={{fontSize:11,color:C.a,background:"none",border:"none",cursor:"pointer",fontWeight:700}}>Восстановить</button>
@@ -11793,14 +14092,14 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
       <div style={{fontSize:22,fontWeight:900,color:C.t1,marginBottom:28}}>Новый продукт</div>
 
       {/* Section 1 */}
-      <div style={{background:dark?"#0F1420":"#fff",borderRadius:20,padding:24,marginBottom:16,border:`1px solid ${dark?"rgba(255,255,255,0.06)":C.bd}`,boxShadow:C.sh}}>
-        <SectionLabel color="#F59E0B">Основная информация</SectionLabel>
+      <div style={{background:dark?"#171717":"#fff",borderRadius:10,padding:24,marginBottom:16,border:`1px solid ${dark?"rgba(255,255,255,0.06)":C.bd}`,boxShadow:C.sh}}>
+        <SectionLabel color="#A7A7A7">Основная информация</SectionLabel>
 
         {/* Logo upload */}
         <div style={{marginBottom:20}}>
           <input ref={logoRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0])uploadLogo(e.target.files[0]);}}/>
           <button onClick={()=>logoRef.current?.click()}
-            style={{width:80,height:80,borderRadius:16,border:`2px dashed ${dark?"rgba(245,158,11,0.3)":"#FDE68A"}`,background:dark?"rgba(245,158,11,0.06)":"#FFFBEB",cursor:"pointer",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            style={{width:80,height:80,borderRadius:10,border:`2px dashed ${dark?"rgba(167,167,167,0.3)":"#E2E2E2"}`,background:dark?"rgba(167,167,167,0.06)":"#FFFBEB",cursor:"pointer",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center"}}>
             {form.logoUrl?<img src={form.logoUrl} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:logoLoading?<div style={{fontSize:11,color:C.t2}}>...</div>:<div style={{textAlign:"center"}}><div style={{fontSize:22}}>📦</div><div style={{fontSize:9,color:C.t2,marginTop:2}}>Логотип</div></div>}
           </button>
         </div>
@@ -11825,8 +14124,8 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
       </div>
 
       {/* Section 2 */}
-      <div style={{background:dark?"#0F1420":"#fff",borderRadius:20,padding:24,marginBottom:16,border:`1px solid ${dark?"rgba(255,255,255,0.06)":C.bd}`,boxShadow:C.sh}}>
-        <SectionLabel color="#A855F7">Целевая аудитория и боли</SectionLabel>
+      <div style={{background:dark?"#171717":"#fff",borderRadius:10,padding:24,marginBottom:16,border:`1px solid ${dark?"rgba(255,255,255,0.06)":C.bd}`,boxShadow:C.sh}}>
+        <SectionLabel color="#808080">Целевая аудитория и боли</SectionLabel>
         <textarea value={form.targetAudience} onChange={e=>setForm(f=>({...f,targetAudience:e.target.value}))} placeholder="Кто твой идеальный клиент для этого продукта? Опиши конкретно." rows={2} style={{...iS(),resize:"vertical" as const,minHeight:70,marginBottom:14}}/>
         <div style={{fontSize:12,fontWeight:700,color:C.t2,marginBottom:8}}>Главные боли аудитории</div>
         {pains.map((pain,i)=>(
@@ -11839,10 +14138,10 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
       </div>
 
       {/* Section 3 — AI Generation */}
-      <div style={{background:dark?"rgba(79,142,247,0.05)":"#F8FAFF",borderRadius:20,padding:24,marginBottom:16,border:`1.5px solid ${dark?"rgba(79,142,247,0.15)":"#DBEAFE"}`,boxShadow:"0 4px 24px rgba(79,142,247,0.06)"}}>
-        <SectionLabel color="#4F8EF7">Сгенерировать с ИИ</SectionLabel>
+      <div style={{background:dark?"rgba(135,135,135,0.05)":"#F8FAFF",borderRadius:10,padding:24,marginBottom:16,border:`1.5px solid ${dark?"rgba(135,135,135,0.15)":"#E8E8E8"}`,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
+        <SectionLabel color="#878787">Сгенерировать с ИИ</SectionLabel>
         <div style={{fontSize:13,color:C.t2,marginBottom:16}}>Заполни поля выше и нажми нужную кнопку. ИИ сделает остальное.</div>
-        {formErr&&<div style={{padding:"10px 14px",borderRadius:10,background:"#FEF2F2",color:C.r,fontSize:13,marginBottom:14}}>{formErr}</div>}
+        {formErr&&<div style={{padding:"10px 14px",borderRadius:8,background:"#FEF2F2",color:C.r,fontSize:13,marginBottom:14}}>{formErr}</div>}
         <div style={{display:"flex",gap:10,marginBottom:20}}>
           <GenBtn type="offer" label="Оффер" icon="⚡"/>
           <GenBtn type="marketing" label="Маркетинг" icon="📊"/>
@@ -11857,10 +14156,10 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
 
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
         <button onClick={saveProduct} disabled={saving||!form.name.trim()}
-          style={{width:"100%",padding:"16px",borderRadius:14,border:"none",background:form.name.trim()?"linear-gradient(135deg,#D97706,#F59E0B)":"rgba(255,255,255,0.06)",color:form.name.trim()?"#fff":C.t2,fontSize:15,fontWeight:700,cursor:form.name.trim()?"pointer":"not-allowed",boxShadow:form.name.trim()?"0 4px 20px rgba(245,158,11,0.3)":"none"}}>
+          style={{width:"100%",padding:"16px",borderRadius:10,border:"none",background:form.name.trim()?"linear-gradient(135deg,#878787,#A7A7A7)":"rgba(255,255,255,0.06)",color:form.name.trim()?"#fff":C.t2,fontSize:15,fontWeight:700,cursor:form.name.trim()?"pointer":"not-allowed",boxShadow:form.name.trim()?"0 4px 20px rgba(167,167,167,0.3)":"none"}}>
           {saving?"Сохраняем...":"Сохранить продукт"}
         </button>
-        <button onClick={()=>setMode("list")} style={{width:"100%",padding:"14px",borderRadius:14,border:`1px solid ${dark?"rgba(255,255,255,0.08)":C.bd}`,background:"transparent",color:C.t2,fontSize:14,fontWeight:500,cursor:"pointer"}}>Отмена</button>
+        <button onClick={()=>setMode("list")} style={{width:"100%",padding:"14px",borderRadius:10,border:`1px solid ${dark?"rgba(255,255,255,0.08)":C.bd}`,background:"transparent",color:C.t2,fontSize:14,fontWeight:500,cursor:"pointer"}}>Отмена</button>
       </div>
     </div>
   );
@@ -11868,7 +14167,7 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
   /* ── PRODUCT DETAIL ── */
   if(mode==="detail"&&selected){
     const s=selected;
-    const InlineEdit=({field,value,multiline,label,color="#4F8EF7"}:{field:string,value:string,multiline?:boolean,label:string,color?:string})=>{
+    const InlineEdit=({field,value,multiline,label,color="#878787"}:{field:string,value:string,multiline?:boolean,label:string,color?:string})=>{
       const isEditing=editField===field;
       return(
         <div style={{marginBottom:24}}>
@@ -11878,7 +14177,7 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
               style={{background:"none",border:"none",cursor:"pointer",color:isEditing?C.a:C.t2,padding:4}}>
               <PencilI/>
             </button>
-            {isEditing&&<button onClick={()=>saveDetailField(field,editVal)} style={{fontSize:11,color:"#10B981",background:"none",border:"none",cursor:"pointer",fontWeight:700}}>Сохранить</button>}
+            {isEditing&&<button onClick={()=>saveDetailField(field,editVal)} style={{fontSize:11,color:"#808080",background:"none",border:"none",cursor:"pointer",fontWeight:700}}>Сохранить</button>}
           </div>
           {isEditing
             ?multiline
@@ -11899,8 +14198,8 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
 
         {/* Header */}
         <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:28}}>
-          <div style={{width:64,height:64,borderRadius:18,background:dark?"rgba(245,158,11,0.1)":"#FFFBEB",display:"flex",alignItems:"center",justifyContent:"center",border:`1.5px solid ${dark?"rgba(245,158,11,0.2)":"#FDE68A"}`,overflow:"hidden",flexShrink:0}}>
-            {s.logo_url?<img src={s.logo_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="1.5"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>}
+          <div style={{width:64,height:64,borderRadius:12,background:dark?"rgba(167,167,167,0.1)":"#FFFBEB",display:"flex",alignItems:"center",justifyContent:"center",border:`1.5px solid ${dark?"rgba(167,167,167,0.2)":"#E2E2E2"}`,overflow:"hidden",flexShrink:0}}>
+            {s.logo_url?<img src={s.logo_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#A7A7A7" strokeWidth="1.5"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>}
           </div>
           <div style={{flex:1,minWidth:0}}>
             <div style={{fontSize:24,fontWeight:900,color:C.t1,marginBottom:4}}>{s.name}</div>
@@ -11912,28 +14211,28 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
         {/* Prices */}
         {(s.prices?.length>0)&&(
           <div style={{marginBottom:24}}>
-            <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#F59E0B",textTransform:"uppercase",marginBottom:10}}>Тарифы</div>
+            <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#A7A7A7",textTransform:"uppercase",marginBottom:10}}>Тарифы</div>
             <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
               {s.prices.map((pr:any,i:number)=>(
-                <div key={i} style={{padding:"12px 18px",borderRadius:12,background:dark?"rgba(245,158,11,0.08)":"#FFFBEB",border:`1.5px solid ${dark?"rgba(245,158,11,0.2)":"#FDE68A"}`}}>
-                  {pr.name&&<div style={{fontSize:11,color:"#D97706",fontWeight:700,marginBottom:2}}>{pr.name}</div>}
-                  <div style={{fontSize:18,fontWeight:900,color:"#F59E0B"}}>{pr.price}</div>
+                <div key={i} style={{padding:"12px 18px",borderRadius:8,background:dark?"rgba(167,167,167,0.08)":"#FFFBEB",border:`1.5px solid ${dark?"rgba(167,167,167,0.2)":"#E2E2E2"}`}}>
+                  {pr.name&&<div style={{fontSize:11,color:"#878787",fontWeight:700,marginBottom:2}}>{pr.name}</div>}
+                  <div style={{fontSize:18,fontWeight:900,color:"#A7A7A7"}}>{pr.price}</div>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        <div style={{background:dark?"#0F1420":"#fff",borderRadius:20,padding:24,border:`1px solid ${dark?"rgba(255,255,255,0.06)":C.bd}`,boxShadow:C.sh,marginBottom:16}}>
-          <InlineEdit field="description" value={s.description} multiline label="Описание" color="#4F8EF7"/>
-          <InlineEdit field="target_audience" value={s.target_audience} multiline label="Целевая аудитория" color="#A855F7"/>
+        <div style={{background:dark?"#171717":"#fff",borderRadius:10,padding:24,border:`1px solid ${dark?"rgba(255,255,255,0.06)":C.bd}`,boxShadow:C.sh,marginBottom:16}}>
+          <InlineEdit field="description" value={s.description} multiline label="Описание" color="#878787"/>
+          <InlineEdit field="target_audience" value={s.target_audience} multiline label="Целевая аудитория" color="#808080"/>
           {s.pains?.length>0&&(
             <div style={{marginBottom:24}}>
-              <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#EC4899",textTransform:"uppercase",marginBottom:10}}>Боли аудитории</div>
+              <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color:"#828282",textTransform:"uppercase",marginBottom:10}}>Боли аудитории</div>
               <div style={{display:"flex",flexDirection:"column",gap:6}}>
                 {s.pains.map((pain:string,i:number)=>(
-                  <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,background:dark?"rgba(236,72,153,0.06)":"#FFF1F8",border:`1px solid ${dark?"rgba(236,72,153,0.15)":"#FCE7F3"}`}}>
-                    <div style={{width:6,height:6,borderRadius:"50%",background:"#EC4899",flexShrink:0}}/>
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:8,background:dark?"rgba(130,130,130,0.06)":"#FFF1F8",border:`1px solid ${dark?"rgba(130,130,130,0.15)":"#EFEFEF"}`}}>
+                    <div style={{width:6,height:6,borderRadius:"50%",background:"#828282",flexShrink:0}}/>
                     <span style={{fontSize:13,color:C.t1}}>{pain}</span>
                   </div>
                 ))}
@@ -11942,10 +14241,10 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
           )}
         </div>
 
-        <div style={{background:dark?"rgba(79,142,247,0.05)":"#F8FAFF",borderRadius:20,padding:24,border:`1.5px solid ${dark?"rgba(79,142,247,0.12)":"#DBEAFE"}`,boxShadow:"0 4px 24px rgba(79,142,247,0.05)"}}>
-          <InlineEdit field="offer_text" value={s.offer_text} multiline label="Offer" color="#4F8EF7"/>
-          <InlineEdit field="marketing_system" value={s.marketing_system} multiline label="Marketing System" color="#34D399"/>
-          <InlineEdit field="sales_funnel" value={s.sales_funnel} multiline label="Sales Funnel" color="#F59E0B"/>
+        <div style={{background:dark?"rgba(135,135,135,0.05)":"#F8FAFF",borderRadius:10,padding:24,border:`1.5px solid ${dark?"rgba(135,135,135,0.12)":"#E8E8E8"}`,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
+          <InlineEdit field="offer_text" value={s.offer_text} multiline label="Offer" color="#878787"/>
+          <InlineEdit field="marketing_system" value={s.marketing_system} multiline label="Marketing System" color="#9D9D9D"/>
+          <InlineEdit field="sales_funnel" value={s.sales_funnel} multiline label="Sales Funnel" color="#A7A7A7"/>
         </div>
       </div>
     );
@@ -11975,7 +14274,7 @@ function FormsPage({userId}:{userId:string}){
   const[editId,setEditId]=useState<string|null>(null);
   const[bTitle,setBTitle]=useState("");
   const[bDesc,setBDesc]=useState("");
-  const[bAccent,setBAccent]=useState("#10B981");
+  const[bAccent,setBAccent]=useState("#808080");
   const[bQuestions,setBQuestions]=useState<Question[]>([]);
   const[bCompTitle,setBCompTitle]=useState("Спасибо за ответы!");
   const[bCompSub,setBCompSub]=useState("");
@@ -12007,14 +14306,14 @@ function FormsPage({userId}:{userId:string}){
   const openBuilder=(form?:FormData)=>{
     if(form){
       setEditId(form.id);setBTitle(form.title);setBDesc(form.description);
-      setBAccent(form.accent_color||"#10B981");
+      setBAccent(form.accent_color||"#808080");
       setBQuestions(form.questions||[]);
       setBCompTitle(form.completion_title||"Спасибо!");
       setBCompSub(form.completion_subtitle||"");
       setBCompUrl(form.completion_url||"");
       setBCompBtn(form.completion_btn_label||"Перейти");
     }else{
-      setEditId(null);setBTitle("");setBDesc("");setBAccent("#10B981");
+      setEditId(null);setBTitle("");setBDesc("");setBAccent("#808080");
       setBQuestions([]);setBCompTitle("Спасибо за ответы!");setBCompSub("");setBCompUrl("");setBCompBtn("Перейти");
     }
     setBuilderStep(1);setTab("builder");
@@ -12123,10 +14422,10 @@ function FormsPage({userId}:{userId:string}){
       :"transparent",
     blur:"blur(20px) saturate(160%)",
   };
-  const gInput:React.CSSProperties={width:"100%",padding:"10px 13px",borderRadius:10,border:`1px solid ${gl.inputBorder}`,background:gl.input,backdropFilter:gl.blur,color:C.t1,fontSize:14,outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box",transition:"border-color 0.15s"};
+  const gInput:React.CSSProperties={width:"100%",padding:"10px 13px",borderRadius:8,border:`1px solid ${gl.inputBorder}`,background:gl.input,backdropFilter:gl.blur,color:C.t1,fontSize:14,outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box",transition:"border-color 0.15s"};
 
   const Chip=({children,color}:{children:React.ReactNode,color?:string})=>(
-    <span style={{fontSize:11,fontWeight:600,color:color||C.t2,background:color?`${color}14`:(dark?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.04)"),padding:"3px 9px",borderRadius:20,letterSpacing:0.2}}>{children}</span>
+    <span style={{fontSize:11,fontWeight:600,color:color||C.t2,background:color?`${color}14`:(dark?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.04)"),padding:"3px 9px",borderRadius:10,letterSpacing:0.2}}>{children}</span>
   );
 
   const GhostBtn=({children,onClick,icon}:{children?:React.ReactNode,onClick?:()=>void,icon?:React.ReactNode})=>(
@@ -12137,13 +14436,13 @@ function FormsPage({userId}:{userId:string}){
 
   const PrimaryBtn=({children,onClick,disabled,small}:{children:React.ReactNode,onClick?:()=>void,disabled?:boolean,small?:boolean})=>(
     <button onClick={onClick} disabled={disabled}
-      style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:small?"8px 16px":"11px 20px",borderRadius:10,border:"none",background:disabled?(dark?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)"):"#18181B",color:disabled?C.t2:"#fff",fontSize:small?12:14,fontWeight:600,cursor:disabled?"not-allowed":"pointer",transition:"opacity 0.15s",opacity:disabled?0.5:1,whiteSpace:"nowrap" as const}}>
+      style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:small?"8px 16px":"11px 20px",borderRadius:8,border:"none",background:disabled?(dark?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)"):"#18181B",color:disabled?C.t2:"#fff",fontSize:small?12:14,fontWeight:600,cursor:disabled?"not-allowed":"pointer",transition:"opacity 0.15s",opacity:disabled?0.5:1,whiteSpace:"nowrap" as const}}>
       {children}
     </button>
   );
 
   const SectionCard=({children,style}:{children:React.ReactNode,style?:React.CSSProperties})=>(
-    <div style={{background:gl.card,backdropFilter:gl.blur,border:`1px solid ${gl.cardBorder}`,borderRadius:16,padding:22,boxShadow:gl.sh,...style}}>
+    <div style={{background:gl.card,backdropFilter:gl.blur,border:`1px solid ${gl.cardBorder}`,borderRadius:10,padding:22,boxShadow:gl.sh,...style}}>
       {children}
     </div>
   );
@@ -12172,7 +14471,7 @@ function FormsPage({userId}:{userId:string}){
       </div>
 
       {/* ── Tabs ── */}
-      <div style={{display:"flex",gap:2,padding:"4px",background:dark?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.04)",backdropFilter:gl.blur,borderRadius:12,marginBottom:28,width:"fit-content",border:`1px solid ${gl.cardBorder}`}}>
+      <div style={{display:"flex",gap:2,padding:"4px",background:dark?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.04)",backdropFilter:gl.blur,borderRadius:8,marginBottom:28,width:"fit-content",border:`1px solid ${gl.cardBorder}`}}>
         {([["list","Формы"],["builder","Конструктор"],selectedForm&&["analytics","Аналитика"]] as any[]).filter(Boolean).map(([id,label]:string[])=>(
           <button key={id} onClick={()=>setTab(id as typeof tab)}
             style={{padding:"7px 16px",borderRadius:9,border:"none",cursor:"pointer",fontSize:13,fontWeight:tab===id?700:500,background:tab===id?(dark?"rgba(255,255,255,0.09)":"#fff"):"transparent",color:tab===id?C.t1:C.t2,transition:"all 0.15s",boxShadow:tab===id?(dark?"none":"0 1px 3px rgba(0,0,0,0.08)"):"none"}}>
@@ -12185,7 +14484,7 @@ function FormsPage({userId}:{userId:string}){
       {tab==="list"&&(
         forms.length===0
           ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16,padding:"80px 24px",textAlign:"center"}}>
-            <div style={{width:56,height:56,borderRadius:16,background:dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.04)",border:`1px solid ${gl.cardBorder}`,display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <div style={{width:56,height:56,borderRadius:10,background:dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.04)",border:`1px solid ${gl.cardBorder}`,display:"flex",alignItems:"center",justifyContent:"center"}}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
             </div>
             <div>
@@ -12212,7 +14511,7 @@ function FormsPage({userId}:{userId:string}){
                 <div style={{fontSize:13,color:C.t2}}>{form.questions?.length||0}</div>
                 <div style={{fontSize:13,color:C.t2}}>—</div>
                 <div>
-                  <Chip color={form.is_active?"#16A34A":undefined}>{form.is_active?"Активна":"Откл."}</Chip>
+                  <Chip color={form.is_active?"#6F6F6F":undefined}>{form.is_active?"Активна":"Откл."}</Chip>
                 </div>
                 <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
                   <GhostBtn onClick={()=>copyLink(form.slug)} icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>}>
@@ -12221,7 +14520,7 @@ function FormsPage({userId}:{userId:string}){
                   <GhostBtn onClick={()=>loadAnalytics(form)} icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>}>Ответы</GhostBtn>
                   <GhostBtn onClick={()=>openBuilder(form)} icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>}/>
                   <button onClick={()=>toggleActive(form)} style={{padding:"7px 8px",borderRadius:9,border:`1px solid ${gl.cardBorder}`,background:gl.card,cursor:"pointer",color:C.t2,fontSize:11,fontWeight:600}}>{form.is_active?"Откл.":"Вкл."}</button>
-                  <button onClick={()=>deleteForm(form.id)} style={{padding:"7px 8px",borderRadius:9,border:"1px solid rgba(239,68,68,0.15)",background:"transparent",cursor:"pointer",color:"#EF4444",fontSize:12}}>
+                  <button onClick={()=>deleteForm(form.id)} style={{padding:"7px 8px",borderRadius:9,border:"1px solid rgba(119,119,119,0.15)",background:"transparent",cursor:"pointer",color:"#777777",fontSize:12}}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
                   </button>
                 </div>
@@ -12273,7 +14572,7 @@ function FormsPage({userId}:{userId:string}){
           {builderStep===2&&(
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               {bQuestions.length===0&&(
-                <div style={{padding:"48px 24px",border:`1px dashed ${gl.cardBorder}`,borderRadius:14,textAlign:"center",color:C.t2}}>
+                <div style={{padding:"48px 24px",border:`1px dashed ${gl.cardBorder}`,borderRadius:10,textAlign:"center",color:C.t2}}>
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{margin:"0 auto 10px",display:"block"}}><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                   <div style={{fontSize:14,fontWeight:600,marginBottom:4}}>Вопросов пока нет</div>
                   <div style={{fontSize:12}}>Добавь первый вопрос ниже</div>
@@ -12294,7 +14593,7 @@ function FormsPage({userId}:{userId:string}){
                     <div style={{display:"flex",gap:2}}>
                       <button onClick={()=>moveQ(i,-1)} disabled={i===0} style={{width:26,height:26,borderRadius:6,border:`1px solid ${gl.cardBorder}`,background:"transparent",cursor:"pointer",color:C.t2,fontSize:12,opacity:i===0?0.3:1,display:"flex",alignItems:"center",justifyContent:"center"}}>↑</button>
                       <button onClick={()=>moveQ(i,1)} disabled={i===bQuestions.length-1} style={{width:26,height:26,borderRadius:6,border:`1px solid ${gl.cardBorder}`,background:"transparent",cursor:"pointer",color:C.t2,fontSize:12,opacity:i===bQuestions.length-1?0.3:1,display:"flex",alignItems:"center",justifyContent:"center"}}>↓</button>
-                      <button onClick={()=>removeQ(q.id)} style={{width:26,height:26,borderRadius:6,border:"1px solid rgba(239,68,68,0.15)",background:"transparent",cursor:"pointer",color:"#EF4444",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+                      <button onClick={()=>removeQ(q.id)} style={{width:26,height:26,borderRadius:6,border:"1px solid rgba(119,119,119,0.15)",background:"transparent",cursor:"pointer",color:"#777777",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
                     </div>
                   </div>
                   <input value={q.label} onChange={e=>updateQ(q.id,{label:e.target.value})} placeholder={`Текст вопроса ${i+1}...`} style={gInput}/>
@@ -12314,7 +14613,7 @@ function FormsPage({userId}:{userId:string}){
                 </SectionCard>
               ))}
               <button onClick={addQuestion}
-                style={{padding:"12px",borderRadius:12,border:`1px dashed ${gl.cardBorder}`,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,transition:"all 0.15s"}}
+                style={{padding:"12px",borderRadius:8,border:`1px dashed ${gl.cardBorder}`,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,transition:"all 0.15s"}}
                 onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=dark?"rgba(255,255,255,0.03)":"rgba(0,0,0,0.02)";}}
                 onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -12345,7 +14644,7 @@ function FormsPage({userId}:{userId:string}){
               {/* Preview */}
               <SectionCard style={{padding:32,textAlign:"center"}}>
                 <div style={{fontSize:11,fontWeight:600,color:C.t2,letterSpacing:1,textTransform:"uppercase" as const,marginBottom:20}}>Превью финала</div>
-                <div style={{width:40,height:40,borderRadius:12,background:`${bAccent}14`,border:`1px solid ${bAccent}30`,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}}>
+                <div style={{width:40,height:40,borderRadius:8,background:`${bAccent}14`,border:`1px solid ${bAccent}30`,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={bAccent} strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                 </div>
                 <div style={{fontSize:19,fontWeight:800,color:C.t1,marginBottom:6}}>{bCompTitle||"Спасибо!"}</div>
@@ -12378,7 +14677,7 @@ function FormsPage({userId}:{userId:string}){
                 {copied===selectedForm.slug?"Скопировано":"Ссылка"}
               </GhostBtn>
               {responses.length>0&&<GhostBtn onClick={exportCSV} icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>}>CSV</GhostBtn>}
-              {responses.length>0&&<button onClick={deleteAllResponses} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:9,border:"1px solid rgba(239,68,68,0.2)",background:"transparent",color:"#EF4444",fontSize:12,fontWeight:600,cursor:"pointer"}}>
+              {responses.length>0&&<button onClick={deleteAllResponses} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:9,border:"1px solid rgba(119,119,119,0.2)",background:"transparent",color:"#777777",fontSize:12,fontWeight:600,cursor:"pointer"}}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
                 Удалить все
               </button>}
@@ -12475,7 +14774,7 @@ function FormsPage({userId}:{userId:string}){
                         })}
                         <td style={{padding:"11px 16px"}}>
                           <button onClick={()=>deleteResponse(r.id)} title="Удалить ответ"
-                            style={{width:26,height:26,borderRadius:7,border:"1px solid rgba(239,68,68,0.15)",background:"transparent",cursor:"pointer",color:"#EF4444",display:"flex",alignItems:"center",justifyContent:"center",opacity:0.6,transition:"opacity 0.15s"}}
+                            style={{width:26,height:26,borderRadius:7,border:"1px solid rgba(119,119,119,0.15)",background:"transparent",cursor:"pointer",color:"#777777",display:"flex",alignItems:"center",justifyContent:"center",opacity:0.6,transition:"opacity 0.15s"}}
                             onMouseEnter={e=>(e.currentTarget as HTMLElement).style.opacity="1"}
                             onMouseLeave={e=>(e.currentTarget as HTMLElement).style.opacity="0.6"}>
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
@@ -12498,7 +14797,7 @@ function FormsPage({userId}:{userId:string}){
 const COPY_TOOLS=[
   {id:"text-booster",name:"Text Booster",desc:"Проверяет и усиливает текст. Глубокий аудит с пошаговой инструкцией.",tag:"Редактура",ic:"M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"},
   {id:"sales-master",name:"Sales Master",desc:"Генерирует убедительные слоганы, призывы к действию и сценарии продаж.",tag:"Продажи",ic:"M13 10V3L4 14h7v7l9-11h-7z"},
-  {id:"profit-planner",name:"Profit Planner",desc:"Разрабатывает стратегию монетизации на основе текущих показателей профиля.",tag:"Стратегия",ic:"M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"},
+  {id:"profile-description",name:"Profile Description",desc:"По офферу и целевой аудитории пишет описания профиля под соцсети: Instagram, Telegram, YouTube, TikTok, Twitter и закреп/сообщение в Telegram.",tag:"Соцсети",ic:"M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"},
   {id:"no-ai-text",name:"NO AI Text",desc:"Убирает эффект генерации текста — делает его живым и человеческим.",tag:"Редактура",ic:"M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"},
   {id:"story-master",name:"Story Master",desc:"Берёт историю и переписывает её в другом жанре или стиле, сохраняя смыслы.",tag:"Сторителлинг",ic:"M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"},
   {id:"reels-master",name:"Reels Master",desc:"Генерирует вирусные посты, цитаты и треды для коротких видео.",tag:"Контент",ic:"M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"},
@@ -12511,11 +14810,336 @@ const COPY_TOOLS=[
 ];
 
 const TAG_COLORS:Record<string,string>={
-  "Редактура":"#6366F1","Продажи":"#10B981","Стратегия":"#F59E0B",
-  "Сторителлинг":"#EC4899","Контент":"#8B5CF6","Стиль":"#14B8A6",
-  "Реклама":"#F97316","Видео":"#EF4444","Бренд":"#3B82F6",
-  "Аудитория":"#06B6D4","Рассылка":"#84CC16",
+  "Редактура":"#757575","Продажи":"#808080","Стратегия":"#A7A7A7",
+  "Сторителлинг":"#828282","Контент":"#7C7C7C","Стиль":"#858585",
+  "Реклама":"#909090","Видео":"#777777","Бренд":"#7A7A7A",
+  "Аудитория":"#858585","Рассылка":"#A2A2A2","Соцсети":"#808080",
 };
+
+/* ============ COPY AI — BATCH 1 (варианты) ============ */
+const VARIANT_TAIL=(count:number,sem:string)=>`\n\nВерни строго JSON-массив из ${count} объектов: [{"title":"...","body":"...","note":"..."}]. ${sem} Без markdown и текста вокруг.`;
+
+const COPY_B_TOOLS:Record<string,{inputs:any[],build:(v:any)=>{system:string,user:string,count:number}}>={
+  "sales-master":{
+    inputs:[
+      {key:"offer",label:"Ваш оффер / продукт",type:"textarea",placeholder:"Что продаёте и ключевая выгода",req:true},
+      {key:"audience",label:"Целевая аудитория",type:"text",placeholder:"Кому продаёте"},
+      {key:"kind",label:"Что сгенерировать",type:"chips",options:["Слоганы","CTA","Сценарий продажи"],default:"Слоганы"},
+      {key:"pain",label:"Боль клиента (необязательно)",type:"text",placeholder:"Что болит у клиента"},
+    ],
+    build:(v)=>{
+      const kind=v.kind||"Слоганы";
+      const count=kind==="Сценарий продажи"?3:5;
+      const sem=kind==="Сценарий продажи"
+        ?'title — короткое название подхода, body — сам сценарий продажи (несколько строк), note — можно оставить пустым.'
+        :`title — угол/приём (боль, выгода, статус, срочность, соц.доказательство), body — сам ${kind==="CTA"?"призыв к действию":"слоган"}, note — можно оставить пустым.`;
+      const base=`Оффер/продукт: ${v.offer}\nАудитория: ${v.audience||"—"}${v.pain?`\nБоль клиента: ${v.pain}`:""}\n\nСгенерируй ${count} вариантов: ${kind}. Разные углы и приёмы, конкретно и убедительно, без клише и воды.`;
+      return{system:"Ты — сильный копирайтер-продажник. Пишешь конкретно, цепляюще, без воды и клише. Возвращаешь строго валидный JSON без markdown.",user:base+VARIANT_TAIL(count,sem),count};
+    },
+  },
+  "reels-master":{
+    inputs:[
+      {key:"theme",label:"Тема",type:"textarea",placeholder:"О чём контент",req:true},
+      {key:"format",label:"Формат",type:"chips",options:["Хуки","Пост","Цитата","Тред"],default:"Хуки"},
+      {key:"tone",label:"Тон",type:"chips",options:["Экспертный","Дерзкий","Дружелюбный","Провокационный"],default:"Экспертный"},
+    ],
+    build:(v)=>{
+      const fmt=v.format||"Хуки";
+      const count=fmt==="Тред"?3:5;
+      const sem=`title — короткий ярлык, body — сам текст в формате «${fmt}», note — можно оставить пустым.`;
+      const base=`Тема: ${v.theme}\nТон: ${v.tone||"Экспертный"}\n\nСгенерируй ${count} вариантов в формате «${fmt}» для коротких видео и сторис. Цепляющие, нативные для соцсетей, останавливают скролл с первой секунды.`;
+      return{system:"Ты — вирусный контент-мейкер для соцсетей. Пишешь тексты, которые останавливают скролл. Возвращаешь строго валидный JSON без markdown.",user:base+VARIANT_TAIL(count,sem),count};
+    },
+  },
+  "ad-master":{
+    inputs:[
+      {key:"product",label:"Продукт / услуга",type:"textarea",placeholder:"Что продвигаем",req:true},
+      {key:"audience",label:"Аудитория",type:"text",placeholder:"Кому"},
+      {key:"channel",label:"Канал",type:"chips",options:["Любой","Instagram","Telegram","YouTube","Наружка"],default:"Любой"},
+    ],
+    build:(v)=>{
+      const count=5;
+      const sem='title — название рекламного хода, body — идея, механика и пример креатива (несколько строк), note — почему это сработает.';
+      const base=`Продукт/услуга: ${v.product}\nАудитория: ${v.audience||"—"}\nКанал: ${v.channel||"Любой"}\n\nПредложи ${count} нестандартных, смелых рекламных ходов. Не банальщина: конкретная механика + пример креатива, который реально зацепит.`;
+      return{system:"Ты — креативный директор с насмотренностью на нестандартную, вирусную рекламу. Возвращаешь строго валидный JSON без markdown.",user:base+VARIANT_TAIL(count,sem),count};
+    },
+  },
+  "send-magnet":{
+    inputs:[
+      {key:"offer",label:"О чём письмо / оффер",type:"textarea",placeholder:"Что предлагаете",req:true},
+      {key:"audience",label:"Аудитория",type:"text",placeholder:"Кому"},
+      {key:"kind",label:"Что сгенерировать",type:"chips",options:["Темы писем","Полное письмо","Серия писем"],default:"Темы писем"},
+    ],
+    build:(v)=>{
+      const kind=v.kind||"Темы писем";
+      const count=kind==="Темы писем"?6:kind==="Серия писем"?5:2;
+      let sem,base;
+      if(kind==="Темы писем"){sem='title — приём (интрига, выгода, вопрос, цифра), body — сама тема письма, note — почему её откроют.';base=`Оффер/тема письма: ${v.offer}\nАудитория: ${v.audience||"—"}\n\nСгенерируй ${count} тем писем под высокую открываемость. Без спам-слов, каждая — интрига или конкретная выгода.`;}
+      else if(kind==="Серия писем"){sem='title — цель письма (напр. «Письмо 1 — знакомство»), body — текст письма, note — можно оставить пустым.';base=`Оффер: ${v.offer}\nАудитория: ${v.audience||"—"}\n\nСобери серию из ${count} писем (прогрев → продажа). Для каждого — цель и готовый текст.`;}
+      else{sem='title — угол письма, body — полный текст письма (в первой строке — тема), note — можно оставить пустым.';base=`Оффер: ${v.offer}\nАудитория: ${v.audience||"—"}\n\nНапиши ${count} варианта полного продающего письма разными углами. В первой строке каждого — тема письма.`;}
+      return{system:"Ты — email-маркетолог. Пишешь письма с высокой открываемостью и конверсией. Возвращаешь строго валидный JSON без markdown.",user:base+VARIANT_TAIL(count,sem),count};
+    },
+  },
+};
+
+async function copyGenVariants(system:string,user:string,count:number,avoid:string[]=[]):Promise<any[]>{
+  let u=user;
+  if(avoid.length)u+=`\n\nНе повторяй уже показанные варианты:\n${avoid.slice(0,8).map((a,i)=>`${i+1}. ${String(a).replace(/\n/g," ").slice(0,80)}`).join("\n")}`;
+  let arr:any=paParseJSON(await paChat(system,u,2400,0.85));
+  if(!Array.isArray(arr))arr=arr.variants||arr.items||arr.stories||[];
+  return (arr||[]).slice(0,count).map((x:any)=>typeof x==="string"?{title:"",body:x,note:""}:{title:x.title||"",body:x.body||x.text||"",note:x.note||""});
+}
+
+function CopyToolRunner({tool,dark}:{tool:any,dark:boolean}){
+  const cfg=COPY_B_TOOLS[tool.id];
+  const isMobile=useIsMobile();
+  const accent=TAG_COLORS[tool.tag]||"#7C7C7C";
+  const bd=C.bd;
+  const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
+  const inputBg=dark?"#1C1C1C":"#F8FAFC";
+
+  const[vals,setVals]=useState<any>(()=>{const o:any={};(cfg?.inputs||[]).forEach((f:any)=>o[f.key]=f.default||(f.type==="chips"?(f.options?.[0]||""):""));return o;});
+  const[variants,setVariants]=useState<any[]>([]);
+  const[loading,setLoading]=useState(false);
+  const[appending,setAppending]=useState(false);
+  const[regenIdx,setRegenIdx]=useState<number|null>(null);
+  const[copied,setCopied]=useState<number|null>(null);
+
+  useEffect(()=>{
+    try{const raw=localStorage.getItem("copyai_b_"+tool.id);if(raw){const d=JSON.parse(raw);if(d.vals)setVals((v:any)=>({...v,...d.vals}));if(Array.isArray(d.variants))setVariants(d.variants);}}catch{}
+  },[tool.id]);
+  useEffect(()=>{
+    try{localStorage.setItem("copyai_b_"+tool.id,JSON.stringify({vals,variants}));}catch{}
+  },[vals,variants,tool.id]);
+
+  if(!cfg)return(
+    <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:24}}>
+      <div style={{fontSize:11,color:C.t2,fontWeight:600,marginBottom:16,letterSpacing:0.3,textTransform:"uppercase" as const}}>Инструмент</div>
+      <div style={{padding:40,border:`1px dashed ${bd}`,borderRadius:8,textAlign:"center" as const,color:C.t2}}>
+        <div style={{fontSize:13,fontWeight:500}}>Функционал в разработке</div>
+        <div style={{fontSize:12,marginTop:4,opacity:0.6}}>Скоро будет доступно</div>
+      </div>
+    </div>
+  );
+
+  const canGen=cfg.inputs.filter((f:any)=>f.req).every((f:any)=>(vals[f.key]||"").trim());
+
+  const run=async(append:boolean)=>{
+    if(!canGen)return;
+    append?setAppending(true):setLoading(true);
+    if(!append)setVariants([]);
+    try{
+      const{system,user,count}=cfg.build(vals);
+      const arr=await copyGenVariants(system,user,count,append?variants.map(x=>x.body):[]);
+      setVariants(prev=>append?[...prev,...arr]:arr);
+    }catch(e){alert("Не удалось сгенерировать. Проверь API-ключ и попробуй ещё раз.");}
+    append?setAppending(false):setLoading(false);
+  };
+
+  const regen=async(idx:number)=>{
+    setRegenIdx(idx);
+    try{
+      const{system,user}=cfg.build(vals);
+      const one=await copyGenVariants(system,user,1,variants.map(x=>x.body));
+      if(one[0])setVariants(prev=>prev.map((v,i)=>i===idx?one[0]:v));
+    }catch(e){}
+    setRegenIdx(null);
+  };
+
+  const copyBody=(text:string,idx:number)=>{navigator.clipboard.writeText(text);setCopied(idx);setTimeout(()=>setCopied(null),1500);};
+
+  const lbl:React.CSSProperties={fontSize:12,fontWeight:700,color:C.t2,letterSpacing:0.3,marginBottom:8,display:"block"};
+  const fld:React.CSSProperties={width:"100%",padding:"11px 13px",border:`1px solid ${bd}`,borderRadius:8,fontSize:14,background:inputBg,color:C.t1,outline:"none",lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const};
+
+  const twoCol=!isMobile&&variants.length>0;
+  return(
+    <div style={{display:"grid",gridTemplateColumns:twoCol?"minmax(340px,440px) 1fr":"1fr",gap:16,alignItems:"start"}}>
+      {/* inputs */}
+      <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:22,display:"flex",flexDirection:"column",gap:16}}>
+        {cfg.inputs.map((f:any)=>(
+          <div key={f.key}>
+            <label style={lbl}>{f.label}</label>
+            {f.type==="textarea"?(
+              <textarea value={vals[f.key]||""} onChange={e=>setVals((v:any)=>({...v,[f.key]:e.target.value}))} placeholder={f.placeholder} style={{...fld,minHeight:70,resize:"vertical" as const}}/>
+            ):f.type==="chips"?(
+              <div style={{display:"flex",gap:8,flexWrap:"wrap" as const}}>
+                {f.options.map((o:string)=><button key={o} onClick={()=>setVals((v:any)=>({...v,[f.key]:o}))} style={{padding:"8px 15px",borderRadius:10,border:`1px solid ${vals[f.key]===o?"transparent":bd}`,background:vals[f.key]===o?`${accent}22`:"transparent",color:vals[f.key]===o?accent:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>{o}</button>)}
+              </div>
+            ):(
+              <input value={vals[f.key]||""} onChange={e=>setVals((v:any)=>({...v,[f.key]:e.target.value}))} placeholder={f.placeholder} style={fld}/>
+            )}
+          </div>
+        ))}
+        <button onClick={()=>run(false)} disabled={!canGen||loading}
+          style={{padding:"13px",borderRadius:8,border:"none",background:canGen?accent:inputBg,color:canGen?"#fff":C.t2,fontSize:15,fontWeight:700,cursor:canGen&&!loading?"pointer":"default",fontFamily:"'Inter',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+          {loading?<><div style={{width:17,height:17,border:"2.5px solid rgba(255,255,255,0.4)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Генерирую…</>:variants.length?"Сгенерировать заново":"Сгенерировать"}
+        </button>
+      </div>
+
+      {/* results */}
+      {variants.length>0&&<div style={{display:"flex",flexDirection:"column",gap:12}}>
+        {variants.map((v,i)=>(
+          <div key={i} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:18}}>
+            {v.title&&<div style={{fontSize:12,fontWeight:700,color:accent,marginBottom:7,textTransform:"uppercase" as const,letterSpacing:0.3}}>{v.title}</div>}
+            <div style={{fontSize:15,color:C.t1,lineHeight:1.65,whiteSpace:"pre-wrap" as const}}>{v.body}</div>
+            {v.note&&<div style={{fontSize:12.5,color:C.t2,marginTop:10,lineHeight:1.5,borderLeft:`2px solid ${bd}`,paddingLeft:10}}>{v.note}</div>}
+            <div style={{display:"flex",gap:8,marginTop:14}}>
+              <button onClick={()=>copyBody(v.body,i)} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:copied===i?"#808080":C.t2,fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                {copied===i?<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#808080" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Скопировано</>:<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Копировать</>}
+              </button>
+              <button onClick={()=>regen(i)} disabled={regenIdx===i} title="Перегенерировать вариант" style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:12.5,fontWeight:600,cursor:regenIdx===i?"default":"pointer",fontFamily:"'Inter',sans-serif"}}>
+                {regenIdx===i?<><div style={{width:12,height:12,border:"2px solid rgba(150,150,150,0.3)",borderTopColor:C.t2,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>Генерирую</>:<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Другой вариант</>}
+              </button>
+            </div>
+          </div>
+        ))}
+        <button onClick={()=>run(true)} disabled={appending}
+          style={{padding:"12px",borderRadius:8,border:`1px dashed ${bd}`,background:"transparent",color:C.t2,fontSize:14,fontWeight:600,cursor:appending?"default":"pointer",fontFamily:"'Inter',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+          {appending?<><div style={{width:15,height:15,border:"2px solid rgba(150,150,150,0.3)",borderTopColor:C.t2,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>Генерирую…</>:"Ещё варианты"}
+        </button>
+      </div>}
+    </div>
+  );
+}
+
+
+/* ============ COPY AI — BATCH 2 (переписать) ============ */
+const COPY_A_TOOLS:Record<string,{inputs:any[],refine:{label:string,hint:string}[],build:(v:any)=>{system:string,user:string}}>={
+  "no-ai-text":{
+    inputs:[
+      {key:"source",label:"Вставьте текст",type:"textarea",placeholder:"Текст, из которого нужно убрать AI-стиль",req:true},
+      {key:"depth",label:"Глубина правки",type:"chips",options:["Лёгкая правка","Средняя","Переписать полностью"],default:"Средняя"},
+      {key:"tone",label:"Тон",type:"chips",options:["Как есть","Разговорный","Экспертный","Дружелюбный"],default:"Как есть"},
+    ],
+    refine:[{label:"Ещё живее",hint:"сделай ещё живее и естественнее, больше разговорности"},{label:"Проще",hint:"упрости формулировки, короче слова и фразы"},{label:"Короче",hint:"сократи, убери лишнее, сохрани суть"}],
+    build:(v)=>({
+      system:"Ты — редактор, который делает AI-текст живым и человеческим. Возвращаешь только переписанный текст, без пояснений и без кавычек.",
+      user:`Перепиши текст так, чтобы он не выглядел написанным ИИ. Убери AI-маркеры: клише («в современном мире», «важно отметить», «давайте разберёмся»), одинаковую длину и структуру предложений, симметричные списки, канцелярит, оверхедж, злоупотребление тире. Добавь живой ритм, разную длину фраз, разговорность и лёгкую неидеальность. Сохрани смысл и факты.\nГлубина правки: ${v.depth||"Средняя"}.\nТон: ${(v.tone&&v.tone!=="Как есть")?v.tone:"сохрани исходный"}.\n\nТекст:\n${v.source}\n\nВерни только переписанный текст.`,
+    }),
+  },
+  "story-master":{
+    inputs:[
+      {key:"source",label:"Ваша история",type:"textarea",placeholder:"История, которую нужно переписать",req:true},
+      {key:"genre",label:"Жанр / стиль",type:"chips",options:["Драма","Детектив","Нуар","Эпик","Стендап","Притча","Бизнес-кейс"],default:"Драма"},
+    ],
+    refine:[{label:"Ярче",hint:"добавь образности, деталей и эмоций"},{label:"Короче",hint:"сократи, оставь только суть"},{label:"Больше диалога",hint:"добавь живые диалоги"}],
+    build:(v)=>({
+      system:"Ты — мастер сторителлинга. Переписываешь историю в заданном жанре, сохраняя смысл и ключевые факты. Возвращаешь только текст истории, без пояснений.",
+      user:`Перепиши историю в стиле/жанре «${v.genre||"Драма"}». Сохрани смысл и ключевые факты, но передай их через тон, ритм и приёмы этого жанра. Сделай ярко и увлекательно.\n\nИстория:\n${v.source}\n\nВерни только переписанную историю.`,
+    }),
+  },
+  "youtube-master":{
+    inputs:[
+      {key:"source",label:"Текст или тема",type:"textarea",placeholder:"Исходный текст или тема видео",req:true},
+      {key:"length",label:"Длина",type:"chips",options:["Короткое (до 1 мин)","Среднее (3-5 мин)","Длинное (10+ мин)"],default:"Среднее (3-5 мин)"},
+      {key:"tone",label:"Подача",type:"chips",options:["Энергичная","Спокойная экспертная","Дружелюбная"],default:"Энергичная"},
+    ],
+    refine:[{label:"Энергичнее",hint:"сделай динамичнее, короче фразы, больше драйва"},{label:"Спокойнее",hint:"сделай размереннее и вдумчивее"},{label:"Короче",hint:"сократи, оставь самое важное"}],
+    build:(v)=>({
+      system:"Ты — сценарист и режиссёр озвучки для YouTube. Превращаешь текст в сценарий для диктора: короткие фразы, речевой ритм, метки пауз и интонаций. Возвращаешь только текст сценария.",
+      user:`Преврати это в сценарий для диктора (озвучка видео). Разбей на блоки: [ХУК], [ИНТРО], [ОСНОВНАЯ ЧАСТЬ], [ПРИЗЫВ]. Пиши короткими фразами под живую речь, ставь метки [пауза] и подсказки интонации (например, [громче], [медленно], [с улыбкой]). Подача: ${v.tone||"Энергичная"}. Ориентировочная длина: ${v.length||"Среднее (3-5 мин)"}.\n\nИсходный текст/тема:\n${v.source}\n\nВерни только сценарий.`,
+    }),
+  },
+};
+
+async function copyRewrite(system:string,user:string):Promise<string>{
+  let t=await paChat(system,user,2800,0.8);
+  t=t.replace(/```/g,"").trim();
+  return t.replace(/^["'«»]+/,"").replace(/["'«»]+$/,"").trim();
+}
+
+function CopyRewriteRunner({tool,dark}:{tool:any,dark:boolean}){
+  const cfg=COPY_A_TOOLS[tool.id];
+  const isMobile=useIsMobile();
+  const accent=TAG_COLORS[tool.tag]||"#7C7C7C";
+  const bd=C.bd;
+  const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
+  const inputBg=dark?"#1C1C1C":"#F8FAFC";
+
+  const[vals,setVals]=useState<any>(()=>{const o:any={};(cfg?.inputs||[]).forEach((f:any)=>o[f.key]=f.default||(f.type==="chips"?(f.options?.[0]||""):""));return o;});
+  const[result,setResult]=useState("");
+  const[loading,setLoading]=useState(false);
+  const[refining,setRefining]=useState<string|null>(null);
+  const[tab,setTab]=useState<"result"|"original">("result");
+  const[copied,setCopied]=useState(false);
+
+  useEffect(()=>{try{const raw=localStorage.getItem("copyai_a_"+tool.id);if(raw){const d=JSON.parse(raw);if(d.vals)setVals((v:any)=>({...v,...d.vals}));if(typeof d.result==="string")setResult(d.result);}}catch{}},[tool.id]);
+  useEffect(()=>{try{localStorage.setItem("copyai_a_"+tool.id,JSON.stringify({vals,result}));}catch{}},[vals,result,tool.id]);
+
+  if(!cfg)return null;
+
+  const sourceKey=(cfg.inputs.find((f:any)=>f.req)||cfg.inputs[0])?.key;
+  const canGen=cfg.inputs.filter((f:any)=>f.req).every((f:any)=>(vals[f.key]||"").trim());
+
+  const run=async()=>{
+    if(!canGen)return;setLoading(true);
+    try{const{system,user}=cfg.build(vals);const r=await copyRewrite(system,user);setResult(r);setTab("result");}
+    catch(e){alert("Не удалось обработать. Проверь API-ключ и попробуй ещё раз.");}
+    setLoading(false);
+  };
+  const refine=async(chip:{label:string,hint:string})=>{
+    if(!result)return;setRefining(chip.label);
+    try{
+      const{system}=cfg.build(vals);
+      const user=`Вот текущий текст:\n\n${result}\n\nПримени изменение: ${chip.hint}. Сохрани смысл. Верни только новый вариант текста, без пояснений.`;
+      const r=await copyRewrite(system,user);setResult(r);setTab("result");
+    }catch(e){}
+    setRefining(null);
+  };
+  const copy=()=>{navigator.clipboard.writeText(result);setCopied(true);setTimeout(()=>setCopied(false),1500);};
+
+  const lbl:React.CSSProperties={fontSize:12,fontWeight:700,color:C.t2,letterSpacing:0.3,marginBottom:8,display:"block"};
+  const fld:React.CSSProperties={width:"100%",padding:"11px 13px",border:`1px solid ${bd}`,borderRadius:8,fontSize:14,background:inputBg,color:C.t1,outline:"none",lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const};
+
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:16}}>
+      <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:22,display:"flex",flexDirection:"column",gap:16}}>
+        {cfg.inputs.map((f:any)=>(
+          <div key={f.key}>
+            <label style={lbl}>{f.label}</label>
+            {f.type==="textarea"?(
+              <textarea value={vals[f.key]||""} onChange={e=>setVals((v:any)=>({...v,[f.key]:e.target.value}))} placeholder={f.placeholder} style={{...fld,minHeight:120,resize:"vertical" as const}}/>
+            ):f.type==="chips"?(
+              <div style={{display:"flex",gap:8,flexWrap:"wrap" as const}}>
+                {f.options.map((o:string)=><button key={o} onClick={()=>setVals((v:any)=>({...v,[f.key]:o}))} style={{padding:"8px 15px",borderRadius:10,border:`1px solid ${vals[f.key]===o?"transparent":bd}`,background:vals[f.key]===o?`${accent}22`:"transparent",color:vals[f.key]===o?accent:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>{o}</button>)}
+              </div>
+            ):(
+              <input value={vals[f.key]||""} onChange={e=>setVals((v:any)=>({...v,[f.key]:e.target.value}))} placeholder={f.placeholder} style={fld}/>
+            )}
+          </div>
+        ))}
+        <button onClick={run} disabled={!canGen||loading}
+          style={{padding:"13px",borderRadius:8,border:"none",background:canGen?accent:inputBg,color:canGen?"#fff":C.t2,fontSize:15,fontWeight:700,cursor:canGen&&!loading?"pointer":"default",fontFamily:"'Inter',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+          {loading?<><div style={{width:17,height:17,border:"2.5px solid rgba(255,255,255,0.4)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Обрабатываю…</>:result?"Обработать заново":"Обработать"}
+        </button>
+      </div>
+
+      {result&&<div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:20}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:14,flexWrap:"wrap" as const}}>
+          <div style={{display:"flex",gap:4,background:inputBg,borderRadius:8,padding:3}}>
+            {(["result","original"] as const).map(t=><button key={t} onClick={()=>setTab(t)} style={{padding:"6px 14px",borderRadius:8,border:"none",background:tab===t?(dark?"rgba(255,255,255,0.08)":"#fff"):"transparent",color:tab===t?C.t1:C.t2,fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>{t==="result"?"Результат":"Оригинал"}</button>)}
+          </div>
+          <button onClick={copy} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:copied?"#808080":C.t2,fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+            {copied?<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#808080" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Скопировано</>:<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Копировать</>}
+          </button>
+        </div>
+        <div style={{fontSize:15,color:C.t1,lineHeight:1.7,whiteSpace:"pre-wrap" as const,opacity:tab==="original"?0.75:1}}>{tab==="result"?result:(vals[sourceKey]||"")}</div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap" as const,marginTop:16,paddingTop:14,borderTop:`1px solid ${bd}`,alignItems:"center"}}>
+          <span style={{fontSize:12,color:C.t2,fontWeight:600}}>Доработать:</span>
+          {cfg.refine.map(r=><button key={r.label} onClick={()=>refine(r)} disabled={refining!==null} style={{padding:"7px 14px",borderRadius:10,border:`1px solid ${bd}`,background:"transparent",color:refining===r.label?accent:C.t2,fontSize:12.5,fontWeight:600,cursor:refining?"default":"pointer",fontFamily:"'Inter',sans-serif",display:"flex",alignItems:"center",gap:6}}>
+            {refining===r.label&&<div style={{width:11,height:11,border:"2px solid rgba(150,150,150,0.3)",borderTopColor:accent,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>}
+            {r.label}
+          </button>)}
+        </div>
+      </div>}
+    </div>
+  );
+}
+
+function CopyToolHost({tool,dark}:{tool:any,dark:boolean}){
+  if(COPY_A_TOOLS[tool.id])return <CopyRewriteRunner tool={tool} dark={dark}/>;
+  return <CopyToolRunner tool={tool} dark={dark}/>;
+}
 
 function CopyAIPage({userId}:{userId:string}){
   const{dark}=useTheme();
@@ -12547,43 +15171,37 @@ function CopyAIPage({userId}:{userId:string}){
   const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
 
   if(selected)return(
-    <div style={{maxWidth:680,margin:"0 auto",padding:"36px 24px"}}>
+    <div style={{maxWidth:1240,margin:"0 auto",width:"100%",padding:"32px 44px"}}>
       <button onClick={()=>setSelected(null)} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",color:C.t2,fontSize:13,fontWeight:500,marginBottom:28,padding:0}}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         Назад к инструментам
       </button>
       <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:28}}>
-        <div style={{width:52,height:52,borderRadius:14,background:dark?"rgba(255,255,255,0.05)":"#F8FAFC",border:`1px solid ${bd}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+        <div style={{width:52,height:52,borderRadius:10,background:dark?"rgba(255,255,255,0.05)":"#F8FAFC",border:`1px solid ${bd}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.5"><path d={selected.ic}/></svg>
         </div>
         <div>
           <div style={{fontSize:22,fontWeight:800,color:C.t1,letterSpacing:"-0.02em",marginBottom:4}}>{selected.name}</div>
-          <span style={{fontSize:11,fontWeight:600,color:TAG_COLORS[selected.tag]||C.t2,background:`${TAG_COLORS[selected.tag]||"#888"}18`,padding:"3px 9px",borderRadius:20}}>{selected.tag}</span>
+          <span style={{fontSize:11,fontWeight:600,color:TAG_COLORS[selected.tag]||C.t2,background:`${TAG_COLORS[selected.tag]||"#888"}18`,padding:"3px 9px",borderRadius:10}}>{selected.tag}</span>
         </div>
       </div>
-      <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:16,padding:24,marginBottom:16}}>
+      <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:24,marginBottom:16}}>
         <div style={{fontSize:11,color:C.t2,fontWeight:600,marginBottom:8,letterSpacing:0.3,textTransform:"uppercase" as const}}>Описание</div>
         <div style={{fontSize:15,color:C.t1,lineHeight:1.7}}>{selected.desc}</div>
       </div>
-      <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:16,padding:24}}>
-        <div style={{fontSize:11,color:C.t2,fontWeight:600,marginBottom:16,letterSpacing:0.3,textTransform:"uppercase" as const}}>Инструмент</div>
-        <div style={{padding:40,border:`1px dashed ${bd}`,borderRadius:12,textAlign:"center" as const,color:C.t2}}>
-          <div style={{fontSize:13,fontWeight:500}}>Функционал в разработке</div>
-          <div style={{fontSize:12,marginTop:4,opacity:0.6}}>Скоро будет доступно</div>
-        </div>
-      </div>
+      <CopyToolHost tool={selected} dark={dark}/>
     </div>
   );
 
   return(
-    <div style={{maxWidth:960,margin:"0 auto",padding:"36px 24px"}}>
+    <div style={{maxWidth:1360,margin:"0 auto",width:"100%",padding:"32px 44px"}}>
       {/* Header */}
       <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:28}}>
         <div>
           <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.025em",marginBottom:4}}>Инструменты Копирайтинга</div>
           <div style={{fontSize:14,color:C.t2}}>{COPY_TOOLS.length} инструментов · Vizzy Copy AI</div>
         </div>
-        <button style={{display:"flex",alignItems:"center",gap:8,padding:"10px 18px",borderRadius:11,border:"none",background:"#2563EB",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",flexShrink:0,letterSpacing:"-0.01em"}}>
+        <button style={{display:"flex",alignItems:"center",gap:8,padding:"10px 18px",borderRadius:8,border:"none",background:"#606060",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",flexShrink:0,letterSpacing:"-0.01em"}}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Создать свой
         </button>
@@ -12596,9 +15214,9 @@ function CopyAIPage({userId}:{userId:string}){
             <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
           </svg>
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Найти инструмент..."
-            style={{width:"100%",padding:"9px 12px 9px 34px",borderRadius:10,border:`1px solid ${bd}`,background:dark?"rgba(255,255,255,0.04)":"#fff",color:C.t1,fontSize:13,outline:"none",boxSizing:"border-box" as const,fontFamily:"'Inter',sans-serif"}}/>
+            style={{width:"100%",padding:"9px 12px 9px 34px",borderRadius:8,border:`1px solid ${bd}`,background:dark?"rgba(255,255,255,0.04)":"#fff",color:C.t1,fontSize:13,outline:"none",boxSizing:"border-box" as const,fontFamily:"'Inter',sans-serif"}}/>
         </div>
-        <div style={{display:"flex",gap:2,padding:"3px",background:dark?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.04)",borderRadius:10,border:`1px solid ${bd}`}}>
+        <div style={{display:"flex",gap:2,padding:"3px",background:dark?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.04)",borderRadius:8,border:`1px solid ${bd}`}}>
           {([["all","Все"],["fav","Любимые"],["my","Мои"]] as const).map(([id,label])=>(
             <button key={id} onClick={()=>setFilter(id)}
               style={{padding:"6px 14px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:filter===id?700:500,background:filter===id?(dark?"rgba(255,255,255,0.09)":"#fff"):"transparent",color:filter===id?C.t1:C.t2,transition:"all 0.15s",boxShadow:filter===id&&!dark?"0 1px 3px rgba(0,0,0,0.08)":"none"}}>
@@ -12616,26 +15234,26 @@ function CopyAIPage({userId}:{userId:string}){
         :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
           {filtered.map(tool=>(
             <button key={tool.id} onClick={()=>setSelected(tool)}
-              style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:14,padding:20,cursor:"pointer",textAlign:"left" as const,transition:"all 0.15s",position:"relative" as const}}
+              style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:20,cursor:"pointer",textAlign:"left" as const,transition:"all 0.15s",position:"relative" as const}}
               onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(-1px)";(e.currentTarget as HTMLElement).style.boxShadow=dark?"0 4px 20px rgba(0,0,0,0.3)":"0 4px 20px rgba(0,0,0,0.08)";}}
               onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(0)";(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
 
               {/* Star */}
               <button onClick={e=>toggleFav(tool.id,e)}
-                style={{position:"absolute",top:14,right:14,background:"none",border:"none",cursor:"pointer",color:favs.has(tool.id)?"#F59E0B":C.t2,opacity:favs.has(tool.id)?1:0.4,transition:"all 0.15s",padding:2}}
+                style={{position:"absolute",top:14,right:14,background:"none",border:"none",cursor:"pointer",color:favs.has(tool.id)?"#A7A7A7":C.t2,opacity:favs.has(tool.id)?1:0.4,transition:"all 0.15s",padding:2}}
                 onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.opacity="1";}}
                 onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.opacity=favs.has(tool.id)?"1":"0.4";}}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill={favs.has(tool.id)?"currentColor":"none"} stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
               </button>
 
               {/* Icon */}
-              <div style={{width:40,height:40,borderRadius:11,background:dark?"rgba(255,255,255,0.05)":"#F8FAFC",border:`1px solid ${bd}`,display:"flex",alignItems:"center",justifyContent:"center",marginBottom:14}}>
+              <div style={{width:40,height:40,borderRadius:8,background:dark?"rgba(255,255,255,0.05)":"#F8FAFC",border:`1px solid ${bd}`,display:"flex",alignItems:"center",justifyContent:"center",marginBottom:14}}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.6"><path d={tool.ic}/></svg>
               </div>
 
               {/* Tag */}
               <div style={{marginBottom:8}}>
-                <span style={{fontSize:10,fontWeight:600,color:TAG_COLORS[tool.tag]||C.t2,background:`${TAG_COLORS[tool.tag]||"#888"}15`,padding:"2px 8px",borderRadius:20,letterSpacing:0.2}}>{tool.tag}</span>
+                <span style={{fontSize:10,fontWeight:600,color:TAG_COLORS[tool.tag]||C.t2,background:`${TAG_COLORS[tool.tag]||"#888"}15`,padding:"2px 8px",borderRadius:10,letterSpacing:0.2}}>{tool.tag}</span>
               </div>
 
               {/* Name */}
@@ -12677,7 +15295,7 @@ const KIRILL_AI_SYSTEM=`Ты — Kirill Scales AI, персональный би
 - Никакого корпоративного буллшита`;
 
 type ChatMessage={role:"user"|"assistant",content:string,id:string};
-type AIChat={id:string,title:string,messages:ChatMessage[],createdAt:number,updatedAt:number};
+type KSChat={id:string,title:string,messages:ChatMessage[],createdAt:number,updatedAt:number};
 
 /* ============ KIRILL AI STORE ============
    Живёт вне React-компонента. Благодаря этому диалоги сохраняются, а генерация
@@ -12686,7 +15304,7 @@ const KS_AI_KEY="ks_kirill_ai_chats_v2";
 const KS_AI_ACTIVE_KEY="ks_kirill_ai_active_v2";
 
 const kirillAIStore=(()=>{
-  let chats:AIChat[]=[];
+  let chats:KSChat[]=[];
   let activeId:string="";
   let hydrated=false;
   let lastPersist=0;
@@ -12695,7 +15313,7 @@ const kirillAIStore=(()=>{
   const listeners=new Set<()=>void>();
 
   const uid=(p:string)=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-  const blank=():AIChat=>({id:uid("c"),title:"Новый чат",messages:[],createdAt:Date.now(),updatedAt:Date.now()});
+  const blank=():KSChat=>({id:uid("c"),title:"Новый чат",messages:[],createdAt:Date.now(),updatedAt:Date.now()});
   const emit=()=>{listeners.forEach(l=>{try{l();}catch{}});};
 
   const persist=(force=false)=>{
@@ -12725,7 +15343,7 @@ const kirillAIStore=(()=>{
     if(!chats.find(c=>c.id===activeId))activeId=chats[0].id;
   };
 
-  const patch=(id:string,fn:(c:AIChat)=>AIChat)=>{chats=chats.map(c=>c.id===id?fn(c):c);};
+  const patch=(id:string,fn:(c:KSChat)=>KSChat)=>{chats=chats.map(c=>c.id===id?fn(c):c);};
 
   const run=async(chatId:string)=>{
     const target=chats.find(c=>c.id===chatId);
@@ -12889,7 +15507,7 @@ function KirillAIPage({userId}:{userId:string}){
         const codeLines:string[]=[];
         i++;
         while(i<lines.length&&!lines[i].startsWith("```")){codeLines.push(lines[i]);i++;}
-        els.push(<pre key={i} style={{background:dark?"#0A0F1A":"#F1F5F9",border:`1px solid ${dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.08)"}`,borderRadius:10,padding:"12px 14px",fontSize:12,overflowX:"auto" as const,fontFamily:"'SF Mono','Fira Code',monospace",lineHeight:1.6,margin:"8px 0",color:C.t1}}><code>{codeLines.join("\n")}</code></pre>);
+        els.push(<pre key={i} style={{background:dark?"#121212":"#F1F5F9",border:`1px solid ${dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.08)"}`,borderRadius:8,padding:"12px 14px",fontSize:12,overflowX:"auto" as const,fontFamily:"'SF Mono','Fira Code',monospace",lineHeight:1.6,margin:"8px 0",color:C.t1}}><code>{codeLines.join("\n")}</code></pre>);
         i++;continue;
       }
       if(line.startsWith("### ")){els.push(<div key={i} style={{fontSize:14,fontWeight:700,color:C.t1,marginTop:14,marginBottom:4}}>{inlineRender(line.slice(4))}</div>);i++;continue;}
@@ -12929,7 +15547,7 @@ function KirillAIPage({userId}:{userId:string}){
 
   const bd=dark?"rgba(255,255,255,0.07)":"rgba(0,0,0,0.07)";
   const isEmpty=messages.length===0;
-  const panelBg=dark?"#0B1018":"#fff";
+  const panelBg=dark?"#111111":"#fff";
 
   if(!mounted)return <div style={{height:"calc(100vh - 56px)"}}/>;
 
@@ -12942,11 +15560,11 @@ function KirillAIPage({userId}:{userId:string}){
         {/* Header */}
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 24px 12px",borderBottom:`1px solid ${bd}`,flexShrink:0}}>
           <div style={{display:"flex",alignItems:"center",gap:12,minWidth:0}}>
-            <img src={KS_AI_LOGO} width={36} height={36} style={{borderRadius:10,objectFit:"cover" as const,flexShrink:0}} alt="Kirill Scales AI"/>
+            <img src={KS_AI_LOGO} width={36} height={36} style={{borderRadius:8,objectFit:"cover" as const,flexShrink:0}} alt="Kirill Scales AI"/>
             <div style={{minWidth:0}}>
               <div style={{fontSize:15,fontWeight:700,color:C.t1,letterSpacing:"-0.01em"}}>Kirill Scales AI</div>
               <div style={{fontSize:11,color:C.t2,fontWeight:500,display:"flex",alignItems:"center",gap:5}}>
-                <div style={{width:6,height:6,borderRadius:"50%",background:loading?"#F59E0B":"#10B981"}}/>
+                <div style={{width:6,height:6,borderRadius:"50%",background:loading?"#A7A7A7":"#808080"}}/>
                 {loading?"Печатает…":"Твой персональный стратег по бизнесу"}
               </div>
             </div>
@@ -12966,7 +15584,7 @@ function KirillAIPage({userId}:{userId:string}){
         <div style={{flex:1,overflowY:"auto" as const,padding:"20px 24px",display:"flex",flexDirection:"column",gap:16}}>
           {isEmpty&&(
             <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",gap:20,paddingBottom:40}}>
-              <img src={KS_AI_LOGO} width={64} height={64} style={{borderRadius:18,objectFit:"cover" as const}} alt="Kirill Scales AI"/>
+              <img src={KS_AI_LOGO} width={64} height={64} style={{borderRadius:12,objectFit:"cover" as const}} alt="Kirill Scales AI"/>
               <div style={{textAlign:"center" as const}}>
                 <div style={{fontSize:20,fontWeight:800,color:C.t1,marginBottom:6,letterSpacing:"-0.02em"}}>Kirill Scales AI</div>
                 <div style={{fontSize:14,color:C.t2,maxWidth:360,lineHeight:1.6}}>Твой персональный стратег по бизнесу</div>
@@ -12974,7 +15592,7 @@ function KirillAIPage({userId}:{userId:string}){
               <div style={{display:"flex",flexWrap:"wrap" as const,gap:8,justifyContent:"center",maxWidth:500}}>
                 {["Как усилить мой оффер?","Напиши стратегию привлечения клиентов","Разбери мою воронку","Помоги с контент-планом"].map(s=>(
                   <button key={s} onClick={()=>{setInput(s);inputRef.current?.focus();}}
-                    style={{padding:"8px 14px",borderRadius:20,border:`1px solid ${bd}`,background:dark?"rgba(255,255,255,0.04)":"#fff",color:C.t2,fontSize:13,cursor:"pointer",transition:"all 0.15s",fontFamily:"'Inter',sans-serif"}}
+                    style={{padding:"8px 14px",borderRadius:10,border:`1px solid ${bd}`,background:dark?"rgba(255,255,255,0.04)":"#fff",color:C.t2,fontSize:13,cursor:"pointer",transition:"all 0.15s",fontFamily:"'Inter',sans-serif"}}
                     onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color=C.t1;(e.currentTarget as HTMLElement).style.borderColor=dark?"rgba(255,255,255,0.15)":"rgba(0,0,0,0.15)";}}
                     onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.color=C.t2;(e.currentTarget as HTMLElement).style.borderColor=bd;}}>
                     {s}
@@ -12999,7 +15617,7 @@ function KirillAIPage({userId}:{userId:string}){
                 padding:msg.role==="user"?"12px 16px":"14px 18px",
                 borderRadius:msg.role==="user"?"16px 16px 4px 16px":"4px 16px 16px 16px",
                 background:msg.role==="user"
-                  ?"linear-gradient(135deg,#1D4ED8,#2563EB)"
+                  ?"linear-gradient(135deg,#4F4F4F,#606060)"
                   :(dark?"rgba(255,255,255,0.05)":"#F8FAFC"),
                 border:msg.role==="assistant"?`1px solid ${bd}`:"none",
                 color:msg.role==="user"?"#fff":C.t1,
@@ -13020,7 +15638,7 @@ function KirillAIPage({userId}:{userId:string}){
                 <button onClick={()=>copyMsg(msg.content,msg.id)}
                   style={{padding:"4px 10px",borderRadius:7,border:`1px solid ${bd}`,background:dark?"rgba(255,255,255,0.04)":"#fff",color:C.t2,fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",gap:5,fontFamily:"'Inter',sans-serif"}}>
                   {copiedId===msg.id
-                    ?<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Скопировано</>
+                    ?<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#808080" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Скопировано</>
                     :<><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Копировать</>
                   }
                 </button>
@@ -13031,8 +15649,8 @@ function KirillAIPage({userId}:{userId:string}){
         </div>
 
         {/* Input */}
-        <div style={{padding:"12px 24px 20px",borderTop:`1px solid ${bd}`,flexShrink:0,background:dark?"#080C14":"#fff"}}>
-          <div style={{display:"flex",gap:10,alignItems:"flex-end",background:dark?"rgba(255,255,255,0.04)":"#F8FAFC",border:`1px solid ${dark?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.1)"}`,borderRadius:14,padding:"10px 12px 10px 16px",transition:"border-color 0.15s"}}>
+        <div style={{padding:"12px 24px 20px",borderTop:`1px solid ${bd}`,flexShrink:0,background:dark?"#0D0D0D":"#fff"}}>
+          <div style={{display:"flex",gap:10,alignItems:"flex-end",background:dark?"rgba(255,255,255,0.04)":"#F8FAFC",border:`1px solid ${dark?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.1)"}`,borderRadius:10,padding:"10px 12px 10px 16px",transition:"border-color 0.15s"}}>
             <textarea ref={inputRef}
               value={input}
               onChange={e=>{setInput(e.target.value);e.target.style.height="auto";e.target.style.height=Math.min(e.target.scrollHeight,160)+"px";}}
@@ -13042,7 +15660,7 @@ function KirillAIPage({userId}:{userId:string}){
               style={{flex:1,background:"transparent",border:"none",outline:"none",resize:"none" as const,fontSize:14,color:C.t1,lineHeight:1.6,fontFamily:"'Inter',sans-serif",maxHeight:160,overflowY:"auto" as const,padding:0}}
             />
             <button onClick={loading?stop:send}
-              style={{width:36,height:36,borderRadius:9,border:"none",background:input.trim()||loading?"#1D4ED8":"rgba(0,0,0,0.08)",color:input.trim()||loading?"#fff":C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.15s"}}>
+              style={{width:36,height:36,borderRadius:9,border:"none",background:input.trim()||loading?"#4F4F4F":"rgba(0,0,0,0.08)",color:input.trim()||loading?"#fff":C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.15s"}}>
               {loading
                 ?<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
                 :<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -13069,7 +15687,7 @@ function KirillAIPage({userId}:{userId:string}){
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 16px 12px",borderBottom:`1px solid ${bd}`,flexShrink:0}}>
             <div style={{fontSize:14,fontWeight:700,color:C.t1,letterSpacing:"-0.01em"}}>Список чатов</div>
             <button onClick={newChat}
-              style={{display:"flex",alignItems:"center",gap:5,padding:"6px 11px",borderRadius:8,border:"none",background:"#1D4ED8",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+              style={{display:"flex",alignItems:"center",gap:5,padding:"6px 11px",borderRadius:8,border:"none",background:"#4F4F4F",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Новый
             </button>
@@ -13088,21 +15706,21 @@ function KirillAIPage({userId}:{userId:string}){
                   onMouseEnter={()=>setHoverChat(c.id)} onMouseLeave={()=>setHoverChat(null)}
                   style={{
                     display:"flex",alignItems:"center",gap:8,
-                    padding:"9px 10px",borderRadius:10,cursor:"pointer",
-                    background:isAct?(dark?"rgba(79,142,247,0.14)":"rgba(37,99,235,0.08)"):"transparent",
-                    border:`1px solid ${isAct?(dark?"rgba(79,142,247,0.28)":"rgba(37,99,235,0.18)"):"transparent"}`,
+                    padding:"9px 10px",borderRadius:8,cursor:"pointer",
+                    background:isAct?(dark?"rgba(135,135,135,0.14)":"rgba(96,96,96,0.08)"):"transparent",
+                    border:`1px solid ${isAct?(dark?"rgba(135,135,135,0.28)":"rgba(96,96,96,0.18)"):"transparent"}`,
                     transition:"background 0.15s",
                   }}>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{display:"flex",alignItems:"center",gap:6}}>
-                      {gen&&<div style={{width:6,height:6,borderRadius:"50%",background:"#F59E0B",flexShrink:0,animation:"bounce 1.2s ease-in-out infinite"}}/>}
+                      {gen&&<div style={{width:6,height:6,borderRadius:"50%",background:"#A7A7A7",flexShrink:0,animation:"bounce 1.2s ease-in-out infinite"}}/>}
                       <div style={{fontSize:13,fontWeight:isAct?600:500,color:isAct?C.t1:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.title||"Новый чат"}</div>
                     </div>
                     <div style={{fontSize:11,color:C.t2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginTop:2}}>{preview.slice(0,60)}</div>
                   </div>
                   {showDel&&<button onClick={e=>removeChat(c.id,e)} title="Удалить чат"
                     style={{width:24,height:24,borderRadius:6,border:"none",background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}
-                    onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color="#EF4444";(e.currentTarget as HTMLElement).style.background=dark?"rgba(239,68,68,0.12)":"rgba(239,68,68,0.08)";}}
+                    onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color="#777777";(e.currentTarget as HTMLElement).style.background=dark?"rgba(119,119,119,0.12)":"rgba(119,119,119,0.08)";}}
                     onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.color=C.t2;(e.currentTarget as HTMLElement).style.background="transparent";}}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
                   </button>}
