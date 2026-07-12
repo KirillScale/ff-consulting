@@ -201,6 +201,7 @@ function useTable(table:string, userId:string|null) {
   }, [table, userId]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(()=>{const h=(e:any)=>{const t=e?.detail?.table;if(!t||t===table)load();};window.addEventListener("ks-refresh",h);return ()=>window.removeEventListener("ks-refresh",h);},[table,load]);
 
   const add = async (row: any) => {
     const { data: inserted } = await supabase.from(table).insert({ ...row, user_id: userId }).select().single();
@@ -630,28 +631,55 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
 
 /* ============ MOBILE NAV ============ */
 // Shows top 5 most important nav items + "More" drawer
-const MOB_NAV_PRIMARY=["dashboard","strategy","crm","content","calls"];
+const MOB_MORE_EXCLUDE=["dashboard","strategy","content","ai"];
+const MOB_LABELS:Record<string,string>={dashboard:"Дашборд",strategy:"War",content:"Контент"};
 function MobileNav({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onLogout:()=>void}){
   const[drawerOpen,setDrawerOpen]=useState(false);
-  const primary=NAV.filter(n=>MOB_NAV_PRIMARY.includes(n.id));
-  const more=NAV.filter(n=>!MOB_NAV_PRIMARY.includes(n.id));
+  const byId=(id:string)=>NAV.find(n=>n.id===id)!;
+  const more=NAV.filter(n=>!MOB_MORE_EXCLUDE.includes(n.id));
+  const BLUE_ON="#5B9BFF";
+  const aiActive=active==="ai";
+  const moreActive=!MOB_MORE_EXCLUDE.includes(active);
+
+  const tabBtn=(id:string)=>{
+    const n=byId(id);const a=active===id;
+    return <button key={id} onClick={()=>{onNav(id);setDrawerOpen(false);}}
+      style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4,border:"none",background:"transparent",cursor:"pointer",padding:"8px 2px",position:"relative"}}>
+      {a&&<div style={{position:"absolute",top:0,width:22,height:3,borderRadius:"0 0 3px 3px",background:BLUE_ON}}/>}
+      <I path={n.ic} size={22} color={a?"#fff":"rgba(255,255,255,0.5)"} sw={a?2:1.6}/>
+      <span style={{fontSize:9.5,color:a?"#fff":"rgba(255,255,255,0.5)",fontWeight:a?700:500,lineHeight:1,letterSpacing:0.2}}>{MOB_LABELS[id]||n.label.split(" ")[0]}</span>
+    </button>;
+  };
 
   return <>
     {/* Bottom nav bar */}
-    <div style={{position:"fixed",bottom:0,left:0,right:0,background:C.dk,zIndex:200,borderTop:"1px solid rgba(255,255,255,0.08)",display:"flex",alignItems:"stretch",height:60,paddingBottom:"env(safe-area-inset-bottom)"}}>
-      {primary.map(n=>{
-        const a=active===n.id;
-        return <button key={n.id} onClick={()=>{onNav(n.id);setDrawerOpen(false);}}
-          style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,border:"none",background:"transparent",cursor:"pointer",padding:"8px 4px"}}>
-          <I path={n.ic} size={20} color={a?C.a:"rgba(255,255,255,0.5)"}/>
-          <span style={{fontSize:9,color:a?C.a:"rgba(255,255,255,0.5)",fontWeight:a?700:400,lineHeight:1}}>{n.label.split(" ")[0]}</span>
-        </button>;
-      })}
+    <div style={{position:"fixed",bottom:0,left:0,right:0,background:C.dk,zIndex:200,borderTop:"1px solid rgba(255,255,255,0.08)",display:"flex",alignItems:"stretch",height:62,paddingBottom:"env(safe-area-inset-bottom)",boxShadow:"0 -4px 24px rgba(0,0,0,0.28)"}}>
+      {tabBtn("dashboard")}
+      {tabBtn("strategy")}
+
+      {/* Center AI FAB */}
+      <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",paddingBottom:6,position:"relative"}}>
+        <button onClick={()=>{onNav("ai");setDrawerOpen(false);}} aria-label="Kirill Scales AI"
+          style={{position:"absolute",top:-24,width:58,height:58,borderRadius:"50%",border:aiActive?"3px solid rgba(91,155,255,0.45)":"3px solid "+C.dk,background:"linear-gradient(160deg,#5B9BFF 0%,#2563EB 55%,#1D4ED8 100%)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 6px 18px rgba(37,99,235,0.5),0 2px 6px rgba(0,0,0,0.35)",transition:"transform 0.15s"}}
+          onTouchStart={e=>{(e.currentTarget as HTMLElement).style.transform="scale(0.94)";}}
+          onTouchEnd={e=>{(e.currentTarget as HTMLElement).style.transform="scale(1)";}}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2.6l1.75 4.9L18.5 9.2l-4.75 1.7L12 15.8l-1.75-4.9L5.5 9.2l4.75-1.7L12 2.6z" fill="#fff"/>
+            <circle cx="18.6" cy="16.6" r="1.7" fill="#fff" opacity="0.92"/>
+            <circle cx="6" cy="17.2" r="1.15" fill="#fff" opacity="0.72"/>
+          </svg>
+        </button>
+        <span style={{fontSize:9.5,color:aiActive?"#fff":"rgba(255,255,255,0.55)",fontWeight:aiActive?700:600,lineHeight:1,marginBottom:2}}>Ассистент</span>
+      </div>
+
+      {tabBtn("content")}
+
       {/* More button */}
       <button onClick={()=>setDrawerOpen(!drawerOpen)}
-        style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,border:"none",background:"transparent",cursor:"pointer",padding:"8px 4px"}}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={drawerOpen?C.a:"rgba(255,255,255,0.5)"} strokeWidth="2"><circle cx="5" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="19" cy="12" r="1.5" fill="currentColor"/></svg>
-        <span style={{fontSize:9,color:drawerOpen?C.a:"rgba(255,255,255,0.5)",fontWeight:400,lineHeight:1}}>Ещё</span>
+        style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4,border:"none",background:"transparent",cursor:"pointer",padding:"8px 2px",position:"relative"}}>
+        {moreActive&&!drawerOpen&&<div style={{position:"absolute",top:0,width:22,height:3,borderRadius:"0 0 3px 3px",background:BLUE_ON}}/>}
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={drawerOpen||moreActive?"#fff":"rgba(255,255,255,0.5)"} strokeWidth="2"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg>
+        <span style={{fontSize:9.5,color:drawerOpen||moreActive?"#fff":"rgba(255,255,255,0.5)",fontWeight:600,lineHeight:1}}>Ещё</span>
       </button>
     </div>
 
@@ -659,21 +687,22 @@ function MobileNav({active,onNav,onLogout}:{active:string,onNav:(id:string)=>voi
     {drawerOpen&&<div style={{position:"fixed",inset:0,zIndex:190,background:"rgba(0,0,0,0.5)"}} onClick={()=>setDrawerOpen(false)}/>}
 
     {/* Drawer panel */}
-    <div style={{position:"fixed",bottom:60,left:0,right:0,background:C.dk,zIndex:195,borderTop:"1px solid rgba(255,255,255,0.1)",borderRadius:"20px 20px 0 0",transform:drawerOpen?"translateY(0)":"translateY(100%)",transition:"transform 0.3s ease",maxHeight:"70vh",overflowY:"auto",paddingBottom:"env(safe-area-inset-bottom)"}}>
+    <div style={{position:"fixed",bottom:62,left:0,right:0,background:C.dk,zIndex:195,borderTop:"1px solid rgba(255,255,255,0.1)",borderRadius:"20px 20px 0 0",transform:drawerOpen?"translateY(0)":"translateY(110%)",transition:"transform 0.3s ease",maxHeight:"70vh",overflowY:"auto",paddingBottom:"env(safe-area-inset-bottom)"}}>
       <div style={{padding:"12px 0 4px",textAlign:"center"}}>
         <div style={{width:36,height:4,background:"rgba(255,255,255,0.15)",borderRadius:2,margin:"0 auto"}}/>
       </div>
-      <div style={{padding:"8px 16px 16px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+      <div style={{padding:"6px 18px 10px",fontSize:11,fontWeight:700,letterSpacing:1,color:"rgba(255,255,255,0.35)",textTransform:"uppercase"}}>Все разделы</div>
+      <div style={{padding:"0 16px 16px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
         {more.map(n=>{
           const a=active===n.id;
           return <button key={n.id} onClick={()=>{onNav(n.id);setDrawerOpen(false);}}
-            style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",border:"none",borderRadius:8,background:a?C.a:"rgba(255,255,255,0.07)",cursor:"pointer"}}>
+            style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",border:"none",borderRadius:10,background:a?"#2563EB":"rgba(255,255,255,0.07)",cursor:"pointer"}}>
             <I path={n.ic} size={18} color={a?"#fff":"rgba(255,255,255,0.7)"}/>
             <span style={{fontSize:13,color:a?"#fff":"rgba(255,255,255,0.7)",fontWeight:a?600:400,textAlign:"left",lineHeight:1.2}}>{n.label}</span>
           </button>;
         })}
         <button onClick={()=>{onLogout();setDrawerOpen(false);}}
-          style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",border:"none",borderRadius:8,background:"rgba(119,119,119,0.15)",cursor:"pointer",gridColumn:"span 2"}}>
+          style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",border:"none",borderRadius:10,background:"rgba(119,119,119,0.15)",cursor:"pointer",gridColumn:"span 2"}}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#777777" strokeWidth="1.5"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
           <span style={{fontSize:13,color:"#777777",fontWeight:500}}>Выйти</span>
         </button>
@@ -1047,7 +1076,7 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
 
       {isMobile ? <>
         <MobileNav active={page} onNav={setPage} onLogout={logout}/>
-        <div style={{minHeight:"100vh",paddingBottom:80}}>
+        <div style={{minHeight:"100vh",paddingBottom:88}}>
           <Head name={userName}/>
           <div style={{padding:"16px 16px 0"}}>{pageContent}</div>
         </div>
@@ -5125,6 +5154,7 @@ function ContentPage({userId}:{userId:string}){
   const isMobile=useIsMobile();
   const{data:items,add,update,remove}=useTable("content",userId);
   const[tab,setTab]=useState<"list"|"calendar"|"stories"|"scripts">("list");
+  const[scriptToOpen,setScriptToOpen]=useState<string|null>(null);
   const[show,setShow]=useState(false);
   const[editId,setEditId]=useState<string|null>(null);
   const[coverUploading,setCoverUploading]=useState(false);
@@ -5502,6 +5532,10 @@ function ContentPage({userId}:{userId:string}){
                       <div style={{fontSize:12,fontWeight:700,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{x.topic}</div>
                       <div style={{fontSize:10,color:C.t2,marginTop:1}}>{x.type} · <span style={{color:C.t2}}>{pLbl(x.platform)}</span></div>
                     </div>
+                    {x.script_id&&<button onClick={e=>{e.stopPropagation();setTab("scripts");setScriptToOpen(x.script_id);}} title="Открыть связанный сценарий" style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:6,border:"1px solid "+C.bd,background:"transparent",color:C.t2,fontSize:10,fontWeight:600,cursor:"pointer",flexShrink:0,fontFamily:"'Inter',sans-serif"}}>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                      Сценарий
+                    </button>}
                   </div>
 
                   {/* Scenario preview */}
@@ -5672,7 +5706,7 @@ function ContentPage({userId}:{userId:string}){
     </>}
 
     {tab==="stories"&&<StoriesCarouselTab userId={userId}/>}
-    {tab==="scripts"&&<ScriptsTab userId={userId}/>}
+    {tab==="scripts"&&<ScriptsTab userId={userId} contentAdd={add} contentUpdate={update} goKanban={()=>setTab("list")} openId={scriptToOpen} onOpened={()=>setScriptToOpen(null)}/>}
   </>;
 }
 
@@ -5709,7 +5743,7 @@ p{font-size:14px;margin:0 0 14px;white-space:pre-wrap}.foot{margin-top:32px;padd
   w.document.open();w.document.write(html);w.document.close();w.focus();setTimeout(()=>{try{w.print();}catch(e){}},350);
 }
 
-function ScriptsTab({userId}:{userId:string}){
+function ScriptsTab({userId,contentAdd,contentUpdate,goKanban,openId,onOpened}:{userId:string,contentAdd?:any,contentUpdate?:any,goKanban?:()=>void,openId?:string|null,onOpened?:()=>void}){
   const{dark}=useTheme();
   const isMobile=useIsMobile();
   const{data:scripts,loading,add,update,remove}=useTable("scripts",userId);
@@ -5729,6 +5763,8 @@ function ScriptsTab({userId}:{userId:string}){
   const[chatting,setChatting]=useState(false);
   const[chatInput,setChatInput]=useState("");
   const[showHist,setShowHist]=useState(false);
+  const[linkId,setLinkId]=useState<string|null>(null);
+  const[movingKanban,setMovingKanban]=useState(false);
   const chatEnd=useRef<HTMLDivElement>(null);
 
   const bd=C.bd;
@@ -5743,16 +5779,17 @@ function ScriptsTab({userId}:{userId:string}){
     if(view!=="editor"||!curId)return;
     const t=setTimeout(()=>{
       update(curId,{name,content,icp,versions,chat,updated_at:new Date().toISOString()});
+      if(linkId&&contentUpdate)contentUpdate(linkId,{topic:name,scenario:content,updated_at:new Date().toISOString()});
     },800);
     return ()=>clearTimeout(t);
-  },[name,content,icp,versions,chat,view,curId]);
+  },[name,content,icp,versions,chat,view,curId,linkId]);
 
   useEffect(()=>{chatEnd.current?.scrollIntoView({behavior:"smooth"});},[chat,chatting]);
 
   const openScript=(row:any)=>{
     setCurId(row.id);setName(row.name||"Новый сценарий");setKind(row.kind==="long"?"long":"short");
     setContent(row.content||"");setIcp(row.icp||"");setVersions(row.versions||[]);setChat(row.chat||[]);
-    setChatInput("");setShowHist(false);setView("editor");
+    setChatInput("");setShowHist(false);setLinkId(row.content_id||null);setView("editor");
   };
 
   const createScript=async(k:"short"|"long")=>{
@@ -5763,6 +5800,21 @@ function ScriptsTab({userId}:{userId:string}){
   };
 
   const del=async(id:string,e:React.MouseEvent)=>{e.stopPropagation();if(confirm("Удалить сценарий? Действие необратимо."))await remove(id);};
+
+  const moveToKanban=async()=>{
+    if(!curId)return;
+    if(linkId){goKanban&&goKanban();return;}
+    if(!contentAdd){alert("Канбан недоступен.");return;}
+    setMovingKanban(true);
+    const card=await contentAdd({platform:"telegram",type:"Сценарий",topic:name||"Сценарий",status:"progress",scenario:content||"",date:"",link:"",cover_url:"",content_url:"",publish_date:"",script_id:curId});
+    if(card){await update(curId,{content_id:card.id});setLinkId(card.id);goKanban&&goKanban();}
+    else alert("Не удалось перенести в Kanban. Убедись, что в таблице content есть колонка script_id, а в scripts — content_id (см. инструкцию).");
+    setMovingKanban(false);
+  };
+
+  useEffect(()=>{
+    if(openId&&scripts.length){const row=scripts.find(s=>s.id===openId);if(row){openScript(row);onOpened&&onOpened();}}
+  },[openId,scripts]);
 
   const doImprove=async()=>{
     if(!content.trim()){alert("Сначала напиши или надиктуй сценарий в редакторе слева.");return;}
@@ -5889,6 +5941,10 @@ function ScriptsTab({userId}:{userId:string}){
               <button onClick={()=>exportScriptPDF(name,content)} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 13px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
                 PDF
+              </button>
+              <button onClick={moveToKanban} disabled={movingKanban} title={linkId?"Открыть карточку на доске":"Создать карточку в колонке «Разработка»"} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 13px",borderRadius:9,border:linkId?`1px solid ${bd}`:"none",background:linkId?"transparent":C.t1,color:linkId?C.t2:C.bg,fontSize:12.5,fontWeight:600,cursor:movingKanban?"default":"pointer",fontFamily:"'Inter',sans-serif"}}>
+                {movingKanban?<><div style={{width:13,height:13,border:"2px solid rgba(150,150,150,0.3)",borderTopColor:linkId?C.t2:C.bg,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></>:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="11" rx="1"/></svg>}
+                {linkId?"Открыть в Kanban":"Перевести в Kanban"}
               </button>
             </div>
           </div>
@@ -15270,29 +15326,38 @@ function CopyAIPage({userId}:{userId:string}){
 }
 
 /* ============ KIRILL SCALES AI PAGE ============ */
-const KIRILL_AI_SYSTEM=`Ты — Kirill Scales AI, персональный бизнес-ассистент и стратегический советник Кирилла.
+const KIRILL_AI_SYSTEM=`Ты — Kirill Scales AI, главный ассистент и операционный центр платформы Vizzy. Ты не просто советник — ты управляешь платформой: читаешь любые данные Кирилла и вносишь/редактируешь их через инструменты.
 
 Кто такой Кирилл:
 - 21-летний предприниматель и маркетинговый стратег из Москвы
 - Основатель Kirill Scales — консалтинговый и коучинговый бизнес
-- 4+ года в digital-маркетинге
-- Строит личный бренд и системы привлечения клиентов
-- Работает с клиентами через Telegram-воронку: контент → закрытый канал → консультация → программа «Геймплан»
+- Строит личный бренд (архетип Ruler-Rebel) и системы привлечения клиентов
+- Воронка: контент → YouTube → открытый Telegram → закрытый Telegram → заявка → консультация → программа
 - Разрабатывает платформу Vizzy App для своих клиентов
 
-Твоя роль:
-- Стратегический советник по бизнесу, маркетингу и позиционированию
-- Помогаешь с задачами: стратегия, офферы, контент, воронки, тексты, анализ
-- Работаешь в стиле умного партнёра — без воды, конкретно, по делу
-- Говоришь на русском языке
-- Отвечаешь структурированно: используешь заголовки, списки, выделение жирным где нужно
-- Помнишь контекст в рамках текущего разговора
+Чем ты управляешь на платформе (для каждого раздела есть инструменты):
+- CRM — лиды и воронки продаж: создавать, смотреть, менять стадию и следующий шаг
+- Стратегия → Расписание (calendar) — планировать день по часам: добавлять, переносить, удалять слоты
+- Стратегия → Спринт — рабочие задачи с длительностью; Цели года
+- War Room (планер) — задачи с приоритетом и дедлайном, отмечать выполненными
+- Созвоны — планировать звонки с лидами, клиентами, командой
+- Контент — карточки Канбана и сценарии видео (short/long)
+- Финансы (P&L) — доходы и расходы
+Полный срез всех дел — инструмент get_overview.
 
-Принципы ответов:
-- Конкретика и цифры вместо общих слов
-- Прямые рекомендации, не «зависит от ситуации»
-- Если нужно уточнить — задаёшь один точный вопрос
-- Никакого корпоративного буллшита`;
+Как работать с данными:
+- Когда Кирилл спрашивает про своё состояние дел («что у меня по задачам», «какие лиды», «что на завтра», «сколько заработал») — СНАЧАЛА вызови нужный read-инструмент и отвечай строго по реальным данным. Не выдумывай.
+- Когда просит создать / добавить / составить / запланировать / перенести / отметить / изменить — ВЫЗЫВАЙ инструмент, а не описывай словами.
+- «Составь расписание на день» → build_day_schedule с осмысленными блоками по времени. Учитывай ритм Кирилла: утро → рабочий блок → еда → рабочий блок → прогулка → рабочий блок → свободное время → отход ко сну в 23:00. Не оставляй день пустым — дай реальный план.
+- Всегда передавай даты как YYYY-MM-DD, а время как HH:MM. Даты «сегодня»/«завтра» бери из контекста ниже.
+- Для правок по имени (лид, задача, слот) достаточно передать название — система сама найдёт нужную запись.
+- После действия коротко подтверди на русском: что именно сделано и в каком разделе.
+- НИКОГДА не утверждай, что что-то сделал, если не вызвал соответствующий инструмент.
+
+Стиль:
+- Русский язык. Конкретика и цифры, без воды и корпоративного буллшита.
+- Прямые рекомендации, не «зависит от ситуации». Спокойная уверенность сильного партнёра.
+- Если для действия не хватает одного ключевого факта — задай один точный вопрос. В остальном действуй сам.`;
 
 type ChatMessage={role:"user"|"assistant",content:string,id:string};
 type KSChat={id:string,title:string,messages:ChatMessage[],createdAt:number,updatedAt:number};
@@ -15303,6 +15368,323 @@ type KSChat={id:string,title:string,messages:ChatMessage[],createdAt:number,upda
 const KS_AI_KEY="ks_kirill_ai_chats_v2";
 const KS_AI_ACTIVE_KEY="ks_kirill_ai_active_v2";
 
+/* ── Kirill Scales AI — платформенные инструменты ── */
+const KS_ACTIONS_NOTE="Всегда выбирай инструмент под запрос: read-инструменты — чтобы посмотреть данные, create/update/remove — чтобы внести, изменить или удалить. Не описывай действие словами вместо вызова инструмента и не утверждай, что сделал, без реального вызова. Если один запрос требует нескольких записей (например расписание на день) — используй пакетный инструмент.";
+function ksDateContext(){
+  const now=new Date();
+  const tmr=new Date(now.getTime()+86400000);
+  const fmt=(d:Date)=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  return `Контекст даты (используй для всех дат):\n- Сегодня: ${fmt(now)} (${WD[now.getDay()]})\n- Завтра: ${fmt(tmr)} (${WD[tmr.getDay()]})\nПередавай даты строго как YYYY-MM-DD, время как HH:MM.`;
+}
+
+const KS_TOOLS:any[]=[
+  /* ── Общий срез ── */
+  {type:"function",function:{name:"get_overview",description:"Общий срез всех дел Кирилла по платформе: лиды по стадиям, активные задачи War Room, расписание на сегодня и завтра, ближайшие созвоны, финансы за месяц. Вызывай, когда спрашивают «что у меня по делам», «с чего начать», «как обстоят дела».",parameters:{type:"object",properties:{}}}},
+
+  /* ── CRM: лиды и воронки ── */
+  {type:"function",function:{name:"create_lead",description:"Добавить нового лида в CRM",parameters:{type:"object",properties:{name:{type:"string",description:"имя лида"},contact:{type:"string",description:"ник/аккаунт для связи"},phone:{type:"string"},email:{type:"string"},source:{type:"string",description:"источник: Instagram, Telegram, YouTube, Сайт, Рекомендация, Реклама"},deal:{type:"string",description:"сумма или суть сделки"},note:{type:"string"},next_step:{type:"string",description:"следующий шаг по лиду"},status:{type:"string",enum:["new","contact","call","closed","rejected"],description:"стадия воронки"}},required:["name"]}}},
+  {type:"function",function:{name:"list_leads",description:"Показать лидов из CRM. Можно отфильтровать по стадии.",parameters:{type:"object",properties:{status:{type:"string",enum:["new","contact","call","closed","rejected"],description:"фильтр по стадии (необязательно)"}}}}},
+  {type:"function",function:{name:"update_lead",description:"Изменить существующего лида: стадию, следующий шаг, заметку, сумму сделки, контакт. Лид ищется по имени.",parameters:{type:"object",properties:{name:{type:"string",description:"имя лида для поиска"},status:{type:"string",enum:["new","contact","call","closed","rejected"]},next_step:{type:"string"},note:{type:"string"},deal:{type:"string"},phone:{type:"string"},contact:{type:"string"}},required:["name"]}}},
+  {type:"function",function:{name:"create_funnel",description:"Создать новую воронку продаж в CRM",parameters:{type:"object",properties:{name:{type:"string"},description:{type:"string"}},required:["name"]}}},
+  {type:"function",function:{name:"list_funnels",description:"Показать воронки продаж в CRM",parameters:{type:"object",properties:{}}}},
+
+  /* ── War Room: планер задач ── */
+  {type:"function",function:{name:"create_task",description:"Добавить задачу в планер War Room (с приоритетом и дедлайном)",parameters:{type:"object",properties:{title:{type:"string"},description:{type:"string"},due_date:{type:"string",description:"дата YYYY-MM-DD"},due_time:{type:"string",description:"время HH:MM"},priority:{type:"string",enum:["none","low","medium","high"]}},required:["title"]}}},
+  {type:"function",function:{name:"list_tasks",description:"Показать активные (невыполненные) задачи из планера War Room",parameters:{type:"object",properties:{}}}},
+  {type:"function",function:{name:"complete_task",description:"Отметить задачу War Room выполненной. Задача ищется по названию.",parameters:{type:"object",properties:{title:{type:"string",description:"название задачи для поиска"}},required:["title"]}}},
+
+  /* ── Расписание (Стратегия → Календарь) ── */
+  {type:"function",function:{name:"get_schedule",description:"Показать расписание на дату (или диапазон дат): все слоты по времени из календаря, спринта и целей.",parameters:{type:"object",properties:{date:{type:"string",description:"дата YYYY-MM-DD"},date_to:{type:"string",description:"конечная дата диапазона YYYY-MM-DD (необязательно)"}},required:["date"]}}},
+  {type:"function",function:{name:"add_schedule_item",description:"Добавить один слот в расписание (Стратегия → Календарь) на конкретное время.",parameters:{type:"object",properties:{text:{type:"string",description:"название дела"},date:{type:"string",description:"дата YYYY-MM-DD"},start_time:{type:"string",description:"начало HH:MM"},end_time:{type:"string",description:"конец HH:MM"},description:{type:"string"}},required:["text","date","start_time","end_time"]}}},
+  {type:"function",function:{name:"build_day_schedule",description:"Составить полное расписание на день сразу из нескольких блоков (Стратегия → Календарь). Используй для запроса «составь расписание на день».",parameters:{type:"object",properties:{date:{type:"string",description:"дата YYYY-MM-DD"},items:{type:"array",description:"блоки дня по порядку",items:{type:"object",properties:{text:{type:"string"},start_time:{type:"string",description:"HH:MM"},end_time:{type:"string",description:"HH:MM"},description:{type:"string"}},required:["text","start_time","end_time"]}}},required:["date","items"]}}},
+  {type:"function",function:{name:"update_schedule_item",description:"Перенести или переименовать слот в расписании. Слот ищется по названию (и дате, если указана).",parameters:{type:"object",properties:{text:{type:"string",description:"текущее название слота для поиска"},on_date:{type:"string",description:"дата, где искать слот YYYY-MM-DD (необязательно)"},new_text:{type:"string"},new_date:{type:"string",description:"новая дата YYYY-MM-DD"},start_time:{type:"string",description:"новое начало HH:MM"},end_time:{type:"string",description:"новый конец HH:MM"}},required:["text"]}}},
+  {type:"function",function:{name:"remove_schedule_item",description:"Удалить слот из расписания. Слот ищется по названию (и дате, если указана).",parameters:{type:"object",properties:{text:{type:"string",description:"название слота для поиска"},on_date:{type:"string",description:"дата YYYY-MM-DD (необязательно)"}},required:["text"]}}},
+
+  /* ── Спринт и цели ── */
+  {type:"function",function:{name:"create_sprint_task",description:"Добавить рабочую задачу в Спринт (Стратегия) с длительностью в минутах.",parameters:{type:"object",properties:{text:{type:"string"},mins:{type:"number",description:"длительность в минутах"},type:{type:"string",description:"тип задачи, напр. Работа, Контент, Созвон"},date:{type:"string",description:"дата YYYY-MM-DD (необязательно)"}},required:["text"]}}},
+  {type:"function",function:{name:"create_goal",description:"Добавить цель в раздел Цели (Стратегия).",parameters:{type:"object",properties:{name:{type:"string"},description:{type:"string"},deadline:{type:"string",description:"дедлайн YYYY-MM-DD"}},required:["name"]}}},
+  {type:"function",function:{name:"list_goals",description:"Показать цели Кирилла с дедлайнами",parameters:{type:"object",properties:{}}}},
+
+  /* ── Созвоны ── */
+  {type:"function",function:{name:"create_call",description:"Запланировать созвон в разделе Созвоны.",parameters:{type:"object",properties:{title:{type:"string"},date:{type:"string",description:"дата YYYY-MM-DD"},time_start:{type:"string",description:"HH:MM"},time_end:{type:"string",description:"HH:MM"},goal:{type:"string",enum:["Созвон с командой","Созвон с лидом","Созвон с клиентом","Своя цель"]},link:{type:"string"},description:{type:"string"}},required:["title","date","time_start"]}}},
+  {type:"function",function:{name:"list_calls",description:"Показать ближайшие запланированные созвоны",parameters:{type:"object",properties:{}}}},
+
+  /* ── Контент ── */
+  {type:"function",function:{name:"create_script",description:"Создать сценарий в разделе Контент → Сценарии. Если to_kanban=true — добавить карточкой в колонку Разработка на Канбане.",parameters:{type:"object",properties:{name:{type:"string"},content:{type:"string",description:"текст сценария"},kind:{type:"string",enum:["short","long"]},to_kanban:{type:"boolean"}},required:["name","content"]}}},
+  {type:"function",function:{name:"create_content_card",description:"Добавить карточку в Канбан контента",parameters:{type:"object",properties:{title:{type:"string"},scenario:{type:"string"},stage:{type:"string",enum:["idea","progress","ready","published"]},platform:{type:"string",description:"instagram, telegram, youtube, vk"},type:{type:"string",description:"Пост, Reels, Stories, Видео"}},required:["title"]}}},
+  {type:"function",function:{name:"list_content",description:"Показать карточки контента из Канбана. Можно отфильтровать по стадии.",parameters:{type:"object",properties:{stage:{type:"string",enum:["idea","progress","ready","published"]}}}}},
+
+  /* ── Финансы ── */
+  {type:"function",function:{name:"add_transaction",description:"Внести доход или расход в Финансы (P&L).",parameters:{type:"object",properties:{type:{type:"string",enum:["income","expense"]},amount:{type:"number",description:"сумма в рублях"},category:{type:"string"},date:{type:"string",description:"дата YYYY-MM-DD"},comment:{type:"string"}},required:["type","amount"]}}},
+  {type:"function",function:{name:"get_finance",description:"Финансовая сводка за месяц: доходы, расходы, прибыль, разбивка по категориям.",parameters:{type:"object",properties:{month:{type:"string",description:"месяц YYYY-MM (по умолчанию текущий)"}}}}},
+];
+
+const KS_STAGE_LABELS:Record<string,string>={idea:"Идея",progress:"Разработка",ready:"Реализация",published:"Опубликовано"};
+const ksFire=(t:string)=>{try{window.dispatchEvent(new CustomEvent("ks-refresh",{detail:{table:t}}));}catch{}};
+
+async function ksExecTool(name:string,a:any,userId:string):Promise<string>{
+  if(!userId)return "Ошибка: пользователь не определён.";
+  try{
+    if(name==="create_lead"){
+      const row:any={name:a.name||"Без имени",contact:a.contact||"",phone:a.phone||"",email:a.email||"",source:a.source||"Instagram",status:a.status||"new",note:a.note||"",deal:a.deal||"",pains:"",desires:"",objections:"",leverage:"",next_step:a.next_step||"",ai_report:"",avatar_url:"",user_id:userId};
+      const{data,error}=await supabase.from("leads").insert(row).select().single();
+      if(error)return "Ошибка создания лида: "+error.message;
+      ksFire("leads");
+      const st=(CRM_DEFAULT_STAGES.find(s=>s.id===row.status)||{label:row.status}).label;
+      return `Лид «${row.name}» добавлен в CRM (стадия «${st}»).`;
+    }
+    if(name==="list_leads"){
+      let q=supabase.from("leads").select("*").eq("user_id",userId);
+      if(a.status)q=q.eq("status",a.status);
+      const{data}=await q.order("created_at",{ascending:false}).limit(50);
+      if(!data||!data.length)return a.status?"Лидов на этой стадии нет.":"Лидов пока нет.";
+      return `Лидов ${data.length}: `+data.map((l:any)=>`${l.name}${l.deal?" ("+l.deal+")":""} [${(CRM_DEFAULT_STAGES.find(s=>s.id===l.status)||{label:l.status}).label}]${l.next_step?" → "+l.next_step:""}`).join("; ");
+    }
+    if(name==="create_funnel"){
+      const{data,error}=await supabase.from("crm_funnels").insert({name:a.name||"Новая воронка",description:a.description||"",color:FUNNEL_COLORS[0],user_id:userId}).select().single();
+      if(error)return "Ошибка создания воронки: "+error.message;
+      ksFire("crm_funnels");
+      return `Воронка продаж «${a.name||"Новая воронка"}» создана в CRM.`;
+    }
+    if(name==="create_task"){
+      const row:any={title:a.title||"Задача",description:a.description||"",due_date:a.due_date||"",due_time:"",priority:a.priority||"none",color:"#3B82F6",done:false,subtasks:[],user_id:userId,updated_at:new Date().toISOString()};
+      const{data,error}=await supabase.from("planner_tasks").insert(row).select().single();
+      if(error)return "Ошибка создания задачи: "+error.message;
+      ksFire("planner_tasks");
+      return `Задача «${row.title}» добавлена в планер${row.due_date?" на "+row.due_date:""}${row.priority!=="none"?", приоритет "+row.priority:""}.`;
+    }
+    if(name==="list_tasks"){
+      const{data}=await supabase.from("planner_tasks").select("*").eq("user_id",userId).eq("done",false).order("due_date",{ascending:true}).limit(50);
+      if(!data||!data.length)return "Активных задач нет.";
+      return `Активных задач ${data.length}: `+data.map((t:any)=>`${t.title}${t.due_date?" ("+t.due_date+")":""}`).join("; ");
+    }
+    if(name==="create_script"){
+      const kind=a.kind==="long"?"long":"short";
+      const{data:sc,error}=await supabase.from("scripts").insert({name:a.name||"Новый сценарий",kind,content:a.content||"",icp:"",versions:[],chat:[],user_id:userId,updated_at:new Date().toISOString()}).select().single();
+      if(error)return "Ошибка создания сценария: "+error.message;
+      let extra="";
+      if(a.to_kanban&&sc){
+        const{data:card}=await supabase.from("content").insert({platform:"telegram",type:"Сценарий",topic:sc.name,status:"progress",scenario:sc.content,script_id:sc.id,user_id:userId}).select().single();
+        if(card){await supabase.from("scripts").update({content_id:card.id}).eq("id",sc.id);extra=" и добавлен карточкой в «Разработку» на Канбане";}
+        ksFire("content");
+      }
+      ksFire("scripts");
+      return `Сценарий «${a.name||"Новый сценарий"}» создан в разделе Контент${extra}.`;
+    }
+    if(name==="create_content_card"){
+      const{data,error}=await supabase.from("content").insert({platform:a.platform||"telegram",type:a.type||"Пост",topic:a.title||"Карточка",status:a.stage||"idea",scenario:a.scenario||"",user_id:userId}).select().single();
+      if(error)return "Ошибка создания карточки: "+error.message;
+      ksFire("content");
+      return `Карточка «${a.title||"Карточка"}» добавлена в Контент (${KS_STAGE_LABELS[a.stage||"idea"]||"Идея"}).`;
+    }
+    /* ── Общий срез ── */
+    if(name==="get_overview"){
+      const now=new Date();const t0=ds(now);const t1=ds(new Date(now.getTime()+86400000));
+      const monthPrefix=t0.slice(0,7);
+      const[leadsR,tasksR,calR,callsR,pnlR]=await Promise.all([
+        supabase.from("leads").select("status").eq("user_id",userId),
+        supabase.from("planner_tasks").select("title,due_date").eq("user_id",userId).eq("done",false),
+        supabase.from("cal_tasks").select("text,date,start_time").eq("user_id",userId).in("date",[t0,t1]),
+        supabase.from("calls").select("title,date,time_start").eq("user_id",userId).gte("date",t0).order("date",{ascending:true}).limit(5),
+        supabase.from("pnl").select("type,amount,date").eq("user_id",userId).like("date",monthPrefix+"%"),
+      ]);
+      const byStage:Record<string,number>={};(leadsR.data||[]).forEach((l:any)=>{byStage[l.status]=(byStage[l.status]||0)+1;});
+      const stageStr=CRM_DEFAULT_STAGES.map(s=>byStage[s.id]?`${s.label}: ${byStage[s.id]}`:null).filter(Boolean).join(", ")||"нет лидов";
+      const tasks=tasksR.data||[];
+      const today0=(calR.data||[]).filter((t:any)=>t.date===t0).sort((x:any,y:any)=>(x.start_time||"").localeCompare(y.start_time||""));
+      const tmrw=(calR.data||[]).filter((t:any)=>t.date===t1).sort((x:any,y:any)=>(x.start_time||"").localeCompare(y.start_time||""));
+      const inc=(pnlR.data||[]).filter((p:any)=>p.type==="income").reduce((s:number,p:any)=>s+(+p.amount||0),0);
+      const exp=(pnlR.data||[]).filter((p:any)=>p.type==="expense").reduce((s:number,p:any)=>s+(+p.amount||0),0);
+      const calls=(callsR.data||[]);
+      return [
+        `CRM: ${leadsR.data?.length||0} лидов (${stageStr}).`,
+        `War Room: ${tasks.length} активных задач${tasks.length?" — "+tasks.slice(0,5).map((t:any)=>t.title).join(", "):""}.`,
+        `Расписание сегодня (${t0}): ${today0.length?today0.map((t:any)=>`${t.start_time} ${t.text}`).join("; "):"пусто"}.`,
+        `Расписание завтра (${t1}): ${tmrw.length?tmrw.map((t:any)=>`${t.start_time} ${t.text}`).join("; "):"пусто"}.`,
+        `Созвоны: ${calls.length?calls.map((c:any)=>`${c.date} ${c.time_start||""} ${c.title}`.trim()).join("; "):"нет запланированных"}.`,
+        `Финансы за месяц: доход ${inc.toLocaleString("ru-RU")} ₽, расход ${exp.toLocaleString("ru-RU")} ₽, прибыль ${(inc-exp).toLocaleString("ru-RU")} ₽.`,
+      ].join("\n");
+    }
+
+    /* ── CRM ── */
+    if(name==="update_lead"){
+      const{data:found}=await supabase.from("leads").select("*").eq("user_id",userId).ilike("name",`%${a.name}%`).order("created_at",{ascending:false}).limit(1);
+      const lead=found?.[0];
+      if(!lead)return `Лид «${a.name}» не найден.`;
+      const upd:any={};
+      if(a.status)upd.status=a.status;
+      if(a.next_step!==undefined)upd.next_step=a.next_step;
+      if(a.note!==undefined)upd.note=a.note;
+      if(a.deal!==undefined)upd.deal=a.deal;
+      if(a.phone!==undefined)upd.phone=a.phone;
+      if(a.contact!==undefined)upd.contact=a.contact;
+      if(!Object.keys(upd).length)return "Нечего обновлять — не переданы изменения.";
+      const{error}=await supabase.from("leads").update(upd).eq("id",lead.id);
+      if(error)return "Ошибка обновления лида: "+error.message;
+      ksFire("leads");
+      const parts:string[]=[];
+      if(upd.status)parts.push(`стадия → «${(CRM_DEFAULT_STAGES.find(s=>s.id===upd.status)||{label:upd.status}).label}»`);
+      if(upd.next_step)parts.push(`следующий шаг → «${upd.next_step}»`);
+      if(upd.deal)parts.push(`сделка → ${upd.deal}`);
+      return `Лид «${lead.name}» обновлён${parts.length?": "+parts.join(", "):""}.`;
+    }
+    if(name==="list_funnels"){
+      const{data}=await supabase.from("crm_funnels").select("*").eq("user_id",userId).order("created_at",{ascending:false});
+      if(!data||!data.length)return "Воронок пока нет.";
+      return `Воронки (${data.length}): `+data.map((f:any)=>f.name).join("; ");
+    }
+
+    /* ── War Room ── */
+    if(name==="complete_task"){
+      const{data:found}=await supabase.from("planner_tasks").select("*").eq("user_id",userId).eq("done",false).ilike("title",`%${a.title}%`).order("created_at",{ascending:false}).limit(1);
+      const task=found?.[0];
+      if(!task)return `Активная задача «${a.title}» не найдена.`;
+      const{error}=await supabase.from("planner_tasks").update({done:true,updated_at:new Date().toISOString()}).eq("id",task.id);
+      if(error)return "Ошибка: "+error.message;
+      ksFire("planner_tasks");
+      return `Задача «${task.title}» отмечена выполненной.`;
+    }
+
+    /* ── Расписание (cal_tasks + спринт + цели) ── */
+    if(name==="get_schedule"){
+      const from=a.date;const to=a.date_to||a.date;
+      if(!from)return "Не указана дата.";
+      const[calR,kbR,gtR]=await Promise.all([
+        supabase.from("cal_tasks").select("text,date,start_time,end_time,done").eq("user_id",userId).gte("date",from).lte("date",to),
+        supabase.from("kanban").select("text,date,start_time,mins,done").eq("user_id",userId).gte("date",from).lte("date",to),
+        supabase.from("goal_tasks").select("text,date,start_time,mins,done").eq("user_id",userId).gte("date",from).lte("date",to),
+      ]);
+      const rows:any[]=[];
+      (calR.data||[]).forEach((t:any)=>rows.push({date:t.date,start:t.start_time||"—",end:t.end_time||"",text:t.text,done:t.done,tag:""}));
+      (kbR.data||[]).filter((t:any)=>t.date).forEach((t:any)=>rows.push({date:t.date,start:t.start_time||"10:00",end:"",text:t.text,done:t.done,tag:" (спринт)"}));
+      (gtR.data||[]).filter((t:any)=>t.date).forEach((t:any)=>rows.push({date:t.date,start:t.start_time||"10:00",end:"",text:t.text,done:t.done,tag:" (цель)"}));
+      if(!rows.length)return `На ${from===to?from:from+"–"+to} расписание пустое.`;
+      rows.sort((x,y)=>x.date===y.date?(x.start||"").localeCompare(y.start||""):x.date.localeCompare(y.date));
+      const byDate:Record<string,string[]>={};
+      rows.forEach(r=>{(byDate[r.date]=byDate[r.date]||[]).push(`${r.start}${r.end?"–"+r.end:""} ${r.text}${r.tag}${r.done?" ✓":""}`);});
+      return Object.keys(byDate).map(d=>`${d}:\n  `+byDate[d].join("\n  ")).join("\n");
+    }
+    if(name==="add_schedule_item"){
+      const row:any={text:a.text||"Дело",description:a.description||"",date:a.date||today(),start_time:a.start_time||"10:00",end_time:a.end_time||"11:00",auto_placed:false,manually_placed:true,status:"todo",done:false,user_id:userId};
+      const{error}=await supabase.from("cal_tasks").insert(row).select().single();
+      if(error)return "Ошибка добавления слота: "+error.message;
+      ksFire("cal_tasks");
+      return `«${row.text}» добавлено в расписание на ${row.date} ${row.start_time}–${row.end_time}.`;
+    }
+    if(name==="build_day_schedule"){
+      const date=a.date||today();
+      const items=Array.isArray(a.items)?a.items:[];
+      if(!items.length)return "Не переданы блоки расписания.";
+      const rows=items.map((it:any)=>({text:it.text||"Дело",description:it.description||"",date,start_time:it.start_time||"10:00",end_time:it.end_time||"11:00",auto_placed:false,manually_placed:true,status:"todo",done:false,user_id:userId}));
+      const{data,error}=await supabase.from("cal_tasks").insert(rows).select();
+      if(error)return "Ошибка построения расписания: "+error.message;
+      ksFire("cal_tasks");
+      const list=(data||rows).map((r:any)=>`${r.start_time} ${r.text}`).join(", ");
+      return `Расписание на ${date} составлено (${rows.length} блоков): ${list}. Открой Стратегия → Календарь.`;
+    }
+    if(name==="update_schedule_item"){
+      let q=supabase.from("cal_tasks").select("*").eq("user_id",userId).ilike("text",`%${a.text}%`);
+      if(a.on_date)q=q.eq("date",a.on_date);
+      const{data:found}=await q.order("date",{ascending:false}).limit(1);
+      const item=found?.[0];
+      if(!item)return `Слот «${a.text}» не найден.`;
+      const upd:any={manually_placed:true,auto_placed:false};
+      if(a.new_text)upd.text=a.new_text;
+      if(a.new_date)upd.date=a.new_date;
+      if(a.start_time)upd.start_time=a.start_time;
+      if(a.end_time)upd.end_time=a.end_time;
+      const{error}=await supabase.from("cal_tasks").update(upd).eq("id",item.id);
+      if(error)return "Ошибка обновления слота: "+error.message;
+      ksFire("cal_tasks");
+      return `Слот «${item.text}» обновлён${upd.date?` → ${upd.date}`:""}${upd.start_time?` ${upd.start_time}${upd.end_time?"–"+upd.end_time:""}`:""}.`;
+    }
+    if(name==="remove_schedule_item"){
+      let q=supabase.from("cal_tasks").select("*").eq("user_id",userId).ilike("text",`%${a.text}%`);
+      if(a.on_date)q=q.eq("date",a.on_date);
+      const{data:found}=await q.order("date",{ascending:false}).limit(1);
+      const item=found?.[0];
+      if(!item)return `Слот «${a.text}» не найден.`;
+      const{error}=await supabase.from("cal_tasks").delete().eq("id",item.id);
+      if(error)return "Ошибка удаления: "+error.message;
+      ksFire("cal_tasks");
+      return `Слот «${item.text}» (${item.date}) удалён из расписания.`;
+    }
+
+    /* ── Спринт и цели ── */
+    if(name==="create_sprint_task"){
+      const row:any={text:a.text||"Задача",mins:a.mins||60,type:a.type||"Работа",date:a.date||null,done:false,status:"todo",sort_order:Math.floor(Date.now()/1000),user_id:userId};
+      const{error}=await supabase.from("kanban").insert(row).select().single();
+      if(error)return "Ошибка создания задачи спринта: "+error.message;
+      ksFire("kanban");
+      return `Задача «${row.text}» (${row.mins} мин) добавлена в Спринт${row.date?" на "+row.date:""}.`;
+    }
+    if(name==="create_goal"){
+      const{data:pinned}=await supabase.from("goals").select("id").eq("user_id",userId).eq("is_system_pinned",true).limit(1);
+      const parentId=pinned?.[0]?.id||null;
+      const row:any={name:a.name||"Новая цель",description:a.description||"",color:C.a,start_date:null,end_date:a.deadline||null,deadline:a.deadline||null,parent_id:parentId,is_system_pinned:false,user_id:userId};
+      const{error}=await supabase.from("goals").insert(row).select().single();
+      if(error)return "Ошибка создания цели: "+error.message;
+      ksFire("goals");
+      return `Цель «${row.name}» добавлена в раздел Цели${row.deadline?" (дедлайн "+row.deadline+")":""}.`;
+    }
+    if(name==="list_goals"){
+      const{data}=await supabase.from("goals").select("*").eq("user_id",userId).eq("is_system_pinned",false).order("created_at",{ascending:false}).limit(50);
+      if(!data||!data.length)return "Целей пока нет.";
+      return `Цели (${data.length}): `+data.map((g:any)=>`${g.name}${g.deadline?" (до "+g.deadline+")":""}`).join("; ");
+    }
+
+    /* ── Созвоны ── */
+    if(name==="create_call"){
+      const start=a.time_start||"10:00";
+      const end=a.time_end||(()=>{const[h,m]=start.split(":").map(Number);return String((h+1)%24).padStart(2,"0")+":"+String(m).padStart(2,"0");})();
+      const goal=a.goal||"Созвон с лидом";
+      const row:any={title:a.title||"Созвон",date:a.date||today(),time_start:start,time_end:end,goal,custom_goal:goal==="Своя цель"?(a.title||""):"",setter_name:"",responsible_name:"",link:a.link||"",description:a.description||"",user_id:userId};
+      const{error}=await supabase.from("calls").insert(row).select().single();
+      if(error)return "Ошибка создания созвона: "+error.message;
+      ksFire("calls");
+      return `Созвон «${row.title}» запланирован на ${row.date} ${row.time_start}–${row.time_end}.`;
+    }
+    if(name==="list_calls"){
+      const{data}=await supabase.from("calls").select("*").eq("user_id",userId).gte("date",today()).order("date",{ascending:true}).limit(30);
+      if(!data||!data.length)return "Ближайших созвонов нет.";
+      return `Созвоны (${data.length}): `+data.map((c:any)=>`${c.date} ${c.time_start||""} ${c.title||c.goal}`.trim()).join("; ");
+    }
+
+    /* ── Контент ── */
+    if(name==="list_content"){
+      let q=supabase.from("content").select("*").eq("user_id",userId);
+      if(a.stage)q=q.eq("status",a.stage);
+      const{data}=await q.order("created_at",{ascending:false}).limit(50);
+      if(!data||!data.length)return "Карточек контента нет.";
+      return `Контент (${data.length}): `+data.map((c:any)=>`${c.topic||c.type} [${KS_STAGE_LABELS[c.status]||c.status}]`).join("; ");
+    }
+
+    /* ── Финансы ── */
+    if(name==="add_transaction"){
+      const amt=+a.amount||0;
+      if(amt<=0)return "Сумма должна быть больше нуля.";
+      const row:any={type:a.type==="expense"?"expense":"income",amount:amt,category:a.category||(a.type==="expense"?"Прочее":"Продажи"),date:a.date||today(),comment:a.comment||"",user_id:userId};
+      const{error}=await supabase.from("pnl").insert(row).select().single();
+      if(error)return "Ошибка внесения транзакции: "+error.message;
+      ksFire("pnl");
+      return `${row.type==="income"?"Доход":"Расход"} ${amt.toLocaleString("ru-RU")} ₽ (${row.category}) внесён в Финансы на ${row.date}.`;
+    }
+    if(name==="get_finance"){
+      const month=a.month||today().slice(0,7);
+      const{data}=await supabase.from("pnl").select("*").eq("user_id",userId).like("date",month+"%");
+      if(!data||!data.length)return `За ${month} транзакций нет.`;
+      const inc=data.filter((p:any)=>p.type==="income").reduce((s:number,p:any)=>s+(+p.amount||0),0);
+      const exp=data.filter((p:any)=>p.type==="expense").reduce((s:number,p:any)=>s+(+p.amount||0),0);
+      const catMap:Record<string,number>={};
+      data.forEach((p:any)=>{const k=(p.type==="income"?"+ ":"- ")+(p.category||"Прочее");catMap[k]=(catMap[k]||0)+(+p.amount||0);});
+      const cats=Object.entries(catMap).map(([k,v])=>`${k}: ${v.toLocaleString("ru-RU")} ₽`).join(", ");
+      return `Финансы за ${month}: доход ${inc.toLocaleString("ru-RU")} ₽, расход ${exp.toLocaleString("ru-RU")} ₽, прибыль ${(inc-exp).toLocaleString("ru-RU")} ₽. Категории: ${cats}.`;
+    }
+
+    return "Неизвестный инструмент: "+name;
+  }catch(e:any){return "Ошибка выполнения: "+(e?.message||String(e));}
+}
+
 const kirillAIStore=(()=>{
   let chats:KSChat[]=[];
   let activeId:string="";
@@ -15311,6 +15693,7 @@ const kirillAIStore=(()=>{
   const generating=new Set<string>();
   const aborts=new Map<string,AbortController>();
   const listeners=new Set<()=>void>();
+  let uidUser="";
 
   const uid=(p:string)=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   const blank=():KSChat=>({id:uid("c"),title:"Новый чат",messages:[],createdAt:Date.now(),updatedAt:Date.now()});
@@ -15364,37 +15747,30 @@ const kirillAIStore=(()=>{
     };
 
     try{
-      const res=await fetch("https://api.deepseek.com/v1/chat/completions",{
-        method:"POST",signal:ctrl.signal,
-        headers:{"Content-Type":"application/json","Authorization":`Bearer ${process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY}`},
-        body:JSON.stringify({model:"deepseek-chat",max_tokens:2000,stream:true,messages:[{role:"system",content:KIRILL_AI_SYSTEM},...history]}),
-      });
-      const reader=res.body?.getReader();
-      const decoder=new TextDecoder();
-      let full="";
-      if(reader){
-        while(true){
-          const{done,value}=await reader.read();
-          if(done)break;
-          const chunk=decoder.decode(value);
-          const rows=chunk.split("\n").filter(l=>l.startsWith("data:"));
-          for(const row of rows){
-            const data=row.slice(5).trim();
-            if(data==="[DONE]")break;
-            try{const j=JSON.parse(data);const d=j.choices?.[0]?.delta?.content||"";if(d){full+=d;setAI(full);}}catch{}
-          }
-        }
-      }
-      if(!full){
-        const fb=await fetch("https://api.deepseek.com/v1/chat/completions",{
+      const msgs:any[]=[{role:"system",content:KIRILL_AI_SYSTEM+"\n\n"+KS_ACTIONS_NOTE+"\n\n"+ksDateContext()},...history];
+      let finalText="";
+      for(let step=0;step<10;step++){
+        const res=await fetch("https://api.deepseek.com/v1/chat/completions",{
           method:"POST",signal:ctrl.signal,
           headers:{"Content-Type":"application/json","Authorization":`Bearer ${process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY}`},
-          body:JSON.stringify({model:"deepseek-chat",max_tokens:2000,messages:[{role:"system",content:KIRILL_AI_SYSTEM},...history]}),
+          body:JSON.stringify({model:"deepseek-chat",max_tokens:2000,messages:msgs,tools:KS_TOOLS,tool_choice:"auto"}),
         });
-        const fd=await fb.json();
-        full=fd.choices?.[0]?.message?.content||"Ошибка ответа";
-        setAI(full,true);
+        const data=await res.json();
+        const msg=data.choices?.[0]?.message;
+        if(!msg){finalText="Не удалось получить ответ.";break;}
+        if(msg.tool_calls&&msg.tool_calls.length){
+          msgs.push(msg);
+          for(const tc of msg.tool_calls){
+            let args:any={};try{args=JSON.parse(tc.function?.arguments||"{}");}catch{}
+            setAI("Выполняю…");
+            const result=await ksExecTool(tc.function?.name,args,uidUser);
+            msgs.push({role:"tool",tool_call_id:tc.id,content:result});
+          }
+          continue;
+        }
+        finalText=msg.content||"Готово.";break;
       }
+      setAI(finalText||"Готово.",true);
     }catch(e:any){
       if(e?.name!=="AbortError"){setAI("Ошибка соединения. Проверь API-ключ или попробуй ещё раз.",true);}
     }finally{
@@ -15406,6 +15782,7 @@ const kirillAIStore=(()=>{
 
   return{
     subscribe(l:()=>void){hydrate();listeners.add(l);return()=>{listeners.delete(l);};},
+    setUser(id:string){uidUser=id;},
     getChats(){hydrate();return chats;},
     getActiveId(){hydrate();return activeId;},
     getActive(){hydrate();return chats.find(c=>c.id===activeId)||chats[0];},
@@ -15455,9 +15832,10 @@ function KirillAIPage({userId}:{userId:string}){
 
   useEffect(()=>{
     setMounted(true);
+    kirillAIStore.setUser(userId);
     const unsub=kirillAIStore.subscribe(()=>setTick(t=>t+1));
     return unsub;
-  },[]);
+  },[userId]);
 
   const chats=kirillAIStore.getChats();
   const activeId=kirillAIStore.getActiveId();
@@ -15549,10 +15927,11 @@ function KirillAIPage({userId}:{userId:string}){
   const isEmpty=messages.length===0;
   const panelBg=dark?"#111111":"#fff";
 
-  if(!mounted)return <div style={{height:"calc(100vh - 56px)"}}/>;
+  const rootH=isMobile?"calc(100vh - 134px)":"calc(100vh - 56px)";
+  if(!mounted)return <div style={{height:rootH}}/>;
 
   return(
-    <div style={{display:"flex",height:"calc(100vh - 56px)",maxWidth:1180,margin:"0 auto",width:"100%",position:"relative" as const,overflow:"hidden"}}>
+    <div style={{display:"flex",height:rootH,maxWidth:1180,margin:"0 auto",width:"100%",position:"relative" as const,overflow:"hidden"}}>
 
       {/* ===== LEFT: чат ===== */}
       <div style={{flex:1,minWidth:0,display:"flex",flexDirection:"column",height:"100%",borderRight:!isMobile&&showList?`1px solid ${bd}`:"none"}}>
@@ -15587,10 +15966,10 @@ function KirillAIPage({userId}:{userId:string}){
               <img src={KS_AI_LOGO} width={64} height={64} style={{borderRadius:12,objectFit:"cover" as const}} alt="Kirill Scales AI"/>
               <div style={{textAlign:"center" as const}}>
                 <div style={{fontSize:20,fontWeight:800,color:C.t1,marginBottom:6,letterSpacing:"-0.02em"}}>Kirill Scales AI</div>
-                <div style={{fontSize:14,color:C.t2,maxWidth:360,lineHeight:1.6}}>Твой персональный стратег по бизнесу</div>
+                <div style={{fontSize:14,color:C.t2,maxWidth:360,lineHeight:1.6}}>Твой стратег и операционный центр платформы</div>
               </div>
               <div style={{display:"flex",flexWrap:"wrap" as const,gap:8,justifyContent:"center",maxWidth:500}}>
-                {["Как усилить мой оффер?","Напиши стратегию привлечения клиентов","Разбери мою воронку","Помоги с контент-планом"].map(s=>(
+                {["Составь расписание на завтра","Что у меня по делам?","Добавь лида: Иван, Telegram, 50к","Покажи задачи на неделю"].map(s=>(
                   <button key={s} onClick={()=>{setInput(s);inputRef.current?.focus();}}
                     style={{padding:"8px 14px",borderRadius:10,border:`1px solid ${bd}`,background:dark?"rgba(255,255,255,0.04)":"#fff",color:C.t2,fontSize:13,cursor:"pointer",transition:"all 0.15s",fontFamily:"'Inter',sans-serif"}}
                     onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color=C.t1;(e.currentTarget as HTMLElement).style.borderColor=dark?"rgba(255,255,255,0.15)":"rgba(0,0,0,0.15)";}}
