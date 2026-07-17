@@ -15041,6 +15041,7 @@ const COPY_TOOLS=[
   {id:"style-master",name:"Style Master",desc:"Изучает фирменный тон голоса и создаёт тексты, звучащие как вы.",tag:"Стиль",ic:"M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"},
   {id:"ad-master",name:"Ad Master",desc:"Предлагает нестандартные рекламные ходы для продвижения продукта.",tag:"Реклама",ic:"M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"},
   {id:"youtube-master",name:"YouTube Master",desc:"Преобразует текст в готовый скрипт для диктора с ритмом и паузами.",tag:"Видео",ic:"M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z M21 12a9 9 0 11-18 0 9 9 0 0118 0z"},
+  {id:"youtube-seo",name:"YouTube SEO",desc:"По названию видео подбирает теги под широкие охваты (с самопроверкой на частотность) и даёт 15 вариантов усиления названия.",tag:"Видео",ic:"M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"},
   {id:"dna-transformer",name:"DNA Transformer",desc:"Подгоняет любой текст под брендовые стандарты и ценности.",tag:"Бренд",ic:"M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"},
   {id:"icp-master",name:"ICP Master",desc:"Помогает составить портрет идеальных покупателей, готовых платить больше.",tag:"Аудитория",ic:"M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"},
   {id:"send-magnet",name:"Send Magnet",desc:"Генератор тем и текстов для рассылки, повышающих открываемость.",tag:"Рассылка",ic:"M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"},
@@ -15373,7 +15374,205 @@ function CopyRewriteRunner({tool,dark}:{tool:any,dark:boolean}){
   );
 }
 
+/* ============ COPY AI — YOUTUBE SEO (теги + названия) ============ */
+const YT_TAG_LIMIT=500;
+const ytClean=(s:any)=>String(s||"").replace(/[#"«»]/g,"").replace(/\s+/g," ").trim().toLowerCase();
+const ytDedup=(arr:string[])=>{const seen=new Set<string>();const out:string[]=[];for(const t of arr){const k=t.trim();if(!k||seen.has(k))continue;seen.add(k);out.push(k);}return out;};
+
+async function ytGenTags(title:string,niche:string):Promise<{broad:string[],seo:string[]}>{
+  const system="Ты — YouTube SEO-специалист. Знаешь, как теги помогают алгоритму связать видео с популярными запросами и вытащить его в поиск и рекомендации. Возвращаешь строго валидный JSON без markdown.";
+  const user=`Название видео: "${title}"${niche?`\nНиша / о чём канал: ${niche}`:""}
+
+Подбери теги для этого видео на русском языке.
+
+Структура ответа:
+1. "broad" — 8-12 широких общих тегов: категория и тема одним-двумя словами (например: бизнес, личный бренд, маркетинг, саморазвитие, мотивация). Самые частотные запросы ниши.
+2. "seo" — 12-18 поисковых тегов-фраз: то, что люди реально вбивают в поиск YouTube (например: как построить бизнес, как стать лучшей версией себя, с чего начать бизнес).
+
+ОБЯЗАТЕЛЬНАЯ САМОПРОВЕРКА каждого тега перед включением в ответ:
+- Реально ли это ищут живые люди? Если запрос почти никто не вбивает — выбрось.
+- Не слишком ли узкий тег? Узкие, гиперспецифичные и переусложнённые теги ВЫБРАСЫВАЙ (например «как открыть кофейню в Твери в 2019» — узко, выбросить).
+- Тег обязан быть в тему видео, но бить в ШИРОКИЙ охват.
+- Не дублируй один и тот же смысл разными словами.
+- Только сам тег: без решёток, кавычек и заглавных букв.
+
+Верни строго JSON:
+{"broad":["..."],"seo":["..."]}`;
+  const d=paParseJSON(await paChat(system,user,1600,0.7));
+  return{
+    broad:ytDedup((d.broad||[]).map(ytClean).filter(Boolean)),
+    seo:ytDedup((d.seo||[]).map(ytClean).filter(Boolean)),
+  };
+}
+
+async function ytGenTitles(title:string,niche:string):Promise<{clickbait:string[],fomo:string[],pain:string[]}>{
+  const system="Ты — YouTube-стратег по заголовкам. Знаешь, что название решает, кликнут по видео или пролистают. Пишешь по-русски, коротко и мощно, без канцелярита. Возвращаешь строго валидный JSON без markdown.";
+  const user=`Исходное название видео: "${title}"${niche?`\nНиша / о чём канал: ${niche}`:""}
+
+Предложи 15 усиленных вариантов названия. Сохраняй смысл и тему исходного. Каждое — до 70 символов, конкретное и живое, без кавычек внутри текста.
+
+Три группы ровно по 5:
+1. "clickbait" — цепляющие, кликбейтные: интрига, парадокс, обещание результата, цифра, контраст. Кликбейт честный — не обманывает содержание.
+2. "fomo" — страх упустить: успеть пока не поздно, все уже сделали, ты теряешь, окно закрывается.
+3. "pain" — личные, бьющие в боль: обращение на «ты», прямое попадание в боль зрителя, узнавание себя.
+
+Верни строго JSON:
+{"clickbait":["1","2","3","4","5"],"fomo":["1","2","3","4","5"],"pain":["1","2","3","4","5"]}`;
+  const d=paParseJSON(await paChat(system,user,2000,0.9));
+  const norm=(a:any)=>(a||[]).map((x:any)=>String(x||"").replace(/^["'«»]|["'«»]$/g,"").trim()).filter(Boolean).slice(0,5);
+  return{clickbait:norm(d.clickbait),fomo:norm(d.fomo),pain:norm(d.pain)};
+}
+
+function YouTubeSeoRunner({tool,dark}:{tool:any,dark:boolean}){
+  const isMobile=useIsMobile();
+  const bd=C.bd;
+  const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
+  const inputBg=dark?"#1C1C1C":"#F8FAFC";
+  const RED="#E62117";
+
+  const[title,setTitle]=useState("");
+  const[niche,setNiche]=useState("");
+  const[tags,setTags]=useState<{broad:string[],seo:string[]}|null>(null);
+  const[titles,setTitles]=useState<{clickbait:string[],fomo:string[],pain:string[]}|null>(null);
+  const[off,setOff]=useState<string[]>([]);
+  const[loading,setLoading]=useState(false);
+  const[err,setErr]=useState("");
+  const[copied,setCopied]=useState<string|null>(null);
+
+  useEffect(()=>{
+    try{const raw=localStorage.getItem("copyai_yt_"+tool.id);if(raw){const d=JSON.parse(raw);
+      if(d.title)setTitle(d.title);if(d.niche)setNiche(d.niche);
+      if(d.tags)setTags(d.tags);if(d.titles)setTitles(d.titles);if(Array.isArray(d.off))setOff(d.off);}}catch{}
+  },[tool.id]);
+  useEffect(()=>{
+    try{localStorage.setItem("copyai_yt_"+tool.id,JSON.stringify({title,niche,tags,titles,off}));}catch{}
+  },[title,niche,tags,titles,off,tool.id]);
+
+  const offSet=new Set(off);
+  const allTags=tags?[...tags.broad,...tags.seo]:[];
+  const active=allTags.filter(t=>!offSet.has(t));
+  const tagString=active.join(", ");
+  const overLimit=tagString.length>YT_TAG_LIMIT;
+
+  const canGen=title.trim().length>1;
+
+  const run=async()=>{
+    if(!canGen||loading)return;
+    setLoading(true);setErr("");
+    try{
+      const[tg,tl]=await Promise.all([ytGenTags(title.trim(),niche.trim()),ytGenTitles(title.trim(),niche.trim())]);
+      setTags(tg);setTitles(tl);setOff([]);
+    }catch(e){setErr("Не удалось сгенерировать. Проверь подключение и попробуй ещё раз.");}
+    setLoading(false);
+  };
+
+  const copy=(text:string,key:string)=>{navigator.clipboard.writeText(text);setCopied(key);setTimeout(()=>setCopied(null),1500);};
+  const toggleTag=(t:string)=>setOff(prev=>prev.includes(t)?prev.filter(x=>x!==t):[...prev,t]);
+
+  const lbl:React.CSSProperties={fontSize:12,fontWeight:700,color:C.t2,letterSpacing:0.3,marginBottom:8,display:"block"};
+  const fld:React.CSSProperties={width:"100%",padding:"11px 13px",border:`1px solid ${bd}`,borderRadius:8,fontSize:14,background:inputBg,color:C.t1,outline:"none",lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const};
+  const secTitle:React.CSSProperties={fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:10};
+
+  const chip=(t:string,groupColor:string)=>{
+    const isOff=offSet.has(t);
+    return <button key={t} onClick={()=>toggleTag(t)} title={isOff?"Включить тег":"Исключить тег"}
+      style={{padding:"6px 11px",borderRadius:20,border:`1px solid ${isOff?bd:"transparent"}`,background:isOff?"transparent":groupColor+"1E",color:isOff?C.t2:C.t1,fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif",textDecoration:isOff?"line-through":"none",opacity:isOff?0.5:1,transition:"all 0.12s"}}>{t}</button>;
+  };
+
+  const titleGroups=titles?[
+    {key:"clickbait",label:"Цепляющие / кликбейт",hint:"интрига, парадокс, обещание результата",items:titles.clickbait},
+    {key:"fomo",label:"FOMO — страх упустить",hint:"успеть, пока не поздно",items:titles.fomo},
+    {key:"pain",label:"Личные — бьют в боль",hint:"обращение на «ты», узнавание себя",items:titles.pain},
+  ]:[];
+
+  const hasResult=!!(tags||titles);
+  const twoCol=!isMobile&&hasResult;
+
+  return(
+    <div style={{display:"grid",gridTemplateColumns:twoCol?"minmax(320px,400px) 1fr":"1fr",gap:16,alignItems:"start"}}>
+      {/* inputs */}
+      <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:22,display:"flex",flexDirection:"column",gap:16}}>
+        <div>
+          <label style={lbl}>Название видео</label>
+          <input value={title} onChange={e=>setTitle(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")run();}}
+            placeholder="Например: Как я построил бизнес с нуля в 21 год" style={fld}/>
+        </div>
+        <div>
+          <label style={lbl}>Ниша / о чём канал <span style={{fontWeight:400,opacity:0.7}}>— необязательно</span></label>
+          <input value={niche} onChange={e=>setNiche(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")run();}}
+            placeholder="Например: бизнес, маркетинг, личный бренд" style={fld}/>
+        </div>
+        <button onClick={run} disabled={!canGen||loading}
+          style={{padding:"13px",borderRadius:8,border:"none",background:canGen?`linear-gradient(180deg,#FF2A1E 0%,${RED} 55%,#C4160F 100%)`:inputBg,color:canGen?"#fff":C.t2,fontSize:15,fontWeight:700,cursor:canGen&&!loading?"pointer":"default",fontFamily:"'Inter',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:10,boxShadow:canGen?"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(230,33,23,0.28)":"none"}}>
+          {loading?<><div style={{width:17,height:17,border:"2.5px solid rgba(255,255,255,0.4)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Генерирую…</>
+            :hasResult?"Сгенерировать заново":"Сгенерировать"}
+        </button>
+        {err&&<div style={{fontSize:12.5,color:RED,lineHeight:1.5}}>{err}</div>}
+        {!hasResult&&!loading&&<div style={{fontSize:12,color:C.t2,lineHeight:1.55,opacity:0.8}}>Теги проходят самопроверку: узкие и низкочастотные запросы отсеиваются — остаются только те, что реально ищут, в тему и на широкий охват.</div>}
+      </div>
+
+      {/* results */}
+      {hasResult&&<div style={{display:"flex",flexDirection:"column",gap:12}}>
+        {/* tags */}
+        {tags&&<div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:18}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:14}}>
+            <div style={{fontSize:14,fontWeight:800,color:C.t1}}>Теги · {active.length}</div>
+            <div style={{fontSize:11.5,fontWeight:700,color:overLimit?RED:C.t2,fontVariantNumeric:"tabular-nums" as const}}>{tagString.length} / {YT_TAG_LIMIT}</div>
+          </div>
+
+          <div style={{marginBottom:14}}>
+            <div style={secTitle}>Общие · широкий охват</div>
+            <div style={{display:"flex",gap:7,flexWrap:"wrap" as const}}>{tags.broad.map(t=>chip(t,"#7C7C7C"))}</div>
+          </div>
+          <div style={{marginBottom:14}}>
+            <div style={secTitle}>SEO — поисковые запросы</div>
+            <div style={{display:"flex",gap:7,flexWrap:"wrap" as const}}>{tags.seo.map(t=>chip(t,RED))}</div>
+          </div>
+
+          <div style={{fontSize:11,color:C.t2,marginBottom:8,opacity:0.75}}>Нажми на тег, чтобы исключить его из результата.</div>
+          <div style={{padding:"11px 13px",borderRadius:8,border:`1px solid ${overLimit?RED:bd}`,background:inputBg,fontSize:13,color:C.t1,lineHeight:1.6,wordBreak:"break-word" as const,marginBottom:10}}>{tagString||"Все теги исключены"}</div>
+          {overLimit&&<div style={{fontSize:12,color:RED,marginBottom:10,lineHeight:1.5}}>Превышен лимит YouTube в {YT_TAG_LIMIT} символов — исключи лишние теги.</div>}
+          <button onClick={()=>copy(tagString,"tags")} disabled={!active.length}
+            style={{display:"flex",alignItems:"center",gap:7,padding:"9px 15px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:copied==="tags"?"#808080":C.t1,fontSize:13,fontWeight:600,cursor:active.length?"pointer":"default",fontFamily:"'Inter',sans-serif",opacity:active.length?1:0.5}}>
+            {copied==="tags"
+              ?<><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#808080" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Скопировано</>
+              :<><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Копировать все теги</>}
+          </button>
+        </div>}
+
+        {/* titles */}
+        {titles&&titleGroups.map(g=>(
+          <div key={g.key} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:18}}>
+            <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:12,flexWrap:"wrap" as const}}>
+              <div style={{fontSize:12,fontWeight:800,color:g.key==="clickbait"?RED:C.t1,textTransform:"uppercase" as const,letterSpacing:0.3}}>{g.label}</div>
+              <div style={{fontSize:11.5,color:C.t2}}>{g.hint}</div>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:7}}>
+              {g.items.map((t,i)=>{
+                const k=g.key+i;
+                return(
+                  <div key={k} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:8,background:inputBg,border:`1px solid ${bd}`}}>
+                    <span style={{fontSize:11,fontWeight:700,color:C.t2,flexShrink:0,width:14}}>{i+1}</span>
+                    <span style={{flex:1,fontSize:14,color:C.t1,lineHeight:1.5,minWidth:0}}>{t}</span>
+                    <button onClick={()=>copy(t,k)} title="Копировать название"
+                      style={{flexShrink:0,display:"flex",alignItems:"center",gap:5,padding:"5px 9px",borderRadius:7,border:`1px solid ${bd}`,background:"transparent",color:copied===k?"#808080":C.t2,fontSize:11.5,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+                      {copied===k
+                        ?<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#808080" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        :<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>}
+    </div>
+  );
+}
+
 function CopyToolHost({tool,dark}:{tool:any,dark:boolean}){
+  if(tool.id==="youtube-seo")return <YouTubeSeoRunner tool={tool} dark={dark}/>;
   if(COPY_A_TOOLS[tool.id])return <CopyRewriteRunner tool={tool} dark={dark}/>;
   return <CopyToolRunner tool={tool} dark={dark}/>;
 }
