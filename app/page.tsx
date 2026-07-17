@@ -1209,6 +1209,7 @@ function DashPage({userId,name,avatar,onNav,onAvatarChange}:{userId:string,name:
   const pnl = useTable("pnl", userId);
   const kanban = useTable("kanban", userId);
   const goalTasks = useTable("goal_tasks", userId);
+  const planner = useTable("planner_tasks", userId);
   const content = useTable("content", userId);
   const calls = useTable("calls", userId);
   const media = useTable("media", userId);
@@ -1246,8 +1247,9 @@ function DashPage({userId,name,avatar,onNav,onAvatarChange}:{userId:string,name:
 
   const todayTasks = kanban.data.filter((t:any)=>t.date===td&&t.type!=="delegate");
   const todayGoalTasks = goalTasks.data.filter((t:any)=>t.date===td&&t.type!=="delegate");
+  const todayPlanner = planner.data.filter((t:any)=>t.due_date===td).map((t:any)=>({id:t.id,text:t.title,status:t.done?"done":"todo",done:!!t.done,type:"biz",due_time:t.due_time,_planner:true}));
   const seenIds = new Set(todayTasks.map((t:any)=>t.id));
-  const allTodayTasks = [...todayTasks, ...todayGoalTasks.filter((t:any)=>!seenIds.has(t.id))];
+  const allTodayTasks = [...todayPlanner, ...todayTasks, ...todayGoalTasks.filter((t:any)=>!seenIds.has(t.id))];
   const doneTodayTasks = allTodayTasks.filter((t:any)=>t.status==="done"||t.done);
 
   const cI = pnl.data.filter((t:any)=>t.type==="income"&&t.date?.startsWith(cm)).reduce((s:number,t:any)=>s+(t.amount||0),0);
@@ -1355,7 +1357,7 @@ function DashPage({userId,name,avatar,onNav,onAvatarChange}:{userId:string,name:
           : <div style={{display:"flex",flexDirection:"column",gap:8}}>{allTodayTasks.filter((t:any)=>t.status!=="done"&&!t.done).slice(0,5).map((t:any)=><div key={t.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:C.bg,borderRadius:8,borderLeft:"3px solid "+(t.type==="biz"?C.a:C.y)}}>
             <span style={{fontSize:13,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.text}</span>
             {!isMobile&&<Tag label={tsLbl(t.status||"todo")} color={tsCol(t.status||"todo")}/>}
-            <span style={{fontSize:11,color:C.t2,flexShrink:0}}>{t.mins}м</span>
+            <span style={{fontSize:11,color:C.t2,flexShrink:0}}>{t.mins!=null?t.mins+"м":(t.due_time||"")}</span>
           </div>)}</div>
         }
       </Card>
@@ -2501,7 +2503,7 @@ function TaskPlanner({userId}:{userId:string}){
   const{dark}=useTheme();
   const isMobile=useIsMobile();
   const{data:tasks,add,update,remove,loading}=useTable("planner_tasks",userId);
-  const[view,setView]=useState<"calendar"|"list">("calendar");
+  const[view,setView]=useState<"month"|"week"|"3day"|"day"|"list">("month");
   const[cur,setCur]=useState(()=>new Date());
   const[edit,setEdit]=useState<any>(null);
   const[subInput,setSubInput]=useState("");
@@ -2517,8 +2519,8 @@ function TaskPlanner({userId}:{userId:string}){
   const days:Date[]=[];for(let i=0;i<42;i++){const d=new Date(gridStart);d.setDate(gridStart.getDate()+i);days.push(d);}
   const forDay=(d:Date)=>tasks.filter((t:any)=>t.due_date===pd(d)).sort((a:any,b:any)=>String(a.due_time||"99").localeCompare(String(b.due_time||"99")));
 
-  const blank=(date?:string)=>({title:"",description:"",due_date:date||"",due_time:"",priority:"none",color:PLANNER_COLORS[0],done:false,subtasks:[]});
-  const openNew=(date?:string)=>{setEdit(blank(date));setSubInput("");};
+  const blank=(date?:string,time?:string)=>({title:"",description:"",due_date:date||"",due_time:time||"",priority:"none",color:PLANNER_COLORS[0],done:false,subtasks:[]});
+  const openNew=(date?:string,time?:string)=>{setEdit(blank(date,time));setSubInput("");};
   const openEdit=(t:any)=>{setEdit({...t,subtasks:t.subtasks||[]});setSubInput("");};
 
   const save=async()=>{
@@ -2559,37 +2561,144 @@ function TaskPlanner({userId}:{userId:string}){
   const prioDot=(p:string)=>p&&p!=="none"&&p!=="low"?<span style={{width:6,height:6,borderRadius:"50%",background:PRIO[p]?.color,flexShrink:0}}/>:null;
   const fmtDue=(t:any)=>{if(!t.due_date)return "";const[Y,M,D]=t.due_date.split("-");return `${D}.${M}${t.due_time?" "+t.due_time:""}`;};
 
+  // ---- multi-day calendar helpers ----
+  const VIEW_DAYS:Record<string,number>={week:7,"3day":3,day:1};
+  const isGrid=view==="week"||view==="3day"||view==="day";
+  const startOfWeek=(d:Date)=>{const x=new Date(d);const dow=(x.getDay()+6)%7;x.setDate(x.getDate()-dow);x.setHours(0,0,0,0);return x;};
+  const rangeDates=():Date[]=>{
+    if(view==="week"){const s=startOfWeek(cur);return Array.from({length:7},(_,i)=>{const d=new Date(s);d.setDate(s.getDate()+i);return d;});}
+    if(view==="3day"){return Array.from({length:3},(_,i)=>{const d=new Date(cur);d.setDate(cur.getDate()+i);return d;});}
+    if(view==="day"){return[new Date(cur)];}
+    return[];
+  };
+  const navRange=(dir:number)=>{const n=VIEW_DAYS[view]||1;const d=new Date(cur);d.setDate(cur.getDate()+dir*n);setCur(d);};
+  const shMon=(x:Date)=>PL_MONTHS[x.getMonth()].slice(0,3).toLowerCase();
+  const rangeLabel=()=>{
+    const rd=rangeDates();if(!rd.length)return "";
+    const f=rd[0],l=rd[rd.length-1];
+    if(view==="day")return `${WD[f.getDay()]}, ${f.getDate()} ${shMon(f)}`;
+    if(f.getMonth()===l.getMonth())return `${f.getDate()}–${l.getDate()} ${shMon(l)} ${l.getFullYear()}`;
+    return `${f.getDate()} ${shMon(f)} – ${l.getDate()} ${shMon(l)}`;
+  };
+  const tmin=(s:string)=>{const[h,mm]=(s||"10:00").split(":").map(Number);return h*60+(mm||0);};
+  const HOUR_START=6,HOUR_END=24,HOURS=HOUR_END-HOUR_START;
+  const HH=isMobile?38:46;
+  // lane packing for overlapping timed tasks (assumes ~60min blocks)
+  const packDay=(items:any[])=>{
+    const arr=items.map((t:any)=>({t,s:tmin(t.due_time),e:tmin(t.due_time)+60}));
+    arr.sort((a,b)=>a.s-b.s);
+    const clusters:any[][]=[];let cluster:any[]=[];let maxEnd=-1;
+    for(const it of arr){if(cluster.length&&it.s>=maxEnd){clusters.push(cluster);cluster=[];maxEnd=-1;}cluster.push(it);maxEnd=Math.max(maxEnd,it.e);}
+    if(cluster.length)clusters.push(cluster);
+    const out:any[]=[];
+    for(const cl of clusters){const lanes:number[]=[];for(const it of cl){let ln=lanes.findIndex(end=>end<=it.s);if(ln<0){ln=lanes.length;lanes.push(it.e);}else lanes[ln]=it.e;it.lane=ln;}for(const it of cl){it.laneCount=lanes.length;out.push(it);}}
+    return out;
+  };
+
+  const TimeGridView=({dates}:{dates:Date[]})=>{
+    const nowMin=new Date().getHours()*60+new Date().getMinutes();
+    const colW=dates.length===1?1:dates.length;
+    return(
+      <div style={{border:"1px solid "+bd,borderRadius:12,overflow:"hidden",background:cardBg}}>
+        {/* day headers */}
+        <div style={{display:"grid",gridTemplateColumns:`52px repeat(${colW},1fr)`,borderBottom:"1px solid "+bd}}>
+          <div/>
+          {dates.map((d,i)=>{const isToday=pd(d)===todayStr;return(
+            <div key={i} style={{padding:"8px 4px",textAlign:"center" as const,borderLeft:"1px solid "+bd}}>
+              <div style={{fontSize:10,fontWeight:700,color:C.t2,textTransform:"uppercase" as const}}>{PL_WD[(d.getDay()+6)%7]}</div>
+              <div style={{margin:"2px auto 0",width:26,height:26,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:isToday?800:600,color:isToday?C.bg:C.t1,background:isToday?C.t1:"transparent"}}>{d.getDate()}</div>
+            </div>
+          );})}
+        </div>
+        {/* untimed strip */}
+        {dates.some(d=>forDay(d).some((t:any)=>!t.due_time))&&(
+          <div style={{display:"grid",gridTemplateColumns:`52px repeat(${colW},1fr)`,borderBottom:"1px solid "+bd,minHeight:30}}>
+            <div style={{fontSize:9,color:C.t2,display:"flex",alignItems:"center",justifyContent:"center",textAlign:"center" as const}}>весь<br/>день</div>
+            {dates.map((d,i)=>(
+              <div key={i} style={{borderLeft:"1px solid "+bd,padding:3,display:"flex",flexDirection:"column",gap:3}}>
+                {forDay(d).filter((t:any)=>!t.due_time).map((t:any)=>(
+                  <div key={t.id} onClick={e=>{e.stopPropagation();openEdit(t);}} style={{display:"flex",alignItems:"center",gap:4,padding:"2px 6px",borderRadius:5,background:(t.color||"#64748B")+"1E",borderLeft:"2px solid "+(t.color||"#64748B"),cursor:"pointer",minWidth:0}}>
+                    <span onClick={e=>toggleDone(t,e)} style={{width:11,height:11,borderRadius:3,border:"1.5px solid "+(t.color||"#64748B"),background:t.done?(t.color||"#64748B"):"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>{t.done&&<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}</span>
+                    <span style={{fontSize:11,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.5:1}}>{t.title}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+        {/* hour grid */}
+        <div style={{display:"grid",gridTemplateColumns:`52px repeat(${colW},1fr)`,maxHeight:isMobile?"58vh":"64vh",overflowY:"auto" as const,position:"relative" as const}}>
+          {/* hour labels */}
+          <div style={{position:"relative" as const}}>
+            {Array.from({length:HOURS},(_,h)=>(
+              <div key={h} style={{height:HH,fontSize:10,color:C.t2,textAlign:"right" as const,paddingRight:6,paddingTop:2,boxSizing:"border-box" as const}}>{String(HOUR_START+h).padStart(2,"0")}:00</div>
+            ))}
+          </div>
+          {dates.map((d,ci)=>{
+            const dateStr=pd(d);const isToday=dateStr===todayStr;
+            const timed=packDay(forDay(d).filter((t:any)=>t.due_time));
+            return(
+              <div key={ci} onClick={e=>{const box=(e.currentTarget as HTMLElement).getBoundingClientRect();const y=(e as any).clientY-box.top;let mn=HOUR_START*60+Math.round((y/HH*60)/15)*15;mn=Math.max(HOUR_START*60,Math.min(HOUR_END*60-15,mn));openNew(dateStr,String(Math.floor(mn/60)).padStart(2,"0")+":"+String(mn%60).padStart(2,"0"));}}
+                style={{position:"relative" as const,borderLeft:"1px solid "+bd,cursor:"pointer"}}>
+                {Array.from({length:HOURS},(_,h)=><div key={h} style={{height:HH,borderTop:h===0?"none":"1px solid "+(dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.05)"),boxSizing:"border-box" as const}}/>)}
+                {isToday&&nowMin>=HOUR_START*60&&nowMin<=HOUR_END*60&&(
+                  <div style={{position:"absolute" as const,left:0,right:0,top:((nowMin-HOUR_START*60)/60)*HH,height:1.5,background:"#EF4444",zIndex:5}}><div style={{position:"absolute",left:0,top:-3,width:7,height:7,borderRadius:"50%",background:"#EF4444"}}/></div>
+                )}
+                {timed.map((it:any)=>{
+                  const t=it.t;const top=Math.max(0,Math.min(HOURS*HH-24,((it.s-HOUR_START*60)/60)*HH));
+                  const wPct=100/it.laneCount;const leftPct=it.lane*wPct;
+                  return(
+                    <div key={t.id} onClick={e=>{e.stopPropagation();openEdit(t);}}
+                      style={{position:"absolute" as const,top,left:`calc(${leftPct}% + 2px)`,width:`calc(${wPct}% - 4px)`,height:HH-4,borderRadius:5,background:(t.color||"#64748B")+(dark?"33":"22"),borderLeft:"3px solid "+(t.color||"#64748B"),padding:"2px 5px",overflow:"hidden",cursor:"pointer",boxSizing:"border-box" as const}}>
+                      <div style={{display:"flex",alignItems:"center",gap:4}}>
+                        <span onClick={e=>toggleDone(t,e)} style={{width:11,height:11,borderRadius:3,border:"1.5px solid "+(t.color||"#64748B"),background:t.done?(t.color||"#64748B"):"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>{t.done&&<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}</span>
+                        {prioDot(t.priority)}
+                        <span style={{fontSize:11,fontWeight:600,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.55:1}}>{t.due_time} {t.title}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   return(
     <div style={{width:"100%"}}>
       {/* Toolbar */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:16,flexWrap:"wrap" as const}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
-          {view==="calendar"&&<>
-            <button onClick={()=>navMonth(-1)} style={{width:34,height:34,borderRadius:8,border:"1px solid "+bd,background:cardBg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          {(view==="month"||isGrid)&&<>
+            <button onClick={()=>view==="month"?navMonth(-1):navRange(-1)} style={{width:34,height:34,borderRadius:8,border:"1px solid "+bd,background:cardBg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
-            <button onClick={()=>navMonth(1)} style={{width:34,height:34,borderRadius:8,border:"1px solid "+bd,background:cardBg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <button onClick={()=>view==="month"?navMonth(1):navRange(1)} style={{width:34,height:34,borderRadius:8,border:"1px solid "+bd,background:cardBg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
-            <span style={{fontSize:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em",minWidth:isMobile?0:180}}>{PL_MONTHS[m]} {y}</span>
+            <span style={{fontSize:isMobile?15:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em",minWidth:isMobile?0:180}}>{view==="month"?`${PL_MONTHS[m]} ${y}`:rangeLabel()}</span>
             <button onClick={()=>setCur(new Date())} style={{padding:"6px 14px",background:"transparent",color:C.t1,border:"1px solid "+bd,borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer"}}>Сегодня</button>
           </>}
           {view==="list"&&<span style={{fontSize:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em"}}>Текущие задачи</span>}
         </div>
-        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap" as const}}>
           <div style={{display:"flex",background:C.ib,borderRadius:8,padding:3,border:"1px solid "+bd,gap:2}}>
-            {(["calendar","list"] as const).map(v=>(
-              <button key={v} onClick={()=>setView(v)} style={{padding:"6px 14px",borderRadius:6,border:"none",background:view===v?cardBg:"transparent",color:view===v?C.t1:C.t2,fontSize:12,fontWeight:600,cursor:"pointer",boxShadow:view===v?"0 1px 3px rgba(0,0,0,0.1)":"none"}}>{v==="calendar"?"Календарь":"Список"}</button>
+            {([["month","Месяц"],["week","Неделя"],["3day","3 дня"],["day","День"],["list","Список"]] as const).map(([v,lbl])=>(
+              <button key={v} onClick={()=>setView(v)} style={{padding:isMobile?"6px 9px":"6px 12px",borderRadius:6,border:"none",background:view===v?cardBg:"transparent",color:view===v?C.t1:C.t2,fontSize:12,fontWeight:600,cursor:"pointer",boxShadow:view===v?"0 1px 3px rgba(0,0,0,0.1)":"none",whiteSpace:"nowrap" as const}}>{lbl}</button>
             ))}
           </div>
-          <button onClick={()=>openNew(view==="calendar"?"":todayStr)} style={{padding:"8px 16px",background:C.t1,color:C.bg,border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+          <button onClick={()=>openNew(view==="list"?todayStr:(isGrid?pd(cur):""))} style={{padding:"8px 16px",background:C.t1,color:C.bg,border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Задача
           </button>
         </div>
       </div>
 
-      {loading?<div style={{padding:50,textAlign:"center" as const,color:C.t2,fontSize:14}}>Загрузка…</div>:view==="calendar"?(
+      {loading?<div style={{padding:50,textAlign:"center" as const,color:C.t2,fontSize:14}}>Загрузка…</div>:isGrid?(
+        <>{TimeGridView({dates:rangeDates()})}</>
+      ):view==="month"?(
         /* ---------- MONTH GRID ---------- */
         <div style={{border:"1px solid "+bd,borderRadius:12,overflow:"hidden",background:cardBg}}>
           <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",borderBottom:"1px solid "+bd}}>
@@ -2734,9 +2843,10 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
   const goals = useTable("goals", userId);
   const goalTasks = useTable("goal_tasks", userId);
   const isMobile=useIsMobile();
-  const[stratTab,setStratTab]=useState<"sprint"|"yearmap"|"calendar">("sprint");
+  const[stratTab,setStratTab]=useState<"sprint"|"yearmap"|"calendar">("calendar");
   // ── Calendar state ──────────────────────────────────────────
   const calTasks=useTable("cal_tasks",userId);
+  const plannerTasks=useTable("planner_tasks",userId);
   const[calMode,setCalMode]=useState<"month"|"week"|"day">("week");
   const[calDate,setCalDate]=useState(()=>new Date());
   const[calModal,setCalModal]=useState<any>(null); // null | "new" | task object
@@ -2761,8 +2871,18 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
       end_time:t.end_time||minsToEnd(t.start_time||"10:00",t.mins||60),
       auto_placed:!t.start_time,
     }));
-    return[...cal,...kb,...gt];
-  },[calTasks.data,kanban.data,goalTasks.data]);
+    // War Room tasks (planner_tasks) with a due date → show in calendar too
+    const pl=plannerTasks.data.filter((t:any)=>t.due_date).map((t:any)=>({
+      ...t,_src:"planner",
+      text:t.title,
+      date:t.due_date,
+      start_time:t.due_time||"10:00",
+      end_time:minsToEnd(t.due_time||"10:00",60),
+      auto_placed:!t.due_time,
+      status:t.done?"done":"todo",
+    }));
+    return[...cal,...kb,...gt,...pl];
+  },[calTasks.data,kanban.data,goalTasks.data,plannerTasks.data]);
 
   // Smart free-slot finder: finds first free 1h slot 10:00–18:00
   const findFreeSlot=(dateStr:string)=>{
@@ -2862,8 +2982,9 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
     const e=minToTime(Math.min((CAL_START+CAL_HOURS)*60,startMin+Math.max(30,dur)));
     if(t._src==="kanban")await kanban.update(id,{date:dateStr,start_time:s,end_time:e});
     else if(t._src==="goal")await goalTasks.update(id,{date:dateStr,start_time:s,end_time:e});
+    else if(t._src==="planner")await plannerTasks.update(id,{due_date:dateStr,due_time:s});
     else await calTasks.update(id,{date:dateStr,start_time:s,end_time:e,manually_placed:true,auto_placed:false});
-  },[kanban,goalTasks,calTasks]);
+  },[kanban,goalTasks,calTasks,plannerTasks]);
 
   const doResizeTask=useCallback(async(id:string,startMin:number,endMin:number)=>{
     const t=allCalRef.current.find((x:any)=>x.id===id);
@@ -2871,6 +2992,7 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
     const e=minToTime(Math.max(startMin+15,Math.min((CAL_START+CAL_HOURS)*60,Math.round(endMin/15)*15)));
     if(t._src==="kanban")await kanban.update(id,{end_time:e});
     else if(t._src==="goal")await goalTasks.update(id,{end_time:e});
+    else if(t._src==="planner")return; // War Room tasks have no duration to resize
     else await calTasks.update(id,{end_time:e,manually_placed:true});
   },[kanban,goalTasks,calTasks]);
 
@@ -3193,6 +3315,7 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
                       const done=!(t.status==="done"||t.done);
                       if(t._src==="kanban")kanban.update(t.id,{status:done?"done":"todo",done});
                       else if(t._src==="goal")goalTasks.update(t.id,{status:done?"done":"todo",done});
+                      else if(t._src==="planner")plannerTasks.update(t.id,{done});
                       else calTasks.update(t.id,{status:done?"done":"todo",done});}}
                       style={{width:13,height:13,minWidth:13,borderRadius:3,border:"1.5px solid "+(isDone?"#898989":color),background:isDone?"#898989":"transparent",cursor:"pointer",marginTop:1,display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s"}}>
                       {isDone&&<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5"><polyline points="20 6 9 17 4 12"/></svg>}
@@ -3522,9 +3645,8 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
 
     {/* Tabs */}
     <div style={{display:"inline-flex",background:C.bg,borderRadius:8,padding:3,gap:2,marginBottom:24,border:"1px solid "+C.bd}}>
-      <button style={tabStyle(stratTab==="sprint")} onClick={()=>setStratTab("sprint")}>Текущий спринт</button>
+      <button style={tabStyle(stratTab==="calendar")} onClick={()=>setStratTab("calendar")}>Задачи</button>
       <button style={tabStyle(stratTab==="yearmap")} onClick={()=>setStratTab("yearmap")}>Карта года</button>
-      <button style={tabStyle(stratTab==="calendar")} onClick={()=>setStratTab("calendar")}>Календарь задач</button>
     </div>
     {stratTab==="yearmap"&&<YearMap userId={userId} goals={goals} goalUpdate={goals.update} goalAdd={goals.add} goalTasks={goalTasks}/>}
 
@@ -8019,7 +8141,12 @@ ${itemsHTML}
 /* ============ VIZZY STORIES AI ============ */
 type SImg={id:string,url:string};
 type OverlayEl={id:string,type:"arrow"|"line"|"image",x:number,y:number,rot:number,len?:number,thickness?:number,color?:string,w?:number,imgUrl?:string};
-type SStory={id:string,text:string,imgUrl:string,gradientPosition:"top"|"bottom",fontId:string,textY:number,textAlign:"left"|"center"|"right",fontScale:number,grayscale:boolean,overlays?:OverlayEl[]};
+type SColorCorrection={brightness:number,contrast:number,saturation:number,warmth:number};
+type SStory={id:string,text:string,imgUrl:string,gradientPosition:"top"|"bottom",fontId:string,textY:number,textAlign:"left"|"center"|"right",fontScale:number,grayscale:boolean,cc?:SColorCorrection,overlays?:OverlayEl[]};
+
+const CC_DEFAULT:SColorCorrection={brightness:1,contrast:1,saturation:1,warmth:0};
+const ccOf=(o:SStory):SColorCorrection=>({...CC_DEFAULT,...(o.cc||{})});
+const ccIsDefault=(c:SColorCorrection)=>c.brightness===1&&c.contrast===1&&c.saturation===1&&c.warmth===0;
 
 const STORY_FONTS:{id:string,label:string,family:string,weight:number}[]=[
   {id:"mont-black",label:"Montserrat Чёрный",family:"Montserrat",weight:900},
@@ -8032,6 +8159,8 @@ const STORY_FONTS:{id:string,label:string,family:string,weight:number}[]=[
   {id:"times",label:"Times",family:"Times New Roman",weight:700},
   {id:"coolvetica",label:"Coolvetica",family:"Coolvetica",weight:400},
   {id:"instagram",label:"Instagram",family:"Poppins",weight:700},
+  {id:"literature",label:"Литература",family:"Lora",weight:700},
+  {id:"literature-reg",label:"Литература Тонкий",family:"Lora",weight:400},
 ];
 const STORY_GOALS=["Продажа","Прогрев","Личный бренд","Вовлечение","Кейсы","Анонс","Контент","Свой вариант"];
 
@@ -8067,14 +8196,31 @@ function storyWrap(ctx:CanvasRenderingContext2D,text:string,maxW:number):string[
   return out.length?out:[""];
 }
 
+function storyFontFallback(family:string){return (family==="Lora"||family==="Times New Roman")?"serif":"sans-serif";}
+
 function drawStory(ctx:CanvasRenderingContext2D,W:number,H:number,o:SStory,img:HTMLImageElement|null,oimgs?:Record<string,HTMLImageElement>){
   ctx.clearRect(0,0,W,H);
+  const cc=ccOf(o);
   if(img){
     const ir=img.width/img.height,cr=W/H;let dw,dh,dx,dy;
     if(ir>cr){dh=H;dw=H*ir;dx=(W-dw)/2;dy=0;}else{dw=W;dh=W/ir;dx=0;dy=(H-dh)/2;}
-    if(o.grayscale)ctx.filter="grayscale(1)";
+    const fx:string[]=[];
+    if(o.grayscale)fx.push("grayscale(1)");
+    if(cc.brightness!==1)fx.push(`brightness(${cc.brightness})`);
+    if(cc.contrast!==1)fx.push(`contrast(${cc.contrast})`);
+    if(cc.saturation!==1&&!o.grayscale)fx.push(`saturate(${cc.saturation})`);
+    ctx.filter=fx.length?fx.join(" "):"none";
     ctx.drawImage(img,dx,dy,dw,dh);
     ctx.filter="none";
+    // warmth tint (soft-light keeps the grade natural)
+    if(cc.warmth!==0){
+      ctx.save();
+      ctx.globalCompositeOperation="soft-light";
+      ctx.globalAlpha=Math.min(0.85,Math.abs(cc.warmth));
+      ctx.fillStyle=cc.warmth>0?"#FF8A1E":"#1E7BFF";
+      ctx.fillRect(0,0,W,H);
+      ctx.restore();
+    }
   }else{ctx.fillStyle="#1a1a1a";ctx.fillRect(0,0,W,H);}
   const g=ctx.createLinearGradient(0,0,0,H);
   if(o.gradientPosition==="top"){g.addColorStop(0,"rgba(0,0,0,0.82)");g.addColorStop(0.45,"rgba(0,0,0,0.18)");g.addColorStop(1,"rgba(0,0,0,0)");}
@@ -8085,7 +8231,7 @@ function drawStory(ctx:CanvasRenderingContext2D,W:number,H:number,o:SStory,img:H
   const family=font.family,weight=font.weight;
   let size=Math.round(W*0.064*(o.fontScale||1));
   const minSize=Math.round(W*0.028);
-  const setF=(fs:number)=>{ctx.font=`${weight} ${fs}px "${family}",sans-serif`;};
+  const setF=(fs:number)=>{ctx.font=`${weight} ${fs}px "${family}",${storyFontFallback(family)}`;};
   setF(size);let lines=storyWrap(ctx,o.text,maxW);let lineH=size*1.22;
   while(lines.length*lineH>availH&&size>minSize){size-=2;setF(size);lines=storyWrap(ctx,o.text,maxW);lineH=size*1.22;}
   const blockH=lines.length*lineH;
@@ -8132,7 +8278,7 @@ function StoryCanvas({story,width,height,radius=0,rev=0}:{story:SStory,width:num
       drawStory(ctx,width,height,story,img,oimgs);
     })();
     return ()=>{alive=false;};
-  },[story.imgUrl,story.text,story.gradientPosition,story.fontId,story.textY,story.textAlign,story.fontScale,story.grayscale,story.overlays,width,height,rev]);
+  },[story.imgUrl,story.text,story.gradientPosition,story.fontId,story.textY,story.textAlign,story.fontScale,story.grayscale,story.cc,story.overlays,width,height,rev]);
   return <canvas ref={ref} width={width} height={height} style={{width,height,borderRadius:radius,display:"block"}}/>;
 }
 
@@ -8352,7 +8498,7 @@ function StoriesAIPage({userId}:{userId:string}){
   useEffect(()=>{
     if(!document.getElementById("ks-story-fonts")){
       const l=document.createElement("link");l.id="ks-story-fonts";l.rel="stylesheet";
-      l.href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;700;900&family=Inter:wght@300;400;700;900&family=Poppins:wght@700&display=swap";
+      l.href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;700;900&family=Inter:wght@300;400;700;900&family=Poppins:wght@700&family=Lora:wght@400;700&display=swap";
       document.head.appendChild(l);
     }
     if(!document.getElementById("ks-story-fonts-cv")){
@@ -8362,7 +8508,11 @@ function StoriesAIPage({userId}:{userId:string}){
     }
     const fonts:any=(document as any).fonts;
     if(fonts&&fonts.load){
-      const jobs=['300 100px Montserrat','700 100px Montserrat','900 100px Montserrat','300 100px Inter','400 100px Inter','700 100px Inter','900 100px Inter','700 100px Poppins','400 100px Coolvetica'].map(s=>fonts.load(s).catch(()=>{}));
+      const specs=['300 100px Montserrat','700 100px Montserrat','900 100px Montserrat','300 100px Inter','400 100px Inter','700 100px Inter','900 100px Inter','700 100px Poppins','400 100px Coolvetica','400 100px Lora','700 100px Lora'];
+      // Google Fonts splits subsets by unicode-range: load latin AND cyrillic glyphs explicitly,
+      // otherwise canvas renders Russian text with a fallback font.
+      const CYR="Русский текст Ёё";
+      const jobs=[...specs.map((s:string)=>fonts.load(s).catch(()=>{})),...specs.map((s:string)=>fonts.load(s,CYR).catch(()=>{}))];
       Promise.allSettled(jobs).then(()=>setFontsRev(r=>r+1));
     }
   },[]);
@@ -8442,7 +8592,7 @@ function StoriesAIPage({userId}:{userId:string}){
       const imgs=pickImages(scripts.length);
       const built:SStory[]=scripts.map((s,i)=>{
         const gp:SStory["gradientPosition"]=Math.random()<0.5?"top":"bottom";
-        return{id:"st"+i+Date.now().toString(36),text:s.text,imgUrl:imgs[i],gradientPosition:gp,fontId:"mont-black",textY:gp==="top"?0:1,textAlign:"left",fontScale:1,grayscale:false};
+        return{id:"st"+i+Date.now().toString(36),text:s.text,imgUrl:imgs[i],gradientPosition:gp,fontId:"mont-black",textY:gp==="top"?0:1,textAlign:"left",fontScale:1,grayscale:false,cc:{...CC_DEFAULT}};
       });
       setStories(built);setSel(0);setView("editor");
     }catch(e){
@@ -8676,9 +8826,40 @@ function StoriesAIPage({userId}:{userId:string}){
             </div>
           </div>
           <div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:8}}>
+              <div style={{fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3}}>Цветокоррекция</div>
+              <div style={{display:"flex",gap:6}}>
+                <button onClick={()=>patchStory(sel,{cc:{...CC_DEFAULT}})} disabled={ccIsDefault(ccOf(cur))}
+                  style={{padding:"5px 10px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:ccIsDefault(ccOf(cur))?C.t2:C.t1,fontSize:11,fontWeight:600,cursor:ccIsDefault(ccOf(cur))?"default":"pointer",opacity:ccIsDefault(ccOf(cur))?0.5:1,fontFamily:"'Inter',sans-serif"}}>Сброс</button>
+                <button onClick={()=>{const g=ccOf(cur);setStories(prev=>prev.map(s=>({...s,cc:{...g}})));}} title="Применить эту коррекцию ко всем сторис серии"
+                  style={{padding:"5px 10px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Ко всем</button>
+              </div>
+            </div>
+            {([
+              {k:"brightness",label:"Яркость",min:0.5,max:1.5,step:0.01,base:1},
+              {k:"contrast",label:"Контраст",min:0.5,max:1.5,step:0.01,base:1},
+              {k:"saturation",label:"Насыщенность",min:0,max:2,step:0.01,base:1},
+              {k:"warmth",label:"Тепло / холод",min:-1,max:1,step:0.01,base:0},
+            ] as const).map(s=>{
+              const g=ccOf(cur);const v=(g as any)[s.k] as number;
+              const pct=Math.round((v-s.base)*100);
+              return(
+                <div key={s.k} style={{marginBottom:9}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:3}}>
+                    <span style={{fontSize:12,color:C.t2}}>{s.label}</span>
+                    <span style={{fontSize:11,fontWeight:700,color:pct===0?C.t2:C.t1,fontVariantNumeric:"tabular-nums" as const}}>{pct>0?"+":""}{pct}</span>
+                  </div>
+                  <input type="range" min={s.min} max={s.max} step={s.step} value={v}
+                    onChange={e=>patchStory(sel,{cc:{...ccOf(cur),[s.k]:+e.target.value}})}
+                    style={{width:"100%",accentColor:"#757575",cursor:"pointer",display:"block"}}/>
+                </div>
+              );
+            })}
+          </div>
+          <div>
             <div style={{fontSize:12,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8}}>Шрифт</div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap" as const}}>
-              {STORY_FONTS.map(f=><button key={f.id} onClick={()=>patchStory(sel,{fontId:f.id})} style={{...segBtn(cur.fontId===f.id),fontFamily:`"${f.family}",sans-serif`,fontWeight:f.weight}}>{f.label}</button>)}
+              {STORY_FONTS.map(f=><button key={f.id} onClick={()=>patchStory(sel,{fontId:f.id})} style={{...segBtn(cur.fontId===f.id),fontFamily:`"${f.family}",${storyFontFallback(f.family)}`,fontWeight:f.weight}}>{f.label}</button>)}
             </div>
           </div>
           <div>
@@ -15337,8 +15518,8 @@ const KIRILL_AI_SYSTEM=`Ты — Kirill Scales AI, главный ассисте
 
 Чем ты управляешь на платформе (для каждого раздела есть инструменты):
 - CRM — лиды и воронки продаж: создавать, смотреть, менять стадию и следующий шаг
-- Стратегия → Расписание (calendar) — планировать день по часам: добавлять, переносить, удалять слоты
-- Стратегия → Спринт — рабочие задачи с длительностью; Цели года
+- War Room (Задачи) — ЕДИНЫЙ хаб всех задач и расписания дня: задачи с датой/временем и приоритетом. Календарь War Room показывает месяц/неделю/3 дня/день + список. Расписание и задачи — одно и то же (planner).
+- Стратегия → Карта года — цели года и их подзадачи
 - War Room (планер) — задачи с приоритетом и дедлайном, отмечать выполненными
 - Созвоны — планировать звонки с лидами, клиентами, командой
 - Контент — карточки Канбана и сценарии видео (short/long)
@@ -15393,15 +15574,15 @@ const KS_TOOLS:any[]=[
   {type:"function",function:{name:"list_tasks",description:"Показать активные (невыполненные) задачи из планера War Room",parameters:{type:"object",properties:{}}}},
   {type:"function",function:{name:"complete_task",description:"Отметить задачу War Room выполненной. Задача ищется по названию.",parameters:{type:"object",properties:{title:{type:"string",description:"название задачи для поиска"}},required:["title"]}}},
 
-  /* ── Расписание (Стратегия → Календарь) ── */
-  {type:"function",function:{name:"get_schedule",description:"Показать расписание на дату (или диапазон дат): все слоты по времени из календаря, спринта и целей.",parameters:{type:"object",properties:{date:{type:"string",description:"дата YYYY-MM-DD"},date_to:{type:"string",description:"конечная дата диапазона YYYY-MM-DD (необязательно)"}},required:["date"]}}},
-  {type:"function",function:{name:"add_schedule_item",description:"Добавить один слот в расписание (Стратегия → Календарь) на конкретное время.",parameters:{type:"object",properties:{text:{type:"string",description:"название дела"},date:{type:"string",description:"дата YYYY-MM-DD"},start_time:{type:"string",description:"начало HH:MM"},end_time:{type:"string",description:"конец HH:MM"},description:{type:"string"}},required:["text","date","start_time","end_time"]}}},
-  {type:"function",function:{name:"build_day_schedule",description:"Составить полное расписание на день сразу из нескольких блоков (Стратегия → Календарь). Используй для запроса «составь расписание на день».",parameters:{type:"object",properties:{date:{type:"string",description:"дата YYYY-MM-DD"},items:{type:"array",description:"блоки дня по порядку",items:{type:"object",properties:{text:{type:"string"},start_time:{type:"string",description:"HH:MM"},end_time:{type:"string",description:"HH:MM"},description:{type:"string"}},required:["text","start_time","end_time"]}}},required:["date","items"]}}},
-  {type:"function",function:{name:"update_schedule_item",description:"Перенести или переименовать слот в расписании. Слот ищется по названию (и дате, если указана).",parameters:{type:"object",properties:{text:{type:"string",description:"текущее название слота для поиска"},on_date:{type:"string",description:"дата, где искать слот YYYY-MM-DD (необязательно)"},new_text:{type:"string"},new_date:{type:"string",description:"новая дата YYYY-MM-DD"},start_time:{type:"string",description:"новое начало HH:MM"},end_time:{type:"string",description:"новый конец HH:MM"}},required:["text"]}}},
-  {type:"function",function:{name:"remove_schedule_item",description:"Удалить слот из расписания. Слот ищется по названию (и дате, если указана).",parameters:{type:"object",properties:{text:{type:"string",description:"название слота для поиска"},on_date:{type:"string",description:"дата YYYY-MM-DD (необязательно)"}},required:["text"]}}},
+  /* ── Расписание = задачи War Room (Календарь задач) ── */
+  {type:"function",function:{name:"get_schedule",description:"Показать расписание/задачи на дату (или диапазон): все задачи War Room по времени, плюс спринт и цели с датой.",parameters:{type:"object",properties:{date:{type:"string",description:"дата YYYY-MM-DD"},date_to:{type:"string",description:"конечная дата диапазона YYYY-MM-DD (необязательно)"}},required:["date"]}}},
+  {type:"function",function:{name:"add_schedule_item",description:"Добавить одну задачу с временем в расписание (War Room → Календарь задач).",parameters:{type:"object",properties:{text:{type:"string",description:"название дела"},date:{type:"string",description:"дата YYYY-MM-DD"},start_time:{type:"string",description:"время HH:MM"},end_time:{type:"string",description:"конец HH:MM (опционально)"},description:{type:"string"}},required:["text","date","start_time"]}}},
+  {type:"function",function:{name:"build_day_schedule",description:"Составить полное расписание на день сразу из нескольких задач (War Room → Календарь задач). Используй для «составь расписание на день».",parameters:{type:"object",properties:{date:{type:"string",description:"дата YYYY-MM-DD"},items:{type:"array",description:"задачи дня по порядку",items:{type:"object",properties:{text:{type:"string"},start_time:{type:"string",description:"HH:MM"},end_time:{type:"string",description:"HH:MM (опционально)"},description:{type:"string"}},required:["text","start_time"]}}},required:["date","items"]}}},
+  {type:"function",function:{name:"update_schedule_item",description:"Перенести или переименовать задачу в расписании (War Room). Ищется по названию (и дате, если указана).",parameters:{type:"object",properties:{text:{type:"string",description:"текущее название для поиска"},on_date:{type:"string",description:"дата, где искать YYYY-MM-DD (необязательно)"},new_text:{type:"string"},new_date:{type:"string",description:"новая дата YYYY-MM-DD"},start_time:{type:"string",description:"новое время HH:MM"}},required:["text"]}}},
+  {type:"function",function:{name:"remove_schedule_item",description:"Удалить задачу из расписания (War Room). Ищется по названию (и дате, если указана).",parameters:{type:"object",properties:{text:{type:"string",description:"название для поиска"},on_date:{type:"string",description:"дата YYYY-MM-DD (необязательно)"}},required:["text"]}}},
 
   /* ── Спринт и цели ── */
-  {type:"function",function:{name:"create_sprint_task",description:"Добавить рабочую задачу в Спринт (Стратегия) с длительностью в минутах.",parameters:{type:"object",properties:{text:{type:"string"},mins:{type:"number",description:"длительность в минутах"},type:{type:"string",description:"тип задачи, напр. Работа, Контент, Созвон"},date:{type:"string",description:"дата YYYY-MM-DD (необязательно)"}},required:["text"]}}},
+  {type:"function",function:{name:"create_sprint_task",description:"Добавить рабочую задачу в War Room (единый список задач). Длительность можно указать в минутах — попадёт в описание.",parameters:{type:"object",properties:{text:{type:"string"},mins:{type:"number",description:"длительность в минутах (необязательно)"},type:{type:"string",description:"тип задачи, напр. Работа, Контент, Созвон"},date:{type:"string",description:"дата YYYY-MM-DD (необязательно)"}},required:["text"]}}},
   {type:"function",function:{name:"create_goal",description:"Добавить цель в раздел Цели (Стратегия).",parameters:{type:"object",properties:{name:{type:"string"},description:{type:"string"},deadline:{type:"string",description:"дедлайн YYYY-MM-DD"}},required:["name"]}}},
   {type:"function",function:{name:"list_goals",description:"Показать цели Кирилла с дедлайнами",parameters:{type:"object",properties:{}}}},
 
@@ -15484,23 +15665,23 @@ async function ksExecTool(name:string,a:any,userId:string):Promise<string>{
       const[leadsR,tasksR,calR,callsR,pnlR]=await Promise.all([
         supabase.from("leads").select("status").eq("user_id",userId),
         supabase.from("planner_tasks").select("title,due_date").eq("user_id",userId).eq("done",false),
-        supabase.from("cal_tasks").select("text,date,start_time").eq("user_id",userId).in("date",[t0,t1]),
+        supabase.from("planner_tasks").select("title,due_date,due_time").eq("user_id",userId).eq("done",false).in("due_date",[t0,t1]),
         supabase.from("calls").select("title,date,time_start").eq("user_id",userId).gte("date",t0).order("date",{ascending:true}).limit(5),
         supabase.from("pnl").select("type,amount,date").eq("user_id",userId).like("date",monthPrefix+"%"),
       ]);
       const byStage:Record<string,number>={};(leadsR.data||[]).forEach((l:any)=>{byStage[l.status]=(byStage[l.status]||0)+1;});
       const stageStr=CRM_DEFAULT_STAGES.map(s=>byStage[s.id]?`${s.label}: ${byStage[s.id]}`:null).filter(Boolean).join(", ")||"нет лидов";
       const tasks=tasksR.data||[];
-      const today0=(calR.data||[]).filter((t:any)=>t.date===t0).sort((x:any,y:any)=>(x.start_time||"").localeCompare(y.start_time||""));
-      const tmrw=(calR.data||[]).filter((t:any)=>t.date===t1).sort((x:any,y:any)=>(x.start_time||"").localeCompare(y.start_time||""));
+      const today0=(calR.data||[]).filter((t:any)=>t.due_date===t0).sort((x:any,y:any)=>(x.due_time||"").localeCompare(y.due_time||""));
+      const tmrw=(calR.data||[]).filter((t:any)=>t.due_date===t1).sort((x:any,y:any)=>(x.due_time||"").localeCompare(y.due_time||""));
       const inc=(pnlR.data||[]).filter((p:any)=>p.type==="income").reduce((s:number,p:any)=>s+(+p.amount||0),0);
       const exp=(pnlR.data||[]).filter((p:any)=>p.type==="expense").reduce((s:number,p:any)=>s+(+p.amount||0),0);
       const calls=(callsR.data||[]);
       return [
         `CRM: ${leadsR.data?.length||0} лидов (${stageStr}).`,
         `War Room: ${tasks.length} активных задач${tasks.length?" — "+tasks.slice(0,5).map((t:any)=>t.title).join(", "):""}.`,
-        `Расписание сегодня (${t0}): ${today0.length?today0.map((t:any)=>`${t.start_time} ${t.text}`).join("; "):"пусто"}.`,
-        `Расписание завтра (${t1}): ${tmrw.length?tmrw.map((t:any)=>`${t.start_time} ${t.text}`).join("; "):"пусто"}.`,
+        `Расписание сегодня (${t0}): ${today0.length?today0.map((t:any)=>`${t.due_time||"—"} ${t.title}`).join("; "):"пусто"}.`,
+        `Расписание завтра (${t1}): ${tmrw.length?tmrw.map((t:any)=>`${t.due_time||"—"} ${t.title}`).join("; "):"пусто"}.`,
         `Созвоны: ${calls.length?calls.map((c:any)=>`${c.date} ${c.time_start||""} ${c.title}`.trim()).join("; "):"нет запланированных"}.`,
         `Финансы за месяц: доход ${inc.toLocaleString("ru-RU")} ₽, расход ${exp.toLocaleString("ru-RU")} ₽, прибыль ${(inc-exp).toLocaleString("ru-RU")} ₽.`,
       ].join("\n");
@@ -15545,78 +15726,77 @@ async function ksExecTool(name:string,a:any,userId:string):Promise<string>{
       return `Задача «${task.title}» отмечена выполненной.`;
     }
 
-    /* ── Расписание (cal_tasks + спринт + цели) ── */
+    /* ── Расписание = задачи War Room (planner_tasks) + спринт + цели ── */
     if(name==="get_schedule"){
       const from=a.date;const to=a.date_to||a.date;
       if(!from)return "Не указана дата.";
-      const[calR,kbR,gtR]=await Promise.all([
-        supabase.from("cal_tasks").select("text,date,start_time,end_time,done").eq("user_id",userId).gte("date",from).lte("date",to),
-        supabase.from("kanban").select("text,date,start_time,mins,done").eq("user_id",userId).gte("date",from).lte("date",to),
-        supabase.from("goal_tasks").select("text,date,start_time,mins,done").eq("user_id",userId).gte("date",from).lte("date",to),
+      const[plR,kbR,gtR]=await Promise.all([
+        supabase.from("planner_tasks").select("title,due_date,due_time,done").eq("user_id",userId).gte("due_date",from).lte("due_date",to),
+        supabase.from("kanban").select("text,date,start_time,done").eq("user_id",userId).gte("date",from).lte("date",to),
+        supabase.from("goal_tasks").select("text,date,start_time,done").eq("user_id",userId).gte("date",from).lte("date",to),
       ]);
       const rows:any[]=[];
-      (calR.data||[]).forEach((t:any)=>rows.push({date:t.date,start:t.start_time||"—",end:t.end_time||"",text:t.text,done:t.done,tag:""}));
-      (kbR.data||[]).filter((t:any)=>t.date).forEach((t:any)=>rows.push({date:t.date,start:t.start_time||"10:00",end:"",text:t.text,done:t.done,tag:" (спринт)"}));
-      (gtR.data||[]).filter((t:any)=>t.date).forEach((t:any)=>rows.push({date:t.date,start:t.start_time||"10:00",end:"",text:t.text,done:t.done,tag:" (цель)"}));
-      if(!rows.length)return `На ${from===to?from:from+"–"+to} расписание пустое.`;
+      (plR.data||[]).forEach((t:any)=>rows.push({date:t.due_date,start:t.due_time||"—",text:t.title,done:t.done,tag:""}));
+      (kbR.data||[]).filter((t:any)=>t.date).forEach((t:any)=>rows.push({date:t.date,start:t.start_time||"10:00",text:t.text,done:t.done,tag:" (спринт)"}));
+      (gtR.data||[]).filter((t:any)=>t.date).forEach((t:any)=>rows.push({date:t.date,start:t.start_time||"10:00",text:t.text,done:t.done,tag:" (цель)"}));
+      if(!rows.length)return `На ${from===to?from:from+"–"+to} задач в расписании нет.`;
       rows.sort((x,y)=>x.date===y.date?(x.start||"").localeCompare(y.start||""):x.date.localeCompare(y.date));
       const byDate:Record<string,string[]>={};
-      rows.forEach(r=>{(byDate[r.date]=byDate[r.date]||[]).push(`${r.start}${r.end?"–"+r.end:""} ${r.text}${r.tag}${r.done?" ✓":""}`);});
+      rows.forEach(r=>{(byDate[r.date]=byDate[r.date]||[]).push(`${r.start} ${r.text}${r.tag}${r.done?" ✓":""}`);});
       return Object.keys(byDate).map(d=>`${d}:\n  `+byDate[d].join("\n  ")).join("\n");
     }
     if(name==="add_schedule_item"){
-      const row:any={text:a.text||"Дело",description:a.description||"",date:a.date||today(),start_time:a.start_time||"10:00",end_time:a.end_time||"11:00",auto_placed:false,manually_placed:true,status:"todo",done:false,user_id:userId};
-      const{error}=await supabase.from("cal_tasks").insert(row).select().single();
-      if(error)return "Ошибка добавления слота: "+error.message;
-      ksFire("cal_tasks");
-      return `«${row.text}» добавлено в расписание на ${row.date} ${row.start_time}–${row.end_time}.`;
+      const row:any={title:a.text||"Дело",description:a.description||"",due_date:a.date||today(),due_time:a.start_time||"10:00",priority:"none",color:"#3B82F6",done:false,subtasks:[],user_id:userId,updated_at:new Date().toISOString()};
+      const{error}=await supabase.from("planner_tasks").insert(row).select().single();
+      if(error)return "Ошибка добавления в расписание: "+error.message;
+      ksFire("planner_tasks");
+      return `«${row.title}» добавлено в расписание (War Room) на ${row.due_date} ${row.due_time}.`;
     }
     if(name==="build_day_schedule"){
       const date=a.date||today();
       const items=Array.isArray(a.items)?a.items:[];
       if(!items.length)return "Не переданы блоки расписания.";
-      const rows=items.map((it:any)=>({text:it.text||"Дело",description:it.description||"",date,start_time:it.start_time||"10:00",end_time:it.end_time||"11:00",auto_placed:false,manually_placed:true,status:"todo",done:false,user_id:userId}));
-      const{data,error}=await supabase.from("cal_tasks").insert(rows).select();
+      const rows=items.map((it:any)=>({title:it.text||"Дело",description:it.description||(it.end_time?`до ${it.end_time}`:""),due_date:date,due_time:it.start_time||"10:00",priority:"none",color:"#3B82F6",done:false,subtasks:[],user_id:userId,updated_at:new Date().toISOString()}));
+      const{data,error}=await supabase.from("planner_tasks").insert(rows).select();
       if(error)return "Ошибка построения расписания: "+error.message;
-      ksFire("cal_tasks");
-      const list=(data||rows).map((r:any)=>`${r.start_time} ${r.text}`).join(", ");
-      return `Расписание на ${date} составлено (${rows.length} блоков): ${list}. Открой Стратегия → Календарь.`;
+      ksFire("planner_tasks");
+      const list=(data||rows).map((r:any)=>`${r.due_time} ${r.title}`).join(", ");
+      return `Расписание на ${date} составлено — ${rows.length} задач в War Room: ${list}. Смотри «War Room → Календарь задач».`;
     }
     if(name==="update_schedule_item"){
-      let q=supabase.from("cal_tasks").select("*").eq("user_id",userId).ilike("text",`%${a.text}%`);
-      if(a.on_date)q=q.eq("date",a.on_date);
-      const{data:found}=await q.order("date",{ascending:false}).limit(1);
+      let q=supabase.from("planner_tasks").select("*").eq("user_id",userId).ilike("title",`%${a.text}%`);
+      if(a.on_date)q=q.eq("due_date",a.on_date);
+      const{data:found}=await q.order("created_at",{ascending:false}).limit(1);
       const item=found?.[0];
-      if(!item)return `Слот «${a.text}» не найден.`;
-      const upd:any={manually_placed:true,auto_placed:false};
-      if(a.new_text)upd.text=a.new_text;
-      if(a.new_date)upd.date=a.new_date;
-      if(a.start_time)upd.start_time=a.start_time;
-      if(a.end_time)upd.end_time=a.end_time;
-      const{error}=await supabase.from("cal_tasks").update(upd).eq("id",item.id);
-      if(error)return "Ошибка обновления слота: "+error.message;
-      ksFire("cal_tasks");
-      return `Слот «${item.text}» обновлён${upd.date?` → ${upd.date}`:""}${upd.start_time?` ${upd.start_time}${upd.end_time?"–"+upd.end_time:""}`:""}.`;
+      if(!item)return `Задача «${a.text}» не найдена.`;
+      const upd:any={updated_at:new Date().toISOString()};
+      if(a.new_text)upd.title=a.new_text;
+      if(a.new_date)upd.due_date=a.new_date;
+      if(a.start_time)upd.due_time=a.start_time;
+      const{error}=await supabase.from("planner_tasks").update(upd).eq("id",item.id);
+      if(error)return "Ошибка обновления: "+error.message;
+      ksFire("planner_tasks");
+      return `Задача «${item.title}» обновлена${upd.due_date?` → ${upd.due_date}`:""}${upd.due_time?` ${upd.due_time}`:""}.`;
     }
     if(name==="remove_schedule_item"){
-      let q=supabase.from("cal_tasks").select("*").eq("user_id",userId).ilike("text",`%${a.text}%`);
-      if(a.on_date)q=q.eq("date",a.on_date);
-      const{data:found}=await q.order("date",{ascending:false}).limit(1);
+      let q=supabase.from("planner_tasks").select("*").eq("user_id",userId).ilike("title",`%${a.text}%`);
+      if(a.on_date)q=q.eq("due_date",a.on_date);
+      const{data:found}=await q.order("created_at",{ascending:false}).limit(1);
       const item=found?.[0];
-      if(!item)return `Слот «${a.text}» не найден.`;
-      const{error}=await supabase.from("cal_tasks").delete().eq("id",item.id);
+      if(!item)return `Задача «${a.text}» не найдена.`;
+      const{error}=await supabase.from("planner_tasks").delete().eq("id",item.id);
       if(error)return "Ошибка удаления: "+error.message;
-      ksFire("cal_tasks");
-      return `Слот «${item.text}» (${item.date}) удалён из расписания.`;
+      ksFire("planner_tasks");
+      return `Задача «${item.title}» (${item.due_date||"без даты"}) удалена из расписания.`;
     }
 
     /* ── Спринт и цели ── */
     if(name==="create_sprint_task"){
-      const row:any={text:a.text||"Задача",mins:a.mins||60,type:a.type||"Работа",date:a.date||null,done:false,status:"todo",sort_order:Math.floor(Date.now()/1000),user_id:userId};
-      const{error}=await supabase.from("kanban").insert(row).select().single();
-      if(error)return "Ошибка создания задачи спринта: "+error.message;
-      ksFire("kanban");
-      return `Задача «${row.text}» (${row.mins} мин) добавлена в Спринт${row.date?" на "+row.date:""}.`;
+      const row:any={title:a.text||"Задача",description:a.type?`Тип: ${a.type}${a.mins?` · ${a.mins} мин`:""}`:"",due_date:a.date||null,due_time:"",priority:"none",color:"#3B82F6",done:false,subtasks:[],user_id:userId,updated_at:new Date().toISOString()};
+      const{error}=await supabase.from("planner_tasks").insert(row).select().single();
+      if(error)return "Ошибка создания задачи: "+error.message;
+      ksFire("planner_tasks");
+      return `Задача «${row.title}» добавлена в War Room${row.due_date?" на "+row.due_date:""}.`;
     }
     if(name==="create_goal"){
       const{data:pinned}=await supabase.from("goals").select("id").eq("user_id",userId).eq("is_system_pinned",true).limit(1);
