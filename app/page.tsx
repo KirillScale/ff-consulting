@@ -204,13 +204,15 @@ function useTable(table:string, userId:string|null) {
   useEffect(()=>{const h=(e:any)=>{const t=e?.detail?.table;if(!t||t===table)load();};window.addEventListener("ks-refresh",h);return ()=>window.removeEventListener("ks-refresh",h);},[table,load]);
 
   const add = async (row: any) => {
-    const { data: inserted } = await supabase.from(table).insert({ ...row, user_id: userId }).select().single();
+    const { data: inserted, error } = await supabase.from(table).insert({ ...row, user_id: userId }).select().single();
+    if (error) console.error(`Ошибка вставки в «${table}»:`, error.message, error);
     if (inserted) setData(prev => [inserted, ...prev]);
     return inserted;
   };
 
   const update = async (id: string, updates: any) => {
-    await supabase.from(table).update(updates).eq("id", id);
+    const { error } = await supabase.from(table).update(updates).eq("id", id);
+    if (error) console.error(`Ошибка обновления «${table}»:`, error.message, error);
     setData(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
   };
 
@@ -5927,22 +5929,50 @@ function ScriptsTab({userId,contentAdd,contentUpdate,goKanban,openId,onOpened}:{
     if(linkId){goKanban&&goKanban();return;}
     if(!contentAdd){alert("Контент-план недоступен.");return;}
     setMovingKanban(true);
-    // Тип и платформа по формату сценария (тип ОБЯЗАН быть из CTYPES, иначе карточка ломается)
+    // Тип/платформа по формату сценария (тип обязан быть из допустимого списка типов контента)
     const isLong=kind==="long";
     const cardType=isLong?"Видео":"Reels";
     const cardPlatform=isLong?"youtube":"instagram";
-    const card=await contentAdd({
-      platform:cardPlatform,
-      type:cardType,
-      topic:(name||"").trim()||"Сценарий",
-      status:"progress",
-      scenario:content||"",
-      date:"",link:"",cover_url:"",content_url:"",publish_date:"",
-      script_id:curId,
-    });
-    if(card){await update(curId,{content_id:card.id});setLinkId(card.id);goKanban&&goKanban();}
-    else alert("Не удалось перенести в контент-план. Убедись, что в таблице content есть колонка script_id, а в scripts — content_id (см. инструкцию).");
+
+    // Шаг 1. Создаём карточку по той же схеме, что и ручное добавление карточки.
+    // НАМЕРЕННО без script_id — чтобы вставка не зависела от связующей колонки и не падала.
+    let card:any=null;
+    try{
+      card=await contentAdd({
+        platform:cardPlatform,
+        type:cardType,
+        topic:(name||"").trim()||"Сценарий",
+        status:"progress",
+        scenario:content||"",
+        date:"",
+        publish_date:"",
+        link:"",
+        content_url:"",
+        cover_url:"",
+        deadline_prep:null,
+        deadline_dev:null,
+        deadline_pub:null,
+      });
+    }catch(e){console.error("Создание карточки контента не удалось:",e);}
+
+    if(!card){
+      setMovingKanban(false);
+      alert("Не удалось создать карточку в контент-плане. Открой консоль браузера (F12 → Console) — там будет точная причина.");
+      return;
+    }
+
+    // Шаг 2. Мягкая привязка карточки и сценария. Не блокирует успех:
+    // если связующие колонки/кэш схемы недоступны — карточка всё равно создана.
+    try{
+      if(contentUpdate)await contentUpdate(card.id,{script_id:curId});
+      await update(curId,{content_id:card.id});
+    }catch(e){console.warn("Привязка сценария к карточке не сохранилась (карточка создана):",e);}
+
+    // В любом случае помечаем как связанное в рамках сессии — чтобы кнопка стала «Открыть»
+    // и повторное нажатие не плодило дубликаты.
+    setLinkId(card.id);
     setMovingKanban(false);
+    goKanban&&goKanban();
   };
 
   useEffect(()=>{
