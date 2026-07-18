@@ -5275,7 +5275,7 @@ const PlatformIcon=({pid,size=16}:{pid:string,size?:number})=>{
 function ContentPage({userId}:{userId:string}){
   const isMobile=useIsMobile();
   const{data:items,add,update,remove}=useTable("content",userId);
-  const[tab,setTab]=useState<"list"|"calendar"|"stories"|"scripts">("list");
+  const[tab,setTab]=useState<"list"|"calendar"|"scripts">("list");
   const[scriptToOpen,setScriptToOpen]=useState<string|null>(null);
   const[show,setShow]=useState(false);
   const[editId,setEditId]=useState<string|null>(null);
@@ -5505,7 +5505,7 @@ function ContentPage({userId}:{userId:string}){
 
     {/* ── Tabs ── */}
     <div style={{display:"flex",gap:4,marginBottom:20,borderBottom:"1px solid "+C.bd}}>
-      {[{id:"list",label:"Канбан"},{id:"calendar",label:"Календарь"},{id:"stories",label:"Карусели историй"},{id:"scripts",label:"Сценарии"}].map(t=><button key={t.id} onClick={()=>setTab(t.id as any)} style={{padding:"10px 18px",background:"none",border:"none",borderBottom:tab===t.id?"2px solid "+C.t1:"2px solid transparent",color:tab===t.id?C.t1:C.t2,fontSize:14,fontWeight:tab===t.id?600:500,cursor:"pointer",marginBottom:-2,letterSpacing:"-0.01em"}}>{t.label}</button>)}
+      {[{id:"list",label:"Контент-план"},{id:"calendar",label:"Календарь"},{id:"scripts",label:"Сценарии"}].map(t=><button key={t.id} onClick={()=>setTab(t.id as any)} style={{padding:"10px 18px",background:"none",border:"none",borderBottom:tab===t.id?"2px solid "+C.t1:"2px solid transparent",color:tab===t.id?C.t1:C.t2,fontSize:14,fontWeight:tab===t.id?600:500,cursor:"pointer",marginBottom:-2,letterSpacing:"-0.01em"}}>{t.label}</button>)}
     </div>
 
     {/* ── KANBAN TAB ── */}
@@ -5827,7 +5827,6 @@ function ContentPage({userId}:{userId:string}){
       </Card>
     </>}
 
-    {tab==="stories"&&<StoriesCarouselTab userId={userId}/>}
     {tab==="scripts"&&<ScriptsTab userId={userId} contentAdd={add} contentUpdate={update} goKanban={()=>setTab("list")} openId={scriptToOpen} onOpened={()=>setScriptToOpen(null)}/>}
   </>;
 }
@@ -5926,11 +5925,23 @@ function ScriptsTab({userId,contentAdd,contentUpdate,goKanban,openId,onOpened}:{
   const moveToKanban=async()=>{
     if(!curId)return;
     if(linkId){goKanban&&goKanban();return;}
-    if(!contentAdd){alert("Канбан недоступен.");return;}
+    if(!contentAdd){alert("Контент-план недоступен.");return;}
     setMovingKanban(true);
-    const card=await contentAdd({platform:"telegram",type:"Сценарий",topic:name||"Сценарий",status:"progress",scenario:content||"",date:"",link:"",cover_url:"",content_url:"",publish_date:"",script_id:curId});
+    // Тип и платформа по формату сценария (тип ОБЯЗАН быть из CTYPES, иначе карточка ломается)
+    const isLong=kind==="long";
+    const cardType=isLong?"Видео":"Reels";
+    const cardPlatform=isLong?"youtube":"instagram";
+    const card=await contentAdd({
+      platform:cardPlatform,
+      type:cardType,
+      topic:(name||"").trim()||"Сценарий",
+      status:"progress",
+      scenario:content||"",
+      date:"",link:"",cover_url:"",content_url:"",publish_date:"",
+      script_id:curId,
+    });
     if(card){await update(curId,{content_id:card.id});setLinkId(card.id);goKanban&&goKanban();}
-    else alert("Не удалось перенести в Kanban. Убедись, что в таблице content есть колонка script_id, а в scripts — content_id (см. инструкцию).");
+    else alert("Не удалось перенести в контент-план. Убедись, что в таблице content есть колонка script_id, а в scripts — content_id (см. инструкцию).");
     setMovingKanban(false);
   };
 
@@ -6064,9 +6075,9 @@ function ScriptsTab({userId,contentAdd,contentUpdate,goKanban,openId,onOpened}:{
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
                 PDF
               </button>
-              <button onClick={moveToKanban} disabled={movingKanban} title={linkId?"Открыть карточку на доске":"Создать карточку в колонке «Разработка»"} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 13px",borderRadius:9,border:linkId?`1px solid ${bd}`:"none",background:linkId?"transparent":C.t1,color:linkId?C.t2:C.bg,fontSize:12.5,fontWeight:600,cursor:movingKanban?"default":"pointer",fontFamily:"'Inter',sans-serif"}}>
+              <button onClick={moveToKanban} disabled={movingKanban} title={linkId?"Открыть карточку в контент-плане":"Создать карточку в колонке «Разработка»"} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 13px",borderRadius:9,border:linkId?`1px solid ${bd}`:"none",background:linkId?"transparent":C.t1,color:linkId?C.t2:C.bg,fontSize:12.5,fontWeight:600,cursor:movingKanban?"default":"pointer",fontFamily:"'Inter',sans-serif"}}>
                 {movingKanban?<><div style={{width:13,height:13,border:"2px solid rgba(150,150,150,0.3)",borderTopColor:linkId?C.t2:C.bg,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></>:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="11" rx="1"/></svg>}
-                {linkId?"Открыть в Kanban":"Перевести в Kanban"}
+                {linkId?"Открыть в контент-плане":"Перенести в контент-план"}
               </button>
             </div>
           </div>
