@@ -40,7 +40,10 @@ const applyTheme=(dark:boolean)=>{Object.assign(C,dark?DARK:LIGHT);};
 
 /* ============ CONSTANTS ============ */
 const PLATS=[{id:"instagram",label:"Instagram",color:C.pk},{id:"telegram",label:"Telegram",color:C.a},{id:"youtube",label:"YouTube",color:C.r},{id:"vk",label:"VK",color:C.lb},{id:"other",label:"Другое",color:C.t2}];
-const CTYPES=["Пост","Reels","Stories","Текст","Видео","Другое"];
+const CTYPES=["LF Video","SF Video","Text Post","Другое"];
+// Цвет типа контента: LF Video — красный, SF Video — розовый, Text Post — голубой, Другое — серый
+const CTYPE_COLORS:Record<string,string>={"LF Video":"#E62117","SF Video":"#EC4899","Text Post":"#38BDF8","Другое":"#9CA3AF"};
+const ctypeColor=(t:string)=>CTYPE_COLORS[t]||CTYPE_COLORS["Другое"];
 const CSTATS=[{id:"idea",label:"Идея",color:C.t2},{id:"progress",label:"В работе",color:C.y},{id:"ready",label:"Готово",color:C.a},{id:"published",label:"Опубликовано",color:C.g}];
 const STAGES_DEFAULT=[{id:"new",label:"Новый",color:C.a},{id:"contact",label:"Взаимодействовали",color:"#7C7C7C"},{id:"call",label:"Созвон",color:C.y},{id:"closed",label:"Закрыт",color:C.g},{id:"rejected",label:"Отказ",color:C.r}];
 const SRCS=["Instagram","Telegram","YouTube","Сайт","Рекомендация","Реклама","Другое"];
@@ -5282,7 +5285,7 @@ function ContentPage({userId}:{userId:string}){
   const[show,setShow]=useState(false);
   const[editId,setEditId]=useState<string|null>(null);
   const[coverUploading,setCoverUploading]=useState(false);
-  const emptyF=()=>({platform:"instagram",type:"Пост",topic:"",status:"idea",date:"",link:"",scenario:"",cover_url:"",content_url:"",publish_date:""});
+  const emptyF=()=>({platform:"instagram",type:"Text Post",topic:"",status:"idea",date:"",link:"",scenario:"",cover_url:"",content_url:"",publish_date:""});
   const[f,sF]=useState<any>(emptyF());
   const[calMonth,setCalMonth]=useState(()=>{const d=new Date();return{y:d.getFullYear(),m:d.getMonth()};});
 
@@ -5341,7 +5344,7 @@ function ContentPage({userId}:{userId:string}){
     if(!f.topic.trim())return;
     const payload={
       platform:f.platform||"instagram",
-      type:f.type||"Пост",
+      type:f.type||"Text Post",
       topic:f.topic.trim(),
       status:f.status||"idea",
       date:f.publish_date||null,
@@ -5361,7 +5364,7 @@ function ContentPage({userId}:{userId:string}){
 
   const startEdit=(item:any)=>{
     const publishDate=item.publish_date||item.date||"";
-    sF({platform:item.platform||"instagram",type:item.type||"Пост",topic:item.topic||"",status:item.status||"idea",date:publishDate,link:item.content_url||item.link||"",scenario:item.scenario||"",cover_url:item.cover_url||"",content_url:item.content_url||item.link||"",publish_date:publishDate});
+    sF({platform:item.platform||"instagram",type:CTYPES.includes(item.type)?item.type:"Другое",topic:item.topic||"",status:item.status||"idea",date:publishDate,link:item.content_url||item.link||"",scenario:item.scenario||"",cover_url:item.cover_url||"",content_url:item.content_url||item.link||"",publish_date:publishDate});
     setEditId(item.id);setShow(true);
   };
 
@@ -5636,15 +5639,15 @@ function ContentPage({userId}:{userId:string}){
                   style={{
                     background:C.w,borderRadius:8,padding:"12px 12px",
                     border:"1px solid "+C.bd,
-                    borderLeft:"2px solid "+C.t1,
+                    borderLeft:"3px solid "+ctypeColor(x.type),
                     cursor:"grab",
                     opacity:kanbanDrag===x.id?0.4:1,
                     transition:"all 0.15s",
                     boxShadow:"0 1px 4px rgba(0,0,0,0.06)",
                     animation:"leadPulse 5s ease-in-out infinite",
                   }}
-                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 4px 14px rgba(0,0,0,0.10)";(e.currentTarget as HTMLElement).style.borderColor=C.t1+"40";(e.currentTarget as HTMLElement).style.animationPlayState="paused";}}
-                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 1px 4px rgba(0,0,0,0.06)";(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.borderLeftColor=C.t1;(e.currentTarget as HTMLElement).style.animationPlayState="running";}}>
+                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 4px 14px rgba(0,0,0,0.10)";(e.currentTarget as HTMLElement).style.borderColor=C.t1+"40";(e.currentTarget as HTMLElement).style.borderLeftColor=ctypeColor(x.type);(e.currentTarget as HTMLElement).style.animationPlayState="paused";}}
+                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 1px 4px rgba(0,0,0,0.06)";(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.borderLeftColor=ctypeColor(x.type);(e.currentTarget as HTMLElement).style.animationPlayState="running";}}>
 
                   {/* Card top: platform + type */}
                   <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:7}}>
@@ -5654,7 +5657,10 @@ function ContentPage({userId}:{userId:string}){
                     }
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:12,fontWeight:700,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{x.topic}</div>
-                      <div style={{fontSize:10,color:C.t2,marginTop:1}}>{x.type} · <span style={{color:C.t2}}>{pLbl(x.platform)}</span></div>
+                      <div style={{display:"flex",alignItems:"center",gap:5,marginTop:2}}>
+                        <span style={{fontSize:9.5,fontWeight:700,color:ctypeColor(x.type),background:ctypeColor(x.type)+"1E",padding:"1px 6px",borderRadius:5,whiteSpace:"nowrap"}}>{x.type}</span>
+                        <span style={{fontSize:10,color:C.t2}}>{pLbl(x.platform)}</span>
+                      </div>
                     </div>
                     {x.script_id&&<button onClick={e=>{e.stopPropagation();setTab("scripts");setScriptToOpen(x.script_id);}} title="Открыть связанный сценарий" style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:6,border:"1px solid "+C.bd,background:"transparent",color:C.t2,fontSize:10,fontWeight:600,cursor:"pointer",flexShrink:0,fontFamily:"'Inter',sans-serif"}}>
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
@@ -5931,7 +5937,7 @@ function ScriptsTab({userId,contentAdd,contentUpdate,goKanban,openId,onOpened}:{
     setMovingKanban(true);
     // Тип/платформа по формату сценария (тип обязан быть из допустимого списка типов контента)
     const isLong=kind==="long";
-    const cardType=isLong?"Видео":"Reels";
+    const cardType=isLong?"LF Video":"SF Video";
     const cardPlatform=isLong?"youtube":"instagram";
 
     // Шаг 1. Создаём карточку по той же схеме, что и ручное добавление карточки.
