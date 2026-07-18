@@ -4162,7 +4162,7 @@ function CrmPage({userId}:{userId:string}){
       const prompt="Ты — аналитик продаж, поведенческий психолог и стратег по работе с клиентами.\nНа основе всей информации о лиде составь краткий, но глубокий отчёт для CRM. Не пересказывай информацию. Анализируй её.\n\nДанные лида:\nИмя: "+(l.name||"—")+"\nКонтакт: "+(l.contact||"—")+"\nИсточник: "+(l.source||"—")+"\nСумма сделки: "+(l.deal?""+l.deal+" ₽":"—")+"\nОписание: "+(l.note||"—")+"\nБоли: "+(l.pains||"—")+"\nЖелания: "+(l.desires||"—")+"\nВозражения: "+(l.objections||"—")+"\nРычаги давления: "+(l.leverage||"—")+"\nСледующий шаг: "+(l.next_step||"—")+"\n\nСтруктура отчёта (строго придерживайся):\n\n##ПОРТРЕТ##\nКто этот человек. Чем занимается. На каком этапе находится. Что им движет на самом деле.\n\n##ЭМОЦИИ##\nЧто он думает о себе. Что он думает о своём бизнесе. Что он думает о нас.\n\n##ВЕРОЯТНОСТЬ##\nВероятность покупки: X%\nПочему купит: ...\nПочему не купит: ...\nКлючевые факторы: ...\n\n##РИСКИ##\n1. ...\n2. ...\n3. ...\n\n##ШАГИ##\nШаг 1: [название] — [объяснение почему]\nШаг 2: [название] — [объяснение почему]\nШаг 3: [название] — [объяснение почему]\n\nПиши по-русски, коротко и аналитично. Только сам отчёт, без вступлений.";
       const resp=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:[{role:"user",content:prompt}]})});
       const data=await resp.json();
-      const text=data.choices?.[0]?.message?.content||data.content?.[0]?.text||"";
+      const text=stripMd(data.choices?.[0]?.message?.content||data.content?.[0]?.text||"");
       if(text){
         await allLeads.update(l.id,{ai_report:text});
         showCrmToast("Отчёт сформирован. Если не появился — перезагрузите страницу.");
@@ -4178,7 +4178,7 @@ function CrmPage({userId}:{userId:string}){
       const prompt="Ты — эксперт по работе с клиентами. На основе данных о лиде и поставленной цели сгенерируй 3 варианта касания.\n\nДанные о лиде:\n"+l.ai_report+"\n\nЦель касания: "+(touchGenGoal||"продвинуть лида вперёд по воронке")+"\n\nГлавная задача — не написать красивый текст, а повысить вероятность достижения указанной цели.\n\nТребования к стилю:\n- писать как живой человек\n- никаких ИИ-конструкций\n- никаких клише и шаблонов\n- никаких фраз вроде надеюсь, у вас всё хорошо\n- никаких чрезмерных продаж\n- уважительный тон\n- деловой стиль\n- короткие и понятные предложения\n- естественный русский язык\n- не использовать длинные тире\n- не использовать эмодзи\n- избегать канцелярита\n- клиент не должен чувствовать, что ему продают\n\nФормат ответа (строго):\n\n##В1##\nНазвание: Рациональный\nЦель: [цель этого касания]\nТекст:\n[сам текст касания]\n\n##В2##\nНазвание: Экспертный\nЦель: [цель этого касания]\nТекст:\n[сам текст касания]\n\n##В3##\nНазвание: Человеческий\nЦель: [цель этого касания]\nТекст:\n[сам текст касания]\n\nТолько сами касания. Никаких комментариев до или после.";
       const resp=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:[{role:"user",content:prompt}]})});
       const data=await resp.json();
-      const text=data.choices?.[0]?.message?.content||data.content?.[0]?.text||"";
+      const text=stripMd(data.choices?.[0]?.message?.content||data.content?.[0]?.text||"");
       setTouchGenResult(text);
     }catch(e){setTouchGenResult("Ошибка генерации. Попробуй ещё раз.");}
     setTouchGenLoading(false);
@@ -5843,6 +5843,23 @@ function ContentPage({userId}:{userId:string}){
 const SCRIPT_SHORT_SYS="Ты — эксперт мирового уровня по созданию вирусных коротких видео для Instagram Reels, TikTok и YouTube Shorts. Твоя задача — не просто улучшить сценарий, а максимально повысить вероятность, что зритель досмотрит ролик до конца. Усиль первые 1–3 секунды и открывающие фразы; усиль эмоцию, любопытство, неожиданность, контраст и конфликт; убери скучные и медленные части; сделай каждую следующую фразу вызывающей желание смотреть дальше; сделай структуру максимально динамичной; используй психологические триггеры удержания; повышай вероятность сохранений и репостов. Если указан ICP — адаптируй все формулировки под эту аудиторию. Верни ПОЛНОСТЬЮ улучшённую версию сценария без комментариев.";
 const SCRIPT_LONG_SYS="Ты — эксперт мирового уровня по созданию образовательного и экспертного видеоконтента. Твоя задача — улучшить сценарий так, чтобы он усиливал доверие аудитории к автору и максимально удерживал внимание на протяжении всего видео. Улучши структуру повествования и логическую последовательность; добавь больше ценности и практической пользы; сделай объяснения понятнее; устрани провалы внимания; добавь плавные переходы между блоками; усиль экспертную позицию автора и убедительность аргументов; повышай доверие через примеры, наблюдения и объяснения; сохраняй естественный стиль речи. Если указан ICP — адаптируй под конкретную аудиторию. Верни ПОЛНОСТЬЮ улучшённую версию сценария без комментариев.";
 
+// Убирает markdown-разметку из ответов ИИ (звёздочки, решётки, бэктики),
+// т.к. интерфейс платформы показывает текст как есть и *** мешают чтению.
+function stripMd(s:any):string{
+  let t=String(s==null?"":s);
+  t=t.replace(/^[ \t]{0,3}#{1,6}[ \t]+/gm,"");     // ## Заголовки → текст
+  t=t.replace(/\*\*\*([^*]+?)\*\*\*/g,"$1");        // ***жирный курсив***
+  t=t.replace(/\*\*([^*]+?)\*\*/g,"$1");            // **жирный**
+  t=t.replace(/\*([^*\n]+?)\*/g,"$1");              // *курсив*
+  t=t.replace(/___([^_]+?)___/g,"$1");
+  t=t.replace(/__([^_]+?)__/g,"$1");
+  t=t.replace(/```[a-zA-Z]*\n?/g,"");               // ```блоки кода```
+  t=t.replace(/`([^`]+?)`/g,"$1");                  // `код`
+  t=t.replace(/^[ \t]*[*+\-][ \t]+/gm,"— ");        // маркеры списка «* » → «— »
+  t=t.replace(/\*+/g,"");                            // любые оставшиеся звёздочки
+  return t.trim();
+}
+
 async function dsMessages(messages:any[],maxTokens=1600,temperature=0.8):Promise<string>{
   const res=await fetch("https://api.deepseek.com/v1/chat/completions",{
     method:"POST",
@@ -5850,7 +5867,7 @@ async function dsMessages(messages:any[],maxTokens=1600,temperature=0.8):Promise
     body:JSON.stringify({model:"deepseek-chat",max_tokens:maxTokens,temperature,messages}),
   });
   const d=await res.json();
-  return d.choices?.[0]?.message?.content||"";
+  return stripMd(d.choices?.[0]?.message?.content||"");
 }
 
 async function improveScript(kind:string,content:string,icp:string):Promise<string>{
@@ -7596,7 +7613,7 @@ function AIChatBase({pageId,system}:{pageId:string,system?:string}){
       const res=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:apiMsgs,...(system?{system}:{})})});
       if(!res.ok)throw new Error("API error "+res.status);
       const data=await res.json();
-      const reply=data.content?.[0]?.text||data.choices?.[0]?.message?.content||"Нет ответа";
+      const reply=stripMd(data.content?.[0]?.text||data.choices?.[0]?.message?.content||"Нет ответа");
       setChats(prev=>prev.map(c=>c.id===chatId?{...c,msgs:[...newMsgs,{role:"assistant" as const,content:reply}]}:c));
     }catch(e:any){setErr("Ошибка: "+e.message);setChats(prev=>prev.map(c=>c.id===chatId?{...c,msgs:newMsgs.slice(0,-1)}:c));}
     finally{setLoading(false);}
@@ -7992,7 +8009,7 @@ async function regenMMSection(answers:Record<string,string>,product:any,key:stri
   const labels:Record<string,string>={concept:"Концепция",location:"Локация и место встречи",organization:"Организация"};
   const system="Ты — архитектор офлайн-мастермайндов. Возвращаешь только текст раздела: без markdown-заголовков, без пояснений вокруг.";
   const user=`Данные эксперта:\n\n${paContext(answers)}\n\nМастермайнд: ${product.title} (${product.format})\n\nПерепиши раздел «${labels[key]||key}» для этого офлайн-мастермайнда.${hint?(" Пожелание автора: "+hint+".") :""} Верни только текст раздела, каждый пункт с новой строки.`;
-  return (await paChat(system,user,1300,0.8)).replace(/```/g,"").trim();
+  return stripMd(await paChat(system,user,1300,0.8));
 }
 
 async function regenMMSession(answers:Record<string,string>,product:any,sessions:any[],idx:number,hint:string):Promise<any>{
@@ -8068,7 +8085,7 @@ async function regenCommSection(answers:Record<string,string>,product:any,key:st
   const labels:Record<string,string>={identity:"Identity и позиционирование",structure:"Структура и организация",starter:"Стартовый набор контента",retention:"Как напоминать о себе"};
   const system="Ты — архитектор закрытых онлайн-сообществ. Возвращаешь только текст раздела: без markdown-заголовков, без пояснений вокруг.";
   const user=`Данные эксперта:\n\n${paContext(answers)}\n\nСообщество: ${product.title} (${product.format})\n\nПерепиши раздел «${labels[key]||key}» для этого закрытого сообщества.${hint?(" Пожелание автора: "+hint+".") :""} Верни только текст раздела, каждый пункт с новой строки.`;
-  return (await paChat(system,user,1300,0.8)).replace(/```/g,"").trim();
+  return stripMd(await paChat(system,user,1300,0.8));
 }
 
 async function regenCommDay(answers:Record<string,string>,product:any,plan:any[],idx:number,hint:string):Promise<any>{
@@ -8110,7 +8127,7 @@ async function regenProgSection(answers:Record<string,string>,product:any,key:st
   const role=kind==="coaching"?"персонального коучинга":"консалтинга";
   const system=`Ты — архитектор программ ${role}. Возвращаешь только текст раздела: без markdown-заголовков, без пояснений вокруг.`;
   const user=`Данные эксперта:\n\n${paContext(answers)}\n\nПрограмма: ${product.title} (${product.format})\n\nПерепиши раздел «${labels[key]||key}».${hint?(" Пожелание автора: "+hint+".") :""} Верни только текст раздела, каждый пункт с новой строки.`;
-  return (await paChat(system,user,1300,0.8)).replace(/```/g,"").trim();
+  return stripMd(await paChat(system,user,1300,0.8));
 }
 
 async function regenProgMonth(answers:Record<string,string>,product:any,program:any[],idx:number,hint:string,kind:string):Promise<any>{
@@ -8388,7 +8405,7 @@ async function generateMoreStoryText(form:any,cur:string,idx:number,total:number
   const system="Ты — сценарист сторис для соцсетей. Возвращаешь только текст слайда, без пояснений и кавычек.";
   const user=`Карусель сторис. Цель: ${form.goal}. Тема: ${form.theme}. Аудитория: ${form.audience}. Посыл: ${form.message}.\n\nЭто слайд ${idx+1} из ${total}. Текущий текст слайда:\n"${cur}"\n\nРасширь и усиль текст ИМЕННО этого слайда: добавь ещё одну мысль, деталь или эмоцию, сохрани стиль и смысл, сделай убедительнее. 2–6 коротких строк, можно перенос строки. Верни только новый текст слайда.`;
   const t=await paChat(system,user,600,0.9);
-  return t.replace(/```/g,"").replace(/^["']|["']$/g,"").trim();
+  return stripMd(t);
 }
 
 function StoryProEditor({story,dark,fontsRev,onClose,onSave}:{story:SStory,dark:boolean,fontsRev:number,onClose:()=>void,onSave:(ov:OverlayEl[])=>void}){
@@ -9938,7 +9955,7 @@ function StoriesAILegacy(){
         body:JSON.stringify({messages:newMsgs,system:STORIES_SYSTEM_V2})});
       if(!res.ok)throw new Error("API error "+res.status);
       const data=await res.json();
-      const reply=data.content?.[0]?.text||data.choices?.[0]?.message?.content||"Нет ответа";
+      const reply=stripMd(data.content?.[0]?.text||data.choices?.[0]?.message?.content||"Нет ответа");
       setChats(prev=>prev.map(c=>c.id===id?{...c,msgs:[...newMsgs,{role:"assistant" as const,content:reply}]}:c));
     }catch(e:any){setErr("Ошибка: "+e.message);}
     finally{setLoading(false);}
@@ -9956,7 +9973,7 @@ function StoriesAILegacy(){
         body:JSON.stringify({messages:newMsgs,system:STORIES_SYSTEM_V2})});
       if(!res.ok)throw new Error("API error "+res.status);
       const data=await res.json();
-      const reply=data.content?.[0]?.text||data.choices?.[0]?.message?.content||"Нет ответа";
+      const reply=stripMd(data.content?.[0]?.text||data.choices?.[0]?.message?.content||"Нет ответа");
       setChats(prev=>prev.map(c=>c.id===chatId?{...c,msgs:[...newMsgs,{role:"assistant" as const,content:reply}]}:c));
     }catch(e:any){setErr("Ошибка: "+e.message);}
     finally{setLoading(false);}
@@ -13873,7 +13890,7 @@ function OfferPage({userId}:{userId:string}){
         }),
       });
       const data=await res.json();
-      const text=data.choices?.[0]?.message?.content||"";
+      const text=stripMd(data.choices?.[0]?.message?.content||"");
       if(!text){setAiError("ИИ не вернул ответ. Попробуй ещё раз.");setMode("quiz");return;}
       setGeneratedOffer(text);setDisplayedOffer(text);setMode("result");
     }catch(e){setAiError("Ошибка генерации. Проверь API ключ или попробуй ещё раз.");setMode("quiz");}
@@ -14193,7 +14210,7 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
         body:JSON.stringify({model:"deepseek-chat",max_tokens:1000,temperature:0.7,messages:[{role:"system",content:systemPrompts[type]},{role:"user",content:userPrompt}]}),
       });
       const data=await res.json();
-      const text=data.choices?.[0]?.message?.content||"";
+      const text=stripMd(data.choices?.[0]?.message?.content||"");
       if(type==="offer"){setOffer(text);typewrite(text,setDisplayOffer);}
       else if(type==="marketing"){setMarketing(text);typewrite(text,setDisplayMkt);}
       else{setFunnel(text);typewrite(text,setDisplayFunnel);}
@@ -15172,7 +15189,7 @@ async function copyGenVariants(system:string,user:string,count:number,avoid:stri
   if(avoid.length)u+=`\n\nНе повторяй уже показанные варианты:\n${avoid.slice(0,8).map((a,i)=>`${i+1}. ${String(a).replace(/\n/g," ").slice(0,80)}`).join("\n")}`;
   let arr:any=paParseJSON(await paChat(system,u,2400,0.85));
   if(!Array.isArray(arr))arr=arr.variants||arr.items||arr.stories||[];
-  return (arr||[]).slice(0,count).map((x:any)=>typeof x==="string"?{title:"",body:x,note:""}:{title:x.title||"",body:x.body||x.text||"",note:x.note||""});
+  return (arr||[]).slice(0,count).map((x:any)=>typeof x==="string"?{title:"",body:stripMd(x),note:""}:{title:stripMd(x.title||""),body:stripMd(x.body||x.text||""),note:stripMd(x.note||"")});
 }
 
 function CopyToolRunner({tool,dark}:{tool:any,dark:boolean}){
@@ -15329,7 +15346,7 @@ const COPY_A_TOOLS:Record<string,{inputs:any[],refine:{label:string,hint:string}
 
 async function copyRewrite(system:string,user:string):Promise<string>{
   let t=await paChat(system,user,2800,0.8);
-  t=t.replace(/```/g,"").trim();
+  t=stripMd(t);
   return t.replace(/^["'«»]+/,"").replace(/["'«»]+$/,"").trim();
 }
 
@@ -16194,7 +16211,7 @@ const kirillAIStore=(()=>{
           }
           continue;
         }
-        finalText=msg.content||"Готово.";break;
+        finalText=stripMd(msg.content||"Готово.");break;
       }
       setAI(finalText||"Готово.",true);
     }catch(e:any){
