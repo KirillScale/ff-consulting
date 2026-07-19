@@ -2513,6 +2513,8 @@ function TaskPlanner({userId}:{userId:string}){
   const[edit,setEdit]=useState<any>(null);
   const[subInput,setSubInput]=useState("");
   const[saving,setSaving]=useState(false);
+  const[boardStart,setBoardStart]=useState(()=>{const d=new Date();const dow=(d.getDay()+6)%7;d.setDate(d.getDate()-dow);d.setHours(0,0,0,0);return d;});
+  const board7=()=>Array.from({length:7},(_,i)=>{const d=new Date(boardStart);d.setDate(boardStart.getDate()+i);return d;});
 
   const bd=C.bd;
   const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
@@ -2531,7 +2533,7 @@ function TaskPlanner({userId}:{userId:string}){
   const save=async()=>{
     if(!edit||!edit.title.trim())return;
     setSaving(true);
-    const payload={title:edit.title.trim(),description:edit.description||"",due_date:edit.due_date||"",due_time:edit.due_time||"",priority:edit.priority||"none",color:edit.color||PLANNER_COLORS[0],done:!!edit.done,subtasks:edit.subtasks||[],updated_at:new Date().toISOString()};
+    const payload={title:edit.title.trim(),description:edit.description||"",due_date:edit.due_date||null,due_time:edit.due_time||null,priority:edit.priority||"none",color:edit.color||PLANNER_COLORS[0],done:!!edit.done,subtasks:edit.subtasks||[],updated_at:new Date().toISOString()};
     if(edit.id)await update(edit.id,payload); else await add(payload);
     setSaving(false);setEdit(null);
   };
@@ -2673,6 +2675,54 @@ function TaskPlanner({userId}:{userId:string}){
 
   return(
     <div style={{width:"100%"}}>
+      {/* ===== ДОСКА 7 ДНЕЙ ===== */}
+      <div style={{marginBottom:22}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,flexWrap:"wrap" as const}}>
+          <span style={{fontSize:isMobile?15:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em"}}>Задачи на неделю</span>
+          <button onClick={()=>setBoardStart(s=>{const d=new Date(s);d.setDate(d.getDate()-7);return d;})} style={{width:30,height:30,borderRadius:8,border:"1px solid "+bd,background:cardBg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <button onClick={()=>setBoardStart(s=>{const d=new Date(s);d.setDate(d.getDate()+7);return d;})} style={{width:30,height:30,borderRadius:8,border:"1px solid "+bd,background:cardBg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+          <button onClick={()=>{const d=new Date();const dow=(d.getDay()+6)%7;d.setDate(d.getDate()-dow);d.setHours(0,0,0,0);setBoardStart(d);}} style={{padding:"6px 14px",background:"transparent",color:C.t1,border:"1px solid "+bd,borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer"}}>Эта неделя</button>
+        </div>
+        <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:6,scrollbarWidth:"none" as const}}>
+          {board7().map((d,i)=>{
+            const isToday=pd(d)===todayStr;const dt=forDay(d);
+            return(
+              <div key={i} style={{flex:"1 0 0",minWidth:isMobile?152:0,background:C.ib,border:"1px solid "+(isToday?C.t1+"55":bd),borderRadius:12,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+                <div style={{padding:"9px 11px",borderBottom:"1px solid "+bd,display:"flex",alignItems:"center",justifyContent:"space-between",background:isToday?C.t1+"0D":"transparent"}}>
+                  <div style={{display:"flex",flexDirection:"column",lineHeight:1.15}}>
+                    <span style={{fontSize:10,fontWeight:700,color:isToday?C.t1:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3}}>{PL_WD[(d.getDay()+6)%7]}</span>
+                    <span style={{fontSize:14,fontWeight:800,color:C.t1}}>{d.getDate()} {shMon(d)}</span>
+                  </div>
+                  <span style={{fontSize:10.5,fontWeight:700,color:C.t2,background:C.bd,borderRadius:8,padding:"1px 7px"}}>{dt.length}</span>
+                </div>
+                <div style={{padding:8,display:"flex",flexDirection:"column",gap:6,flex:1,minHeight:isMobile?110:150}}>
+                  {dt.map((t:any)=>(
+                    <div key={t.id} onClick={()=>openEdit(t)}
+                      style={{display:"flex",alignItems:"center",gap:6,padding:"7px 9px",borderRadius:8,background:cardBg,border:"1px solid "+bd,borderLeft:"3px solid "+(t.color||"#64748B"),cursor:"pointer"}}>
+                      <span onClick={e=>toggleDone(t,e)} style={{width:14,height:14,borderRadius:4,border:"1.5px solid "+(t.color||"#64748B"),background:t.done?(t.color||"#64748B"):"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        {t.done&&<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}
+                      </span>
+                      {prioDot(t.priority)}
+                      <span style={{flex:1,minWidth:0,fontSize:12.5,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.5:1}}>{t.due_time?<b style={{fontWeight:700}}>{t.due_time} </b>:null}{t.title}</span>
+                    </div>
+                  ))}
+                  <button onClick={()=>openNew(pd(d))} style={{marginTop:dt.length?2:0,padding:"6px",borderRadius:8,border:"1px dashed "+bd,background:"transparent",color:C.t2,fontSize:11.5,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>задача
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div style={{height:1,background:bd,margin:"0 0 18px"}}/>
+      <div style={{fontSize:isMobile?15:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em",marginBottom:14}}>Календарь</div>
+
       {/* Toolbar */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:16,flexWrap:"wrap" as const}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -15976,7 +16026,7 @@ async function ksExecTool(name:string,a:any,userId:string):Promise<string>{
       return `Воронка продаж «${a.name||"Новая воронка"}» создана в CRM.`;
     }
     if(name==="create_task"){
-      const row:any={title:a.title||"Задача",description:a.description||"",due_date:a.due_date||"",due_time:"",priority:a.priority||"none",color:"#3B82F6",done:false,subtasks:[],user_id:userId,updated_at:new Date().toISOString()};
+      const row:any={title:a.title||"Задача",description:a.description||"",due_date:a.due_date||null,due_time:a.due_time||null,priority:a.priority||"none",color:"#3B82F6",done:false,subtasks:[],user_id:userId,updated_at:new Date().toISOString()};
       const{data,error}=await supabase.from("planner_tasks").insert(row).select().single();
       if(error)return "Ошибка создания задачи: "+error.message;
       ksFire("planner_tasks");
@@ -16140,7 +16190,7 @@ async function ksExecTool(name:string,a:any,userId:string):Promise<string>{
 
     /* ── Спринт и цели ── */
     if(name==="create_sprint_task"){
-      const row:any={title:a.text||"Задача",description:a.type?`Тип: ${a.type}${a.mins?` · ${a.mins} мин`:""}`:"",due_date:a.date||null,due_time:"",priority:"none",color:"#3B82F6",done:false,subtasks:[],user_id:userId,updated_at:new Date().toISOString()};
+      const row:any={title:a.text||"Задача",description:a.type?`Тип: ${a.type}${a.mins?` · ${a.mins} мин`:""}`:"",due_date:a.date||null,due_time:null,priority:"none",color:"#3B82F6",done:false,subtasks:[],user_id:userId,updated_at:new Date().toISOString()};
       const{error}=await supabase.from("planner_tasks").insert(row).select().single();
       if(error)return "Ошибка создания задачи: "+error.message;
       ksFire("planner_tasks");
