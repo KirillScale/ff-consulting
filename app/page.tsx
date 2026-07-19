@@ -3836,6 +3836,89 @@ const CRM_DEFAULT_STAGES=[
 ];
 const FUNNEL_COLORS=["#656565","#7E7E7E","#A4A4A4","#8F8F8F","#707070","#ADADAD","#747474","#A2A2A2"];
 
+// Воронка продаж над канбаном: метрики по этапам + сужающаяся лента с конверсией
+const FUNNEL_BLUES=["#DCEBFF","#B8D6FF","#8FBEFF","#5E9BFF","#3B7DF5","#2463DD","#1A4FBE"];
+function funnelBlue(i:number,n:number){const t=n<=1?0.55:i/(n-1);return FUNNEL_BLUES[Math.round(t*(FUNNEL_BLUES.length-1))];}
+function funnelStageIcon(id:string){
+  const m:Record<string,string>={
+    new:"M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2 M9 7a4 4 0 108 0 4 4 0 00-8 0 M19 8v6 M22 11h-6",
+    contact:"M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z",
+    call:"M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16.92z",
+    closed:"M12 1v22 M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6",
+    rejected:"M18 6L6 18 M6 6l12 12",
+  };
+  return m[id]||"M12 2a10 10 0 100 20 10 10 0 000-20z";
+}
+function CrmFunnel({stages,leads,isMobile}:{stages:any[],leads:any[],isMobile:boolean}){
+  if(!stages||stages.length<2)return null;
+  const counts=stages.map((s:any)=>leads.filter((l:any)=>l.status===s.id).length);
+  const maxC=Math.max(1,...counts);
+  const N=stages.length;
+  const H=isMobile?120:150,VB=200,cy=VB/2,maxHalf=86,minHalf=9;
+  const half=counts.map(c=>minHalf+(maxHalf-minHalf)*Math.sqrt(c/maxC));
+  const segW=1000/N;
+  const hb=(j:number)=>j<=0?half[0]:j>=N?half[N-1]:(half[j-1]+half[j])/2;
+  const total=leads.length;
+  const wonStage=stages.find((s:any)=>s.id==="closed")||stages[N-1];
+  const wonLeads=leads.filter((l:any)=>l.status===wonStage?.id);
+  const wonSum=wonLeads.reduce((s:number,l:any)=>s+(+l.deal||0),0);
+  const rejStage=stages.find((s:any)=>s.id==="rejected");
+  const rejCount=rejStage?leads.filter((l:any)=>l.status===rejStage.id).length:null;
+
+  return(
+    <div style={{border:"1px solid "+C.bd,borderRadius:14,overflow:"hidden",background:C.w,marginBottom:16,boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
+      {/* metric cards */}
+      <div style={{display:"flex",overflowX:isMobile?"auto":"visible" as const,scrollbarWidth:"none" as const}}>
+        {stages.map((s:any,i:number)=>(
+          <div key={s.id} style={{flex:"1 0 0",minWidth:isMobile?120:0,padding:"12px 14px",borderLeft:i>0?"1px solid "+C.bd:"none"}}>
+            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={funnelBlue(i,N)} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={funnelStageIcon(s.id)}/></svg>
+              <span style={{fontSize:11.5,color:C.t2,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.label}</span>
+            </div>
+            <div style={{fontSize:22,fontWeight:800,color:C.t1,lineHeight:1,letterSpacing:"-0.02em"}}>{counts[i]}</div>
+          </div>
+        ))}
+      </div>
+      {/* funnel band */}
+      <div style={{position:"relative",borderTop:"1px solid "+C.bd,borderBottom:"1px solid "+C.bd,background:C.ib}}>
+        <svg width="100%" height={H} viewBox={`0 0 1000 ${VB}`} preserveAspectRatio="none" style={{display:"block"}}>
+          {stages.map((s:any,i:number)=>{
+            const x0=i*segW,x1=(i+1)*segW,l=hb(i),r=hb(i+1);
+            return <path key={s.id} d={`M${x0},${cy-l} L${x1},${cy-r} L${x1},${cy+r} L${x0},${cy+l} Z`} fill={funnelBlue(i,N)}/>;
+          })}
+        </svg>
+        {/* conversion badges */}
+        {stages.slice(0,-1).map((s:any,i:number)=>{
+          const from=counts[i],to=counts[i+1];
+          const pct=from>0?Math.round(to/from*100):null;
+          return(
+            <div key={s.id} style={{position:"absolute",left:`${((i+1)/N)*100}%`,top:"50%",transform:"translate(-50%,-50%)",background:C.w,border:"1px solid "+C.bd,borderRadius:20,padding:"3px 10px",boxShadow:"0 1px 4px rgba(0,0,0,0.12)",display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
+              <span style={{fontSize:11,fontWeight:700,color:C.t1,fontVariantNumeric:"tabular-nums" as const}}>{pct==null?"—":pct+"%"}</span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </div>
+          );
+        })}
+      </div>
+      {/* footer */}
+      <div style={{display:"flex",alignItems:"center",gap:16,padding:"9px 14px",flexWrap:"wrap" as const}}>
+        <span style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:C.t2}}>
+          <span style={{width:7,height:7,borderRadius:"50%",background:funnelBlue(0,N)}}/>Всего: <b style={{color:C.t1,fontWeight:700}}>{total}</b>
+        </span>
+        <span style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:C.t2}}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22A06B" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          {wonStage?.label||"Выиграно"}: <b style={{color:C.t1,fontWeight:700}}>{wonLeads.length}</b>{wonSum>0&&<span style={{color:C.t2}}>· {wonSum.toLocaleString("ru-RU")} ₽</span>}
+        </span>
+        {rejCount!=null&&<span style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:C.t2}}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E5484D" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          {rejStage.label}: <b style={{color:C.t1,fontWeight:700}}>{rejCount}</b>
+        </span>}
+      </div>
+    </div>
+  );
+}
+
+
+
 function CrmPage({userId}:{userId:string}){
   const isMobile=useIsMobile();
 
@@ -5080,6 +5163,8 @@ function CrmPage({userId}:{userId:string}){
           <button onClick={()=>setShow(false)} style={{padding:"9px 14px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:9,fontSize:12,cursor:"pointer"}}>Отмена</button>
         </div>
       </div>}
+
+      <CrmFunnel stages={stages} leads={leads} isMobile={isMobile}/>
 
       <div style={{display:"flex",gap:12,overflowX:"auto",paddingBottom:16,alignItems:"flex-start",scrollbarWidth:"none"}}>
         {stages.map(stage=>{
