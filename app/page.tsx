@@ -40,9 +40,9 @@ const applyTheme=(dark:boolean)=>{Object.assign(C,dark?DARK:LIGHT);};
 
 /* ============ CONSTANTS ============ */
 const PLATS=[{id:"instagram",label:"Instagram",color:C.pk},{id:"telegram",label:"Telegram",color:C.a},{id:"youtube",label:"YouTube",color:C.r},{id:"vk",label:"VK",color:C.lb},{id:"other",label:"Другое",color:C.t2}];
-const CTYPES=["LF Video","SF Video","Text Post","Другое"];
-// Цвет типа контента: LF Video — красный, SF Video — розовый, Text Post — голубой, Другое — серый
-const CTYPE_COLORS:Record<string,string>={"LF Video":"#E62117","SF Video":"#EC4899","Text Post":"#38BDF8","Другое":"#9CA3AF"};
+const CTYPES=["LF Video","SF Video","Text Post","Stories","Другое"];
+// Цвет типа контента: LF Video — красный, SF Video — розовый, Text Post — голубой, Stories — фиолетовый, Другое — серый
+const CTYPE_COLORS:Record<string,string>={"LF Video":"#E62117","SF Video":"#EC4899","Text Post":"#38BDF8","Stories":"#A855F7","Другое":"#9CA3AF"};
 const ctypeColor=(t:string)=>CTYPE_COLORS[t]||CTYPE_COLORS["Другое"];
 const CSTATS=[{id:"idea",label:"Идея",color:C.t2},{id:"progress",label:"В работе",color:C.y},{id:"ready",label:"Готово",color:C.a},{id:"published",label:"Опубликовано",color:C.g}];
 const STAGES_DEFAULT=[{id:"new",label:"Новый",color:C.a},{id:"contact",label:"Взаимодействовали",color:"#7C7C7C"},{id:"call",label:"Созвон",color:C.y},{id:"closed",label:"Закрыт",color:C.g},{id:"rejected",label:"Отказ",color:C.r}];
@@ -233,6 +233,8 @@ function Auth({ onLogin }: { onLogin: (u: any) => void }) {
   const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState<"login"|"forgot">("login");
+  const [sent, setSent] = useState(false);
 
   const login = async () => {
     setErr(""); setLoading(true);
@@ -240,6 +242,18 @@ function Auth({ onLogin }: { onLogin: (u: any) => void }) {
     setLoading(false);
     if (error) return setErr("Неверный email или пароль");
     if (data.user) onLogin(data.user);
+  };
+
+  const sendReset = async () => {
+    setErr("");
+    if (!email.trim()) return setErr("Введите email");
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
+    });
+    setLoading(false);
+    if (error) return setErr("Не удалось отправить письмо. Проверьте email и попробуйте снова.");
+    setSent(true);
   };
 
   return (
@@ -250,15 +264,98 @@ function Auth({ onLogin }: { onLogin: (u: any) => void }) {
             <Logo s={40}/><Brand size="lg"/>
           </div>
         </div>
-        <div style={{fontSize:16,fontWeight:600,textAlign:"center",marginBottom:24,color:C.t1}}>Вход в платформу</div>
-        <div style={{display:"flex",flexDirection:"column",gap:14}}>
-          <input placeholder="Email" type="email" value={email} onChange={e=>setEmail(e.target.value)} style={iS()}/>
-          <input placeholder="Пароль" type="password" value={pw} onChange={e=>setPw(e.target.value)} style={iS()} onKeyDown={e=>e.key==="Enter"&&login()}/>
-          {err&&<div style={{background:"#FEF2F2",color:C.r,padding:"10px 14px",borderRadius:8,fontSize:13,fontWeight:500}}>{err}</div>}
-          <Btn onClick={login} style={{width:"100%",padding:"14px 0",fontSize:15,marginTop:8,opacity:loading?0.6:1}}>
-            {loading?"Вход...":"Войти"}
-          </Btn>
+
+        {mode==="login" ? (
+          <>
+            <div style={{fontSize:16,fontWeight:600,textAlign:"center",marginBottom:24,color:C.t1}}>Вход в платформу</div>
+            <div style={{display:"flex",flexDirection:"column",gap:14}}>
+              <input placeholder="Email" type="email" value={email} onChange={e=>setEmail(e.target.value)} style={iS()}/>
+              <input placeholder="Пароль" type="password" value={pw} onChange={e=>setPw(e.target.value)} style={iS()} onKeyDown={e=>e.key==="Enter"&&login()}/>
+              {err&&<div style={{background:"#FEF2F2",color:C.r,padding:"10px 14px",borderRadius:8,fontSize:13,fontWeight:500}}>{err}</div>}
+              <Btn onClick={login} style={{width:"100%",padding:"14px 0",fontSize:15,marginTop:8,opacity:loading?0.6:1}}>
+                {loading?"Вход...":"Войти"}
+              </Btn>
+              <button onClick={()=>{setMode("forgot");setErr("");setSent(false);}} style={{background:"none",border:"none",color:C.t2,fontSize:13,fontWeight:500,cursor:"pointer",marginTop:4,fontFamily:"'Inter',sans-serif"}}>Забыли пароль?</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{fontSize:16,fontWeight:600,textAlign:"center",marginBottom:8,color:C.t1}}>Восстановление пароля</div>
+            {sent ? (
+              <div style={{display:"flex",flexDirection:"column",gap:16,marginTop:12,textAlign:"center"}}>
+                <div style={{width:52,height:52,borderRadius:"50%",background:"#ECFDF3",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto"}}>
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#12B76A" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <div style={{fontSize:14,color:C.t1,lineHeight:1.6}}>Письмо со ссылкой для смены пароля отправлено на <b>{email}</b>. Откройте письмо и задайте новый пароль. Если письма нет — проверьте «Спам».</div>
+                <button onClick={()=>{setMode("login");setSent(false);setErr("");}} style={{background:"none",border:"none",color:C.t1,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>← Вернуться ко входу</button>
+              </div>
+            ) : (
+              <>
+                <div style={{fontSize:13,color:C.t2,textAlign:"center",marginBottom:22,lineHeight:1.6}}>Введите email аккаунта — на почту придёт ссылка, чтобы задать новый пароль.</div>
+                <div style={{display:"flex",flexDirection:"column",gap:14}}>
+                  <input placeholder="Email" type="email" value={email} onChange={e=>setEmail(e.target.value)} style={iS()} onKeyDown={e=>e.key==="Enter"&&sendReset()}/>
+                  {err&&<div style={{background:"#FEF2F2",color:C.r,padding:"10px 14px",borderRadius:8,fontSize:13,fontWeight:500}}>{err}</div>}
+                  <Btn onClick={sendReset} style={{width:"100%",padding:"14px 0",fontSize:15,marginTop:8,opacity:loading?0.6:1}}>
+                    {loading?"Отправляем...":"Отправить ссылку"}
+                  </Btn>
+                  <button onClick={()=>{setMode("login");setErr("");}} style={{background:"none",border:"none",color:C.t2,fontSize:13,fontWeight:500,cursor:"pointer",marginTop:4,fontFamily:"'Inter',sans-serif"}}>← Назад ко входу</button>
+                </div>
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ResetPassword({ onDone }: { onDone: () => void }) {
+  const [pw, setPw] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [ok, setOk] = useState(false);
+
+  const submit = async () => {
+    setErr("");
+    if (pw.length < 6) return setErr("Пароль должен быть не короче 6 символов");
+    if (pw !== pw2) return setErr("Пароли не совпадают");
+    setLoading(true);
+    const { error } = await supabase.auth.updateUser({ password: pw });
+    setLoading(false);
+    if (error) return setErr("Не удалось сохранить пароль. Ссылка могла устареть — запросите новую.");
+    setOk(true);
+    setTimeout(onDone, 1200);
+  };
+
+  return (
+    <div style={{minHeight:"100vh",background:`linear-gradient(135deg,${C.dk},${C.da},${C.a})`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter',sans-serif",padding:20}}>
+      <div style={{background:C.w,borderRadius:12,padding:"48px 40px",width:"100%",maxWidth:420,boxShadow:"0 24px 80px rgba(0,0,0,0.25)"}}>
+        <div style={{textAlign:"center",marginBottom:32}}>
+          <div style={{display:"inline-flex",alignItems:"center",gap:10,background:C.dk,padding:"14px 28px",borderRadius:8}}>
+            <Logo s={40}/><Brand size="lg"/>
+          </div>
         </div>
+        {ok ? (
+          <div style={{textAlign:"center"}}>
+            <div style={{width:52,height:52,borderRadius:"50%",background:"#ECFDF3",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#12B76A" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div style={{fontSize:15,color:C.t1,fontWeight:600}}>Пароль обновлён</div>
+          </div>
+        ) : (
+          <>
+            <div style={{fontSize:16,fontWeight:600,textAlign:"center",marginBottom:24,color:C.t1}}>Задайте новый пароль</div>
+            <div style={{display:"flex",flexDirection:"column",gap:14}}>
+              <input placeholder="Новый пароль" type="password" value={pw} onChange={e=>setPw(e.target.value)} style={iS()}/>
+              <input placeholder="Повторите пароль" type="password" value={pw2} onChange={e=>setPw2(e.target.value)} style={iS()} onKeyDown={e=>e.key==="Enter"&&submit()}/>
+              {err&&<div style={{background:"#FEF2F2",color:C.r,padding:"10px 14px",borderRadius:8,fontSize:13,fontWeight:500}}>{err}</div>}
+              <Btn onClick={submit} style={{width:"100%",padding:"14px 0",fontSize:15,marginTop:8,opacity:loading?0.6:1}}>
+                {loading?"Сохраняем...":"Сохранить пароль"}
+              </Btn>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -765,6 +862,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 /* ============ MAIN APP ============ */
 export default function App() {
   const [user, setUser] = useState<any>(null);
+  const [recovery, setRecovery] = useState(false);
   const APP_VERSION="v2.2"; // bump this to force-clear stale localStorage
   const VALID_PAGES=["dashboard","strategy","crm","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","pnl","media","ads","calc","tools","mailings"];
 
@@ -817,7 +915,8 @@ export default function App() {
       if (session?.user) { setUser(session.user); loadProfile(session.user.id); }
       setLoading(false);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") { setRecovery(true); if (session?.user) setUser(session.user); setLoading(false); return; }
       if (session?.user) { setUser(session.user); loadProfile(session.user.id); }
       else { setUser(null); }
     });
@@ -837,6 +936,7 @@ export default function App() {
   };
 
   if (loading) return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.bg,fontFamily:"'Inter',sans-serif"}}><div style={{fontSize:18,color:C.t2}}>Загрузка...</div></div>;
+  if (recovery) return <ResetPassword onDone={() => setRecovery(false)} />;
   if (!user) return <Auth onLogin={(u) => { setUser(u); loadProfile(u.id); }} />;
 
   const nav = NAV.find(n => n.id === page);
@@ -5521,10 +5621,10 @@ function ContentPage({userId}:{userId:string}){
   };
 
   const CONTENT_STAGES=[
-    {id:"idea",label:"Идея",color:C.t1,hint:"Концепции и темы ждут своей очереди"},
-    {id:"progress",label:"Разработка",color:C.t1,hint:"Съёмка, написание текста, сбор материала"},
-    {id:"ready",label:"Реализация",color:C.t1,hint:"Монтаж, дизайн, финальная правка"},
-    {id:"published",label:"Опубликовано",color:C.t1,hint:"Вышло в свет — собирает реакции"},
+    {id:"idea",label:"Идея",color:"#A9D2FF",hint:"Концепции и темы ждут своей очереди"},
+    {id:"progress",label:"Разработка",color:"#5B9BFF",hint:"Съёмка, написание текста, сбор материала"},
+    {id:"ready",label:"Реализация",color:"#2563EB",hint:"Монтаж, дизайн, финальная правка"},
+    {id:"published",label:"Опубликовано",color:"#15307A",hint:"Вышло в свет — собирает реакции"},
   ];
   const[kanbanDrag,setKanbanDrag]=useState<string|null>(null);
   const[kanbanOver,setKanbanOver]=useState<string|null>(null);
@@ -5570,6 +5670,7 @@ function ContentPage({userId}:{userId:string}){
   };
 
   const[platformFilter,setPlatformFilter]=useState<string>("all");
+  const[groupMode,setGroupMode]=useState<"platform"|"type">("platform");
 
   const PLATFORM_FILTERS=[
     {id:"all",label:"Все",icon:"🌐"},
@@ -5579,21 +5680,37 @@ function ContentPage({userId}:{userId:string}){
     {id:"tiktok",label:"TikTok",icon:"🎵"},
     {id:"other",label:"Другое",icon:"📦"},
   ];
+  const TYPE_FILTERS=[{id:"all",label:"Все"},...CTYPES.map(t=>({id:t,label:t}))];
+  const activeFilters=groupMode==="type"?TYPE_FILTERS:PLATFORM_FILTERS;
 
   const filteredItems=useMemo(()=>{
     if(platformFilter==="all")return items;
+    if(groupMode==="type")return items.filter((x:any)=>(x.type||"Другое")===platformFilter);
     if(platformFilter==="other"){
       const known=["youtube","instagram","telegram","tiktok"];
       return items.filter((x:any)=>!known.includes((x.platform||"").toLowerCase()));
     }
     return items.filter((x:any)=>(x.platform||"").toLowerCase()===platformFilter);
-  },[items,platformFilter]);
+  },[items,platformFilter,groupMode]);
+
 
   return <>
-    {/* ── Platform filter bar ── */}
+    {/* ── Group mode switcher ── */}
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+      <span style={{fontSize:12,color:C.t2,fontWeight:600}}>Группировать по:</span>
+      <div style={{display:"flex",background:C.ib,borderRadius:9,padding:3,border:"1px solid "+C.bd,gap:2}}>
+        {([["platform","Соцсети"],["type","Типу контента"]] as const).map(([m,lbl])=>(
+          <button key={m} onClick={()=>{setGroupMode(m);setPlatformFilter("all");}}
+            style={{padding:"5px 12px",borderRadius:6,border:"none",background:groupMode===m?C.w:"transparent",color:groupMode===m?C.t1:C.t2,fontSize:12,fontWeight:600,cursor:"pointer",boxShadow:groupMode===m?"0 1px 2px rgba(0,0,0,0.08)":"none",whiteSpace:"nowrap" as const}}>{lbl}</button>
+        ))}
+      </div>
+    </div>
+
+    {/* ── Filter bar ── */}
     <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
-      {PLATFORM_FILTERS.map(pf=>{
+      {activeFilters.map(pf=>{
         const cnt=pf.id==="all"?items.length
+          :groupMode==="type"?items.filter((x:any)=>(x.type||"Другое")===pf.id).length
           :pf.id==="other"?items.filter((x:any)=>!["youtube","instagram","telegram","tiktok"].includes((x.platform||"").toLowerCase())).length
           :items.filter((x:any)=>(x.platform||"").toLowerCase()===pf.id).length;
         const isActive=platformFilter===pf.id;
@@ -5609,7 +5726,11 @@ function ContentPage({userId}:{userId:string}){
           }}
           onMouseEnter={e=>{if(!isActive)(e.currentTarget as HTMLElement).style.background=C.bd;}}
           onMouseLeave={e=>{if(!isActive)(e.currentTarget as HTMLElement).style.background=C.ib;}}>
-          {pf.id==="all"?<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={isActive?C.bg:C.t2} strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          {groupMode==="type"
+            ?(pf.id==="all"
+              ?<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={isActive?C.bg:C.t2} strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+              :<span style={{width:9,height:9,borderRadius:"50%",background:ctypeColor(pf.id),flexShrink:0}}/>)
+            :pf.id==="all"?<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={isActive?C.bg:C.t2} strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
             :pf.id==="other"?<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={isActive?C.bg:C.t2} strokeWidth="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/></svg>
             :<PlatformIcon pid={pf.id} size={16}/>}
           {pf.label}
@@ -8649,8 +8770,8 @@ function StoryProEditor({story,dark,fontsRev,onClose,onSave}:{story:SStory,dark:
                   </div>
                   <div>
                     <label style={lbl}>Цвет</label>
-                    <div style={{display:"flex",gap:8}}>
-                      {["#FFFFFF","#000000","#777777","#D7D7D7","#7C7C7C"].map(col=><button key={col} onClick={()=>patch({color:col})} style={{width:28,height:28,borderRadius:8,border:cur.color===col?"2px solid #7C7C7C":`1px solid ${bd}`,background:col,cursor:"pointer"}}/>)}
+                    <div style={{display:"flex",gap:8,flexWrap:"wrap" as const}}>
+                      {["#FFFFFF","#000000","#EF4444","#F97316","#FACC15","#22C55E","#38BDF8","#3B82F6","#A855F7","#EC4899"].map(col=><button key={col} onClick={()=>patch({color:col})} style={{width:28,height:28,borderRadius:8,border:cur.color===col?"2px solid "+C.t1:`1px solid ${bd}`,background:col,cursor:"pointer",boxShadow:cur.color===col?"0 0 0 2px "+C.w+" inset":"none"}}/>)}
                     </div>
                   </div>
                 </>}
@@ -8659,9 +8780,9 @@ function StoryProEditor({story,dark,fontsRev,onClose,onSave}:{story:SStory,dark:
               <div style={{fontSize:13,color:C.t2,textAlign:"center" as const,lineHeight:1.6}}>Добавь стрелку, линию или фото поверх истории. Перетаскивай элементы пальцем/мышью, выбери элемент для настройки.</div>
             )}
 
-            <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
-              <button onClick={onClose} style={{padding:"11px 20px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Отмена</button>
-              <button onClick={()=>onSave(overlays)} style={{padding:"11px 24px",borderRadius:8,border:"none",background:"#757575",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>Сохранить</button>
+            <div style={{display:"flex",gap:12,justifyContent:"center",borderTop:"1px solid "+bd,paddingTop:16,marginTop:4}}>
+              <button onClick={onClose} style={{minWidth:130,padding:"12px 20px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Отмена</button>
+              <button onClick={()=>onSave(overlays)} style={{minWidth:130,padding:"12px 24px",borderRadius:9,border:"none",background:"#38BDF8",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(56,189,248,0.35)"}}>Сохранить</button>
             </div>
           </div>
         </div>
@@ -8930,7 +9051,7 @@ function StoriesAIPage({userId}:{userId:string}){
         </div>
 
         <button onClick={runGenerate} disabled={!canGen}
-          style={{width:"100%",marginTop:26,padding:"15px",borderRadius:10,border:"none",background:canGen?GRAD:inputBg,color:canGen?"#fff":C.t2,fontSize:15,fontWeight:700,cursor:canGen?"pointer":"default",fontFamily:"'Inter',sans-serif",boxShadow:canGen?"0 4px 20px rgba(124,124,124,0.3)":"none"}}>
+          style={{width:"100%",marginTop:26,padding:"15px",borderRadius:10,border:"1px solid "+(canGen?C.bd:"transparent"),background:canGen?"#FFFFFF":inputBg,color:canGen?"#111111":C.t2,fontSize:15,fontWeight:700,cursor:canGen?"pointer":"default",fontFamily:"'Inter',sans-serif",boxShadow:canGen?"0 1px 2px rgba(0,0,0,0.05),0 8px 22px rgba(0,0,0,0.10)":"none"}}>
           Сгенерировать сценарий
         </button>
       </div>
@@ -8940,10 +9061,10 @@ function StoriesAIPage({userId}:{userId:string}){
   /* ---------- GENERATING ---------- */
   if(view==="generating")return(
     <div style={{maxWidth:640,margin:"0 auto",padding:"36px 24px",minHeight:"60vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:22}}>
-      <div style={{width:72,height:72,borderRadius:10,background:GRAD,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
-        <div style={{width:30,height:30,border:"3px solid rgba(255,255,255,0.35)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <div style={{width:76,height:76,borderRadius:16,background:GRAD,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 10px 26px rgba(0,0,0,0.18)",animation:"ksbounce 0.9s ease-in-out infinite",overflow:"hidden"}}>
+        <img src="/icon-stories.png" alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{(e.currentTarget as HTMLImageElement).style.display="none";}}/>
       </div>
+      <style>{`@keyframes ksbounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-20px)}}`}</style>
       <div style={{textAlign:"center" as const}}>
         <div style={{fontSize:22,fontWeight:800,color:C.t1,letterSpacing:"-0.02em",marginBottom:8}}>Собираем карусель</div>
         <div style={{fontSize:14,color:C.t2,lineHeight:1.6,maxWidth:400}}>AI пишет сценарий, движок подбирает фото и собирает сторис. Пара секунд…</div>
@@ -8994,7 +9115,7 @@ function StoriesAIPage({userId}:{userId:string}){
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
             Скачать PNG
           </button>}
-          {cur&&<button onClick={()=>setProIdx(sel)} style={{width:"100%",marginTop:8,padding:"11px",borderRadius:8,border:"none",background:"#757575",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
+          {cur&&<button onClick={()=>setProIdx(sel)} style={{width:"100%",marginTop:8,padding:"11px",borderRadius:8,border:"none",background:"#38BDF8",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(56,189,248,0.35)"}}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
             Перейти в Pro-редактор
           </button>}
