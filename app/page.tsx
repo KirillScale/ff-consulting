@@ -15367,6 +15367,44 @@ const COPY_TOOLS=[
   {id:"send-magnet",name:"Send Magnet",desc:"Генератор тем и текстов для рассылки, повышающих открываемость.",tag:"Рассылка",ic:"M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"},
 ];
 
+/* ============ COPY AI — БРЕНД ============ */
+const COPY_ORANGE="#F97316";
+const COPY_ORANGE_DK="#EA580C";
+const COPY_GRAD=`linear-gradient(180deg,#FB923C 0%,${COPY_ORANGE} 55%,${COPY_ORANGE_DK} 100%)`;
+const COPY_KEYFRAMES=`@keyframes spin{to{transform:rotate(360deg)}}@keyframes copybounce{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-14px) scale(1.04)}}@keyframes copyfade{0%,100%{opacity:.45}50%{opacity:1}}`;
+
+// Прыгающий логотип Vizzy Copy AI вместо кружка загрузки
+function CopyLoader({size=56,text,sub}:{size?:number,text?:string,sub?:string}){
+  return(
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:14,padding:"26px 16px",textAlign:"center" as const}}>
+      <div style={{width:size,height:size,borderRadius:size*0.28,background:COPY_GRAD,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",boxShadow:"0 10px 24px rgba(249,115,22,0.32)",animation:"copybounce 0.85s ease-in-out infinite"}}>
+        <img src="/icon-copy.png" alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{(e.currentTarget as HTMLImageElement).style.display="none";}}/>
+      </div>
+      {text&&<div style={{fontSize:14,fontWeight:700,color:C.t1,animation:"copyfade 1.6s ease-in-out infinite"}}>{text}</div>}
+      {sub&&<div style={{fontSize:12.5,color:C.t2,lineHeight:1.55,maxWidth:320}}>{sub}</div>}
+      <style>{COPY_KEYFRAMES}</style>
+    </div>
+  );
+}
+
+// Маленький прыгающий логотип для кнопок
+function CopyLoaderMini({size=17}:{size?:number}){
+  return<><span style={{width:size,height:size,borderRadius:size*0.3,background:"rgba(255,255,255,0.9)",display:"inline-flex",alignItems:"center",justifyContent:"center",overflow:"hidden",animation:"copybounce 0.7s ease-in-out infinite",flexShrink:0}}>
+    <img src="/icon-copy.png" alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{(e.currentTarget as HTMLImageElement).style.display="none";}}/>
+  </span><style>{COPY_KEYFRAMES}</style></>;
+}
+
+// Кнопка «Генерировать заново»
+function RegenButton({onClick,busy,label="Генерировать заново",full}:{onClick:()=>void,busy?:boolean,label?:string,full?:boolean}){
+  return(
+    <button onClick={onClick} disabled={busy}
+      style={{width:full?"100%":"auto",padding:"11px 18px",borderRadius:9,border:"none",background:busy?"rgba(249,115,22,0.5)":COPY_GRAD,color:"#fff",fontSize:13.5,fontWeight:700,cursor:busy?"default":"pointer",fontFamily:"'Inter',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 6px 16px rgba(249,115,22,0.30)"}}>
+      {busy?<><CopyLoaderMini size={15}/>Генерирую…</>
+        :<><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>{label}</>}
+    </button>
+  );
+}
+
 const TAG_COLORS:Record<string,string>={
   "Редактура":"#757575","Продажи":"#808080","Стратегия":"#A7A7A7",
   "Сторителлинг":"#828282","Контент":"#7C7C7C","Стиль":"#858585",
@@ -15438,6 +15476,45 @@ const COPY_B_TOOLS:Record<string,{inputs:any[],build:(v:any)=>{system:string,use
       return{system:"Ты — email-маркетолог. Пишешь письма с высокой открываемостью и конверсией. Возвращаешь строго валидный JSON без markdown.",user:base+VARIANT_TAIL(count,sem),count};
     },
   },
+  "profile-description":{
+    inputs:[
+      {key:"offer",label:"Оффер / чем занимаетесь",type:"textarea",placeholder:"Что вы даёте и какой результат приносите",req:true},
+      {key:"audience",label:"Целевая аудитория",type:"text",placeholder:"Кому вы помогаете",req:true},
+      {key:"cta",label:"Целевое действие",type:"text",placeholder:"Напр.: запись на разбор, ссылка в шапке"},
+      {key:"tone",label:"Тон",type:"chips",options:["Экспертный","Дерзкий","Спокойно-статусный","Дружеский"],default:"Спокойно-статусный"},
+    ],
+    build:(v)=>{
+      const count=6;
+      const sem='title — название площадки (Instagram, Telegram, YouTube, TikTok, Twitter/X, Закреп в Telegram), body — готовый текст описания под эту площадку, note — краткое пояснение приёма и лимит символов.';
+      const base=`Оффер: ${v.offer}\nАудитория: ${v.audience}\nЦелевое действие: ${v.cta||"—"}\nТон: ${v.tone||"Спокойно-статусный"}\n\nНапиши описание профиля под каждую площадку, строго в этом порядке: Instagram (до 150 символов, с переносами строк), Telegram (до 70 символов — коротко и ёмко), YouTube (2–3 предложения, можно развёрнуто), TikTok (до 80 символов, живо), Twitter/X (до 160 символов), Закреплённое сообщение в Telegram (развёрнутый текст: кто ты, кому помогаешь, что делать дальше).\n\nПравила: первая строка бьёт в аудиторию и результат, без «эксперт по всему» и пустых эпитетов. Учитывай формат каждой площадки — где-то нужны переносы строк, где-то сухо и коротко. В конце каждого описания — целевое действие, если оно указано.`;
+      return{system:"Ты — специалист по упаковке личного бренда в соцсетях. Пишешь описания профилей, которые за секунду объясняют, кто человек и зачем на него подписываться. Возвращаешь строго валидный JSON без markdown.",user:base+VARIANT_TAIL(count,sem),count};
+    },
+  },
+  "icp-master":{
+    inputs:[
+      {key:"offer",label:"Ваш продукт / услуга",type:"textarea",placeholder:"Что вы продаёте и какой результат даёте",req:true},
+      {key:"price",label:"Цена / чек",type:"text",placeholder:"Напр.: 150 000 ₽ за программу"},
+      {key:"current",label:"Кто покупает сейчас (необязательно)",type:"textarea",placeholder:"Опишите текущих клиентов, если они есть"},
+      {key:"kind",label:"Что нужно",type:"chips",options:["Портреты сегментов","Один идеальный клиент","Кому НЕ продавать"],default:"Портреты сегментов"},
+    ],
+    build:(v)=>{
+      const kind=v.kind||"Портреты сегментов";
+      const count=kind==="Один идеальный клиент"?1:3;
+      const ctx=`Продукт: ${v.offer}\nЧек: ${v.price||"не указан"}\nТекущие клиенты: ${v.current||"не описаны"}`;
+      let sem,base;
+      if(kind==="Один идеальный клиент"){
+        sem='title — краткое имя сегмента, body — детальный портрет, note — где его искать.';
+        base=`${ctx}\n\nСобери портрет ОДНОГО идеального клиента — того, кто платит охотнее всех и получает максимальный результат. Раскрой: кто он (роль, уровень дохода, стадия бизнеса), какая боль заставляет искать решение прямо сейчас, чего хочет на самом деле, за что готов платить премию, какие возражения выдвинет, какими словами описывает свою проблему.`;
+      } else if(kind==="Кому НЕ продавать"){
+        sem='title — тип клиента, которого стоит избегать, body — почему он проблемный и как распознать его на входе, note — что ему ответить или куда перенаправить.';
+        base=`${ctx}\n\nОпиши ${count} типа клиентов, которым НЕ стоит продавать этот продукт: они выжигают ресурс, торгуются, не доходят до результата или портят репутацию. Для каждого — как распознать ещё на заявке или созвоне.`;
+      } else {
+        sem='title — название сегмента и уровень платёжеспособности, body — портрет (боли, желания, триггер покупки, возражения, язык клиента), note — где искать и через какой оффер заходить.';
+        base=`${ctx}\n\nВыдели ${count} сегмента идеальных покупателей, готовых платить выше рынка. Расположи от самого платёжеспособного к менее. Для каждого раскрой: кто это, какая ситуация подталкивает к покупке, чего хочет на самом деле, за что готов доплатить, какие возражения, какими словами говорит о проблеме.`;
+      }
+      return{system:"Ты — маркетолог-стратег по сегментации аудитории. Строишь портреты клиентов на основе экономики и поведения, а не общих слов. Пишешь конкретно, живым языком клиента. Возвращаешь строго валидный JSON без markdown.",user:base+VARIANT_TAIL(count,sem),count};
+    },
+  },
 };
 
 async function copyGenVariants(system:string,user:string,count:number,avoid:string[]=[]):Promise<any[]>{
@@ -15451,7 +15528,7 @@ async function copyGenVariants(system:string,user:string,count:number,avoid:stri
 function CopyToolRunner({tool,dark}:{tool:any,dark:boolean}){
   const cfg=COPY_B_TOOLS[tool.id];
   const isMobile=useIsMobile();
-  const accent=TAG_COLORS[tool.tag]||"#7C7C7C";
+  const accent=COPY_ORANGE;
   const bd=C.bd;
   const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
   const inputBg=dark?"#1C1C1C":"#F8FAFC";
@@ -15529,13 +15606,28 @@ function CopyToolRunner({tool,dark}:{tool:any,dark:boolean}){
           </div>
         ))}
         <button onClick={()=>run(false)} disabled={!canGen||loading}
-          style={{padding:"13px",borderRadius:8,border:"none",background:canGen?accent:inputBg,color:canGen?"#fff":C.t2,fontSize:15,fontWeight:700,cursor:canGen&&!loading?"pointer":"default",fontFamily:"'Inter',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
-          {loading?<><div style={{width:17,height:17,border:"2.5px solid rgba(255,255,255,0.4)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Генерирую…</>:variants.length?"Сгенерировать заново":"Сгенерировать"}
+          style={{padding:"13px",borderRadius:9,border:"none",background:canGen?COPY_GRAD:inputBg,color:canGen?"#fff":C.t2,fontSize:15,fontWeight:700,cursor:canGen&&!loading?"pointer":"default",fontFamily:"'Inter',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:10,boxShadow:canGen?"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(249,115,22,0.28)":"none"}}>
+          {loading?<><CopyLoaderMini/>Генерирую…</>:variants.length?"Генерировать заново":"Сгенерировать"}
         </button>
+        {!canGen&&<div style={{fontSize:11.5,color:C.t2,textAlign:"center" as const,marginTop:-6,opacity:0.75}}>Заполни обязательные поля выше</div>}
       </div>
 
       {/* results */}
+      {loading&&!variants.length&&<div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10}}>
+        <CopyLoader text="Генерирую варианты…" sub="Vizzy Copy AI подбирает формулировки. Пара секунд."/>
+      </div>}
+
       {variants.length>0&&<div style={{display:"flex",flexDirection:"column",gap:12}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap" as const}}>
+          <div style={{fontSize:13,fontWeight:700,color:C.t2}}>Вариантов: {variants.length}</div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={()=>{navigator.clipboard.writeText(variants.map((v,i)=>`${i+1}. ${v.title?v.title+"\n":""}${v.body}`).join("\n\n"));setCopied(-1);setTimeout(()=>setCopied(null),1500);}}
+              style={{display:"flex",alignItems:"center",gap:6,padding:"10px 14px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:copied===-1?COPY_ORANGE:C.t2,fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+              {copied===-1?"Скопировано":"Копировать всё"}
+            </button>
+            <RegenButton onClick={()=>run(false)} busy={loading}/>
+          </div>
+        </div>
         {variants.map((v,i)=>(
           <div key={i} style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:18}}>
             {v.title&&<div style={{fontSize:12,fontWeight:700,color:accent,marginBottom:7,textTransform:"uppercase" as const,letterSpacing:0.3}}>{v.title}</div>}
@@ -15545,15 +15637,15 @@ function CopyToolRunner({tool,dark}:{tool:any,dark:boolean}){
               <button onClick={()=>copyBody(v.body,i)} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:copied===i?"#808080":C.t2,fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
                 {copied===i?<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#808080" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Скопировано</>:<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Копировать</>}
               </button>
-              <button onClick={()=>regen(i)} disabled={regenIdx===i} title="Перегенерировать вариант" style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:C.t2,fontSize:12.5,fontWeight:600,cursor:regenIdx===i?"default":"pointer",fontFamily:"'Inter',sans-serif"}}>
-                {regenIdx===i?<><div style={{width:12,height:12,border:"2px solid rgba(150,150,150,0.3)",borderTopColor:C.t2,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>Генерирую</>:<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Другой вариант</>}
+              <button onClick={()=>regen(i)} disabled={regenIdx===i} title="Перегенерировать этот вариант" style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:9,border:`1px solid ${regenIdx===i?COPY_ORANGE:bd}`,background:"transparent",color:regenIdx===i?COPY_ORANGE:C.t2,fontSize:12.5,fontWeight:600,cursor:regenIdx===i?"default":"pointer",fontFamily:"'Inter',sans-serif"}}>
+                {regenIdx===i?<><div style={{width:12,height:12,border:"2px solid rgba(249,115,22,0.3)",borderTopColor:COPY_ORANGE,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{COPY_KEYFRAMES}</style>Генерирую</>:<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Другой вариант</>}
               </button>
             </div>
           </div>
         ))}
         <button onClick={()=>run(true)} disabled={appending}
-          style={{padding:"12px",borderRadius:8,border:`1px dashed ${bd}`,background:"transparent",color:C.t2,fontSize:14,fontWeight:600,cursor:appending?"default":"pointer",fontFamily:"'Inter',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-          {appending?<><div style={{width:15,height:15,border:"2px solid rgba(150,150,150,0.3)",borderTopColor:C.t2,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>Генерирую…</>:"Ещё варианты"}
+          style={{padding:"12px",borderRadius:9,border:`1px dashed ${appending?COPY_ORANGE:bd}`,background:"transparent",color:appending?COPY_ORANGE:C.t2,fontSize:14,fontWeight:600,cursor:appending?"default":"pointer",fontFamily:"'Inter',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+          {appending?<><div style={{width:15,height:15,border:"2px solid rgba(249,115,22,0.3)",borderTopColor:COPY_ORANGE,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{COPY_KEYFRAMES}</style>Генерирую…</>:"+ Добавить ещё варианты"}
         </button>
       </div>}
     </div>
@@ -15598,6 +15690,58 @@ const COPY_A_TOOLS:Record<string,{inputs:any[],refine:{label:string,hint:string}
       user:`Преврати это в сценарий для диктора (озвучка видео). Разбей на блоки: [ХУК], [ИНТРО], [ОСНОВНАЯ ЧАСТЬ], [ПРИЗЫВ]. Пиши короткими фразами под живую речь, ставь метки [пауза] и подсказки интонации (например, [громче], [медленно], [с улыбкой]). Подача: ${v.tone||"Энергичная"}. Ориентировочная длина: ${v.length||"Среднее (3-5 мин)"}.\n\nИсходный текст/тема:\n${v.source}\n\nВерни только сценарий.`,
     }),
   },
+  "text-booster":{
+    inputs:[
+      {key:"source",label:"Текст для разбора",type:"textarea",placeholder:"Вставьте текст, который нужно проверить и усилить",req:true},
+      {key:"goal",label:"Задача текста",type:"text",placeholder:"Напр.: продать разбор, собрать заявки, прогреть"},
+      {key:"depth",label:"Формат разбора",type:"chips",options:["Аудит + усиленный текст","Только усиленный текст","Жёсткий разнос"],default:"Аудит + усиленный текст"},
+    ],
+    refine:[{label:"Жёстче",hint:"критикуй жёстче, не щади формулировки"},{label:"Короче",hint:"сократи разбор, оставь только критичное"},{label:"Больше примеров",hint:"покажи конкретные варианты замены фраз"}],
+    build:(v)=>{
+      const depth=v.depth||"Аудит + усиленный текст";
+      const task=depth==="Только усиленный текст"
+        ? `Перепиши текст сильнее, без разбора. Убери воду, клише и канцелярит, усиль первую строку, добавь конкретику вместо общих слов. Верни только готовый текст.`
+        : depth==="Жёсткий разнос"
+        ? `Разбери текст жёстко и по делу. Сначала — что не работает: слабый заход, вода, клише, отсутствие конкретики, размытый призыв. Каждый пункт — с цитатой из текста и объяснением, почему это не работает. Затем — пошаговая инструкция, что переписать. В конце — усиленная версия текста целиком.`
+        : `Сделай разбор в три блока.\n1. ЧТО РАБОТАЕТ — сильные места с цитатами.\n2. ЧТО СЛАБО — проблемы с цитатами и объяснением, плюс конкретная замена для каждой.\n3. ПОШАГОВО — что сделать по порядку, чтобы текст стал сильнее.\nПосле разбора — блок УСИЛЕННЫЙ ТЕКСТ с готовой переписанной версией.`;
+      return{
+        system:"Ты — редактор-практик с опытом в продающих текстах. Оцениваешь текст по делу: цепляет ли первая строка, есть ли конкретика вместо общих слов, ясен ли призыв. Не хвалишь из вежливости. Пишешь по-русски, без канцелярита. Возвращаешь только текст разбора без markdown-разметки.",
+        user:`Задача текста: ${v.goal||"не указана"}\n\n${task}\n\nТекст:\n${v.source}`,
+      };
+    },
+  },
+  "style-master":{
+    inputs:[
+      {key:"samples",label:"Образцы вашего текста",type:"textarea",placeholder:"Вставьте 2-3 своих текста — по ним AI поймёт вашу манеру",req:true},
+      {key:"task",label:"Что написать в этом стиле",type:"textarea",placeholder:"Напр.: пост о том, почему я поднял цены",req:true},
+      {key:"format",label:"Формат",type:"chips",options:["Пост","Сторис","Письмо","Сценарий видео","Свободный"],default:"Пост"},
+    ],
+    refine:[{label:"Ближе к образцу",hint:"сильнее копируй манеру из образцов: ритм, длину фраз, лексику"},{label:"Короче",hint:"сократи, сохранив стиль"},{label:"Резче",hint:"добавь остроты и прямоты, оставаясь в стиле"}],
+    build:(v)=>({
+      system:"Ты — аналитик авторского стиля. Сначала про себя разбираешь образцы: длину предложений, ритм, любимые слова и обороты, уровень формальности, как автор начинает и заканчивает мысль, использует ли метафоры и юмор. Затем пишешь новый текст так, чтобы его нельзя было отличить от авторского. Возвращаешь только готовый текст, без разбора и пояснений.",
+      user:`Изучи манеру автора по образцам и напиши новый текст в точно такой же манере.\n\nОБРАЗЦЫ АВТОРА:\n${v.samples}\n\nЗАДАЧА — напиши в этом стиле (формат: ${v.format||"Пост"}):\n${v.task}\n\nВажно: копируй ритм, длину фраз, характерную лексику и способ заходить в мысль. Не используй слова и обороты, которых нет в манере автора. Верни только готовый текст.`,
+    }),
+  },
+  "dna-transformer":{
+    inputs:[
+      {key:"source",label:"Текст для адаптации",type:"textarea",placeholder:"Текст, который нужно привести к стандартам бренда",req:true},
+      {key:"brand",label:"Стандарты и ценности бренда",type:"textarea",placeholder:"Как бренд говорит, во что верит, что никогда не делает",req:true},
+      {key:"strict",label:"Степень переработки",type:"chips",options:["Мягкая правка","Полная перезапись","Только проверка"],default:"Полная перезапись"},
+    ],
+    refine:[{label:"Строже к бренду",hint:"жёстче следуй стандартам и ценностям бренда"},{label:"Живее",hint:"добавь энергии, сохранив рамки бренда"},{label:"Короче",hint:"сократи, не теряя брендовых маркеров"}],
+    build:(v)=>{
+      const strict=v.strict||"Полная перезапись";
+      const task=strict==="Только проверка"
+        ? `Проверь текст на соответствие бренду. Перечисли конкретные места, которые выбиваются из стандартов и ценностей: цитата → чем нарушает → как заменить. В конце — общий вердикт одной строкой. Сам текст не переписывай целиком.`
+        : strict==="Мягкая правка"
+        ? `Аккуратно поправь текст под стандарты бренда: сохрани структуру и авторские мысли, замени только то, что противоречит тону и ценностям. Верни готовый текст, а под ним короткий список внесённых правок.`
+        : `Полностью перепиши текст под стандарты бренда: тон, лексика, ценности, запреты. Сохрани суть и факты, но подача должна стать полностью брендовой. Верни готовый текст, а под ним — короткий список ключевых изменений.`;
+      return{
+        system:"Ты — бренд-редактор. Приводишь любые тексты к единым стандартам бренда: тон голоса, ценности, разрешённая и запрещённая лексика. Не превращаешь текст в корпоративный шаблон — сохраняешь живость. Возвращаешь только результат, без markdown-разметки.",
+        user:`СТАНДАРТЫ И ЦЕННОСТИ БРЕНДА:\n${v.brand}\n\nЗАДАЧА:\n${task}\n\nИСХОДНЫЙ ТЕКСТ:\n${v.source}`,
+      };
+    },
+  },
 };
 
 async function copyRewrite(system:string,user:string):Promise<string>{
@@ -15609,7 +15753,7 @@ async function copyRewrite(system:string,user:string):Promise<string>{
 function CopyRewriteRunner({tool,dark}:{tool:any,dark:boolean}){
   const cfg=COPY_A_TOOLS[tool.id];
   const isMobile=useIsMobile();
-  const accent=TAG_COLORS[tool.tag]||"#7C7C7C";
+  const accent=COPY_ORANGE;
   const bd=C.bd;
   const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
   const inputBg=dark?"#1C1C1C":"#F8FAFC";
@@ -15667,25 +15811,33 @@ function CopyRewriteRunner({tool,dark}:{tool:any,dark:boolean}){
           </div>
         ))}
         <button onClick={run} disabled={!canGen||loading}
-          style={{padding:"13px",borderRadius:8,border:"none",background:canGen?accent:inputBg,color:canGen?"#fff":C.t2,fontSize:15,fontWeight:700,cursor:canGen&&!loading?"pointer":"default",fontFamily:"'Inter',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
-          {loading?<><div style={{width:17,height:17,border:"2.5px solid rgba(255,255,255,0.4)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Обрабатываю…</>:result?"Обработать заново":"Обработать"}
+          style={{padding:"13px",borderRadius:9,border:"none",background:canGen?COPY_GRAD:inputBg,color:canGen?"#fff":C.t2,fontSize:15,fontWeight:700,cursor:canGen&&!loading?"pointer":"default",fontFamily:"'Inter',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:10,boxShadow:canGen?"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(249,115,22,0.28)":"none"}}>
+          {loading?<><CopyLoaderMini/>Обрабатываю…</>:result?"Генерировать заново":"Обработать"}
         </button>
+        {!canGen&&<div style={{fontSize:11.5,color:C.t2,textAlign:"center" as const,marginTop:-6,opacity:0.75}}>Заполни обязательные поля выше</div>}
       </div>
+
+      {loading&&!result&&<div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10}}>
+        <CopyLoader text="Обрабатываю текст…" sub="Vizzy Copy AI переписывает. Пара секунд."/>
+      </div>}
 
       {result&&<div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:20}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:14,flexWrap:"wrap" as const}}>
           <div style={{display:"flex",gap:4,background:inputBg,borderRadius:8,padding:3}}>
             {(["result","original"] as const).map(t=><button key={t} onClick={()=>setTab(t)} style={{padding:"6px 14px",borderRadius:8,border:"none",background:tab===t?(dark?"rgba(255,255,255,0.08)":"#fff"):"transparent",color:tab===t?C.t1:C.t2,fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>{t==="result"?"Результат":"Оригинал"}</button>)}
           </div>
-          <button onClick={copy} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:copied?"#808080":C.t2,fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
-            {copied?<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#808080" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Скопировано</>:<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Копировать</>}
-          </button>
+          <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap" as const}}>
+            <button onClick={copy} style={{display:"flex",alignItems:"center",gap:6,padding:"9px 13px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:copied?COPY_ORANGE:C.t2,fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+              {copied?<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={COPY_ORANGE} strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Скопировано</>:<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Копировать</>}
+            </button>
+            <RegenButton onClick={run} busy={loading}/>
+          </div>
         </div>
         <div style={{fontSize:15,color:C.t1,lineHeight:1.7,whiteSpace:"pre-wrap" as const,opacity:tab==="original"?0.75:1}}>{tab==="result"?result:(vals[sourceKey]||"")}</div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap" as const,marginTop:16,paddingTop:14,borderTop:`1px solid ${bd}`,alignItems:"center"}}>
           <span style={{fontSize:12,color:C.t2,fontWeight:600}}>Доработать:</span>
-          {cfg.refine.map(r=><button key={r.label} onClick={()=>refine(r)} disabled={refining!==null} style={{padding:"7px 14px",borderRadius:10,border:`1px solid ${bd}`,background:"transparent",color:refining===r.label?accent:C.t2,fontSize:12.5,fontWeight:600,cursor:refining?"default":"pointer",fontFamily:"'Inter',sans-serif",display:"flex",alignItems:"center",gap:6}}>
-            {refining===r.label&&<div style={{width:11,height:11,border:"2px solid rgba(150,150,150,0.3)",borderTopColor:accent,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>}
+          {cfg.refine.map(r=><button key={r.label} onClick={()=>refine(r)} disabled={refining!==null} style={{padding:"7px 14px",borderRadius:10,border:`1px solid ${refining===r.label?COPY_ORANGE:bd}`,background:refining===r.label?COPY_ORANGE+"14":"transparent",color:refining===r.label?COPY_ORANGE:C.t2,fontSize:12.5,fontWeight:600,cursor:refining?"default":"pointer",fontFamily:"'Inter',sans-serif",display:"flex",alignItems:"center",gap:6}}>
+            {refining===r.label&&<><div style={{width:11,height:11,border:"2px solid rgba(249,115,22,0.3)",borderTopColor:COPY_ORANGE,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{COPY_KEYFRAMES}</style></>}
             {r.label}
           </button>)}
         </div>
@@ -15748,7 +15900,7 @@ function YouTubeSeoRunner({tool,dark}:{tool:any,dark:boolean}){
   const bd=C.bd;
   const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
   const inputBg=dark?"#1C1C1C":"#F8FAFC";
-  const RED="#E62117";
+  const RED=COPY_ORANGE;
 
   const[title,setTitle]=useState("");
   const[niche,setNiche]=useState("");
@@ -15823,16 +15975,24 @@ function YouTubeSeoRunner({tool,dark}:{tool:any,dark:boolean}){
             placeholder="Например: бизнес, маркетинг, личный бренд" style={fld}/>
         </div>
         <button onClick={run} disabled={!canGen||loading}
-          style={{padding:"13px",borderRadius:8,border:"none",background:canGen?`linear-gradient(180deg,#FF2A1E 0%,${RED} 55%,#C4160F 100%)`:inputBg,color:canGen?"#fff":C.t2,fontSize:15,fontWeight:700,cursor:canGen&&!loading?"pointer":"default",fontFamily:"'Inter',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:10,boxShadow:canGen?"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(230,33,23,0.28)":"none"}}>
-          {loading?<><div style={{width:17,height:17,border:"2.5px solid rgba(255,255,255,0.4)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Генерирую…</>
+          style={{padding:"13px",borderRadius:9,border:"none",background:canGen?COPY_GRAD:inputBg,color:canGen?"#fff":C.t2,fontSize:15,fontWeight:700,cursor:canGen&&!loading?"pointer":"default",fontFamily:"'Inter',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:10,boxShadow:canGen?"0 1px 2px rgba(0,0,0,0.06),0 8px 22px rgba(249,115,22,0.32)":"none"}}>
+          {loading?<><CopyLoaderMini/>Генерирую…</>
             :hasResult?"Сгенерировать заново":"Сгенерировать"}
         </button>
         {err&&<div style={{fontSize:12.5,color:RED,lineHeight:1.5}}>{err}</div>}
         {!hasResult&&!loading&&<div style={{fontSize:12,color:C.t2,lineHeight:1.55,opacity:0.8}}>Теги проходят самопроверку: узкие и низкочастотные запросы отсеиваются — остаются только те, что реально ищут, в тему и на широкий охват.</div>}
       </div>
 
+      {/* loading */}
+      {loading&&!hasResult&&<div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10}}>
+        <CopyLoader text="Подбираю теги и заголовки…" sub="Vizzy Copy AI проверяет частотность и отсеивает узкие запросы."/>
+      </div>}
+
       {/* results */}
       {hasResult&&<div style={{display:"flex",flexDirection:"column",gap:12}}>
+        <div style={{display:"flex",justifyContent:"flex-end"}}>
+          <RegenButton onClick={run} busy={loading}/>
+        </div>
         {/* tags */}
         {tags&&<div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:18}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:14}}>
@@ -15975,7 +16135,7 @@ function CopyAIPage({userId}:{userId:string}){
         <div style={{display:"flex",gap:2,padding:"3px",background:dark?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.04)",borderRadius:8,border:`1px solid ${bd}`}}>
           {([["all","Все"],["fav","Любимые"],["my","Мои"]] as const).map(([id,label])=>(
             <button key={id} onClick={()=>setFilter(id)}
-              style={{padding:"6px 14px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:filter===id?700:500,background:filter===id?(dark?"rgba(255,255,255,0.09)":"#fff"):"transparent",color:filter===id?C.t1:C.t2,transition:"all 0.15s",boxShadow:filter===id&&!dark?"0 1px 3px rgba(0,0,0,0.08)":"none"}}>
+              style={{padding:"6px 14px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:filter===id?700:500,background:filter===id?(dark?"rgba(255,255,255,0.09)":"#fff"):"transparent",color:filter===id?COPY_ORANGE:C.t2,transition:"all 0.15s",boxShadow:filter===id&&!dark?"0 1px 3px rgba(0,0,0,0.08)":"none"}}>
               {label}{id==="fav"&&favs.size>0?` (${favs.size})`:""}
             </button>
           ))}
@@ -15991,12 +16151,12 @@ function CopyAIPage({userId}:{userId:string}){
           {filtered.map(tool=>(
             <button key={tool.id} onClick={()=>setSelected(tool)}
               style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:10,padding:20,cursor:"pointer",textAlign:"left" as const,transition:"all 0.15s",position:"relative" as const}}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(-1px)";(e.currentTarget as HTMLElement).style.boxShadow=dark?"0 4px 20px rgba(0,0,0,0.3)":"0 4px 20px rgba(0,0,0,0.08)";}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(0)";(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
+              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(-1px)";(e.currentTarget as HTMLElement).style.boxShadow=dark?"0 4px 20px rgba(0,0,0,0.3)":"0 6px 22px rgba(249,115,22,0.16)";(e.currentTarget as HTMLElement).style.borderColor=COPY_ORANGE+"55";}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(0)";(e.currentTarget as HTMLElement).style.boxShadow="none";(e.currentTarget as HTMLElement).style.borderColor=bd;}}>
 
               {/* Star */}
               <button onClick={e=>toggleFav(tool.id,e)}
-                style={{position:"absolute",top:14,right:14,background:"none",border:"none",cursor:"pointer",color:favs.has(tool.id)?"#A7A7A7":C.t2,opacity:favs.has(tool.id)?1:0.4,transition:"all 0.15s",padding:2}}
+                style={{position:"absolute",top:14,right:14,background:"none",border:"none",cursor:"pointer",color:favs.has(tool.id)?COPY_ORANGE:C.t2,opacity:favs.has(tool.id)?1:0.4,transition:"all 0.15s",padding:2}}
                 onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.opacity="1";}}
                 onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.opacity=favs.has(tool.id)?"1":"0.4";}}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill={favs.has(tool.id)?"currentColor":"none"} stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
