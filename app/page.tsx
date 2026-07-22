@@ -58,6 +58,7 @@ const NAV_GROUPS=[
       {id:"dashboard",label:"Dashboard",accent:"#878787",ic:"M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"},
       {id:"strategy",label:"War Room",accent:"#878787",ic:"M13 10V3L4 14h7v7l9-11h-7z"},
       {id:"crm",label:"CRM",accent:"#9C9C9C",ic:"M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"},
+      {id:"cashflow",label:"Cash Flow",accent:"#16A34A",ic:"M12 1v22 M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"},
       {id:"content",label:"Content",accent:"#808080",ic:"M7 4v16M17 4v16M3 8h4m10 0h4M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"},
       {id:"calls",label:"Calls",accent:"#9C9C9C",ic:"M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"},
       {id:"offer",label:"Positioning",accent:"#A7A7A7",ic:"M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"},
@@ -978,6 +979,7 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
     {page==="dashboard"&&<SafePage name="Dashboard"><DashPage userId={user.id} name={userName} avatar={userAvatar} onNav={setPage} onAvatarChange={async(url:string)=>{setUserAvatar(url);await supabase.from("profiles").upsert({id:user.id,avatar_url:url},{onConflict:"id"});}}/></SafePage>}
     {page==="strategy"&&<SafePage name="War Room"><StrategyPage userId={user.id} onNav={setPage}/></SafePage>}
     {page==="crm"&&<SafePage name="CRM"><CrmPage userId={user.id}/></SafePage>}
+    {page==="cashflow"&&<SafePage name="Cash Flow"><CashFlowPage userId={user.id}/></SafePage>}
     {page==="calls"&&<SafePage name="Созвоны"><CallsPage userId={user.id}/></SafePage>}
     {page==="mailings"&&<SafePage name="Рассылки"><MailingsPage userId={user.id}/></SafePage>}
     {page==="content"&&<SafePage name="Контент"><ContentPage userId={user.id}/></SafePage>}
@@ -4069,6 +4071,595 @@ function CrmFunnel({stages,leads,isMobile}:{stages:any[],leads:any[],isMobile:bo
 
 
 
+/* ============ CASH FLOW ============ */
+const CF_GREEN="#16A34A";
+const CF_RED="#DC2626";
+const CF_BLUE="#2563EB";
+const CF_AMBER="#D97706";
+
+const CF_INCOME_SRC=["Консультация","Наставничество","Курс","Реклама","Партнёрка","Другое"];
+const CF_EXPENSE_SRC=["Реклама","Зарплата","Подрядчики","Налоги","Сервисы","Аренда","Другое"];
+const CF_PF_DEFAULT=[
+  {key:"owner",label:"Зарплата владельцу",pct:30,color:"#2563EB"},
+  {key:"tax",label:"Налоги",pct:25,color:"#DC2626"},
+  {key:"ads",label:"Реклама",pct:20,color:"#D97706"},
+  {key:"reserve",label:"Резерв",pct:15,color:"#7C3AED"},
+  {key:"profit",label:"Прибыль",pct:10,color:"#16A34A"},
+];
+const CF_SETTINGS_DEFAULT={start_balance:0,goal_profit:0,pf:CF_PF_DEFAULT,conversion:20,repeat_rate:30};
+
+const cfMoney=(n:number)=>{
+  const v=Math.round(n||0);
+  const s=Math.abs(v).toLocaleString("ru-RU");
+  return (v<0?"−":"")+s+" ₽";
+};
+const cfShort=(n:number)=>{
+  const v=Math.abs(Math.round(n||0));
+  if(v>=1000000)return (v/1000000).toFixed(1).replace(".0","")+" млн";
+  if(v>=1000)return (v/1000).toFixed(v>=100000?0:1).replace(".0","")+"к";
+  return String(v);
+};
+const cfMonth=(d:string)=>(d||"").slice(0,7);
+const cfDaysInMonth=()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth()+1,0).getDate();};
+const cfDayOfMonth=()=>new Date().getDate();
+
+function CashFlowPage({userId}:{userId:string}){
+  const isMobile=useIsMobile();
+  const{data:tx,add,remove,loading}=useTable("pnl",userId);
+  const[tab,setTab]=useState<"dash"|"goal"|"kpi"|"history">("dash");
+  const[settings,setSettings]=useState<any>(CF_SETTINGS_DEFAULT);
+  const[settingsOpen,setSettingsOpen]=useState(false);
+
+  // ── settings: таблица cashflow_settings, с откатом на localStorage ──
+  const lsKey="cf_settings_"+userId;
+  useEffect(()=>{
+    let alive=true;
+    (async()=>{
+      try{
+        const{data,error}=await supabase.from("cashflow_settings").select("*").eq("user_id",userId).maybeSingle();
+        if(error)throw error;
+        if(alive&&data)setSettings({...CF_SETTINGS_DEFAULT,...(data.payload||{})});
+        else if(alive){
+          const raw=localStorage.getItem(lsKey);
+          if(raw)setSettings({...CF_SETTINGS_DEFAULT,...JSON.parse(raw)});
+        }
+      }catch{
+        try{const raw=localStorage.getItem(lsKey);if(raw&&alive)setSettings({...CF_SETTINGS_DEFAULT,...JSON.parse(raw)});}catch{}
+      }
+    })();
+    return()=>{alive=false;};
+  },[userId]);
+
+  const saveSettings=async(next:any)=>{
+    setSettings(next);
+    try{localStorage.setItem(lsKey,JSON.stringify(next));}catch{}
+    try{
+      await supabase.from("cashflow_settings").upsert({user_id:userId,payload:next,updated_at:new Date().toISOString()},{onConflict:"user_id"});
+    }catch(e){console.warn("cashflow_settings не сохранены в БД (работает локально):",e);}
+  };
+
+  // ── быстрый ввод ──
+  const[entry,setEntry]=useState<null|"income"|"expense">(null);
+  const[amount,setAmount]=useState("");
+  const[cat,setCat]=useState("");
+  const[note,setNote]=useState("");
+  const[when,setWhen]=useState(today());
+  const[saving,setSaving]=useState(false);
+
+  const openEntry=(t:"income"|"expense")=>{
+    setEntry(t);setAmount("");setNote("");setWhen(today());
+    setCat(t==="income"?CF_INCOME_SRC[0]:CF_EXPENSE_SRC[0]);
+  };
+  const submitEntry=async()=>{
+    const v=Number(String(amount).replace(/\s/g,"").replace(",","."));
+    if(!isFinite(v)||v<=0||saving)return;
+    setSaving(true);
+    await add({type:entry,amount:v,category:cat,date:when||today(),comment:note||""});
+    setSaving(false);setEntry(null);
+  };
+
+  // ── расчёты ──
+  const m=useMemo(()=>{
+    const cm=today().slice(0,7);
+    const inc=(t:any)=>t.type==="income";
+    const exp=(t:any)=>t.type==="expense";
+    const sum=(a:any[])=>a.reduce((s,t)=>s+(+t.amount||0),0);
+
+    const allInc=sum(tx.filter(inc));
+    const allExp=sum(tx.filter(exp));
+    const cash=(+settings.start_balance||0)+allInc-allExp;
+
+    const monthTx=tx.filter((t:any)=>cfMonth(t.date)===cm);
+    const mInc=sum(monthTx.filter(inc));
+    const mExp=sum(monthTx.filter(exp));
+    const mProfit=mInc-mExp;
+
+    // burn rate: средний расход за последние 3 месяца с данными
+    const byMonth:Record<string,{i:number,e:number}>={};
+    tx.forEach((t:any)=>{
+      const k=cfMonth(t.date);if(!k)return;
+      byMonth[k]=byMonth[k]||{i:0,e:0};
+      if(t.type==="income")byMonth[k].i+=(+t.amount||0);else byMonth[k].e+=(+t.amount||0);
+    });
+    const months=Object.keys(byMonth).sort().reverse();
+    const last3=months.slice(0,3);
+    const burn=last3.length?last3.reduce((s,k)=>s+byMonth[k].e,0)/last3.length:mExp;
+    const avgInc=last3.length?last3.reduce((s,k)=>s+byMonth[k].i,0)/last3.length:mInc;
+    const netBurn=Math.max(0,burn-avgInc);
+    const runway=netBurn>0?cash/netBurn:Infinity;
+
+    // что съедает прибыль
+    const expByCat:Record<string,number>={};
+    monthTx.filter(exp).forEach((t:any)=>{const k=t.category||"Другое";expByCat[k]=(expByCat[k]||0)+(+t.amount||0);});
+    const topExp=Object.entries(expByCat).sort((a,b)=>b[1]-a[1]);
+
+    const incByCat:Record<string,number>={};
+    monthTx.filter(inc).forEach((t:any)=>{const k=t.category||"Другое";incByCat[k]=(incByCat[k]||0)+(+t.amount||0);});
+    const topInc=Object.entries(incByCat).sort((a,b)=>b[1]-a[1]);
+
+    // план
+    const goal=+settings.goal_profit||0;
+    const planPct=goal>0?Math.round(mProfit/goal*100):null;
+    const dim=cfDaysInMonth(),dom=cfDayOfMonth();
+    const paceProfit=dom>0?mProfit/dom*dim:0;
+    const pacePct=goal>0?Math.round(paceProfit/goal*100):null;
+
+    // KPI
+    const salesCount=monthTx.filter(inc).length;
+    const avgCheck=salesCount>0?mInc/salesCount:0;
+    const adSpend=expByCat["Реклама"]||0;
+    const margin=mInc>0?mProfit/mInc*100:0;
+    const cac=salesCount>0&&adSpend>0?adSpend/salesCount:0;
+    const romi=adSpend>0?(mInc-adSpend)/adSpend*100:0;
+    const roas=adSpend>0?mInc/adSpend:0;
+    const ltv=avgCheck*(1+(+settings.repeat_rate||0)/100);
+    const breakEven=margin>0?mExp/(margin/100):0;
+
+    return{cash,allInc,allExp,mInc,mExp,mProfit,burn,avgInc,netBurn,runway,topExp,topInc,goal,planPct,paceProfit,pacePct,
+      salesCount,avgCheck,adSpend,margin,cac,romi,roas,ltv,breakEven,byMonth,months,dim,dom};
+  },[tx,settings]);
+
+  // ── AI финдиректор ──
+  const[ai,setAi]=useState("");
+  const[aiBusy,setAiBusy]=useState(false);
+  const askCFO=async()=>{
+    if(aiBusy)return;
+    setAiBusy(true);setAi("");
+    const ctx=`Деньги на счетах: ${Math.round(m.cash)} ₽
+Доход за месяц: ${Math.round(m.mInc)} ₽
+Расход за месяц: ${Math.round(m.mExp)} ₽
+Чистая прибыль месяца: ${Math.round(m.mProfit)} ₽
+Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
+Запас месяцев: ${isFinite(m.runway)?m.runway.toFixed(1):"бесконечный (доход покрывает расходы)"}
+План прибыли: ${m.goal>0?Math.round(m.goal)+" ₽":"не задан"}
+Выполнение плана: ${m.planPct!=null?m.planPct+"%":"—"}
+Прогноз по темпу до конца месяца: ${m.goal>0?Math.round(m.paceProfit)+" ₽ ("+m.pacePct+"% плана)":"—"}
+Сегодня ${m.dom}-й день из ${m.dim}
+Расходы по категориям: ${m.topExp.map(([k,v])=>k+" "+Math.round(v)+" ₽").join(", ")||"нет"}
+Доходы по источникам: ${m.topInc.map(([k,v])=>k+" "+Math.round(v)+" ₽").join(", ")||"нет"}
+Средний чек: ${Math.round(m.avgCheck)} ₽ | Сделок: ${m.salesCount} | Маржинальность: ${m.margin.toFixed(0)}%
+Рекламный бюджет: ${Math.round(m.adSpend)} ₽ | ROMI: ${m.romi.toFixed(0)}%`;
+    try{
+      const t=await paChat(
+        "Ты — финансовый директор предпринимателя. Говоришь коротко и по делу, оперируешь цифрами из данных, не выдумываешь. Пишешь по-русски, без markdown-разметки и без воды. Максимум 5 коротких пунктов.",
+        `Вот финансы за текущий месяц:\n\n${ctx}\n\nДай сводку финдиректора:\n1) Одной строкой — идём ли мы по плану и на сколько процентов по текущему темпу.\n2) Что сейчас сильнее всего съедает прибыль — с конкретной суммой.\n3) Один риск, который виден по цифрам (кассовый разрыв, перекос расходов, зависимость от одного источника дохода).\n4) Одно конкретное действие на эту неделю с числом.\n5) Если есть запас — на сколько можно увеличить рекламный бюджет, не уходя в минус.\nПиши строго по этим данным. Если данных мало — так и скажи.`,
+        900,0.6);
+      setAi(stripMd(t));
+    }catch{setAi("Не удалось получить сводку. Попробуй ещё раз.");}
+    setAiBusy(false);
+  };
+
+  // ── прогноз ──
+  const[hireCost,setHireCost]=useState("");
+  const hire=Number(String(hireCost).replace(/\s/g,""))||0;
+  const forecastProfit=m.mProfit-hire;
+  const forecastRunway=(()=>{const nb=Math.max(0,m.burn+hire-m.avgInc);return nb>0?m.cash/nb:Infinity;})();
+  const gapDays=(()=>{
+    const dailyNet=(m.avgInc-m.burn)/30;
+    if(dailyNet>=0)return null;
+    return Math.max(0,Math.floor(m.cash/Math.abs(dailyNet)));
+  })();
+
+  // ── карта цели ──
+  const goalMap=useMemo(()=>{
+    const target=+settings.goal_profit||0;
+    if(target<=0)return null;
+    const expected=m.mExp>0?m.mExp:m.burn;
+    const revenue=target+expected;
+    const check=m.avgCheck>0?m.avgCheck:0;
+    const sales=check>0?Math.ceil(revenue/check):0;
+    const conv=Math.max(1,+settings.conversion||20);
+    const leads=sales>0?Math.ceil(sales/(conv/100)):0;
+    return{target,expected,revenue,check,sales,leads,conv};
+  },[settings,m]);
+
+  // ── стили ──
+  const cardS:React.CSSProperties={background:C.w,border:"1px solid "+C.bd,borderRadius:12,padding:isMobile?14:18};
+  const lblS:React.CSSProperties={fontSize:12,color:C.t2,fontWeight:600,marginBottom:6,display:"block"};
+  const tabS=(a:boolean):React.CSSProperties=>({padding:"8px 16px",borderRadius:9,border:"none",background:a?C.t1:"transparent",color:a?C.bg:C.t2,fontSize:13,fontWeight:a?700:500,cursor:"pointer",whiteSpace:"nowrap"});
+
+  const KpiCard=({icon,label,value,sub,color}:{icon:string,label:string,value:string,sub?:string,color?:string})=>(
+    <div style={cardS}>
+      <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:8}}>
+        <span style={{fontSize:15}}>{icon}</span>
+        <span style={{fontSize:12,color:C.t2,fontWeight:600}}>{label}</span>
+      </div>
+      <div style={{fontSize:isMobile?20:24,fontWeight:800,color:color||C.t1,letterSpacing:"-0.02em",lineHeight:1.1}}>{value}</div>
+      {sub&&<div style={{fontSize:11.5,color:C.t2,marginTop:5,lineHeight:1.45}}>{sub}</div>}
+    </div>
+  );
+
+  return<>
+    {/* Быстрый ввод */}
+    <div style={{display:"flex",gap:10,marginBottom:18,flexWrap:"wrap" as const}}>
+      <button onClick={()=>openEntry("income")}
+        style={{flex:isMobile?"1 1 100%":"0 0 auto",padding:"13px 22px",borderRadius:11,border:"none",background:CF_GREEN,color:"#fff",fontSize:14.5,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:"0 6px 18px rgba(22,163,74,0.28)"}}>
+        <span style={{fontSize:16}}>💰</span> Получил оплату
+      </button>
+      <button onClick={()=>openEntry("expense")}
+        style={{flex:isMobile?"1 1 100%":"0 0 auto",padding:"13px 22px",borderRadius:11,border:"1px solid "+C.bd,background:C.w,color:C.t1,fontSize:14.5,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+        <span style={{fontSize:16}}>💸</span> Записать расход
+      </button>
+      <div style={{flex:1}}/>
+      <button onClick={()=>setSettingsOpen(true)}
+        style={{padding:"13px 16px",borderRadius:11,border:"1px solid "+C.bd,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer"}}>⚙ Настройки</button>
+    </div>
+
+    {/* Вкладки */}
+    <div style={{display:"flex",gap:4,marginBottom:18,overflowX:"auto" as const,background:C.ib,padding:4,borderRadius:11,border:"1px solid "+C.bd,width:"fit-content",maxWidth:"100%"}}>
+      {([["dash","Дашборд"],["goal","Цель и прогноз"],["kpi","KPI бизнеса"],["history","История"]] as const).map(([id,l])=>(
+        <button key={id} onClick={()=>setTab(id)} style={tabS(tab===id)}>{l}</button>
+      ))}
+    </div>
+
+    {/* ============ ДАШБОРД ============ */}
+    {tab==="dash"&&<>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(auto-fit,minmax(190px,1fr))",gap:isMobile?10:14,marginBottom:16}}>
+        <KpiCard icon="💰" label="Деньги на счетах" value={cfMoney(m.cash)} color={m.cash>=0?C.t1:CF_RED}
+          sub={`Приход ${cfShort(m.allInc)} · расход ${cfShort(m.allExp)}`}/>
+        <KpiCard icon="📈" label="Чистая прибыль (мес)" value={cfMoney(m.mProfit)} color={m.mProfit>=0?CF_GREEN:CF_RED}
+          sub={`Доход ${cfShort(m.mInc)} − расход ${cfShort(m.mExp)}`}/>
+        <KpiCard icon="🔥" label="Burn Rate" value={cfMoney(m.burn)+"/мес"} color={CF_AMBER}
+          sub={m.netBurn>0?`Чистое сгорание ${cfShort(m.netBurn)}/мес`:"Доход перекрывает расходы"}/>
+        <KpiCard icon="🚀" label="Запас месяцев" value={isFinite(m.runway)?m.runway.toFixed(1)+" мес":"∞"}
+          color={!isFinite(m.runway)?CF_GREEN:m.runway<3?CF_RED:m.runway<6?CF_AMBER:CF_GREEN}
+          sub={isFinite(m.runway)?(m.runway<3?"Критично — меньше 3 месяцев":"При текущем темпе расходов"):"Бизнес окупает себя"}/>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:14,marginBottom:16}}>
+        {/* План прибыли */}
+        <div style={cardS}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+            <div style={{display:"flex",alignItems:"center",gap:7}}>
+              <span style={{fontSize:15}}>📊</span>
+              <span style={{fontSize:13,fontWeight:700,color:C.t1}}>План прибыли месяца</span>
+            </div>
+            {m.goal>0&&<span style={{fontSize:12,color:C.t2}}>цель {cfShort(m.goal)} ₽</span>}
+          </div>
+          {m.goal>0?<>
+            <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:10}}>
+              <span style={{fontSize:30,fontWeight:800,color:(m.planPct||0)>=100?CF_GREEN:C.t1,letterSpacing:"-0.02em"}}>{m.planPct}%</span>
+              <span style={{fontSize:13,color:C.t2}}>{cfMoney(m.mProfit)} из {cfShort(m.goal)} ₽</span>
+            </div>
+            <div style={{height:10,background:C.ib,borderRadius:6,overflow:"hidden",marginBottom:10}}>
+              <div style={{width:Math.max(0,Math.min(100,m.planPct||0))+"%",height:"100%",background:(m.planPct||0)>=100?CF_GREEN:CF_BLUE,transition:"width 0.4s"}}/>
+            </div>
+            <div style={{fontSize:12.5,color:C.t2,lineHeight:1.55}}>
+              По текущему темпу к концу месяца: <b style={{color:(m.pacePct||0)>=100?CF_GREEN:CF_AMBER,fontWeight:700}}>{cfMoney(m.paceProfit)}</b> ({m.pacePct}% плана).
+              Идёт {m.dom}-й день из {m.dim}.
+            </div>
+          </>:(
+            <div style={{padding:"14px 0"}}>
+              <div style={{fontSize:13,color:C.t2,lineHeight:1.6,marginBottom:12}}>Цель по прибыли не задана. Поставь её — и платформа посчитает выполнение и темп.</div>
+              <button onClick={()=>setSettingsOpen(true)} style={{padding:"9px 16px",borderRadius:9,border:"none",background:CF_BLUE,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Задать цель</button>
+            </div>
+          )}
+        </div>
+
+        {/* Что съедает прибыль */}
+        <div style={cardS}>
+          <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:12}}>
+            <span style={{fontSize:15}}>⚠️</span>
+            <span style={{fontSize:13,fontWeight:700,color:C.t1}}>Что съедает прибыль</span>
+          </div>
+          {m.topExp.length?<div style={{display:"flex",flexDirection:"column",gap:9}}>
+            {m.topExp.slice(0,5).map(([k,v])=>{
+              const pct=m.mExp>0?Math.round(v/m.mExp*100):0;
+              return<div key={k}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                  <span style={{fontSize:12.5,color:C.t1,fontWeight:600}}>{k}</span>
+                  <span style={{fontSize:12.5,color:C.t2,fontVariantNumeric:"tabular-nums" as const}}>{cfShort(v)} ₽ · {pct}%</span>
+                </div>
+                <div style={{height:6,background:C.ib,borderRadius:4,overflow:"hidden"}}>
+                  <div style={{width:pct+"%",height:"100%",background:pct>=40?CF_RED:pct>=25?CF_AMBER:C.t2,borderRadius:4}}/>
+                </div>
+              </div>;
+            })}
+          </div>:<div style={{fontSize:13,color:C.t2,padding:"14px 0",lineHeight:1.6}}>Расходов в этом месяце пока нет.</div>}
+        </div>
+      </div>
+
+      {/* AI финдиректор */}
+      <div style={{...cardS,marginBottom:16,borderColor:CF_BLUE+"44",background:C.w}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:ai||aiBusy?12:0,flexWrap:"wrap" as const}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <div style={{width:30,height:30,borderRadius:9,background:CF_BLUE,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15}}>🧠</div>
+            <div>
+              <div style={{fontSize:13.5,fontWeight:800,color:C.t1}}>AI финансовый директор</div>
+              <div style={{fontSize:11.5,color:C.t2}}>Разбор цифр и что делать дальше</div>
+            </div>
+          </div>
+          <button onClick={askCFO} disabled={aiBusy}
+            style={{padding:"9px 18px",borderRadius:9,border:"none",background:aiBusy?C.ib:CF_BLUE,color:aiBusy?C.t2:"#fff",fontSize:13,fontWeight:700,cursor:aiBusy?"default":"pointer"}}>
+            {aiBusy?"Считаю…":ai?"Обновить сводку":"Получить сводку"}
+          </button>
+        </div>
+        {aiBusy&&<div style={{fontSize:13,color:C.t2,padding:"8px 0"}}>Анализирую денежный поток…</div>}
+        {ai&&!aiBusy&&<div style={{fontSize:13.5,color:C.t1,lineHeight:1.7,whiteSpace:"pre-wrap" as const,borderTop:"1px solid "+C.bd,paddingTop:12}}>{ai}</div>}
+      </div>
+
+      {/* Profit First */}
+      <div style={cardS}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:14,flexWrap:"wrap" as const}}>
+          <div style={{display:"flex",alignItems:"center",gap:7}}>
+            <span style={{fontSize:15}}>🧮</span>
+            <span style={{fontSize:13,fontWeight:700,color:C.t1}}>Распределение денег (Profit First)</span>
+          </div>
+          <span style={{fontSize:12,color:C.t2}}>с дохода {cfShort(m.mInc)} ₽ за месяц</span>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(5,1fr)",gap:10}}>
+          {(settings.pf||CF_PF_DEFAULT).map((b:any)=>(
+            <div key={b.key} style={{background:C.ib,borderRadius:10,padding:"12px 13px",borderLeft:"3px solid "+b.color}}>
+              <div style={{fontSize:11.5,color:C.t2,fontWeight:600,marginBottom:5,lineHeight:1.3}}>{b.label}</div>
+              <div style={{fontSize:17,fontWeight:800,color:C.t1,letterSpacing:"-0.01em"}}>{cfShort(m.mInc*b.pct/100)} ₽</div>
+              <div style={{fontSize:11,color:b.color,fontWeight:700,marginTop:3}}>{b.pct}%</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>}
+
+    {/* ============ ЦЕЛЬ И ПРОГНОЗ ============ */}
+    {tab==="goal"&&<>
+      <div style={{...cardS,marginBottom:14}}>
+        <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:14}}>
+          <span style={{fontSize:15}}>🎯</span>
+          <span style={{fontSize:14,fontWeight:800,color:C.t1}}>Карта цели по прибыли</span>
+        </div>
+        {goalMap?<>
+          <div style={{fontSize:13.5,color:C.t2,lineHeight:1.6,marginBottom:16}}>
+            Чтобы получить <b style={{color:C.t1,fontWeight:700}}>{cfMoney(goalMap.target)}</b> чистой прибыли при текущих расходах <b style={{color:C.t1}}>{cfShort(goalMap.expected)} ₽</b>, нужно:
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(4,1fr)",gap:12,marginBottom:14}}>
+            {[
+              {l:"Выручка",v:cfMoney(goalMap.revenue),h:"прибыль + расходы"},
+              {l:"Продаж",v:goalMap.sales?goalMap.sales+" шт":"—",h:goalMap.check?`при чеке ${cfShort(goalMap.check)} ₽`:"нужен средний чек"},
+              {l:"Заявок",v:goalMap.leads?goalMap.leads+" шт":"—",h:`при конверсии ${goalMap.conv}%`},
+              {l:"Расходы",v:cfMoney(goalMap.expected),h:"держать не выше"},
+            ].map(x=>(
+              <div key={x.l} style={{background:C.ib,borderRadius:10,padding:"13px 14px"}}>
+                <div style={{fontSize:11.5,color:C.t2,fontWeight:600,marginBottom:5}}>{x.l}</div>
+                <div style={{fontSize:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em"}}>{x.v}</div>
+                <div style={{fontSize:11,color:C.t2,marginTop:4,lineHeight:1.4}}>{x.h}</div>
+              </div>
+            ))}
+          </div>
+          {!goalMap.check&&<div style={{fontSize:12.5,color:CF_AMBER,lineHeight:1.6}}>Средний чек пока не посчитан — внеси хотя бы один доход, и карта станет точнее.</div>}
+        </>:(
+          <div style={{padding:"10px 0"}}>
+            <div style={{fontSize:13,color:C.t2,lineHeight:1.6,marginBottom:12}}>Задай цель по прибыли — AI разложит её на продажи, чек, конверсию и потолок расходов.</div>
+            <button onClick={()=>setSettingsOpen(true)} style={{padding:"9px 16px",borderRadius:9,border:"none",background:CF_BLUE,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Задать цель</button>
+          </div>
+        )}
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:14}}>
+        <div style={cardS}>
+          <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:12}}>
+            <span style={{fontSize:15}}>👤</span>
+            <span style={{fontSize:13.5,fontWeight:800,color:C.t1}}>Если нанять человека</span>
+          </div>
+          <label style={lblS}>Расход в месяц, ₽</label>
+          <input value={hireCost} onChange={e=>setHireCost(e.target.value)} inputMode="numeric" placeholder="Напр.: 80000" style={iS()}/>
+          {hire>0&&<div style={{marginTop:14,display:"flex",flexDirection:"column",gap:9}}>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:13}}>
+              <span style={{color:C.t2}}>Прибыль станет</span>
+              <b style={{color:forecastProfit>=0?CF_GREEN:CF_RED,fontWeight:700}}>{cfMoney(forecastProfit)}</b>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:13}}>
+              <span style={{color:C.t2}}>Запас месяцев</span>
+              <b style={{color:!isFinite(forecastRunway)?CF_GREEN:forecastRunway<3?CF_RED:C.t1,fontWeight:700}}>{isFinite(forecastRunway)?forecastRunway.toFixed(1)+" мес":"∞"}</b>
+            </div>
+            <div style={{fontSize:12.5,color:C.t2,lineHeight:1.6,borderTop:"1px solid "+C.bd,paddingTop:10}}>
+              {forecastProfit>=0
+                ?`Найм окупается: прибыль остаётся положительной. Чтобы вернуть текущий уровень, нужно добавить ${cfShort(hire)} ₽ выручки в месяц — это ${m.avgCheck>0?Math.ceil(hire/m.avgCheck):"?"} продаж по текущему чеку.`
+                :`Найм уводит в минус на ${cfShort(Math.abs(forecastProfit))} ₽/мес. Нужно ${m.avgCheck>0?Math.ceil((hire-m.mProfit)/m.avgCheck):"?"} дополнительных продаж, чтобы выйти в ноль.`}
+            </div>
+          </div>}
+        </div>
+
+        <div style={cardS}>
+          <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:12}}>
+            <span style={{fontSize:15}}>⏳</span>
+            <span style={{fontSize:13.5,fontWeight:800,color:C.t1}}>Кассовый разрыв</span>
+          </div>
+          {gapDays==null?
+            <div style={{padding:"8px 0"}}>
+              <div style={{fontSize:22,fontWeight:800,color:CF_GREEN,marginBottom:6}}>Не грозит</div>
+              <div style={{fontSize:12.5,color:C.t2,lineHeight:1.6}}>Средний доход перекрывает расходы. Деньги на счетах не убывают.</div>
+            </div>
+            :<div style={{padding:"8px 0"}}>
+              <div style={{fontSize:30,fontWeight:800,color:gapDays<45?CF_RED:CF_AMBER,letterSpacing:"-0.02em",marginBottom:6}}>{gapDays} дн.</div>
+              <div style={{fontSize:12.5,color:C.t2,lineHeight:1.6}}>
+                При текущем темпе деньги закончатся через {gapDays} дней. Чтобы этого избежать — поднять доход на {cfShort(Math.abs(m.avgInc-m.burn))} ₽/мес или срезать расходы на столько же.
+              </div>
+            </div>}
+        </div>
+      </div>
+    </>}
+
+    {/* ============ KPI ============ */}
+    {tab==="kpi"&&<>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(auto-fit,minmax(190px,1fr))",gap:isMobile?10:14}}>
+        <KpiCard icon="📈" label="Чистая прибыль" value={cfMoney(m.mProfit)} color={m.mProfit>=0?CF_GREEN:CF_RED} sub="за текущий месяц"/>
+        <KpiCard icon="📐" label="Маржинальность" value={m.mInc>0?m.margin.toFixed(0)+"%":"—"} sub="доля прибыли в выручке"
+          color={m.margin>=30?CF_GREEN:m.margin>=15?CF_AMBER:m.mInc>0?CF_RED:C.t1}/>
+        <KpiCard icon="🧾" label="Средний чек" value={m.avgCheck>0?cfMoney(m.avgCheck):"—"} sub={`${m.salesCount} оплат за месяц`}/>
+        <KpiCard icon="🎯" label="CAC" value={m.cac>0?cfMoney(m.cac):"—"} sub="стоимость привлечения клиента"/>
+        <KpiCard icon="💎" label="LTV" value={m.ltv>0?cfMoney(m.ltv):"—"} sub={`с учётом ${settings.repeat_rate||0}% повторных`}/>
+        <KpiCard icon="📊" label="ROMI" value={m.adSpend>0?m.romi.toFixed(0)+"%":"—"} sub="возврат на маркетинг"
+          color={m.romi>=100?CF_GREEN:m.adSpend>0?CF_AMBER:C.t1}/>
+        <KpiCard icon="🔁" label="ROAS" value={m.adSpend>0?m.roas.toFixed(1)+"x":"—"} sub="выручка на 1 ₽ рекламы"/>
+        <KpiCard icon="⚖️" label="Точка безубыточности" value={m.breakEven>0?cfMoney(m.breakEven):"—"} sub="выручка, чтобы выйти в ноль"/>
+        <KpiCard icon="🔄" label="Повторные продажи" value={(settings.repeat_rate||0)+"%"} sub="задаётся в настройках"/>
+      </div>
+      <div style={{...cardS,marginTop:14}}>
+        <div style={{fontSize:12.5,color:C.t2,lineHeight:1.7}}>
+          <b style={{color:C.t1}}>Как считается:</b> CAC — рекламный бюджет ÷ количество оплат за месяц. LTV — средний чек с учётом доли повторных продаж. ROMI — (выручка − реклама) ÷ реклама. Точка безубыточности — расходы ÷ маржинальность.
+          Чтобы CAC и ROMI были точными, отмечай рекламные траты категорией «Реклама».
+        </div>
+      </div>
+    </>}
+
+    {/* ============ ИСТОРИЯ ============ */}
+    {tab==="history"&&<div style={{...cardS,padding:0,overflow:"hidden"}}>
+      {loading?<div style={{padding:40,textAlign:"center" as const,color:C.t2}}>Загрузка…</div>
+      :!tx.length?<div style={{padding:"48px 20px",textAlign:"center" as const,color:C.t2,fontSize:14}}>Операций пока нет. Начни с кнопки «Получил оплату».</div>
+      :<div style={{overflowX:"auto" as const}}>
+        <table style={{width:"100%",borderCollapse:"collapse" as const,fontSize:13.5}}>
+          <thead><tr style={{borderBottom:"1px solid "+C.bd}}>
+            {["Дата","Тип","Сумма","Категория","Комментарий",""].map((h,i)=>(
+              <th key={i} style={{padding:"12px 14px",textAlign:"left" as const,fontSize:11,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3}}>{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {[...tx].sort((a:any,b:any)=>(b.date||"").localeCompare(a.date||"")).map((t:any)=>(
+              <tr key={t.id} style={{borderBottom:"1px solid "+C.bd}}>
+                <td style={{padding:"12px 14px",color:C.t2,whiteSpace:"nowrap" as const}}>{t.date}</td>
+                <td style={{padding:"12px 14px"}}>
+                  <span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:6,background:(t.type==="income"?CF_GREEN:CF_RED)+"18",color:t.type==="income"?CF_GREEN:CF_RED}}>{t.type==="income"?"Доход":"Расход"}</span>
+                </td>
+                <td style={{padding:"12px 14px",fontWeight:700,color:t.type==="income"?CF_GREEN:CF_RED,whiteSpace:"nowrap" as const,fontVariantNumeric:"tabular-nums" as const}}>{(t.type==="income"?"+":"−")+cfMoney(+t.amount||0).replace("−","")}</td>
+                <td style={{padding:"12px 14px",color:C.t1}}>{t.category}</td>
+                <td style={{padding:"12px 14px",color:C.t2}}>{t.comment||"—"}</td>
+                <td style={{padding:"12px 8px"}}>
+                  <button onClick={()=>remove(t.id)} title="Удалить"
+                    style={{width:28,height:28,borderRadius:7,border:"none",background:"transparent",cursor:"pointer",color:C.t2,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>}
+    </div>}
+
+    {/* ============ МОДАЛКА ВВОДА ============ */}
+    {entry&&<div onClick={()=>setEntry(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.w,borderRadius:16,padding:24,width:"100%",maxWidth:420,boxShadow:"0 24px 70px rgba(0,0,0,0.25)"}}>
+        <div style={{fontSize:17,fontWeight:800,color:C.t1,marginBottom:4}}>{entry==="income"?"💰 Получил оплату":"💸 Записать расход"}</div>
+        <div style={{fontSize:12.5,color:C.t2,marginBottom:18}}>{entry==="income"?"Сколько и откуда пришло":"Сколько и на что ушло"}</div>
+
+        <label style={lblS}>Сумма, ₽</label>
+        <input autoFocus value={amount} onChange={e=>setAmount(e.target.value)} inputMode="decimal" placeholder="0"
+          onKeyDown={e=>{if(e.key==="Enter")submitEntry();}}
+          style={{...iS(),fontSize:22,fontWeight:800,padding:"12px 14px"}}/>
+
+        <label style={{...lblS,marginTop:14}}>{entry==="income"?"Откуда":"Куда"}</label>
+        <div style={{display:"flex",gap:7,flexWrap:"wrap" as const}}>
+          {(entry==="income"?CF_INCOME_SRC:CF_EXPENSE_SRC).map(c=>(
+            <button key={c} onClick={()=>setCat(c)}
+              style={{padding:"7px 13px",borderRadius:9,border:"1px solid "+(cat===c?"transparent":C.bd),background:cat===c?(entry==="income"?CF_GREEN:C.t1):"transparent",color:cat===c?"#fff":C.t2,fontSize:12.5,fontWeight:600,cursor:"pointer"}}>{c}</button>
+          ))}
+        </div>
+
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginTop:14}}>
+          <div><label style={lblS}>Дата</label><input type="date" value={when} onChange={e=>setWhen(e.target.value)} style={iS()}/></div>
+          <div><label style={lblS}>Комментарий</label><input value={note} onChange={e=>setNote(e.target.value)} placeholder="необязательно" style={iS()}/></div>
+        </div>
+
+        {entry==="income"&&Number(amount)>0&&<div style={{marginTop:16,padding:"12px 14px",background:C.ib,borderRadius:10}}>
+          <div style={{fontSize:11.5,color:C.t2,fontWeight:600,marginBottom:8}}>Распределится так:</div>
+          <div style={{display:"flex",flexWrap:"wrap" as const,gap:10}}>
+            {(settings.pf||CF_PF_DEFAULT).map((b:any)=>(
+              <div key={b.key} style={{fontSize:11.5,color:C.t2}}>
+                <span style={{color:b.color,fontWeight:700}}>{b.label}</span> {cfShort(Number(amount)*b.pct/100)} ₽
+              </div>
+            ))}
+          </div>
+        </div>}
+
+        <div style={{display:"flex",gap:10,marginTop:20}}>
+          <button onClick={()=>setEntry(null)} style={{flex:1,padding:"12px",borderRadius:10,border:"1px solid "+C.bd,background:"transparent",color:C.t1,fontSize:14,fontWeight:600,cursor:"pointer"}}>Отмена</button>
+          <button onClick={submitEntry} disabled={!(Number(amount)>0)||saving}
+            style={{flex:1.4,padding:"12px",borderRadius:10,border:"none",background:Number(amount)>0?(entry==="income"?CF_GREEN:C.t1):C.ib,color:Number(amount)>0?"#fff":C.t2,fontSize:14,fontWeight:700,cursor:Number(amount)>0?"pointer":"default"}}>
+            {saving?"Сохраняю…":"Записать"}
+          </button>
+        </div>
+      </div>
+    </div>}
+
+    {/* ============ НАСТРОЙКИ ============ */}
+    {settingsOpen&&<div onClick={()=>setSettingsOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.w,borderRadius:16,padding:24,width:"100%",maxWidth:520,maxHeight:"88vh",overflowY:"auto" as const,boxShadow:"0 24px 70px rgba(0,0,0,0.25)"}}>
+        <div style={{fontSize:17,fontWeight:800,color:C.t1,marginBottom:18}}>Настройки Cash Flow</div>
+
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:14,marginBottom:18}}>
+          <div>
+            <label style={lblS}>Деньги на счетах на старте, ₽</label>
+            <input value={settings.start_balance||""} onChange={e=>saveSettings({...settings,start_balance:Number(e.target.value)||0})} inputMode="numeric" placeholder="0" style={iS()}/>
+            <div style={{fontSize:11,color:C.t2,marginTop:5,lineHeight:1.5}}>Сколько было до начала учёта</div>
+          </div>
+          <div>
+            <label style={lblS}>Цель по прибыли в месяц, ₽</label>
+            <input value={settings.goal_profit||""} onChange={e=>saveSettings({...settings,goal_profit:Number(e.target.value)||0})} inputMode="numeric" placeholder="0" style={iS()}/>
+            <div style={{fontSize:11,color:C.t2,marginTop:5,lineHeight:1.5}}>Из неё строится карта цели</div>
+          </div>
+          <div>
+            <label style={lblS}>Конверсия заявки в продажу, %</label>
+            <input value={settings.conversion||""} onChange={e=>saveSettings({...settings,conversion:Number(e.target.value)||0})} inputMode="numeric" placeholder="20" style={iS()}/>
+          </div>
+          <div>
+            <label style={lblS}>Доля повторных продаж, %</label>
+            <input value={settings.repeat_rate||""} onChange={e=>saveSettings({...settings,repeat_rate:Number(e.target.value)||0})} inputMode="numeric" placeholder="30" style={iS()}/>
+          </div>
+        </div>
+
+        <div style={{borderTop:"1px solid "+C.bd,paddingTop:16}}>
+          <div style={{fontSize:13.5,fontWeight:800,color:C.t1,marginBottom:4}}>Profit First — распределение дохода</div>
+          <div style={{fontSize:12,color:C.t2,marginBottom:14,lineHeight:1.55}}>Каждая оплата делится по этим долям. Настрой под себя — сумма должна быть 100%.</div>
+          {(settings.pf||CF_PF_DEFAULT).map((b:any,i:number)=>(
+            <div key={b.key} style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
+              <span style={{width:10,height:10,borderRadius:"50%",background:b.color,flexShrink:0}}/>
+              <span style={{flex:1,fontSize:13,color:C.t1}}>{b.label}</span>
+              <input type="number" value={b.pct} min={0} max={100}
+                onChange={e=>{
+                  const next=[...(settings.pf||CF_PF_DEFAULT)];
+                  next[i]={...next[i],pct:Math.max(0,Math.min(100,Number(e.target.value)||0))};
+                  saveSettings({...settings,pf:next});
+                }}
+                style={{...iS(),width:76,textAlign:"center" as const,padding:"7px 8px"}}/>
+              <span style={{fontSize:13,color:C.t2,width:14}}>%</span>
+            </div>
+          ))}
+          {(()=>{
+            const total=(settings.pf||CF_PF_DEFAULT).reduce((s:number,b:any)=>s+(+b.pct||0),0);
+            return<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:12,padding:"10px 12px",borderRadius:9,background:total===100?CF_GREEN+"14":CF_AMBER+"14"}}>
+              <span style={{fontSize:12.5,color:C.t2,fontWeight:600}}>Итого</span>
+              <span style={{fontSize:14,fontWeight:800,color:total===100?CF_GREEN:CF_AMBER}}>{total}%{total!==100?" — должно быть 100%":""}</span>
+            </div>;
+          })()}
+          <button onClick={()=>saveSettings({...settings,pf:CF_PF_DEFAULT})}
+            style={{marginTop:10,padding:"7px 14px",borderRadius:8,border:"1px solid "+C.bd,background:"transparent",color:C.t2,fontSize:12,fontWeight:600,cursor:"pointer"}}>Вернуть стандартные 30/25/20/15/10</button>
+        </div>
+
+        <button onClick={()=>setSettingsOpen(false)} style={{width:"100%",marginTop:20,padding:"12px",borderRadius:10,border:"none",background:C.t1,color:C.bg,fontSize:14,fontWeight:700,cursor:"pointer"}}>Готово</button>
+      </div>
+    </div>}
+  </>;
+}
+
 function CrmPage({userId}:{userId:string}){
   const isMobile=useIsMobile();
 
@@ -5512,6 +6103,223 @@ const PlatformIcon=({pid,size=16}:{pid:string,size?:number})=>{
   return <div style={{width:size,height:size,borderRadius:"50%",background:C.t2+"44",display:"flex",alignItems:"center",justifyContent:"center"}}><svg width={size*0.55} height={size*0.55} viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg></div>;
 };
 
+/* ============ АНАЛИТИКА КОНТЕНТА ============ */
+type CMetric={key:string,label:string,unit?:string,hint?:string};
+
+const CM_SHORT:CMetric[]=[
+  {key:"views",label:"Просмотры"},
+  {key:"reach",label:"Охват",hint:"уникальные аккаунты"},
+  {key:"retention",label:"Удержание",unit:"%",hint:"доля досмотревших до конца"},
+  {key:"skip_rate",label:"Доля пропуска",unit:"%",hint:"сколько пролистнули в первые секунды"},
+  {key:"avg_watch",label:"Ср. время просмотра",unit:"сек"},
+  {key:"likes",label:"Лайки"},
+  {key:"comments",label:"Комментарии"},
+  {key:"saves",label:"Сохранения",hint:"главный сигнал пользы"},
+  {key:"shares",label:"Репосты",hint:"главный драйвер охвата"},
+  {key:"follows",label:"Новые подписчики"},
+  {key:"profile_visits",label:"Переходы в профиль"},
+];
+const CM_LONG:CMetric[]=[
+  {key:"impressions",label:"Показы",hint:"сколько раз показали значок"},
+  {key:"ctr",label:"CTR значка",unit:"%",hint:"кликабельность обложки"},
+  {key:"views",label:"Просмотры"},
+  {key:"avg_view_pct",label:"Средний % просмотра",unit:"%",hint:"удержание"},
+  {key:"avg_view_duration",label:"Ср. длительность",unit:"сек"},
+  {key:"watch_hours",label:"Часы просмотра",unit:"ч"},
+  {key:"likes",label:"Лайки"},
+  {key:"comments",label:"Комментарии"},
+  {key:"subs",label:"Новые подписчики"},
+];
+const CM_STORIES:CMetric[]=[
+  {key:"views",label:"Просмотры"},
+  {key:"reach",label:"Охват"},
+  {key:"retention",label:"Досмотры",unit:"%"},
+  {key:"exits",label:"Выходы"},
+  {key:"replies",label:"Ответы"},
+  {key:"shares",label:"Репосты"},
+  {key:"link_clicks",label:"Клики по ссылке"},
+  {key:"follows",label:"Новые подписчики"},
+];
+const CM_POST:CMetric[]=[
+  {key:"reach",label:"Охват"},
+  {key:"likes",label:"Лайки"},
+  {key:"comments",label:"Комментарии"},
+  {key:"saves",label:"Сохранения"},
+  {key:"shares",label:"Репосты"},
+  {key:"follows",label:"Новые подписчики"},
+];
+function metricsForType(type:string):CMetric[]{
+  if(type==="LF Video")return CM_LONG;
+  if(type==="SF Video")return CM_SHORT;
+  if(type==="Stories")return CM_STORIES;
+  return CM_POST;
+}
+const CA_BLUE="#2563EB";
+const fmtNum=(n:any)=>{const v=Number(n);return isFinite(v)&&v!==0?v.toLocaleString("ru-RU"):"—";};
+
+// Сжимаем скриншот перед отправкой — цифры остаются читаемыми, вес меньше
+function shrinkShot(file:File):Promise<{data:string,media:string}>{
+  return new Promise((res,rej)=>{
+    const img=new Image();const o=URL.createObjectURL(file);
+    img.onload=()=>{
+      const MAX=1400;const s=Math.min(1,MAX/Math.max(img.width,img.height));
+      const c=document.createElement("canvas");
+      c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);
+      c.getContext("2d")!.drawImage(img,0,0,c.width,c.height);
+      URL.revokeObjectURL(o);
+      res({data:c.toDataURL("image/jpeg",0.85).split(",")[1],media:"image/jpeg"});
+    };
+    img.onerror=()=>{URL.revokeObjectURL(o);rej(new Error("bad image"));};
+    img.src=o;
+  });
+}
+
+function ContentAnalytics({type,value,onChange}:{type:string,value:any,onChange:(v:any)=>void}){
+  const metrics=metricsForType(type);
+  const a=value||{};
+  const[busy,setBusy]=useState(false);
+  const[msg,setMsg]=useState("");
+  const[shots,setShots]=useState<{data:string,media:string,name:string}[]>([]);
+
+  const setM=(k:string,v:string)=>{
+    const num=v===""?"":Number(v.replace(",","."));
+    onChange({...a,[k]:v===""?undefined:(isFinite(num as number)?num:undefined)});
+  };
+
+  const pick=async(files:FileList)=>{
+    setMsg("");
+    const arr=Array.from(files).slice(0,4);
+    try{
+      const out=[];
+      for(const f of arr){const s=await shrinkShot(f);out.push({...s,name:f.name});}
+      setShots(prev=>[...prev,...out].slice(0,4));
+    }catch{setMsg("Не удалось прочитать изображение.");}
+  };
+
+  const extract=async()=>{
+    if(!shots.length||busy)return;
+    setBusy(true);setMsg("");
+    const fields=metrics.map(m=>`"${m.key}" — ${m.label}${m.unit?` (в ${m.unit})`:""}`).join("\n");
+    const vocab=type==="LF Video"
+      ? `\nПодсказки по YouTube Studio: «Показы» = impressions; «CTR для показов значка видео» = ctr; «Средняя продолжительность просмотра» = avg_view_duration; «Средний процент просмотра» = avg_view_pct; «Время просмотра (часы)» = watch_hours; «Подписчики» / «+N подписчиков» = subs.`
+      : type==="SF Video"
+      ? `\nПодсказки по статистике Instagram Reels: «Воспроизведения» / «Просмотры» = views; «Охват» / «Аккаунты, охваченные» = reach; «Удержание» / «Досмотры» / «Смотрели до конца» = retention; «Пропуски» / «Пролистнули» = skip_rate; «Среднее время просмотра» = avg_watch; «Сохранения» = saves; «Поделились» / «Репосты» = shares; «Подписки» = follows; «Посещения профиля» = profile_visits.`
+      : "";
+    const prompt=`На скриншотах — статистика ${type==="LF Video"?"видео на YouTube":type==="SF Video"?"Reels в Instagram":type==="Stories"?"сторис в Instagram":"публикации"}.
+Извлеки числовые значения метрик и верни СТРОГО валидный JSON без markdown.
+
+Нужные поля:
+${fields}${vocab}
+
+Правила:
+- Только числа, без пробелов и символов: 12500, а не "12,5 тыс." и не "12 500".
+- Значения вида «12,5 тыс.» переводи в число: 12500. «1,2 млн» → 1200000.
+- Проценты — числом без знака %: 47.
+- Время («0:32», «1 мин 5 с») переводи в СЕКУНДЫ: 32, 65.
+- Если метрики на скриншоте нет — не включай это поле в ответ. Не выдумывай значения.
+- Никаких пояснений, только JSON вида {"views":12500,"likes":340}`;
+
+    const anthropicMsg=[{role:"user",content:[...shots.map(s=>({type:"image",source:{type:"base64",media_type:s.media,data:s.data}})),{type:"text",text:prompt}]}];
+    const openaiMsg=[{role:"user",content:[...shots.map(s=>({type:"image_url",image_url:{url:`data:${s.media};base64,${s.data}`}})),{type:"text",text:prompt}]}];
+
+    const call=async(messages:any)=>{
+      const r=await fetch("/api/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages})});
+      if(!r.ok)throw new Error("http "+r.status);
+      const d=await r.json();
+      const t=d.content?.[0]?.text||d.choices?.[0]?.message?.content||"";
+      if(!t)throw new Error("empty");
+      return t;
+    };
+
+    try{
+      let text="";
+      try{text=await call(anthropicMsg);}
+      catch(e1){text=await call(openaiMsg);}
+      const parsed=paParseJSON(text);
+      const clean:any={};
+      metrics.forEach(m=>{
+        const v=parsed?.[m.key];
+        const n=typeof v==="string"?Number(v.replace(/[^\d.]/g,"")):Number(v);
+        if(isFinite(n)&&n>0)clean[m.key]=n;
+      });
+      if(!Object.keys(clean).length){setMsg("Не удалось распознать цифры. Заполни вручную ниже.");}
+      else{
+        onChange({...a,...clean,updated_at:today()});
+        setShots([]);
+        setMsg(`Распознано метрик: ${Object.keys(clean).length}. Проверь цифры ниже.`);
+      }
+    }catch(e){
+      console.error("Analytics extract failed:",e);
+      setMsg("Распознавание недоступно (нужна AI-модель с поддержкой картинок). Введи цифры вручную — они сохранятся.");
+    }
+    setBusy(false);
+  };
+
+  // производные показатели
+  const num=(k:string)=>Number(a[k])||0;
+  const er=(()=>{
+    const base=num("reach")||num("views");
+    if(!base)return null;
+    const eng=num("likes")+num("comments")+num("saves")+num("shares");
+    return eng?((eng/base)*100).toFixed(1):null;
+  })();
+  const ctrCalc=(()=>{
+    if(type!=="LF Video")return null;
+    const i=num("impressions"),v=num("views");
+    return i&&v?((v/i)*100).toFixed(1):null;
+  })();
+
+  const box:React.CSSProperties={width:"100%",padding:"9px 11px",border:`1px solid ${C.bd}`,borderRadius:8,fontSize:14,background:C.bg,color:C.t1,outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const,fontVariantNumeric:"tabular-nums" as const};
+
+  return(
+    <div style={{border:`1px solid ${C.bd}`,borderRadius:10,padding:16,background:C.bg}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:4,flexWrap:"wrap" as const}}>
+        <div style={{fontSize:13,fontWeight:700,color:C.t1}}>Аналитика</div>
+        <span style={{fontSize:11,color:C.t2}}>{type}{a.updated_at?` · обновлено ${a.updated_at}`:""}</span>
+      </div>
+      <div style={{fontSize:11.5,color:C.t2,lineHeight:1.5,marginBottom:12}}>Загрузи скриншоты статистики — AI считает цифры и заполнит поля. Сами скриншоты не сохраняются, остаются только числа.</div>
+
+      {/* загрузка скриншотов */}
+      <div style={{display:"flex",gap:8,flexWrap:"wrap" as const,alignItems:"center",marginBottom:10}}>
+        <label style={{display:"flex",alignItems:"center",gap:7,padding:"9px 14px",borderRadius:9,border:`1px dashed ${C.bd}`,background:"transparent",color:C.t1,fontSize:12.5,fontWeight:600,cursor:"pointer"}}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          Добавить скриншоты
+          <input type="file" accept="image/*" multiple style={{display:"none"}} onChange={e=>{if(e.target.files?.length)pick(e.target.files);e.currentTarget.value="";}}/>
+        </label>
+        {shots.length>0&&<>
+          <span style={{fontSize:12,color:C.t2}}>Выбрано: {shots.length}</span>
+          <button onClick={()=>setShots([])} style={{padding:"7px 11px",borderRadius:8,border:`1px solid ${C.bd}`,background:"transparent",color:C.t2,fontSize:12,fontWeight:600,cursor:"pointer"}}>Очистить</button>
+        </>}
+        <button onClick={extract} disabled={!shots.length||busy}
+          style={{display:"flex",alignItems:"center",gap:8,padding:"9px 16px",borderRadius:9,border:"none",background:shots.length&&!busy?CA_BLUE:C.ib,color:shots.length&&!busy?"#fff":C.t2,fontSize:12.5,fontWeight:700,cursor:shots.length&&!busy?"pointer":"default",fontFamily:"'Inter',sans-serif"}}>
+          {busy?<><div style={{width:13,height:13,border:"2px solid rgba(255,255,255,0.35)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>Считываю…</>
+            :<><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Обновить аналитику</>}
+        </button>
+      </div>
+      {msg&&<div style={{fontSize:12,color:C.t2,lineHeight:1.5,marginBottom:12,padding:"8px 11px",background:C.ib,borderRadius:8}}>{msg}</div>}
+
+      {/* поля метрик */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:10}}>
+        {metrics.map(m=>(
+          <div key={m.key}>
+            <label style={{fontSize:11.5,color:C.t2,display:"block",marginBottom:4,fontWeight:600}}>
+              {m.label}{m.unit?<span style={{opacity:0.7}}> ({m.unit})</span>:null}
+            </label>
+            <input type="number" inputMode="decimal" value={a[m.key]??""} onChange={e=>setM(m.key,e.target.value)} placeholder="—" style={box}/>
+            {m.hint&&<div style={{fontSize:10,color:C.t2,opacity:0.7,marginTop:3,lineHeight:1.35}}>{m.hint}</div>}
+          </div>
+        ))}
+      </div>
+
+      {/* производные */}
+      {(er||ctrCalc)&&<div style={{display:"flex",gap:14,flexWrap:"wrap" as const,marginTop:12,paddingTop:12,borderTop:`1px solid ${C.bd}`}}>
+        {er&&<span style={{fontSize:12,color:C.t2}}>Вовлечённость: <b style={{color:CA_BLUE,fontWeight:700}}>{er}%</b></span>}
+        {ctrCalc&&<span style={{fontSize:12,color:C.t2}}>Просмотры / показы: <b style={{color:CA_BLUE,fontWeight:700}}>{ctrCalc}%</b></span>}
+      </div>}
+    </div>
+  );
+}
+
 function ContentPage({userId}:{userId:string}){
   const isMobile=useIsMobile();
   const{data:items,add,update,remove}=useTable("content",userId);
@@ -5520,7 +6328,7 @@ function ContentPage({userId}:{userId:string}){
   const[show,setShow]=useState(false);
   const[editId,setEditId]=useState<string|null>(null);
   const[coverUploading,setCoverUploading]=useState(false);
-  const emptyF=()=>({platform:"instagram",type:"Text Post",topic:"",status:"idea",date:"",link:"",scenario:"",cover_url:"",content_url:"",publish_date:""});
+  const emptyF=()=>({platform:"instagram",type:"Text Post",topic:"",status:"idea",date:"",link:"",scenario:"",cover_url:"",content_url:"",publish_date:"",analytics:null as any});
   const[f,sF]=useState<any>(emptyF());
   const[calMonth,setCalMonth]=useState(()=>{const d=new Date();return{y:d.getFullYear(),m:d.getMonth()};});
 
@@ -5588,6 +6396,7 @@ function ContentPage({userId}:{userId:string}){
       content_url:f.content_url||"",
       scenario:f.scenario||"",
       cover_url:f.cover_url||"",
+      analytics:f.analytics||null,
       deadline_prep:null,
       deadline_dev:null,
       deadline_pub:null,
@@ -5599,7 +6408,7 @@ function ContentPage({userId}:{userId:string}){
 
   const startEdit=(item:any)=>{
     const publishDate=item.publish_date||item.date||"";
-    sF({platform:item.platform||"instagram",type:CTYPES.includes(item.type)?item.type:"Другое",topic:item.topic||"",status:item.status||"idea",date:publishDate,link:item.content_url||item.link||"",scenario:item.scenario||"",cover_url:item.cover_url||"",content_url:item.content_url||item.link||"",publish_date:publishDate});
+    sF({platform:item.platform||"instagram",type:CTYPES.includes(item.type)?item.type:"Другое",topic:item.topic||"",status:item.status||"idea",date:publishDate,link:item.content_url||item.link||"",scenario:item.scenario||"",cover_url:item.cover_url||"",content_url:item.content_url||item.link||"",publish_date:publishDate,analytics:item.analytics||null});
     setEditId(item.id);setShow(true);
   };
 
@@ -5835,6 +6644,11 @@ function ContentPage({userId}:{userId:string}){
               rows={8} placeholder={"Напиши сценарий, текст поста, хэштеги, описание видео...\n\nМожно структурировать:\n• Крючок: ...\n• Основная мысль: ...\n• Призыв к действию: ..."}
               style={{...iS(),resize:"vertical",lineHeight:"1.6",fontFamily:"'Inter',sans-serif"}}/>
           </div>
+
+          {/* Аналитика по опубликованному контенту */}
+          <div style={{gridColumn:isMobile?"1 / -1":"span 3"}}>
+            <ContentAnalytics type={f.type||"Text Post"} value={f.analytics} onChange={(v:any)=>sF({...f,analytics:v})}/>
+          </div>
         </div>
         <div style={{display:"flex",gap:10,marginTop:16,flexWrap:"wrap"}}>
           <Btn onClick={sub}>{editId?"Сохранить":"Добавить"}</Btn>
@@ -5951,6 +6765,17 @@ function ContentPage({userId}:{userId:string}){
                       </button>
                     </div>
                   </div>
+
+                  {/* Сводка аналитики */}
+                  {x.analytics&&Object.keys(x.analytics).filter((k:string)=>k!=="updated_at").length>0&&(
+                    <div style={{display:"flex",gap:8,flexWrap:"wrap" as const,marginTop:8,paddingTop:8,borderTop:"1px solid "+C.bd}}>
+                      {metricsForType(x.type).slice(0,4).filter(m=>Number(x.analytics[m.key])>0).map(m=>(
+                        <span key={m.key} style={{fontSize:10,color:C.t2,display:"flex",alignItems:"center",gap:3}}>
+                          {m.label}: <b style={{color:C.t1,fontWeight:700,fontVariantNumeric:"tabular-nums" as const}}>{fmtNum(x.analytics[m.key])}{m.unit==="%"?"%":""}</b>
+                        </span>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Move to next stage quick button */}
                   {stage.id!=="published"&&(()=>{
