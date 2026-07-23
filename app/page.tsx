@@ -4074,100 +4074,101 @@ function CrmFunnel({stages,leads,isMobile}:{stages:any[],leads:any[],isMobile:bo
 
 /* ============ ETS — EXPERT TRUST SYSTEM ============ */
 type EtsField={key:string,label:string,ph:string,long?:boolean};
-type EtsNode={
-  id:string,title:string,short:string,tier:number,
-  desc:string,fields:EtsField[],
-};
+type EtsNode={id:string,title:string,short:string,desc:string,fields:EtsField[]};
 
 const ETS_NODES:EtsNode[]=[
   {
-    id:"icp",title:"ICP",short:"Ideal Client Profile",tier:0,
-    desc:"Кто платит деньги. Тот, кому ты продаёшь и кто получает результат.",
+    id:"ivp",title:"IVP",short:"Ideal Viewer Profile",
+    desc:"Кто смотрит контент. Широкая аудитория, из которой вырастает клиент.",
+    fields:[
+      {key:"who",label:"Кто смотрит",ph:"Возраст, занятие, стадия пути"},
+      {key:"where",label:"Где смотрит",ph:"YouTube, Telegram, Instagram — что основное"},
+      {key:"trigger",label:"Что цепляет",ph:"Темы и форматы, на которые реагирует"},
+      {key:"why",label:"Зачем подписывается",ph:"Что получает от контента"},
+    ],
+  },
+  {
+    id:"icp",title:"ICP",short:"Ideal Client Profile",
+    desc:"Кто платит деньги. Тот, кто покупает и получает результат.",
     fields:[
       {key:"who",label:"Кто это",ph:"Роль, стадия бизнеса, уровень дохода"},
-      {key:"pain",label:"Главная боль",ph:"Что болит прямо сейчас настолько, что он ищет решение"},
-      {key:"desire",label:"Чего хочет на самом деле",ph:"Не «продукт», а результат и состояние"},
-      {key:"objection",label:"Возражения",ph:"Почему может не купить: дорого, не верит, нет времени"},
+      {key:"pain",label:"Главная боль",ph:"Что болит настолько, что ищет решение"},
+      {key:"desire",label:"Чего хочет",ph:"Не продукт, а результат и состояние"},
+      {key:"objection",label:"Возражения",ph:"Почему может не купить"},
       {key:"check",label:"Средний чек",ph:"Сколько готов платить"},
     ],
   },
   {
-    id:"ivp",title:"IVP",short:"Ideal Viewer Profile",tier:0,
-    desc:"Кто смотрит контент. Аудитория шире, чем покупатели — из неё вырастает ICP.",
+    id:"reach",title:"Reach Based Content",short:"Контент на охват",
+    desc:"Контент, который приводит новых зрителей и растит IVP.",
     fields:[
-      {key:"who",label:"Кто смотрит",ph:"Возраст, занятие, стадия пути"},
-      {key:"where",label:"Где смотрит",ph:"YouTube, Telegram, Instagram — что основное"},
-      {key:"trigger",label:"Что заставляет остановиться",ph:"Темы, форматы, слова, на которые реагирует"},
-      {key:"why",label:"Зачем подписывается",ph:"Что получает от контента"},
-      {key:"path",label:"Путь до клиента",ph:"Как зритель становится покупателем"},
+      {key:"formats",label:"Форматы",ph:"Reels, Shorts, вирусные хуки"},
+      {key:"topics",label:"Темы",ph:"О чём говоришь, чтобы попасть в широкую аудиторию"},
+      {key:"hook",label:"Приёмы захвата",ph:"Что делаешь в первые 3 секунды"},
+      {key:"freq",label:"Частота",ph:"Сколько единиц в неделю"},
     ],
   },
   {
-    id:"offer",title:"Оффер",short:"Что покупают",tier:1,
-    desc:"Конкретное обещание результата за понятные деньги и срок.",
+    id:"value",title:"Value Based Content",short:"Контент на ценность",
+    desc:"Контент, который прогревает и превращает зрителя в клиента (ICP).",
     fields:[
-      {key:"what",label:"Что даёшь",ph:"Продукт или услуга в одном предложении"},
-      {key:"result",label:"Какой результат",ph:"Измеримый итог: цифра, состояние, срок"},
-      {key:"time",label:"За какой срок",ph:"Месяц, три месяца, семь созвонов"},
-      {key:"price",label:"Цена",ph:"Сколько стоит и что входит"},
-      {key:"why_you",label:"Почему ты",ph:"Что делает результат достижимым именно с тобой"},
+      {key:"formats",label:"Форматы",ph:"Длинные видео, разборы, кейсы, посты"},
+      {key:"topics",label:"Темы",ph:"Что доказывает экспертность и снимает возражения"},
+      {key:"proof",label:"Доказательства",ph:"Кейсы, цифры, результаты клиентов"},
+      {key:"cta",label:"Призыв",ph:"Куда ведёшь: заявка, канал, разбор"},
     ],
   },
   {
-    id:"positioning",title:"Позиционирование",short:"Место на рынке",tier:2,
-    desc:"Кто ты на рынке и чем принципиально отличаешься от остальных.",
+    id:"positioning",title:"Positioning",short:"Позиционирование",
+    desc:"Кто ты на рынке и чем принципиально отличаешься.",
     fields:[
-      {key:"who_am_i",label:"Кто ты",ph:"Одно предложение: «Я — тот, кто…»"},
-      {key:"against",label:"Против чего идёшь",ph:"Какой подход в нише ты отрицаешь"},
+      {key:"who_am_i",label:"Кто ты",ph:"«Я — тот, кто…» в одном предложении"},
+      {key:"against",label:"Против чего идёшь",ph:"Какой подход в нише отрицаешь"},
       {key:"different",label:"Чем отличаешься",ph:"Что делаешь не так, как все"},
-      {key:"proof",label:"Чем докажешь",ph:"Кейсы, цифры, опыт"},
-      {key:"for_whom",label:"Для кого НЕ подходишь",ph:"Явное исключение усиливает позицию"},
+      {key:"phrase",label:"Ключевая фраза",ph:"5–9 слов, по которым тебя узнают"},
+      {key:"not_for",label:"Кому НЕ подходишь",ph:"Явное исключение усиливает позицию"},
     ],
   },
   {
-    id:"phrase",title:"Фраза",short:"Ключевое сообщение",tier:3,
-    desc:"Короткая формула, которую повторяешь везде и по которой тебя узнают.",
+    id:"look",title:"How you look",short:"Как ты выглядишь",
+    desc:"Визуальный код: что человек видит и чувствует до первого слова.",
     fields:[
-      {key:"main",label:"Главная фраза",ph:"5–9 слов, которые бьют в суть"},
-      {key:"variants",label:"Варианты",ph:"Как звучит в шапке профиля, в видео, на созвоне",long:true},
+      {key:"visual",label:"Визуальный стиль",ph:"Цвета, свет, локации, стиль съёмки"},
+      {key:"image",label:"Образ",ph:"Как одет, как держишься в кадре"},
+      {key:"feeling",label:"Ощущение",ph:"Спокойная сила, дерзость, точность"},
+      {key:"association",label:"Ассоциация",ph:"С кем или чем ассоциируешься"},
     ],
   },
   {
-    id:"quote",title:"Цитата",short:"Манифест",tier:3,
-    desc:"Убеждение, за которым стоит твоя позиция. То, что цитируют.",
+    id:"mission",title:"Mission",short:"Миссия",
+    desc:"Во что веришь и зачем всё это. То, что цитируют.",
     fields:[
-      {key:"main",label:"Цитата",ph:"Одна мысль, в которую ты веришь",long:true},
-      {key:"context",label:"Откуда она",ph:"Личный опыт или наблюдение за рынком",long:true},
-    ],
-  },
-  {
-    id:"association",title:"Ассоциация",short:"Образ бренда",tier:3,
-    desc:"С чем тебя сравнивают и что чувствуют, когда видят.",
-    fields:[
-      {key:"image",label:"Образ",ph:"С кем или чем ассоциируешься"},
-      {key:"feeling",label:"Ощущение",ph:"Что человек чувствует: спокойная сила, дерзость, точность"},
-      {key:"visual",label:"Визуальный код",ph:"Цвета, свет, стиль съёмки"},
-      {key:"words",label:"Слова-маркеры",ph:"Лексика, по которой узнают",long:true},
+      {key:"belief",label:"Убеждение",ph:"Одна мысль, в которую ты веришь",long:true},
+      {key:"why",label:"Зачем ты это делаешь",ph:"Что хочешь изменить",long:true},
+      {key:"quote",label:"Цитата",ph:"Формулировка, которую можно цитировать",long:true},
     ],
   },
 ];
 
-const ETS_LINKS:[string,string][]=[
-  ["icp","offer"],["ivp","offer"],
-  ["offer","positioning"],
-  ["positioning","phrase"],["positioning","quote"],["positioning","association"],
-];
+// Оффер — особый узел со списком продуктов
+const ETS_OFFER={id:"offer",title:"Offer",short:"Продукты и цены",
+  desc:"Что именно покупают: продукт, цена, результат."};
 
-const etsFilled=(data:any,n:EtsNode)=>n.fields.filter(f=>(data?.[n.id]?.[f.key]||"").trim()).length;
-const etsNodeDone=(data:any,n:EtsNode)=>etsFilled(data,n)===n.fields.length;
+type EtsProduct={id:string,name:string,price:string,result:string,forWhom:string};
+
+const etsFilled=(data:any,n:EtsNode)=>n.fields.filter(f=>String(data?.[n.id]?.[f.key]||"").trim()).length;
+const etsProducts=(data:any):EtsProduct[]=>Array.isArray(data?.offer?.products)?data.offer.products:[];
 
 function ETSPage({userId}:{userId:string}){
   const isMobile=useIsMobile();
   const{dark}=useTheme();
   const[data,setData]=useState<any>({});
   const[open,setOpen]=useState<string|null>(null);
+  const[expanded,setExpanded]=useState<Record<string,boolean>>({});
   const[loaded,setLoaded]=useState(false);
-  const[savedAt,setSavedAt]=useState<string>("");
+  const[savedAt,setSavedAt]=useState("");
+  const[audit,setAudit]=useState("");
+  const[auditBusy,setAuditBusy]=useState(false);
   const lsKey="ets_"+userId;
 
   useEffect(()=>{
@@ -4192,119 +4193,182 @@ function ETSPage({userId}:{userId:string}){
     try{
       await supabase.from("ets_profile").upsert({user_id:userId,payload:next,updated_at:new Date().toISOString()},{onConflict:"user_id"});
       setSavedAt(new Date().toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"}));
-    }catch(e){console.warn("ETS: сохранено локально, БД недоступна:",e);setSavedAt("локально");}
+    }catch(e){console.warn("ETS: сохранено локально:",e);setSavedAt("локально");}
   };
+  const setField=(nodeId:string,key:string,v:string)=>save({...data,[nodeId]:{...(data[nodeId]||{}),[key]:v}});
 
-  const setField=(nodeId:string,key:string,v:string)=>{
-    save({...data,[nodeId]:{...(data[nodeId]||{}),[key]:v}});
-  };
+  // ── продукты оффера ──
+  const products=etsProducts(data);
+  const setProducts=(list:EtsProduct[])=>save({...data,offer:{...(data.offer||{}),products:list}});
+  const addProduct=()=>setProducts([...products,{id:"p"+Date.now().toString(36),name:"",price:"",result:"",forWhom:""}]);
+  const updProduct=(id:string,patch:Partial<EtsProduct>)=>setProducts(products.map(p=>p.id===id?{...p,...patch}:p));
+  const delProduct=(id:string)=>setProducts(products.filter(p=>p.id!==id));
 
-  const totalFields=ETS_NODES.reduce((s,n)=>s+n.fields.length,0);
-  const doneFields=ETS_NODES.reduce((s,n)=>s+etsFilled(data,n),0);
+  // ── прогресс ──
+  const offerDone=products.filter(p=>p.name.trim()&&p.price.trim()).length;
+  const totalFields=ETS_NODES.reduce((s,n)=>s+n.fields.length,0)+1;
+  const doneFields=ETS_NODES.reduce((s,n)=>s+etsFilled(data,n),0)+(offerDone>0?1:0);
   const progress=totalFields?Math.round(doneFields/totalFields*100):0;
 
   const accent=dark?"#E8E8E8":"#181818";
-  const nodeBg=(done:boolean,active:boolean)=>
-    active?(dark?"rgba(255,255,255,0.10)":"rgba(0,0,0,0.05)")
-    :done?(dark?"rgba(255,255,255,0.055)":"rgba(255,255,255,0.85)")
-    :(dark?"rgba(255,255,255,0.025)":"rgba(255,255,255,0.5)");
+  const line=dark?"rgba(255,255,255,0.28)":"rgba(0,0,0,0.30)";
+  const lineOn=dark?"#E8E8E8":"#181818";
 
-  // ── карта: узлы по ярусам ──
-  const tiers=[0,1,2,3].map(t=>ETS_NODES.filter(n=>n.tier===t));
+  // ── превью-выжимка ──
+  const summaryOf=(id:string):string=>{
+    if(id==="offer"){
+      if(!products.length)return "";
+      return products.filter(p=>p.name.trim()).map(p=>p.name+(p.price?` — ${p.price}`:"")).join(" · ");
+    }
+    const n=ETS_NODES.find(x=>x.id===id);
+    if(!n)return "";
+    return n.fields.map(f=>String(data?.[n.id]?.[f.key]||"").trim()).filter(Boolean).join(" · ");
+  };
+  const nodeCount=(id:string)=>{
+    if(id==="offer")return{f:offerDone,t:Math.max(1,products.length||1)};
+    const n=ETS_NODES.find(x=>x.id===id)!;
+    return{f:etsFilled(data,n),t:n.fields.length};
+  };
 
-  const NodeCard=({n}:{n:EtsNode})=>{
-    const f=etsFilled(data,n);
-    const done=f===n.fields.length;
-    const active=open===n.id;
-    const pct=Math.round(f/n.fields.length*100);
+  // ── блок карты ──
+  const Node=({id,title,short,wide}:{id:string,title:string,short:string,wide?:boolean})=>{
+    const{f,t}=nodeCount(id);
+    const done=id==="offer"?offerDone>0:f===t;
+    const has=f>0;
+    const active=open===id;
+    const sum=summaryOf(id);
+    const isExp=!!expanded[id];
     return(
-      <button onClick={()=>setOpen(active?null:n.id)}
-        style={{
-          flex:1,minWidth:isMobile?140:160,textAlign:"left" as const,cursor:"pointer",
-          background:nodeBg(done,active),
-          backdropFilter:"blur(14px) saturate(1.2)",
-          border:"1px solid "+(active?accent+"66":done?(dark?"rgba(255,255,255,0.16)":"rgba(0,0,0,0.14)"):C.bd),
-          borderRadius:12,padding:isMobile?"12px 13px":"14px 16px",
-          transition:"all 0.18s",
-          boxShadow:active?(dark?"0 6px 22px rgba(0,0,0,0.4)":"0 6px 22px rgba(0,0,0,0.10)"):"none",
-        }}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:4}}>
-          <span style={{fontSize:isMobile?13:14,fontWeight:800,color:C.t1,letterSpacing:"-0.01em"}}>{n.title}</span>
-          <span style={{fontSize:10,fontWeight:700,color:done?C.t1:C.t2,background:done?(dark?"rgba(255,255,255,0.12)":"rgba(0,0,0,0.07)"):"transparent",border:done?"none":"1px solid "+C.bd,borderRadius:20,padding:"1px 7px",whiteSpace:"nowrap" as const}}>
-            {f}/{n.fields.length}
-          </span>
-        </div>
-        <div style={{fontSize:11,color:C.t2,marginBottom:9,lineHeight:1.35}}>{n.short}</div>
-        <div style={{height:3,borderRadius:3,background:dark?"rgba(255,255,255,0.09)":"rgba(0,0,0,0.07)",overflow:"hidden"}}>
-          <div style={{height:"100%",width:pct+"%",background:accent,borderRadius:3,transition:"width 0.35s"}}/>
-        </div>
-      </button>
+      <div style={{
+        flex:wide?"1 1 100%":"1 1 0",minWidth:isMobile?0:130,
+        background:active?(dark?"rgba(255,255,255,0.10)":"rgba(0,0,0,0.055)")
+          :has?(dark?"rgba(255,255,255,0.05)":"rgba(255,255,255,0.9)")
+          :(dark?"rgba(255,255,255,0.02)":"rgba(255,255,255,0.5)"),
+        backdropFilter:"blur(14px) saturate(1.2)",
+        border:"1px solid "+(active?accent+"70":has?(dark?"rgba(255,255,255,0.18)":"rgba(0,0,0,0.16)"):C.bd),
+        borderRadius:11,overflow:"hidden",transition:"all 0.18s",
+      }}>
+        <button onClick={()=>setOpen(active?null:id)}
+          style={{width:"100%",textAlign:"left" as const,cursor:"pointer",background:"transparent",border:"none",padding:isMobile?"10px 11px":"12px 14px"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:7}}>
+            <span style={{fontSize:isMobile?12.5:13.5,fontWeight:800,color:C.t1,letterSpacing:"-0.01em",lineHeight:1.25}}>{title}</span>
+            <span style={{flexShrink:0,fontSize:9.5,fontWeight:700,color:done?C.t1:C.t2,background:done?(dark?"rgba(255,255,255,0.14)":"rgba(0,0,0,0.08)"):"transparent",border:done?"none":"1px solid "+C.bd,borderRadius:20,padding:"1px 6px"}}>
+              {id==="offer"?(offerDone||0):`${f}/${t}`}
+            </span>
+          </div>
+          <div style={{fontSize:10,color:C.t2,marginTop:2,lineHeight:1.3}}>{short}</div>
+          <div style={{height:2.5,borderRadius:3,background:dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.06)",overflow:"hidden",marginTop:8}}>
+            <div style={{height:"100%",width:(id==="offer"?(offerDone?100:0):Math.round(f/t*100))+"%",background:accent,borderRadius:3,transition:"width 0.35s"}}/>
+          </div>
+        </button>
+        {sum&&<div style={{borderTop:"1px solid "+(dark?"rgba(255,255,255,0.07)":"rgba(0,0,0,0.06)"),padding:"7px 11px 9px"}}>
+          <div style={{fontSize:10.5,color:C.t2,lineHeight:1.5,
+            display:"-webkit-box",WebkitLineClamp:isExp?99:2,WebkitBoxOrient:"vertical" as const,overflow:"hidden"}}>{sum}</div>
+          {sum.length>70&&<button onClick={()=>setExpanded(p=>({...p,[id]:!p[id]}))}
+            style={{marginTop:4,background:"none",border:"none",padding:0,color:C.t2,fontSize:10,fontWeight:700,cursor:"pointer",textDecoration:"underline"}}>
+            {isExp?"свернуть":"раскрыть"}
+          </button>}
+        </div>}
+      </div>
     );
   };
 
-  const Connector=({active}:{active:boolean})=>(
-    <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:26}}>
-      <svg width="100%" height="26" viewBox="0 0 200 26" preserveAspectRatio="none" style={{display:"block",opacity:active?1:0.35}}>
-        <line x1="100" y1="0" x2="100" y2="18" stroke={accent} strokeWidth="1.4" strokeDasharray={active?"0":"4 4"}/>
-        <polygon points="100,26 96,18 104,18" fill={accent}/>
-      </svg>
-    </div>
+  // соединители
+  const ArrowDown=({on,h=26}:{on:boolean,h?:number})=>(
+    <svg width="14" height={h} viewBox={`0 0 14 ${h}`} style={{display:"block",margin:"0 auto"}}>
+      <line x1="7" y1="0" x2="7" y2={h-7} stroke={on?lineOn:line} strokeWidth="1.5" strokeDasharray={on?"0":"4 4"}/>
+      <polygon points={`7,${h} 3,${h-7} 11,${h-7}`} fill={on?lineOn:line}/>
+    </svg>
   );
+  const ArrowUp=({on,h=26}:{on:boolean,h?:number})=>(
+    <svg width="14" height={h} viewBox={`0 0 14 ${h}`} style={{display:"block",margin:"0 auto"}}>
+      <line x1="7" y1="7" x2="7" y2={h} stroke={on?lineOn:line} strokeWidth="1.5" strokeDasharray={on?"0":"4 4"}/>
+      <polygon points={`7,0 3,7 11,7`} fill={on?lineOn:line}/>
+    </svg>
+  );
+
+  const hasIvp=nodeCount("ivp").f>0, hasIcp=nodeCount("icp").f>0;
+  const hasReach=nodeCount("reach").f>0, hasValue=nodeCount("value").f>0;
+  const hasPos=nodeCount("positioning").f>0;
+
+  // ── AI-аудит воронки ──
+  const runAudit=async()=>{
+    if(auditBusy)return;
+    setAuditBusy(true);setAudit("");
+    const part=(id:string,title:string)=>{
+      const s=summaryOf(id);
+      return `${title}: ${s||"НЕ ЗАПОЛНЕНО"}`;
+    };
+    const prodTxt=products.length
+      ?products.map(p=>`«${p.name||"без названия"}» — ${p.price||"цена не указана"}; результат: ${p.result||"не описан"}; для кого: ${p.forWhom||"не указано"}`).join("\n")
+      :"НЕ ЗАПОЛНЕНО";
+    const ctx=[
+      part("ivp","IVP (кто смотрит)"),
+      part("icp","ICP (кто платит)"),
+      part("reach","Reach Based Content (контент на охват)"),
+      part("value","Value Based Content (контент на ценность)"),
+      part("positioning","Позиционирование"),
+      part("look","How you look (визуал)"),
+      part("mission","Mission (миссия)"),
+      "Offer (продукты):\n"+prodTxt,
+    ].join("\n\n");
+    try{
+      const t=await paChat(
+        "Ты — стратег по позиционированию и воронкам. Разбираешь систему эксперта по цепочке: зритель (IVP) → клиент (ICP) → контент на охват → контент на ценность → позиционирование → визуал, миссия, оффер. Пишешь по-русски, коротко, без markdown и без воды. Говоришь прямо, не хвалишь из вежливости.",
+        `Вот система эксперта:\n\n${ctx}\n\nНайди слабые места в воронке. Ответь строго в таком виде, без вступлений:\n\nЧТО РАБОТАЕТ\n— 1-2 пункта, что уже сильно (если есть).\n\nСЛАБЫЕ МЕСТА\n— 3-4 пункта. Для каждого: где именно разрыв и чем это грозит. Особое внимание на разрывы между блоками: не совпадает ли аудитория контента с тем, кто платит; ведёт ли контент на охват к контенту на ценность; закрывает ли оффер боль ICP; отражает ли позиционирование то, что заявлено в миссии.\n\nЧТО СДЕЛАТЬ\n— 3 конкретных действия по порядку приоритета.\n\nЕсли блок не заполнен — прямо скажи, что без него воронку оценить нельзя, и поставь его первым в действиях.`,
+        1100,0.6);
+      setAudit(stripMd(t));
+    }catch{setAudit("Не удалось выполнить разбор. Попробуй ещё раз.");}
+    setAuditBusy(false);
+  };
 
   // ── PDF ──
   const exportPDF=()=>{
-    const win=window.open("","_blank");
-    if(!win)return;
+    const win=window.open("","_blank");if(!win)return;
     const esc=(t:string)=>String(t||"").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br/>");
     const blocks=ETS_NODES.map(n=>{
       const rows=n.fields.map(f=>{
-        const v=(data?.[n.id]?.[f.key]||"").trim();
+        const v=String(data?.[n.id]?.[f.key]||"").trim();
         return `<div class="row"><div class="k">${esc(f.label)}</div><div class="v${v?"":" empty"}">${v?esc(v):"— не заполнено —"}</div></div>`;
       }).join("");
       return `<section><h2>${esc(n.title)} <span class="sub">${esc(n.short)}</span></h2><p class="desc">${esc(n.desc)}</p>${rows}</section>`;
     }).join("");
+    const prod=products.length
+      ?products.map(p=>`<div class="row"><div class="k">${esc(p.name||"Без названия")}${p.price?` · ${esc(p.price)}`:""}</div><div class="v">${esc(p.result||"— результат не описан —")}${p.forWhom?`<br/><span style="color:#888">Для кого: ${esc(p.forWhom)}</span>`:""}</div></div>`).join("")
+      :'<div class="row"><div class="v empty">— продукты не добавлены —</div></div>';
     win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>ETS — Expert Trust System</title>
-<style>
-*{box-sizing:border-box}
-body{font-family:-apple-system,Segoe UI,Arial,sans-serif;max-width:820px;margin:40px auto;padding:0 28px;color:#141414;line-height:1.6}
-h1{font-size:28px;font-weight:800;margin:0 0 4px;letter-spacing:-0.5px}
-.lead{font-size:13px;color:#666;margin-bottom:6px}
+<style>*{box-sizing:border-box}body{font-family:-apple-system,Segoe UI,Arial,sans-serif;max-width:820px;margin:40px auto;padding:0 28px;color:#141414;line-height:1.6}
+h1{font-size:28px;font-weight:800;margin:0 0 4px;letter-spacing:-0.5px}.lead{font-size:13px;color:#666}
 .prog{font-size:12px;color:#666;margin-bottom:26px;padding-bottom:18px;border-bottom:2px solid #141414}
-section{margin-bottom:26px;page-break-inside:avoid}
-h2{font-size:17px;font-weight:800;margin:0 0 3px;letter-spacing:-0.2px}
-.sub{font-size:12px;font-weight:500;color:#888;letter-spacing:0}
-.desc{font-size:12px;color:#777;margin:0 0 12px}
+section{margin-bottom:24px;page-break-inside:avoid}h2{font-size:17px;font-weight:800;margin:0 0 3px}
+.sub{font-size:12px;font-weight:500;color:#888}.desc{font-size:12px;color:#777;margin:0 0 10px}
 .row{display:flex;gap:14px;padding:8px 0;border-bottom:1px solid #ededed}
-.k{flex:0 0 190px;font-size:12px;font-weight:700;color:#555}
-.v{flex:1;font-size:13px;white-space:pre-wrap}
-.v.empty{color:#bbb;font-style:italic}
-footer{margin-top:34px;padding-top:14px;border-top:1px solid #e5e5e5;font-size:11px;color:#999}
-@media print{body{margin:0;padding:14mm}}
-</style></head><body>
-<h1>Expert Trust System</h1>
-<div class="lead">Система позиционирования эксперта</div>
-<div class="prog">Заполнено ${progress}% · ${doneFields} из ${totalFields} полей · ${new Date().toLocaleDateString("ru-RU")}</div>
+.k{flex:0 0 180px;font-size:12px;font-weight:700;color:#555}.v{flex:1;font-size:13px;white-space:pre-wrap}
+.v.empty{color:#bbb;font-style:italic}.audit{background:#f7f7f7;border-radius:8px;padding:14px;font-size:12.5px;white-space:pre-wrap}
+footer{margin-top:32px;padding-top:14px;border-top:1px solid #e5e5e5;font-size:11px;color:#999}
+@media print{body{margin:0;padding:14mm}}</style></head><body>
+<h1>Expert Trust System</h1><div class="lead">Система позиционирования эксперта</div>
+<div class="prog">Заполнено ${progress}% · ${new Date().toLocaleDateString("ru-RU")}</div>
 ${blocks}
+<section><h2>Offer <span class="sub">Продукты и цены</span></h2>${prod}</section>
+${audit?`<section><h2>Разбор воронки</h2><div class="audit">${esc(audit)}</div></section>`:""}
 <footer>Vizzy · ETS</footer>
-<script>window.onload=function(){window.print()}<\/script>
-</body></html>`);
+<script>window.onload=function(){window.print()}<\/script></body></html>`);
     win.document.close();
   };
 
-  const cur=ETS_NODES.find(n=>n.id===open)||null;
+  const curNode=ETS_NODES.find(n=>n.id===open)||null;
+  const isOfferOpen=open==="offer";
 
   return<>
-    {/* Шапка */}
     <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",gap:16,marginBottom:18,flexWrap:"wrap" as const}}>
       <div>
         <div style={{fontSize:isMobile?20:26,fontWeight:800,color:C.t1,letterSpacing:"-0.03em",lineHeight:1.15}}>Expert Trust System</div>
-        <div style={{fontSize:13,color:C.t2,marginTop:4,lineHeight:1.5,maxWidth:520}}>
-          Система, из которой собирается позиционирование: от того, кто платит — до фразы, по которой тебя узнают.
-        </div>
+        <div style={{fontSize:13,color:C.t2,marginTop:4,lineHeight:1.5,maxWidth:540}}>От зрителя до оффера — вся система в одной карте. Нажми на блок, чтобы заполнить.</div>
       </div>
       <div style={{textAlign:isMobile?"left":"right" as const,minWidth:150}}>
         <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.02em",lineHeight:1}}>{progress}%</div>
-        <div style={{fontSize:11.5,color:C.t2,marginTop:3}}>{doneFields} из {totalFields} полей{savedAt?` · сохранено ${savedAt}`:""}</div>
+        <div style={{fontSize:11.5,color:C.t2,marginTop:3}}>заполнено{savedAt?` · сохранено ${savedAt}`:""}</div>
         <div style={{height:4,borderRadius:4,background:dark?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.08)",overflow:"hidden",marginTop:7,width:isMobile?160:180}}>
           <div style={{height:"100%",width:progress+"%",background:accent,borderRadius:4,transition:"width 0.4s"}}/>
         </div>
@@ -4312,101 +4376,182 @@ ${blocks}
     </div>
 
     {!loaded?<div style={{padding:48,textAlign:"center" as const,color:C.t2}}>Загрузка…</div>:<>
-      {/* Карта */}
-      <div style={{background:dark?"rgba(255,255,255,0.02)":"rgba(255,255,255,0.4)",border:"1px solid "+C.bd,borderRadius:14,padding:isMobile?14:22,marginBottom:16}}>
-        <div style={{fontSize:11,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.6,marginBottom:14}}>Карта системы — нажми на блок, чтобы заполнить</div>
+      {/* ── КАРТА ── */}
+      <div style={{background:dark?"rgba(255,255,255,0.02)":"rgba(255,255,255,0.4)",border:"1px solid "+C.bd,borderRadius:14,padding:isMobile?12:22,marginBottom:16}}>
 
-        {/* Ярус 0: ICP + IVP */}
-        <div style={{display:"flex",gap:isMobile?8:14}}>
-          {tiers[0].map(n=><NodeCard key={n.id} n={n}/>)}
+        {/* Ряд 1: IVP → ICP */}
+        <div style={{display:"flex",alignItems:"stretch",gap:isMobile?8:0}}>
+          <div style={{flex:1,display:"flex"}}><Node id="ivp" title="IVP" short="Ideal Viewer Profile"/></div>
+          <div style={{flex:isMobile?"0 0 26px":"0 0 90px",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <svg width="100%" height="14" viewBox="0 0 90 14" preserveAspectRatio="none" style={{display:"block"}}>
+              <line x1="0" y1="7" x2="80" y2="7" stroke={hasIvp?lineOn:line} strokeWidth="1.5" strokeDasharray={hasIvp?"0":"4 4"}/>
+              <polygon points="90,7 80,3 80,11" fill={hasIvp?lineOn:line}/>
+            </svg>
+          </div>
+          <div style={{flex:1,display:"flex"}}><Node id="icp" title="ICP" short="Ideal Client Profile"/></div>
         </div>
-        <Connector active={tiers[0].some(n=>etsFilled(data,n)>0)}/>
 
-        {/* Ярус 1: Оффер */}
-        <div style={{display:"flex",gap:14,maxWidth:isMobile?"100%":420,margin:"0 auto"}}>
-          {tiers[1].map(n=><NodeCard key={n.id} n={n}/>)}
+        {/* Ряд 2: стрелки Reach↑IVP и ICP↓Value */}
+        <div style={{display:"flex",alignItems:"center"}}>
+          <div style={{flex:1}}><ArrowUp on={hasReach}/></div>
+          <div style={{flex:isMobile?"0 0 26px":"0 0 90px"}}/>
+          <div style={{flex:1}}><ArrowDown on={hasIcp}/></div>
         </div>
-        <Connector active={etsFilled(data,ETS_NODES[2])>0}/>
 
-        {/* Ярус 2: Позиционирование */}
-        <div style={{display:"flex",gap:14,maxWidth:isMobile?"100%":420,margin:"0 auto"}}>
-          {tiers[2].map(n=><NodeCard key={n.id} n={n}/>)}
+        {/* Ряд 3: Reach | Value */}
+        <div style={{display:"flex",alignItems:"stretch",gap:isMobile?8:0}}>
+          <div style={{flex:1,display:"flex"}}><Node id="reach" title="Reach Based Content" short="Контент на охват"/></div>
+          <div style={{flex:isMobile?"0 0 26px":"0 0 90px"}}/>
+          <div style={{flex:1,display:"flex"}}><Node id="value" title="Value Based Content" short="Контент на ценность"/></div>
         </div>
-        <Connector active={etsFilled(data,ETS_NODES[3])>0}/>
 
-        {/* Ярус 3: Фраза / Цитата / Ассоциация */}
-        <div style={{display:"flex",gap:isMobile?8:14,flexWrap:isMobile?"wrap" as const:"nowrap" as const}}>
-          {tiers[3].map(n=><NodeCard key={n.id} n={n}/>)}
+        {/* Схождение к Positioning */}
+        <svg width="100%" height="42" viewBox="0 0 300 42" preserveAspectRatio="none" style={{display:"block"}}>
+          <path d="M55,0 L55,18 Q55,24 62,24 L138,24 Q145,24 145,30 L145,34"
+            fill="none" stroke={hasReach?lineOn:line} strokeWidth="1.5" strokeDasharray={hasReach?"0":"4 4"} vectorEffect="non-scaling-stroke"/>
+          <path d="M245,0 L245,18 Q245,24 238,24 L162,24 Q155,24 155,30 L155,34"
+            fill="none" stroke={hasValue?lineOn:line} strokeWidth="1.5" strokeDasharray={hasValue?"0":"4 4"} vectorEffect="non-scaling-stroke"/>
+          <polygon points="150,42 145,33 155,33" fill={(hasReach||hasValue)?lineOn:line}/>
+        </svg>
+
+        {/* Ряд 4: Positioning */}
+        <div style={{display:"flex",justifyContent:"center"}}>
+          <div style={{width:isMobile?"100%":"46%",display:"flex"}}><Node id="positioning" title="Positioning" short="Позиционирование"/></div>
+        </div>
+
+        {/* Расхождение на 3 ветки */}
+        <svg width="100%" height="42" viewBox="0 0 300 42" preserveAspectRatio="none" style={{display:"block"}}>
+          <path d="M150,0 L150,14 Q150,20 143,20 L57,20 Q50,20 50,26 L50,34"
+            fill="none" stroke={hasPos?lineOn:line} strokeWidth="1.5" strokeDasharray={hasPos?"0":"4 4"} vectorEffect="non-scaling-stroke"/>
+          <path d="M150,0 L150,34" fill="none" stroke={hasPos?lineOn:line} strokeWidth="1.5" strokeDasharray={hasPos?"0":"4 4"} vectorEffect="non-scaling-stroke"/>
+          <path d="M150,0 L150,14 Q150,20 157,20 L243,20 Q250,20 250,26 L250,34"
+            fill="none" stroke={hasPos?lineOn:line} strokeWidth="1.5" strokeDasharray={hasPos?"0":"4 4"} vectorEffect="non-scaling-stroke"/>
+          <polygon points="50,42 45,33 55,33" fill={hasPos?lineOn:line}/>
+          <polygon points="150,42 145,33 155,33" fill={hasPos?lineOn:line}/>
+          <polygon points="250,42 245,33 255,33" fill={hasPos?lineOn:line}/>
+        </svg>
+
+        {/* Ряд 5: How you look | Mission | Offer */}
+        <div style={{display:"flex",gap:isMobile?8:12,alignItems:"stretch",flexWrap:isMobile?"wrap" as const:"nowrap" as const}}>
+          <Node id="look" title="How you look" short="Визуальный код"/>
+          <Node id="mission" title="Mission" short="Миссия"/>
+          <Node id="offer" title="Offer" short="Продукты и цены"/>
         </div>
       </div>
 
-      {/* Редактор выбранного блока */}
-      {cur&&<div style={{background:C.w,border:"1px solid "+C.bd,borderRadius:14,padding:isMobile?16:22,marginBottom:16}}>
+      {/* ── Кнопка аудита ── */}
+      <div style={{background:C.w,border:"1px solid "+C.bd,borderRadius:14,padding:isMobile?16:20,marginBottom:16}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap" as const,marginBottom:audit||auditBusy?14:0}}>
+          <div>
+            <div style={{fontSize:13.5,fontWeight:800,color:C.t1}}>Разбор воронки</div>
+            <div style={{fontSize:12,color:C.t2,marginTop:3,lineHeight:1.5}}>AI пройдёт по всей системе и найдёт разрывы между блоками</div>
+          </div>
+          <button onClick={runAudit} disabled={auditBusy}
+            style={{padding:"11px 20px",borderRadius:10,border:"none",background:auditBusy?C.ib:C.t1,color:auditBusy?C.t2:C.bg,fontSize:13.5,fontWeight:700,cursor:auditBusy?"default":"pointer",whiteSpace:"nowrap" as const}}>
+            {auditBusy?"Анализирую…":audit?"Проверить заново":"Найти слабые места в воронке"}
+          </button>
+        </div>
+        {auditBusy&&<div style={{fontSize:13,color:C.t2}}>Сверяю аудиторию, контент, позиционирование и оффер…</div>}
+        {audit&&!auditBusy&&<div style={{fontSize:13.5,color:C.t1,lineHeight:1.75,whiteSpace:"pre-wrap" as const,borderTop:"1px solid "+C.bd,paddingTop:14}}>{audit}</div>}
+      </div>
+
+      {/* ── Редактор: обычный блок ── */}
+      {curNode&&<div style={{background:C.w,border:"1px solid "+C.bd,borderRadius:14,padding:isMobile?16:22,marginBottom:16}}>
         <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,marginBottom:16}}>
           <div>
             <div style={{display:"flex",alignItems:"baseline",gap:9,flexWrap:"wrap" as const}}>
-              <span style={{fontSize:17,fontWeight:800,color:C.t1,letterSpacing:"-0.02em"}}>{cur.title}</span>
-              <span style={{fontSize:12,color:C.t2,fontWeight:600}}>{cur.short}</span>
+              <span style={{fontSize:17,fontWeight:800,color:C.t1,letterSpacing:"-0.02em"}}>{curNode.title}</span>
+              <span style={{fontSize:12,color:C.t2,fontWeight:600}}>{curNode.short}</span>
             </div>
-            <div style={{fontSize:12.5,color:C.t2,marginTop:5,lineHeight:1.55,maxWidth:560}}>{cur.desc}</div>
+            <div style={{fontSize:12.5,color:C.t2,marginTop:5,lineHeight:1.55,maxWidth:560}}>{curNode.desc}</div>
           </div>
-          <button onClick={()=>setOpen(null)} title="Свернуть"
-            style={{flexShrink:0,width:30,height:30,borderRadius:8,border:"1px solid "+C.bd,background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <button onClick={()=>setOpen(null)} style={{flexShrink:0,width:30,height:30,borderRadius:8,border:"1px solid "+C.bd,background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:14}}>
+          {curNode.fields.map(f=>{
+            const v=data?.[curNode.id]?.[f.key]||"";
+            return<div key={f.key} style={{gridColumn:f.long&&!isMobile?"span 2":"auto"}}>
+              <label style={{fontSize:12,color:C.t2,fontWeight:600,display:"block",marginBottom:6}}>{f.label}</label>
+              {f.long
+                ?<textarea value={v} onChange={e=>setField(curNode.id,f.key,e.target.value)} placeholder={f.ph} rows={3}
+                   style={{...iS(),resize:"vertical" as const,minHeight:74,lineHeight:1.6,fontFamily:"'Inter',sans-serif"}}/>
+                :<input value={v} onChange={e=>setField(curNode.id,f.key,e.target.value)} placeholder={f.ph} style={iS()}/>}
+            </div>;
+          })}
+        </div>
+      </div>}
+
+      {/* ── Редактор: Offer с продуктами ── */}
+      {isOfferOpen&&<div style={{background:C.w,border:"1px solid "+C.bd,borderRadius:14,padding:isMobile?16:22,marginBottom:16}}>
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,marginBottom:16}}>
+          <div>
+            <div style={{display:"flex",alignItems:"baseline",gap:9,flexWrap:"wrap" as const}}>
+              <span style={{fontSize:17,fontWeight:800,color:C.t1,letterSpacing:"-0.02em"}}>{ETS_OFFER.title}</span>
+              <span style={{fontSize:12,color:C.t2,fontWeight:600}}>{ETS_OFFER.short}</span>
+            </div>
+            <div style={{fontSize:12.5,color:C.t2,marginTop:5,lineHeight:1.55,maxWidth:560}}>{ETS_OFFER.desc}</div>
+          </div>
+          <button onClick={()=>setOpen(null)} style={{flexShrink:0,width:30,height:30,borderRadius:8,border:"1px solid "+C.bd,background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
 
-        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:14}}>
-          {cur.fields.map(f=>{
-            const v=data?.[cur.id]?.[f.key]||"";
-            return<div key={f.key} style={{gridColumn:f.long&&!isMobile?"span 2":"auto"}}>
-              <label style={{fontSize:12,color:C.t2,fontWeight:600,display:"block",marginBottom:6}}>{f.label}</label>
-              {f.long
-                ?<textarea value={v} onChange={e=>setField(cur.id,f.key,e.target.value)} placeholder={f.ph} rows={3}
-                   style={{...iS(),resize:"vertical" as const,minHeight:76,lineHeight:1.6,fontFamily:"'Inter',sans-serif"}}/>
-                :<input value={v} onChange={e=>setField(cur.id,f.key,e.target.value)} placeholder={f.ph} style={iS()}/>}
-            </div>;
-          })}
+        {!products.length&&<div style={{fontSize:13,color:C.t2,lineHeight:1.6,marginBottom:14}}>Продуктов пока нет. Добавь первый — название, цену и что человек получает.</div>}
+
+        <div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:14}}>
+          {products.map((p,i)=>(
+            <div key={p.id} style={{border:"1px solid "+C.bd,borderRadius:11,padding:isMobile?13:16,background:dark?"rgba(255,255,255,0.02)":"rgba(0,0,0,0.015)"}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:11}}>
+                <span style={{fontSize:11,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.4}}>Продукт {i+1}</span>
+                <button onClick={()=>delProduct(p.id)} title="Удалить продукт"
+                  style={{width:26,height:26,borderRadius:7,border:"none",background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                </button>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"2fr 1fr",gap:12,marginBottom:12}}>
+                <div>
+                  <label style={{fontSize:12,color:C.t2,fontWeight:600,display:"block",marginBottom:6}}>Название продукта</label>
+                  <input value={p.name} onChange={e=>updProduct(p.id,{name:e.target.value})} placeholder="Напр.: GAME PLAN" style={iS()}/>
+                </div>
+                <div>
+                  <label style={{fontSize:12,color:C.t2,fontWeight:600,display:"block",marginBottom:6}}>Цена</label>
+                  <input value={p.price} onChange={e=>updProduct(p.id,{price:e.target.value})} placeholder="Напр.: 150 000 ₽" style={iS()}/>
+                </div>
+              </div>
+              <div style={{marginBottom:12}}>
+                <label style={{fontSize:12,color:C.t2,fontWeight:600,display:"block",marginBottom:6}}>Что человек получает</label>
+                <textarea value={p.result} onChange={e=>updProduct(p.id,{result:e.target.value})} rows={2}
+                  placeholder="Результат, состав, сроки — конкретно" style={{...iS(),resize:"vertical" as const,minHeight:62,lineHeight:1.6,fontFamily:"'Inter',sans-serif"}}/>
+              </div>
+              <div>
+                <label style={{fontSize:12,color:C.t2,fontWeight:600,display:"block",marginBottom:6}}>Для кого</label>
+                <input value={p.forWhom} onChange={e=>updProduct(p.id,{forWhom:e.target.value})} placeholder="Кому этот продукт подходит" style={iS()}/>
+              </div>
+            </div>
+          ))}
         </div>
 
-        {/* Навигация между блоками */}
-        <div style={{display:"flex",justifyContent:"space-between",gap:10,marginTop:18,paddingTop:14,borderTop:"1px solid "+C.bd}}>
-          {(()=>{
-            const i=ETS_NODES.findIndex(n=>n.id===cur.id);
-            const prev=i>0?ETS_NODES[i-1]:null;
-            const next=i<ETS_NODES.length-1?ETS_NODES[i+1]:null;
-            const nav=(n:EtsNode|null,dir:"prev"|"next")=>n?(
-              <button onClick={()=>setOpen(n.id)}
-                style={{padding:"8px 14px",borderRadius:9,border:"1px solid "+C.bd,background:"transparent",color:C.t2,fontSize:12.5,fontWeight:600,cursor:"pointer"}}>
-                {dir==="prev"?"← "+n.title:n.title+" →"}
-              </button>
-            ):<span/>;
-            return<>{nav(prev,"prev")}{nav(next,"next")}</>;
-          })()}
-        </div>
+        <button onClick={addProduct}
+          style={{padding:"10px 18px",borderRadius:10,border:"1px dashed "+C.bd,background:"transparent",color:C.t1,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:7}}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Добавить продукт
+        </button>
       </div>}
 
-      {/* Сводка */}
+      {/* ── PDF ── */}
       <div style={{background:C.w,border:"1px solid "+C.bd,borderRadius:14,padding:isMobile?16:22}}>
-        <div style={{fontSize:13.5,fontWeight:800,color:C.t1,marginBottom:14}}>Сводка позиционирования</div>
-        {doneFields===0
-          ?<div style={{fontSize:13,color:C.t2,lineHeight:1.6,marginBottom:16}}>Заполни блоки на карте — здесь соберётся готовое позиционирование, которое можно выгрузить в PDF.</div>
-          :<div style={{display:"flex",flexDirection:"column",gap:11,marginBottom:18}}>
-            {ETS_NODES.map(n=>{
-              const vals=n.fields.map(f=>(data?.[n.id]?.[f.key]||"").trim()).filter(Boolean);
-              if(!vals.length)return null;
-              return<div key={n.id} style={{display:"flex",gap:12,alignItems:"flex-start",flexDirection:isMobile?"column":"row"}}>
-                <div style={{flex:"0 0 150px",fontSize:12,fontWeight:700,color:C.t2,paddingTop:1}}>{n.title}</div>
-                <div style={{flex:1,fontSize:13,color:C.t1,lineHeight:1.6}}>{vals.join(" · ")}</div>
-              </div>;
-            })}
-          </div>}
+        <div style={{fontSize:13.5,fontWeight:800,color:C.t1,marginBottom:6}}>Сводка системы</div>
+        <div style={{fontSize:12.5,color:C.t2,lineHeight:1.6,marginBottom:16}}>
+          Выгрузи всю систему одним документом — со всеми блоками, продуктами{audit?" и разбором воронки":""}.
+        </div>
         <button onClick={exportPDF}
           style={{width:isMobile?"100%":"auto",padding:"12px 22px",borderRadius:10,border:"none",background:C.t1,color:C.bg,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:9}}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Скачать сводку в PDF
         </button>
-        <div style={{fontSize:11.5,color:C.t2,marginTop:10,lineHeight:1.5}}>Откроется окно печати — выбери «Сохранить как PDF».</div>
+        <div style={{fontSize:11.5,color:C.t2,marginTop:10}}>Откроется окно печати — выбери «Сохранить как PDF».</div>
       </div>
     </>}
   </>;
