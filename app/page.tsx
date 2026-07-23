@@ -4075,16 +4075,18 @@ function CrmFunnel({stages,leads,isMobile}:{stages:any[],leads:any[],isMobile:bo
 const CF_GREEN="#16A34A";
 const CF_RED="#DC2626";
 const CF_BLUE="#2563EB";
+const CF_GLASS_GREEN="linear-gradient(160deg,rgba(22,163,74,0.92) 0%,rgba(17,138,62,0.88) 100%)";
+const CF_GLASS_RED="linear-gradient(160deg,rgba(220,38,38,0.92) 0%,rgba(185,28,28,0.88) 100%)";
 const CF_AMBER="#D97706";
 
 const CF_INCOME_SRC=["Консультация","Наставничество","Курс","Реклама","Партнёрка","Другое"];
 const CF_EXPENSE_SRC=["Реклама","Зарплата","Подрядчики","Налоги","Сервисы","Аренда","Другое"];
 const CF_PF_DEFAULT=[
-  {key:"owner",label:"Зарплата владельцу",pct:30,color:"#2563EB"},
-  {key:"tax",label:"Налоги",pct:25,color:"#DC2626"},
-  {key:"ads",label:"Реклама",pct:20,color:"#D97706"},
-  {key:"reserve",label:"Резерв",pct:15,color:"#7C3AED"},
-  {key:"profit",label:"Прибыль",pct:10,color:"#16A34A"},
+  {key:"owner",label:"Зарплата владельцу",pct:30,color:"#8A8A8A"},
+  {key:"tax",label:"Налоги",pct:25,color:"#9E9E9E"},
+  {key:"ads",label:"Реклама",pct:20,color:"#767676"},
+  {key:"reserve",label:"Резерв",pct:15,color:"#B0B0B0"},
+  {key:"profit",label:"Прибыль",pct:10,color:"#A2A2A2"},
 ];
 const CF_SETTINGS_DEFAULT={start_balance:0,goal_profit:0,pf:CF_PF_DEFAULT,conversion:20,repeat_rate:30};
 
@@ -4105,6 +4107,7 @@ const cfDayOfMonth=()=>new Date().getDate();
 
 function CashFlowPage({userId}:{userId:string}){
   const isMobile=useIsMobile();
+  const{dark}=useTheme();
   const{data:tx,add,remove,loading}=useTable("pnl",userId);
   const[tab,setTab]=useState<"dash"|"goal"|"kpi"|"history">("dash");
   const[settings,setSettings]=useState<any>(CF_SETTINGS_DEFAULT);
@@ -4278,11 +4281,10 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
   const lblS:React.CSSProperties={fontSize:12,color:C.t2,fontWeight:600,marginBottom:6,display:"block"};
   const tabS=(a:boolean):React.CSSProperties=>({padding:"8px 16px",borderRadius:9,border:"none",background:a?C.t1:"transparent",color:a?C.bg:C.t2,fontSize:13,fontWeight:a?700:500,cursor:"pointer",whiteSpace:"nowrap"});
 
-  const KpiCard=({icon,label,value,sub,color}:{icon:string,label:string,value:string,sub?:string,color?:string})=>(
+  const KpiCard=({label,value,sub,color}:{label:string,value:string,sub?:string,color?:string})=>(
     <div style={cardS}>
       <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:8}}>
-        <span style={{fontSize:15}}>{icon}</span>
-        <span style={{fontSize:12,color:C.t2,fontWeight:600}}>{label}</span>
+        <span style={{fontSize:12,color:C.t2,fontWeight:600,letterSpacing:0.2}}>{label}</span>
       </div>
       <div style={{fontSize:isMobile?20:24,fontWeight:800,color:color||C.t1,letterSpacing:"-0.02em",lineHeight:1.1}}>{value}</div>
       {sub&&<div style={{fontSize:11.5,color:C.t2,marginTop:5,lineHeight:1.45}}>{sub}</div>}
@@ -4293,16 +4295,16 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
     {/* Быстрый ввод */}
     <div style={{display:"flex",gap:10,marginBottom:18,flexWrap:"wrap" as const}}>
       <button onClick={()=>openEntry("income")}
-        style={{flex:isMobile?"1 1 100%":"0 0 auto",padding:"13px 22px",borderRadius:11,border:"none",background:CF_GREEN,color:"#fff",fontSize:14.5,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:"0 6px 18px rgba(22,163,74,0.28)"}}>
-        <span style={{fontSize:16}}>💰</span> Получил оплату
+        style={{flex:isMobile?"1 1 100%":"0 0 auto",padding:"13px 22px",borderRadius:11,border:"1px solid rgba(255,255,255,0.14)",background:CF_GLASS_GREEN,backdropFilter:"blur(12px) saturate(1.4)",color:"#fff",fontSize:14.5,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:"0 6px 20px rgba(22,163,74,0.30)"}}>
+        Получил оплату
       </button>
       <button onClick={()=>openEntry("expense")}
-        style={{flex:isMobile?"1 1 100%":"0 0 auto",padding:"13px 22px",borderRadius:11,border:"1px solid "+C.bd,background:C.w,color:C.t1,fontSize:14.5,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-        <span style={{fontSize:16}}>💸</span> Записать расход
+        style={{flex:isMobile?"1 1 100%":"0 0 auto",padding:"13px 22px",borderRadius:11,border:"1px solid rgba(255,255,255,0.14)",background:CF_GLASS_RED,backdropFilter:"blur(12px) saturate(1.4)",color:"#fff",fontSize:14.5,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:"0 6px 20px rgba(220,38,38,0.30)"}}>
+        Записать расход
       </button>
       <div style={{flex:1}}/>
       <button onClick={()=>setSettingsOpen(true)}
-        style={{padding:"13px 16px",borderRadius:11,border:"1px solid "+C.bd,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer"}}>⚙ Настройки</button>
+        style={{padding:"13px 16px",borderRadius:11,border:"1px solid "+C.bd,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer"}}>Настройки</button>
     </div>
 
     {/* Вкладки */}
@@ -4315,13 +4317,13 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
     {/* ============ ДАШБОРД ============ */}
     {tab==="dash"&&<>
       <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(auto-fit,minmax(190px,1fr))",gap:isMobile?10:14,marginBottom:16}}>
-        <KpiCard icon="💰" label="Деньги на счетах" value={cfMoney(m.cash)} color={m.cash>=0?C.t1:CF_RED}
+        <KpiCard label="Деньги на счетах" value={cfMoney(m.cash)} color={m.cash>=0?C.t1:CF_RED}
           sub={`Приход ${cfShort(m.allInc)} · расход ${cfShort(m.allExp)}`}/>
-        <KpiCard icon="📈" label="Чистая прибыль (мес)" value={cfMoney(m.mProfit)} color={m.mProfit>=0?CF_GREEN:CF_RED}
+        <KpiCard label="Чистая прибыль (мес)" value={cfMoney(m.mProfit)} color={m.mProfit>=0?CF_GREEN:CF_RED}
           sub={`Доход ${cfShort(m.mInc)} − расход ${cfShort(m.mExp)}`}/>
-        <KpiCard icon="🔥" label="Burn Rate" value={cfMoney(m.burn)+"/мес"} color={CF_AMBER}
+        <KpiCard label="Burn Rate" value={cfMoney(m.burn)+"/мес"} color={C.t1}
           sub={m.netBurn>0?`Чистое сгорание ${cfShort(m.netBurn)}/мес`:"Доход перекрывает расходы"}/>
-        <KpiCard icon="🚀" label="Запас месяцев" value={isFinite(m.runway)?m.runway.toFixed(1)+" мес":"∞"}
+        <KpiCard label="Запас месяцев" value={isFinite(m.runway)?m.runway.toFixed(1)+" мес":"∞"}
           color={!isFinite(m.runway)?CF_GREEN:m.runway<3?CF_RED:m.runway<6?CF_AMBER:CF_GREEN}
           sub={isFinite(m.runway)?(m.runway<3?"Критично — меньше 3 месяцев":"При текущем темпе расходов"):"Бизнес окупает себя"}/>
       </div>
@@ -4331,7 +4333,6 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
         <div style={cardS}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
             <div style={{display:"flex",alignItems:"center",gap:7}}>
-              <span style={{fontSize:15}}>📊</span>
               <span style={{fontSize:13,fontWeight:700,color:C.t1}}>План прибыли месяца</span>
             </div>
             {m.goal>0&&<span style={{fontSize:12,color:C.t2}}>цель {cfShort(m.goal)} ₽</span>}
@@ -4342,7 +4343,7 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
               <span style={{fontSize:13,color:C.t2}}>{cfMoney(m.mProfit)} из {cfShort(m.goal)} ₽</span>
             </div>
             <div style={{height:10,background:C.ib,borderRadius:6,overflow:"hidden",marginBottom:10}}>
-              <div style={{width:Math.max(0,Math.min(100,m.planPct||0))+"%",height:"100%",background:(m.planPct||0)>=100?CF_GREEN:CF_BLUE,transition:"width 0.4s"}}/>
+              <div style={{width:Math.max(0,Math.min(100,m.planPct||0))+"%",height:"100%",background:(m.planPct||0)>=100?CF_GREEN:"linear-gradient(90deg,rgba(22,163,74,0.55),rgba(22,163,74,0.9))",transition:"width 0.4s"}}/>
             </div>
             <div style={{fontSize:12.5,color:C.t2,lineHeight:1.55}}>
               По текущему темпу к концу месяца: <b style={{color:(m.pacePct||0)>=100?CF_GREEN:CF_AMBER,fontWeight:700}}>{cfMoney(m.paceProfit)}</b> ({m.pacePct}% плана).
@@ -4351,7 +4352,7 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
           </>:(
             <div style={{padding:"14px 0"}}>
               <div style={{fontSize:13,color:C.t2,lineHeight:1.6,marginBottom:12}}>Цель по прибыли не задана. Поставь её — и платформа посчитает выполнение и темп.</div>
-              <button onClick={()=>setSettingsOpen(true)} style={{padding:"9px 16px",borderRadius:9,border:"none",background:CF_BLUE,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Задать цель</button>
+              <button onClick={()=>setSettingsOpen(true)} style={{padding:"9px 16px",borderRadius:9,border:"1px solid rgba(255,255,255,0.14)",background:CF_GLASS_GREEN,backdropFilter:"blur(10px) saturate(1.4)",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 14px rgba(22,163,74,0.26)"}}>Задать цель</button>
             </div>
           )}
         </div>
@@ -4359,7 +4360,6 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
         {/* Что съедает прибыль */}
         <div style={cardS}>
           <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:12}}>
-            <span style={{fontSize:15}}>⚠️</span>
             <span style={{fontSize:13,fontWeight:700,color:C.t1}}>Что съедает прибыль</span>
           </div>
           {m.topExp.length?<div style={{display:"flex",flexDirection:"column",gap:9}}>
@@ -4380,17 +4380,17 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
       </div>
 
       {/* AI финдиректор */}
-      <div style={{...cardS,marginBottom:16,borderColor:CF_BLUE+"44",background:C.w}}>
+      <div style={{...cardS,marginBottom:16,borderColor:CF_GREEN+"55",background:C.w}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:ai||aiBusy?12:0,flexWrap:"wrap" as const}}>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <div style={{width:30,height:30,borderRadius:9,background:CF_BLUE,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15}}>🧠</div>
+            <div style={{width:32,height:32,borderRadius:9,background:CF_GLASS_GREEN,backdropFilter:"blur(10px)",border:"1px solid rgba(255,255,255,0.16)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:13,fontWeight:800,letterSpacing:0.2}}>V</div>
             <div>
-              <div style={{fontSize:13.5,fontWeight:800,color:C.t1}}>AI финансовый директор</div>
+              <div style={{fontSize:13.5,fontWeight:800,color:C.t1}}>Vizzy CFO <span style={{fontWeight:600,color:C.t2}}>(AI финансовый директор)</span></div>
               <div style={{fontSize:11.5,color:C.t2}}>Разбор цифр и что делать дальше</div>
             </div>
           </div>
           <button onClick={askCFO} disabled={aiBusy}
-            style={{padding:"9px 18px",borderRadius:9,border:"none",background:aiBusy?C.ib:CF_BLUE,color:aiBusy?C.t2:"#fff",fontSize:13,fontWeight:700,cursor:aiBusy?"default":"pointer"}}>
+            style={{padding:"9px 18px",borderRadius:9,border:aiBusy?"1px solid "+C.bd:"1px solid rgba(255,255,255,0.14)",background:aiBusy?C.ib:CF_GLASS_GREEN,backdropFilter:aiBusy?"none":"blur(10px) saturate(1.4)",color:aiBusy?C.t2:"#fff",fontSize:13,fontWeight:700,cursor:aiBusy?"default":"pointer",boxShadow:aiBusy?"none":"0 4px 14px rgba(22,163,74,0.28)"}}>
             {aiBusy?"Считаю…":ai?"Обновить сводку":"Получить сводку"}
           </button>
         </div>
@@ -4402,14 +4402,13 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
       <div style={cardS}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:14,flexWrap:"wrap" as const}}>
           <div style={{display:"flex",alignItems:"center",gap:7}}>
-            <span style={{fontSize:15}}>🧮</span>
             <span style={{fontSize:13,fontWeight:700,color:C.t1}}>Распределение денег (Profit First)</span>
           </div>
           <span style={{fontSize:12,color:C.t2}}>с дохода {cfShort(m.mInc)} ₽ за месяц</span>
         </div>
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(5,1fr)",gap:10}}>
           {(settings.pf||CF_PF_DEFAULT).map((b:any)=>(
-            <div key={b.key} style={{background:C.ib,borderRadius:10,padding:"12px 13px",borderLeft:"3px solid "+b.color}}>
+            <div key={b.key} style={{background:dark?"rgba(255,255,255,0.045)":"rgba(255,255,255,0.55)",backdropFilter:"blur(14px) saturate(1.2)",border:"1px solid "+(dark?"rgba(255,255,255,0.09)":"rgba(255,255,255,0.7)"),borderLeft:"3px solid "+b.color,borderRadius:10,padding:"12px 13px",boxShadow:dark?"none":"0 2px 10px rgba(0,0,0,0.05)"}}>
               <div style={{fontSize:11.5,color:C.t2,fontWeight:600,marginBottom:5,lineHeight:1.3}}>{b.label}</div>
               <div style={{fontSize:17,fontWeight:800,color:C.t1,letterSpacing:"-0.01em"}}>{cfShort(m.mInc*b.pct/100)} ₽</div>
               <div style={{fontSize:11,color:b.color,fontWeight:700,marginTop:3}}>{b.pct}%</div>
@@ -4423,7 +4422,6 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
     {tab==="goal"&&<>
       <div style={{...cardS,marginBottom:14}}>
         <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:14}}>
-          <span style={{fontSize:15}}>🎯</span>
           <span style={{fontSize:14,fontWeight:800,color:C.t1}}>Карта цели по прибыли</span>
         </div>
         {goalMap?<>
@@ -4448,7 +4446,7 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
         </>:(
           <div style={{padding:"10px 0"}}>
             <div style={{fontSize:13,color:C.t2,lineHeight:1.6,marginBottom:12}}>Задай цель по прибыли — AI разложит её на продажи, чек, конверсию и потолок расходов.</div>
-            <button onClick={()=>setSettingsOpen(true)} style={{padding:"9px 16px",borderRadius:9,border:"none",background:CF_BLUE,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Задать цель</button>
+            <button onClick={()=>setSettingsOpen(true)} style={{padding:"9px 16px",borderRadius:9,border:"1px solid rgba(255,255,255,0.14)",background:CF_GLASS_GREEN,backdropFilter:"blur(10px) saturate(1.4)",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 14px rgba(22,163,74,0.26)"}}>Задать цель</button>
           </div>
         )}
       </div>
@@ -4456,7 +4454,6 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
       <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:14}}>
         <div style={cardS}>
           <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:12}}>
-            <span style={{fontSize:15}}>👤</span>
             <span style={{fontSize:13.5,fontWeight:800,color:C.t1}}>Если нанять человека</span>
           </div>
           <label style={lblS}>Расход в месяц, ₽</label>
@@ -4480,7 +4477,6 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
 
         <div style={cardS}>
           <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:12}}>
-            <span style={{fontSize:15}}>⏳</span>
             <span style={{fontSize:13.5,fontWeight:800,color:C.t1}}>Кассовый разрыв</span>
           </div>
           {gapDays==null?
@@ -4501,17 +4497,17 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
     {/* ============ KPI ============ */}
     {tab==="kpi"&&<>
       <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(auto-fit,minmax(190px,1fr))",gap:isMobile?10:14}}>
-        <KpiCard icon="📈" label="Чистая прибыль" value={cfMoney(m.mProfit)} color={m.mProfit>=0?CF_GREEN:CF_RED} sub="за текущий месяц"/>
-        <KpiCard icon="📐" label="Маржинальность" value={m.mInc>0?m.margin.toFixed(0)+"%":"—"} sub="доля прибыли в выручке"
+        <KpiCard label="Чистая прибыль" value={cfMoney(m.mProfit)} color={m.mProfit>=0?CF_GREEN:CF_RED} sub="за текущий месяц"/>
+        <KpiCard label="Маржинальность" value={m.mInc>0?m.margin.toFixed(0)+"%":"—"} sub="доля прибыли в выручке"
           color={m.margin>=30?CF_GREEN:m.margin>=15?CF_AMBER:m.mInc>0?CF_RED:C.t1}/>
-        <KpiCard icon="🧾" label="Средний чек" value={m.avgCheck>0?cfMoney(m.avgCheck):"—"} sub={`${m.salesCount} оплат за месяц`}/>
-        <KpiCard icon="🎯" label="CAC" value={m.cac>0?cfMoney(m.cac):"—"} sub="стоимость привлечения клиента"/>
-        <KpiCard icon="💎" label="LTV" value={m.ltv>0?cfMoney(m.ltv):"—"} sub={`с учётом ${settings.repeat_rate||0}% повторных`}/>
-        <KpiCard icon="📊" label="ROMI" value={m.adSpend>0?m.romi.toFixed(0)+"%":"—"} sub="возврат на маркетинг"
+        <KpiCard label="Средний чек" value={m.avgCheck>0?cfMoney(m.avgCheck):"—"} sub={`${m.salesCount} оплат за месяц`}/>
+        <KpiCard label="CAC" value={m.cac>0?cfMoney(m.cac):"—"} sub="стоимость привлечения клиента"/>
+        <KpiCard label="LTV" value={m.ltv>0?cfMoney(m.ltv):"—"} sub={`с учётом ${settings.repeat_rate||0}% повторных`}/>
+        <KpiCard label="ROMI" value={m.adSpend>0?m.romi.toFixed(0)+"%":"—"} sub="возврат на маркетинг"
           color={m.romi>=100?CF_GREEN:m.adSpend>0?CF_AMBER:C.t1}/>
-        <KpiCard icon="🔁" label="ROAS" value={m.adSpend>0?m.roas.toFixed(1)+"x":"—"} sub="выручка на 1 ₽ рекламы"/>
-        <KpiCard icon="⚖️" label="Точка безубыточности" value={m.breakEven>0?cfMoney(m.breakEven):"—"} sub="выручка, чтобы выйти в ноль"/>
-        <KpiCard icon="🔄" label="Повторные продажи" value={(settings.repeat_rate||0)+"%"} sub="задаётся в настройках"/>
+        <KpiCard label="ROAS" value={m.adSpend>0?m.roas.toFixed(1)+"x":"—"} sub="выручка на 1 ₽ рекламы"/>
+        <KpiCard label="Точка безубыточности" value={m.breakEven>0?cfMoney(m.breakEven):"—"} sub="выручка, чтобы выйти в ноль"/>
+        <KpiCard label="Повторные продажи" value={(settings.repeat_rate||0)+"%"} sub="задаётся в настройках"/>
       </div>
       <div style={{...cardS,marginTop:14}}>
         <div style={{fontSize:12.5,color:C.t2,lineHeight:1.7}}>
@@ -4558,7 +4554,7 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
     {/* ============ МОДАЛКА ВВОДА ============ */}
     {entry&&<div onClick={()=>setEntry(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
       <div onClick={e=>e.stopPropagation()} style={{background:C.w,borderRadius:16,padding:24,width:"100%",maxWidth:420,boxShadow:"0 24px 70px rgba(0,0,0,0.25)"}}>
-        <div style={{fontSize:17,fontWeight:800,color:C.t1,marginBottom:4}}>{entry==="income"?"💰 Получил оплату":"💸 Записать расход"}</div>
+        <div style={{fontSize:17,fontWeight:800,color:C.t1,marginBottom:4}}>{entry==="income"?"Получил оплату":"Записать расход"}</div>
         <div style={{fontSize:12.5,color:C.t2,marginBottom:18}}>{entry==="income"?"Сколько и откуда пришло":"Сколько и на что ушло"}</div>
 
         <label style={lblS}>Сумма, ₽</label>
@@ -4570,7 +4566,7 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
         <div style={{display:"flex",gap:7,flexWrap:"wrap" as const}}>
           {(entry==="income"?CF_INCOME_SRC:CF_EXPENSE_SRC).map(c=>(
             <button key={c} onClick={()=>setCat(c)}
-              style={{padding:"7px 13px",borderRadius:9,border:"1px solid "+(cat===c?"transparent":C.bd),background:cat===c?(entry==="income"?CF_GREEN:C.t1):"transparent",color:cat===c?"#fff":C.t2,fontSize:12.5,fontWeight:600,cursor:"pointer"}}>{c}</button>
+              style={{padding:"7px 13px",borderRadius:9,border:"1px solid "+(cat===c?"rgba(255,255,255,0.14)":C.bd),background:cat===c?(entry==="income"?CF_GLASS_GREEN:CF_GLASS_RED):"transparent",backdropFilter:cat===c?"blur(10px) saturate(1.4)":"none",color:cat===c?"#fff":C.t2,fontSize:12.5,fontWeight:600,cursor:"pointer",boxShadow:cat===c?(entry==="income"?"0 3px 12px rgba(22,163,74,0.26)":"0 3px 12px rgba(220,38,38,0.26)"):"none"}}>{c}</button>
           ))}
         </div>
 
@@ -4593,7 +4589,7 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
         <div style={{display:"flex",gap:10,marginTop:20}}>
           <button onClick={()=>setEntry(null)} style={{flex:1,padding:"12px",borderRadius:10,border:"1px solid "+C.bd,background:"transparent",color:C.t1,fontSize:14,fontWeight:600,cursor:"pointer"}}>Отмена</button>
           <button onClick={submitEntry} disabled={!(Number(amount)>0)||saving}
-            style={{flex:1.4,padding:"12px",borderRadius:10,border:"none",background:Number(amount)>0?(entry==="income"?CF_GREEN:C.t1):C.ib,color:Number(amount)>0?"#fff":C.t2,fontSize:14,fontWeight:700,cursor:Number(amount)>0?"pointer":"default"}}>
+            style={{flex:1.4,padding:"12px",borderRadius:10,border:Number(amount)>0?"1px solid rgba(255,255,255,0.14)":"none",background:Number(amount)>0?(entry==="income"?CF_GLASS_GREEN:CF_GLASS_RED):C.ib,backdropFilter:Number(amount)>0?"blur(12px) saturate(1.4)":"none",color:Number(amount)>0?"#fff":C.t2,fontSize:14,fontWeight:700,cursor:Number(amount)>0?"pointer":"default",boxShadow:Number(amount)>0?(entry==="income"?"0 5px 16px rgba(22,163,74,0.30)":"0 5px 16px rgba(220,38,38,0.30)"):"none"}}>
             {saving?"Сохраняю…":"Записать"}
           </button>
         </div>
