@@ -6190,7 +6190,7 @@ function ContentAnalytics({type,value,onChange}:{type:string,value:any,onChange:
     setMsg("");
     const arr=Array.from(files).slice(0,4);
     try{
-      const out=[];
+      const out:{data:string,media:string,name:string}[]=[];
       for(const f of arr){const s=await shrinkShot(f);out.push({...s,name:f.name});}
       setShots(prev=>[...prev,...out].slice(0,4));
     }catch{setMsg("Не удалось прочитать изображение.");}
