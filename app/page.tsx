@@ -61,7 +61,7 @@ const NAV_GROUPS=[
       {id:"cashflow",label:"Cash Flow",accent:"#16A34A",ic:"M12 1v22 M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"},
       {id:"content",label:"Content",accent:"#808080",ic:"M7 4v16M17 4v16M3 8h4m10 0h4M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"},
       {id:"calls",label:"Calls",accent:"#9C9C9C",ic:"M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"},
-      {id:"offer",label:"Positioning",accent:"#A7A7A7",ic:"M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"},
+      {id:"offer",label:"ETS",accent:"#A7A7A7",ic:"M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"},
     ]
   },
   {
@@ -865,7 +865,7 @@ export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
   const APP_VERSION="v2.2"; // bump this to force-clear stale localStorage
-  const VALID_PAGES=["dashboard","strategy","crm","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","pnl","media","ads","calc","tools","mailings"];
+  const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","pnl","media","ads","calc","tools","mailings"];
 
   // Clear stale localStorage on version change
   useEffect(()=>{
@@ -980,6 +980,7 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
     {page==="strategy"&&<SafePage name="War Room"><StrategyPage userId={user.id} onNav={setPage}/></SafePage>}
     {page==="crm"&&<SafePage name="CRM"><CrmPage userId={user.id}/></SafePage>}
     {page==="cashflow"&&<SafePage name="Cash Flow"><CashFlowPage userId={user.id}/></SafePage>}
+    {page==="offer"&&<SafePage name="ETS"><ETSPage userId={user.id}/></SafePage>}
     {page==="calls"&&<SafePage name="Созвоны"><CallsPage userId={user.id}/></SafePage>}
     {page==="mailings"&&<SafePage name="Рассылки"><MailingsPage userId={user.id}/></SafePage>}
     {page==="content"&&<SafePage name="Контент"><ContentPage userId={user.id}/></SafePage>}
@@ -1000,7 +1001,7 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
     {page==="icp"&&<SafePage name="ICP & IVP"><Placeholder title="ICP & IVP" ic="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></SafePage>}
     {page==="bizstrategy"&&<SafePage name="Strategy"><Placeholder title="Strategy" ic="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></SafePage>}
     {page==="team"&&<SafePage name="Team"><Placeholder title="Team" ic="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></SafePage>}
-    {!["dashboard","strategy","crm","calls","mailings","content","pnl","media","ads","calc","tools","links","profile","files","ai","script","product","stories","design","offer","prices","icp","bizstrategy","team"].includes(page)&&nav&&<Placeholder title={nav.label} ic={nav.ic}/>}
+    {!["dashboard","strategy","crm","cashflow","calls","mailings","content","pnl","media","ads","calc","tools","links","profile","files","ai","script","product","stories","design","offer","prices","icp","bizstrategy","team"].includes(page)&&nav&&<Placeholder title={nav.label} ic={nav.ic}/>}
   </>;
 
   return (
@@ -4071,6 +4072,346 @@ function CrmFunnel({stages,leads,isMobile}:{stages:any[],leads:any[],isMobile:bo
 
 
 
+/* ============ ETS — EXPERT TRUST SYSTEM ============ */
+type EtsField={key:string,label:string,ph:string,long?:boolean};
+type EtsNode={
+  id:string,title:string,short:string,tier:number,
+  desc:string,fields:EtsField[],
+};
+
+const ETS_NODES:EtsNode[]=[
+  {
+    id:"icp",title:"ICP",short:"Ideal Client Profile",tier:0,
+    desc:"Кто платит деньги. Тот, кому ты продаёшь и кто получает результат.",
+    fields:[
+      {key:"who",label:"Кто это",ph:"Роль, стадия бизнеса, уровень дохода"},
+      {key:"pain",label:"Главная боль",ph:"Что болит прямо сейчас настолько, что он ищет решение"},
+      {key:"desire",label:"Чего хочет на самом деле",ph:"Не «продукт», а результат и состояние"},
+      {key:"objection",label:"Возражения",ph:"Почему может не купить: дорого, не верит, нет времени"},
+      {key:"check",label:"Средний чек",ph:"Сколько готов платить"},
+    ],
+  },
+  {
+    id:"ivp",title:"IVP",short:"Ideal Viewer Profile",tier:0,
+    desc:"Кто смотрит контент. Аудитория шире, чем покупатели — из неё вырастает ICP.",
+    fields:[
+      {key:"who",label:"Кто смотрит",ph:"Возраст, занятие, стадия пути"},
+      {key:"where",label:"Где смотрит",ph:"YouTube, Telegram, Instagram — что основное"},
+      {key:"trigger",label:"Что заставляет остановиться",ph:"Темы, форматы, слова, на которые реагирует"},
+      {key:"why",label:"Зачем подписывается",ph:"Что получает от контента"},
+      {key:"path",label:"Путь до клиента",ph:"Как зритель становится покупателем"},
+    ],
+  },
+  {
+    id:"offer",title:"Оффер",short:"Что покупают",tier:1,
+    desc:"Конкретное обещание результата за понятные деньги и срок.",
+    fields:[
+      {key:"what",label:"Что даёшь",ph:"Продукт или услуга в одном предложении"},
+      {key:"result",label:"Какой результат",ph:"Измеримый итог: цифра, состояние, срок"},
+      {key:"time",label:"За какой срок",ph:"Месяц, три месяца, семь созвонов"},
+      {key:"price",label:"Цена",ph:"Сколько стоит и что входит"},
+      {key:"why_you",label:"Почему ты",ph:"Что делает результат достижимым именно с тобой"},
+    ],
+  },
+  {
+    id:"positioning",title:"Позиционирование",short:"Место на рынке",tier:2,
+    desc:"Кто ты на рынке и чем принципиально отличаешься от остальных.",
+    fields:[
+      {key:"who_am_i",label:"Кто ты",ph:"Одно предложение: «Я — тот, кто…»"},
+      {key:"against",label:"Против чего идёшь",ph:"Какой подход в нише ты отрицаешь"},
+      {key:"different",label:"Чем отличаешься",ph:"Что делаешь не так, как все"},
+      {key:"proof",label:"Чем докажешь",ph:"Кейсы, цифры, опыт"},
+      {key:"for_whom",label:"Для кого НЕ подходишь",ph:"Явное исключение усиливает позицию"},
+    ],
+  },
+  {
+    id:"phrase",title:"Фраза",short:"Ключевое сообщение",tier:3,
+    desc:"Короткая формула, которую повторяешь везде и по которой тебя узнают.",
+    fields:[
+      {key:"main",label:"Главная фраза",ph:"5–9 слов, которые бьют в суть"},
+      {key:"variants",label:"Варианты",ph:"Как звучит в шапке профиля, в видео, на созвоне",long:true},
+    ],
+  },
+  {
+    id:"quote",title:"Цитата",short:"Манифест",tier:3,
+    desc:"Убеждение, за которым стоит твоя позиция. То, что цитируют.",
+    fields:[
+      {key:"main",label:"Цитата",ph:"Одна мысль, в которую ты веришь",long:true},
+      {key:"context",label:"Откуда она",ph:"Личный опыт или наблюдение за рынком",long:true},
+    ],
+  },
+  {
+    id:"association",title:"Ассоциация",short:"Образ бренда",tier:3,
+    desc:"С чем тебя сравнивают и что чувствуют, когда видят.",
+    fields:[
+      {key:"image",label:"Образ",ph:"С кем или чем ассоциируешься"},
+      {key:"feeling",label:"Ощущение",ph:"Что человек чувствует: спокойная сила, дерзость, точность"},
+      {key:"visual",label:"Визуальный код",ph:"Цвета, свет, стиль съёмки"},
+      {key:"words",label:"Слова-маркеры",ph:"Лексика, по которой узнают",long:true},
+    ],
+  },
+];
+
+const ETS_LINKS:[string,string][]=[
+  ["icp","offer"],["ivp","offer"],
+  ["offer","positioning"],
+  ["positioning","phrase"],["positioning","quote"],["positioning","association"],
+];
+
+const etsFilled=(data:any,n:EtsNode)=>n.fields.filter(f=>(data?.[n.id]?.[f.key]||"").trim()).length;
+const etsNodeDone=(data:any,n:EtsNode)=>etsFilled(data,n)===n.fields.length;
+
+function ETSPage({userId}:{userId:string}){
+  const isMobile=useIsMobile();
+  const{dark}=useTheme();
+  const[data,setData]=useState<any>({});
+  const[open,setOpen]=useState<string|null>(null);
+  const[loaded,setLoaded]=useState(false);
+  const[savedAt,setSavedAt]=useState<string>("");
+  const lsKey="ets_"+userId;
+
+  useEffect(()=>{
+    let alive=true;
+    (async()=>{
+      try{
+        const{data:row,error}=await supabase.from("ets_profile").select("*").eq("user_id",userId).maybeSingle();
+        if(error)throw error;
+        if(alive&&row?.payload)setData(row.payload);
+        else{const raw=localStorage.getItem(lsKey);if(raw&&alive)setData(JSON.parse(raw));}
+      }catch{
+        try{const raw=localStorage.getItem(lsKey);if(raw&&alive)setData(JSON.parse(raw));}catch{}
+      }
+      if(alive)setLoaded(true);
+    })();
+    return()=>{alive=false;};
+  },[userId]);
+
+  const save=async(next:any)=>{
+    setData(next);
+    try{localStorage.setItem(lsKey,JSON.stringify(next));}catch{}
+    try{
+      await supabase.from("ets_profile").upsert({user_id:userId,payload:next,updated_at:new Date().toISOString()},{onConflict:"user_id"});
+      setSavedAt(new Date().toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"}));
+    }catch(e){console.warn("ETS: сохранено локально, БД недоступна:",e);setSavedAt("локально");}
+  };
+
+  const setField=(nodeId:string,key:string,v:string)=>{
+    save({...data,[nodeId]:{...(data[nodeId]||{}),[key]:v}});
+  };
+
+  const totalFields=ETS_NODES.reduce((s,n)=>s+n.fields.length,0);
+  const doneFields=ETS_NODES.reduce((s,n)=>s+etsFilled(data,n),0);
+  const progress=totalFields?Math.round(doneFields/totalFields*100):0;
+
+  const accent=dark?"#E8E8E8":"#181818";
+  const nodeBg=(done:boolean,active:boolean)=>
+    active?(dark?"rgba(255,255,255,0.10)":"rgba(0,0,0,0.05)")
+    :done?(dark?"rgba(255,255,255,0.055)":"rgba(255,255,255,0.85)")
+    :(dark?"rgba(255,255,255,0.025)":"rgba(255,255,255,0.5)");
+
+  // ── карта: узлы по ярусам ──
+  const tiers=[0,1,2,3].map(t=>ETS_NODES.filter(n=>n.tier===t));
+
+  const NodeCard=({n}:{n:EtsNode})=>{
+    const f=etsFilled(data,n);
+    const done=f===n.fields.length;
+    const active=open===n.id;
+    const pct=Math.round(f/n.fields.length*100);
+    return(
+      <button onClick={()=>setOpen(active?null:n.id)}
+        style={{
+          flex:1,minWidth:isMobile?140:160,textAlign:"left" as const,cursor:"pointer",
+          background:nodeBg(done,active),
+          backdropFilter:"blur(14px) saturate(1.2)",
+          border:"1px solid "+(active?accent+"66":done?(dark?"rgba(255,255,255,0.16)":"rgba(0,0,0,0.14)"):C.bd),
+          borderRadius:12,padding:isMobile?"12px 13px":"14px 16px",
+          transition:"all 0.18s",
+          boxShadow:active?(dark?"0 6px 22px rgba(0,0,0,0.4)":"0 6px 22px rgba(0,0,0,0.10)"):"none",
+        }}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:4}}>
+          <span style={{fontSize:isMobile?13:14,fontWeight:800,color:C.t1,letterSpacing:"-0.01em"}}>{n.title}</span>
+          <span style={{fontSize:10,fontWeight:700,color:done?C.t1:C.t2,background:done?(dark?"rgba(255,255,255,0.12)":"rgba(0,0,0,0.07)"):"transparent",border:done?"none":"1px solid "+C.bd,borderRadius:20,padding:"1px 7px",whiteSpace:"nowrap" as const}}>
+            {f}/{n.fields.length}
+          </span>
+        </div>
+        <div style={{fontSize:11,color:C.t2,marginBottom:9,lineHeight:1.35}}>{n.short}</div>
+        <div style={{height:3,borderRadius:3,background:dark?"rgba(255,255,255,0.09)":"rgba(0,0,0,0.07)",overflow:"hidden"}}>
+          <div style={{height:"100%",width:pct+"%",background:accent,borderRadius:3,transition:"width 0.35s"}}/>
+        </div>
+      </button>
+    );
+  };
+
+  const Connector=({active}:{active:boolean})=>(
+    <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:26}}>
+      <svg width="100%" height="26" viewBox="0 0 200 26" preserveAspectRatio="none" style={{display:"block",opacity:active?1:0.35}}>
+        <line x1="100" y1="0" x2="100" y2="18" stroke={accent} strokeWidth="1.4" strokeDasharray={active?"0":"4 4"}/>
+        <polygon points="100,26 96,18 104,18" fill={accent}/>
+      </svg>
+    </div>
+  );
+
+  // ── PDF ──
+  const exportPDF=()=>{
+    const win=window.open("","_blank");
+    if(!win)return;
+    const esc=(t:string)=>String(t||"").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br/>");
+    const blocks=ETS_NODES.map(n=>{
+      const rows=n.fields.map(f=>{
+        const v=(data?.[n.id]?.[f.key]||"").trim();
+        return `<div class="row"><div class="k">${esc(f.label)}</div><div class="v${v?"":" empty"}">${v?esc(v):"— не заполнено —"}</div></div>`;
+      }).join("");
+      return `<section><h2>${esc(n.title)} <span class="sub">${esc(n.short)}</span></h2><p class="desc">${esc(n.desc)}</p>${rows}</section>`;
+    }).join("");
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>ETS — Expert Trust System</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:-apple-system,Segoe UI,Arial,sans-serif;max-width:820px;margin:40px auto;padding:0 28px;color:#141414;line-height:1.6}
+h1{font-size:28px;font-weight:800;margin:0 0 4px;letter-spacing:-0.5px}
+.lead{font-size:13px;color:#666;margin-bottom:6px}
+.prog{font-size:12px;color:#666;margin-bottom:26px;padding-bottom:18px;border-bottom:2px solid #141414}
+section{margin-bottom:26px;page-break-inside:avoid}
+h2{font-size:17px;font-weight:800;margin:0 0 3px;letter-spacing:-0.2px}
+.sub{font-size:12px;font-weight:500;color:#888;letter-spacing:0}
+.desc{font-size:12px;color:#777;margin:0 0 12px}
+.row{display:flex;gap:14px;padding:8px 0;border-bottom:1px solid #ededed}
+.k{flex:0 0 190px;font-size:12px;font-weight:700;color:#555}
+.v{flex:1;font-size:13px;white-space:pre-wrap}
+.v.empty{color:#bbb;font-style:italic}
+footer{margin-top:34px;padding-top:14px;border-top:1px solid #e5e5e5;font-size:11px;color:#999}
+@media print{body{margin:0;padding:14mm}}
+</style></head><body>
+<h1>Expert Trust System</h1>
+<div class="lead">Система позиционирования эксперта</div>
+<div class="prog">Заполнено ${progress}% · ${doneFields} из ${totalFields} полей · ${new Date().toLocaleDateString("ru-RU")}</div>
+${blocks}
+<footer>Vizzy · ETS</footer>
+<script>window.onload=function(){window.print()}<\/script>
+</body></html>`);
+    win.document.close();
+  };
+
+  const cur=ETS_NODES.find(n=>n.id===open)||null;
+
+  return<>
+    {/* Шапка */}
+    <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",gap:16,marginBottom:18,flexWrap:"wrap" as const}}>
+      <div>
+        <div style={{fontSize:isMobile?20:26,fontWeight:800,color:C.t1,letterSpacing:"-0.03em",lineHeight:1.15}}>Expert Trust System</div>
+        <div style={{fontSize:13,color:C.t2,marginTop:4,lineHeight:1.5,maxWidth:520}}>
+          Система, из которой собирается позиционирование: от того, кто платит — до фразы, по которой тебя узнают.
+        </div>
+      </div>
+      <div style={{textAlign:isMobile?"left":"right" as const,minWidth:150}}>
+        <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.02em",lineHeight:1}}>{progress}%</div>
+        <div style={{fontSize:11.5,color:C.t2,marginTop:3}}>{doneFields} из {totalFields} полей{savedAt?` · сохранено ${savedAt}`:""}</div>
+        <div style={{height:4,borderRadius:4,background:dark?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.08)",overflow:"hidden",marginTop:7,width:isMobile?160:180}}>
+          <div style={{height:"100%",width:progress+"%",background:accent,borderRadius:4,transition:"width 0.4s"}}/>
+        </div>
+      </div>
+    </div>
+
+    {!loaded?<div style={{padding:48,textAlign:"center" as const,color:C.t2}}>Загрузка…</div>:<>
+      {/* Карта */}
+      <div style={{background:dark?"rgba(255,255,255,0.02)":"rgba(255,255,255,0.4)",border:"1px solid "+C.bd,borderRadius:14,padding:isMobile?14:22,marginBottom:16}}>
+        <div style={{fontSize:11,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.6,marginBottom:14}}>Карта системы — нажми на блок, чтобы заполнить</div>
+
+        {/* Ярус 0: ICP + IVP */}
+        <div style={{display:"flex",gap:isMobile?8:14}}>
+          {tiers[0].map(n=><NodeCard key={n.id} n={n}/>)}
+        </div>
+        <Connector active={tiers[0].some(n=>etsFilled(data,n)>0)}/>
+
+        {/* Ярус 1: Оффер */}
+        <div style={{display:"flex",gap:14,maxWidth:isMobile?"100%":420,margin:"0 auto"}}>
+          {tiers[1].map(n=><NodeCard key={n.id} n={n}/>)}
+        </div>
+        <Connector active={etsFilled(data,ETS_NODES[2])>0}/>
+
+        {/* Ярус 2: Позиционирование */}
+        <div style={{display:"flex",gap:14,maxWidth:isMobile?"100%":420,margin:"0 auto"}}>
+          {tiers[2].map(n=><NodeCard key={n.id} n={n}/>)}
+        </div>
+        <Connector active={etsFilled(data,ETS_NODES[3])>0}/>
+
+        {/* Ярус 3: Фраза / Цитата / Ассоциация */}
+        <div style={{display:"flex",gap:isMobile?8:14,flexWrap:isMobile?"wrap" as const:"nowrap" as const}}>
+          {tiers[3].map(n=><NodeCard key={n.id} n={n}/>)}
+        </div>
+      </div>
+
+      {/* Редактор выбранного блока */}
+      {cur&&<div style={{background:C.w,border:"1px solid "+C.bd,borderRadius:14,padding:isMobile?16:22,marginBottom:16}}>
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,marginBottom:16}}>
+          <div>
+            <div style={{display:"flex",alignItems:"baseline",gap:9,flexWrap:"wrap" as const}}>
+              <span style={{fontSize:17,fontWeight:800,color:C.t1,letterSpacing:"-0.02em"}}>{cur.title}</span>
+              <span style={{fontSize:12,color:C.t2,fontWeight:600}}>{cur.short}</span>
+            </div>
+            <div style={{fontSize:12.5,color:C.t2,marginTop:5,lineHeight:1.55,maxWidth:560}}>{cur.desc}</div>
+          </div>
+          <button onClick={()=>setOpen(null)} title="Свернуть"
+            style={{flexShrink:0,width:30,height:30,borderRadius:8,border:"1px solid "+C.bd,background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:14}}>
+          {cur.fields.map(f=>{
+            const v=data?.[cur.id]?.[f.key]||"";
+            return<div key={f.key} style={{gridColumn:f.long&&!isMobile?"span 2":"auto"}}>
+              <label style={{fontSize:12,color:C.t2,fontWeight:600,display:"block",marginBottom:6}}>{f.label}</label>
+              {f.long
+                ?<textarea value={v} onChange={e=>setField(cur.id,f.key,e.target.value)} placeholder={f.ph} rows={3}
+                   style={{...iS(),resize:"vertical" as const,minHeight:76,lineHeight:1.6,fontFamily:"'Inter',sans-serif"}}/>
+                :<input value={v} onChange={e=>setField(cur.id,f.key,e.target.value)} placeholder={f.ph} style={iS()}/>}
+            </div>;
+          })}
+        </div>
+
+        {/* Навигация между блоками */}
+        <div style={{display:"flex",justifyContent:"space-between",gap:10,marginTop:18,paddingTop:14,borderTop:"1px solid "+C.bd}}>
+          {(()=>{
+            const i=ETS_NODES.findIndex(n=>n.id===cur.id);
+            const prev=i>0?ETS_NODES[i-1]:null;
+            const next=i<ETS_NODES.length-1?ETS_NODES[i+1]:null;
+            const nav=(n:EtsNode|null,dir:"prev"|"next")=>n?(
+              <button onClick={()=>setOpen(n.id)}
+                style={{padding:"8px 14px",borderRadius:9,border:"1px solid "+C.bd,background:"transparent",color:C.t2,fontSize:12.5,fontWeight:600,cursor:"pointer"}}>
+                {dir==="prev"?"← "+n.title:n.title+" →"}
+              </button>
+            ):<span/>;
+            return<>{nav(prev,"prev")}{nav(next,"next")}</>;
+          })()}
+        </div>
+      </div>}
+
+      {/* Сводка */}
+      <div style={{background:C.w,border:"1px solid "+C.bd,borderRadius:14,padding:isMobile?16:22}}>
+        <div style={{fontSize:13.5,fontWeight:800,color:C.t1,marginBottom:14}}>Сводка позиционирования</div>
+        {doneFields===0
+          ?<div style={{fontSize:13,color:C.t2,lineHeight:1.6,marginBottom:16}}>Заполни блоки на карте — здесь соберётся готовое позиционирование, которое можно выгрузить в PDF.</div>
+          :<div style={{display:"flex",flexDirection:"column",gap:11,marginBottom:18}}>
+            {ETS_NODES.map(n=>{
+              const vals=n.fields.map(f=>(data?.[n.id]?.[f.key]||"").trim()).filter(Boolean);
+              if(!vals.length)return null;
+              return<div key={n.id} style={{display:"flex",gap:12,alignItems:"flex-start",flexDirection:isMobile?"column":"row"}}>
+                <div style={{flex:"0 0 150px",fontSize:12,fontWeight:700,color:C.t2,paddingTop:1}}>{n.title}</div>
+                <div style={{flex:1,fontSize:13,color:C.t1,lineHeight:1.6}}>{vals.join(" · ")}</div>
+              </div>;
+            })}
+          </div>}
+        <button onClick={exportPDF}
+          style={{width:isMobile?"100%":"auto",padding:"12px 22px",borderRadius:10,border:"none",background:C.t1,color:C.bg,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:9}}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Скачать сводку в PDF
+        </button>
+        <div style={{fontSize:11.5,color:C.t2,marginTop:10,lineHeight:1.5}}>Откроется окно печати — выбери «Сохранить как PDF».</div>
+      </div>
+    </>}
+  </>;
+}
+
 /* ============ CASH FLOW ============ */
 const CF_GREEN="#16A34A";
 const CF_RED="#DC2626";
@@ -6560,7 +6901,7 @@ function ContentPage({userId}:{userId:string}){
             <span style={{fontSize:13,color:C.t2,fontWeight:500}}>{stage.label}</span>
             {isMax&&cnt>0&&<span style={{fontSize:10,background:C.bd,color:C.t2,borderRadius:6,padding:"2px 7px",fontWeight:600}}>больше всего</span>}
           </div>
-          <div style={{fontSize:26,fontWeight:800,color:stage.color,marginBottom:6}}>{cnt}</div>
+          <div style={{fontSize:26,fontWeight:800,color:C.t1,marginBottom:6}}>{cnt}</div>
           <div style={{height:4,borderRadius:4,background:C.bd,overflow:"hidden"}}>
             <div style={{height:"100%",width:pct+"%",background:stage.color,borderRadius:4,transition:"width 0.4s"}}/>
           </div>
