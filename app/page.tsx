@@ -4588,6 +4588,19 @@ const cfShort=(n:number)=>{
   return String(v);
 };
 const cfMonth=(d:string)=>(d||"").slice(0,7);
+const CF_CHART="#2F6BFF";
+const CF_MONTHS_RU=["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+const cfNowMonth=()=>today().slice(0,7);
+const cfShiftMonth=(ym:string,delta:number)=>{
+  const[y,mm]=ym.split("-").map(Number);
+  const d=new Date(y,(mm-1)+delta,1);
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+};
+const cfMonthLabel=(ym:string)=>{
+  const[y,mm]=ym.split("-").map(Number);
+  return CF_MONTHS_RU[mm-1]+" "+y;
+};
+const cfDaysIn=(ym:string)=>{const[y,mm]=ym.split("-").map(Number);return new Date(y,mm,0).getDate();};
 const cfDaysInMonth=()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth()+1,0).getDate();};
 const cfDayOfMonth=()=>new Date().getDate();
 
@@ -4596,6 +4609,8 @@ function CashFlowPage({userId}:{userId:string}){
   const{dark}=useTheme();
   const{data:tx,add,remove,loading}=useTable("pnl",userId);
   const[tab,setTab]=useState<"dash"|"goal"|"kpi"|"history">("dash");
+  const[curMonth,setCurMonth]=useState<string>(()=>today().slice(0,7));
+  const[chartMetric,setChartMetric]=useState<"income"|"expense"|"profit">("income");
   const[settings,setSettings]=useState<any>(CF_SETTINGS_DEFAULT);
   const[settingsOpen,setSettingsOpen]=useState(false);
 
@@ -4649,13 +4664,17 @@ function CashFlowPage({userId}:{userId:string}){
 
   // ── расчёты ──
   const m=useMemo(()=>{
-    const cm=today().slice(0,7);
+    const cm=curMonth;
+    const nowM=cfNowMonth();
+    const isPast=cm<nowM, isFuture=cm>nowM, isNow=cm===nowM;
     const inc=(t:any)=>t.type==="income";
     const exp=(t:any)=>t.type==="expense";
     const sum=(a:any[])=>a.reduce((s,t)=>s+(+t.amount||0),0);
 
-    const allInc=sum(tx.filter(inc));
-    const allExp=sum(tx.filter(exp));
+    // деньги на счетах на конец выбранного месяца
+    const upto=tx.filter((t:any)=>cfMonth(t.date)<=cm);
+    const allInc=sum(upto.filter(inc));
+    const allExp=sum(upto.filter(exp));
     const cash=(+settings.start_balance||0)+allInc-allExp;
 
     const monthTx=tx.filter((t:any)=>cfMonth(t.date)===cm);
@@ -4689,8 +4708,9 @@ function CashFlowPage({userId}:{userId:string}){
     // план
     const goal=+settings.goal_profit||0;
     const planPct=goal>0?Math.round(mProfit/goal*100):null;
-    const dim=cfDaysInMonth(),dom=cfDayOfMonth();
-    const paceProfit=dom>0?mProfit/dom*dim:0;
+    const dim=cfDaysIn(cm);
+    const dom=isNow?cfDayOfMonth():isPast?dim:0;
+    const paceProfit=dom>0?mProfit/dom*dim:mProfit;
     const pacePct=goal>0?Math.round(paceProfit/goal*100):null;
 
     // KPI
@@ -4704,9 +4724,27 @@ function CashFlowPage({userId}:{userId:string}){
     const ltv=avgCheck*(1+(+settings.repeat_rate||0)/100);
     const breakEven=margin>0?mExp/(margin/100):0;
 
+    // дневные ряды для графиков
+    const dayInc=new Array(dim).fill(0), dayExp=new Array(dim).fill(0);
+    monthTx.forEach((t:any)=>{
+      const d=Number(String(t.date||"").slice(8,10));
+      if(!d||d<1||d>dim)return;
+      if(t.type==="income")dayInc[d-1]+=(+t.amount||0); else dayExp[d-1]+=(+t.amount||0);
+    });
+    const dayProfit=dayInc.map((v,i)=>v-dayExp[i]);
+    const cumProfit:number[]=[]; let acc=0;
+    dayProfit.forEach(v=>{acc+=v;cumProfit.push(acc);});
+
+    // предыдущий месяц — для сравнения
+    const pm=cfShiftMonth(cm,-1);
+    const prevTx=tx.filter((t:any)=>cfMonth(t.date)===pm);
+    const pInc=sum(prevTx.filter(inc)), pExp=sum(prevTx.filter(exp));
+    const prev={inc:pInc,exp:pExp,profit:pInc-pExp};
+
     return{cash,allInc,allExp,mInc,mExp,mProfit,burn,avgInc,netBurn,runway,topExp,topInc,goal,planPct,paceProfit,pacePct,
-      salesCount,avgCheck,adSpend,margin,cac,romi,roas,ltv,breakEven,byMonth,months,dim,dom};
-  },[tx,settings]);
+      salesCount,avgCheck,adSpend,margin,cac,romi,roas,ltv,breakEven,byMonth,months,dim,dom,
+      dayInc,dayExp,dayProfit,cumProfit,prev,isPast,isFuture,isNow};
+  },[tx,settings,curMonth]);
 
   // ── AI финдиректор ──
   const[ai,setAi]=useState("");
@@ -4731,7 +4769,7 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
     try{
       const t=await paChat(
         "Ты — финансовый директор предпринимателя. Говоришь коротко и по делу, оперируешь цифрами из данных, не выдумываешь. Пишешь по-русски, без markdown-разметки и без воды. Максимум 5 коротких пунктов.",
-        `Вот финансы за текущий месяц:\n\n${ctx}\n\nДай сводку финдиректора:\n1) Одной строкой — идём ли мы по плану и на сколько процентов по текущему темпу.\n2) Что сейчас сильнее всего съедает прибыль — с конкретной суммой.\n3) Один риск, который виден по цифрам (кассовый разрыв, перекос расходов, зависимость от одного источника дохода).\n4) Одно конкретное действие на эту неделю с числом.\n5) Если есть запас — на сколько можно увеличить рекламный бюджет, не уходя в минус.\nПиши строго по этим данным. Если данных мало — так и скажи.`,
+        `Вот финансы за ${cfMonthLabel(curMonth)}:\n\n${ctx}\n\nДай сводку финдиректора:\n1) Одной строкой — идём ли мы по плану и на сколько процентов по текущему темпу.\n2) Что сейчас сильнее всего съедает прибыль — с конкретной суммой.\n3) Один риск, который виден по цифрам (кассовый разрыв, перекос расходов, зависимость от одного источника дохода).\n4) Одно конкретное действие на эту неделю с числом.\n5) Если есть запас — на сколько можно увеличить рекламный бюджет, не уходя в минус.\nПиши строго по этим данным. Если данных мало — так и скажи.`,
         900,0.6);
       setAi(stripMd(t));
     }catch{setAi("Не удалось получить сводку. Попробуй ещё раз.");}
@@ -4767,12 +4805,84 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
   const lblS:React.CSSProperties={fontSize:12,color:C.t2,fontWeight:600,marginBottom:6,display:"block"};
   const tabS=(a:boolean):React.CSSProperties=>({padding:"8px 16px",borderRadius:9,border:"none",background:a?C.t1:"transparent",color:a?C.bg:C.t2,fontSize:13,fontWeight:a?700:500,cursor:"pointer",whiteSpace:"nowrap"});
 
-  const KpiCard=({label,value,sub,color}:{label:string,value:string,sub?:string,color?:string})=>(
+  // ── Большой график: цифра сверху, линия снизу (стиль референса) ──
+  const CFChart=({series,label,value,delta,dim}:{series:number[],label:string,value:string,delta:number|null,dim:number})=>{
+    const W=1000,H=260,padT=14,padB=30,padR=54;
+    const has=series.some(v=>v!==0);
+    const min=Math.min(0,...series), max=Math.max(...series,0);
+    const span=(max-min)||1;
+    const x=(i:number)=>series.length<2?padR/2:(i/(series.length-1))*(W-padR);
+    const y=(v:number)=>padT+(1-(v-min)/span)*(H-padT-padB);
+    const path=series.map((v,i)=>(i?"L":"M")+x(i).toFixed(1)+","+y(v).toFixed(1)).join(" ");
+    const area=has?path+` L${x(series.length-1).toFixed(1)},${y(min)} L${x(0).toFixed(1)},${y(min)} Z`:"";
+    const ticks=[0,0.25,0.5,0.75,1].map(p=>min+span*p);
+    return(
+      <div style={{background:C.w,border:"1px solid "+C.bd,borderRadius:14,padding:isMobile?16:22,marginBottom:16}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,flexWrap:"wrap" as const}}>
+          <span style={{fontSize:13,color:C.t2,fontWeight:600}}>{label}</span>
+          <div style={{display:"flex",gap:2,marginLeft:"auto",background:C.ib,borderRadius:9,padding:3,border:"1px solid "+C.bd}}>
+            {([["income","Доход"],["expense","Расход"],["profit","Прибыль"]] as const).map(([k,l])=>(
+              <button key={k} onClick={()=>setChartMetric(k)}
+                style={{padding:"5px 11px",borderRadius:6,border:"none",background:chartMetric===k?C.w:"transparent",color:chartMetric===k?C.t1:C.t2,fontSize:11.5,fontWeight:chartMetric===k?700:500,cursor:"pointer",boxShadow:chartMetric===k?"0 1px 3px rgba(0,0,0,0.08)":"none"}}>{l}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexWrap:"wrap" as const}}>
+          <span style={{fontSize:isMobile?26:32,fontWeight:800,color:C.t1,letterSpacing:"-0.03em",lineHeight:1}}>{value}</span>
+          {delta!==null&&<span style={{fontSize:12.5,fontWeight:700,padding:"3px 10px",borderRadius:20,
+            color:delta>=0?CF_GREEN:CF_RED,background:(delta>=0?CF_GREEN:CF_RED)+"18"}}>
+            {(delta>=0?"+":"−")+cfMoney(Math.abs(delta)).replace("−","")}
+          </span>}
+        </div>
+        {!has
+          ?<div style={{height:isMobile?150:190,display:"flex",alignItems:"center",justifyContent:"center",color:C.t2,fontSize:13,background:dark?"rgba(255,255,255,0.02)":"rgba(0,0,0,0.015)",borderRadius:10}}>
+             Нет операций за этот месяц
+           </div>
+          :<div style={{position:"relative" as const}}>
+            <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={isMobile?170:210} preserveAspectRatio="none" style={{display:"block",overflow:"visible"}}>
+              <defs>
+                <linearGradient id="cfgrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={CF_CHART} stopOpacity="0.22"/>
+                  <stop offset="100%" stopColor={CF_CHART} stopOpacity="0"/>
+                </linearGradient>
+              </defs>
+              {ticks.map((t,i)=>(
+                <line key={i} x1="0" y1={y(t)} x2={W-padR} y2={y(t)} stroke={dark?"rgba(255,255,255,0.07)":"rgba(0,0,0,0.06)"} strokeWidth="1" vectorEffect="non-scaling-stroke"/>
+              ))}
+              {min<0&&<line x1="0" y1={y(0)} x2={W-padR} y2={y(0)} stroke={dark?"rgba(255,255,255,0.22)":"rgba(0,0,0,0.2)"} strokeWidth="1" vectorEffect="non-scaling-stroke"/>}
+              {area&&<path d={area} fill="url(#cfgrad)"/>}
+              <path d={path} fill="none" stroke={CF_CHART} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
+            </svg>
+            <div style={{position:"absolute" as const,top:0,right:0,height:isMobile?170:210,width:padR,display:"flex",flexDirection:"column-reverse",justifyContent:"space-between",paddingBottom:(padB/H)*(isMobile?170:210),paddingTop:(padT/H)*(isMobile?170:210)}}>
+              {ticks.map((t,i)=><span key={i} style={{fontSize:10,color:C.t2,textAlign:"right" as const,lineHeight:1}}>{cfShort(t)}</span>)}
+            </div>
+          </div>}
+        {has&&<div style={{display:"flex",justifyContent:"space-between",marginTop:8,paddingRight:padR/2}}>
+          <span style={{fontSize:10.5,color:C.t2}}>1 {cfMonthLabel(curMonth).split(" ")[0].toLowerCase()}</span>
+          <span style={{fontSize:10.5,color:C.t2}}>{dim} {cfMonthLabel(curMonth).split(" ")[0].toLowerCase()}</span>
+        </div>}
+      </div>
+    );
+  };
+
+  // ── Мини-график для карточек ──
+  const CFSpark=({series}:{series:number[]})=>{
+    if(!series.some(v=>v!==0))return null;
+    const W=120,H=26;
+    const min=Math.min(0,...series),max=Math.max(...series,0),span=(max-min)||1;
+    const d=series.map((v,i)=>(i?"L":"M")+((i/(series.length-1))*W).toFixed(1)+","+(H-((v-min)/span)*H).toFixed(1)).join(" ");
+    return<svg viewBox={`0 0 ${W} ${H}`} width="100%" height={26} preserveAspectRatio="none" style={{display:"block",marginTop:8,overflow:"visible"}}>
+      <path d={d} fill="none" stroke={CF_CHART} strokeWidth="1.6" strokeLinejoin="round" vectorEffect="non-scaling-stroke"/>
+    </svg>;
+  };
+
+  const KpiCard=({label,value,sub,color,spark}:{label:string,value:string,sub?:string,color?:string,spark?:number[]})=>(
     <div style={cardS}>
       <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:8}}>
         <span style={{fontSize:12,color:C.t2,fontWeight:600,letterSpacing:0.2}}>{label}</span>
       </div>
       <div style={{fontSize:isMobile?20:24,fontWeight:800,color:color||C.t1,letterSpacing:"-0.02em",lineHeight:1.1}}>{value}</div>
+      {spark&&<CFSpark series={spark}/>}
       {sub&&<div style={{fontSize:11.5,color:C.t2,marginTop:5,lineHeight:1.45}}>{sub}</div>}
     </div>
   );
@@ -4793,6 +4903,26 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
         style={{padding:"13px 16px",borderRadius:11,border:"1px solid "+C.bd,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer"}}>Настройки</button>
     </div>
 
+    {/* Переключение месяцев */}
+    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16,flexWrap:"wrap" as const}}>
+      <button onClick={()=>setCurMonth(cfShiftMonth(curMonth,-1))} title="Предыдущий месяц"
+        style={{width:34,height:34,borderRadius:9,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div style={{minWidth:isMobile?130:160,textAlign:"center" as const}}>
+        <div style={{fontSize:isMobile?15:17,fontWeight:800,color:C.t1,letterSpacing:"-0.01em",lineHeight:1.2}}>{cfMonthLabel(curMonth)}</div>
+        <div style={{fontSize:10.5,color:C.t2,marginTop:1}}>
+          {m.isNow?"текущий месяц":m.isPast?"завершён":"планирование"}
+        </div>
+      </div>
+      <button onClick={()=>setCurMonth(cfShiftMonth(curMonth,1))} title="Следующий месяц"
+        style={{width:34,height:34,borderRadius:9,border:"1px solid "+C.bd,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+      {!m.isNow&&<button onClick={()=>setCurMonth(cfNowMonth())}
+        style={{padding:"7px 15px",borderRadius:9,border:"1px solid "+C.bd,background:"transparent",color:C.t1,fontSize:12.5,fontWeight:600,cursor:"pointer"}}>Текущий месяц</button>}
+    </div>
+
     {/* Вкладки */}
     <div style={{display:"flex",gap:4,marginBottom:18,overflowX:"auto" as const,background:C.ib,padding:4,borderRadius:11,border:"1px solid "+C.bd,width:"fit-content",maxWidth:"100%"}}>
       {([["dash","Дашборд"],["goal","Цель и прогноз"],["kpi","KPI бизнеса"],["history","История"]] as const).map(([id,l])=>(
@@ -4802,12 +4932,22 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
 
     {/* ============ ДАШБОРД ============ */}
     {tab==="dash"&&<>
+      <CFChart
+        series={chartMetric==="income"?m.dayInc:chartMetric==="expense"?m.dayExp:m.cumProfit}
+        label={chartMetric==="income"?"Доход за месяц":chartMetric==="expense"?"Расход за месяц":"Прибыль накопительно"}
+        value={cfMoney(chartMetric==="income"?m.mInc:chartMetric==="expense"?m.mExp:m.mProfit)}
+        delta={(()=>{
+          const cur=chartMetric==="income"?m.mInc:chartMetric==="expense"?m.mExp:m.mProfit;
+          const prv=chartMetric==="income"?m.prev.inc:chartMetric==="expense"?m.prev.exp:m.prev.profit;
+          return (cur===0&&prv===0)?null:cur-prv;
+        })()}
+        dim={m.dim}/>
       <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(auto-fit,minmax(190px,1fr))",gap:isMobile?10:14,marginBottom:16}}>
         <KpiCard label="Деньги на счетах" value={cfMoney(m.cash)} color={m.cash>=0?C.t1:CF_RED}
           sub={`Приход ${cfShort(m.allInc)} · расход ${cfShort(m.allExp)}`}/>
         <KpiCard label="Чистая прибыль (мес)" value={cfMoney(m.mProfit)} color={m.mProfit>=0?CF_GREEN:CF_RED}
-          sub={`Доход ${cfShort(m.mInc)} − расход ${cfShort(m.mExp)}`}/>
-        <KpiCard label="Burn Rate" value={cfMoney(m.burn)+"/мес"} color={C.t1}
+          spark={m.cumProfit} sub={`Доход ${cfShort(m.mInc)} − расход ${cfShort(m.mExp)}`}/>
+        <KpiCard label="Burn Rate" value={cfMoney(m.burn)+"/мес"} spark={m.dayExp}
           sub={m.netBurn>0?`Чистое сгорание ${cfShort(m.netBurn)}/мес`:"Доход перекрывает расходы"}/>
         <KpiCard label="Запас месяцев" value={isFinite(m.runway)?m.runway.toFixed(1)+" мес":"∞"}
           color={!isFinite(m.runway)?CF_GREEN:m.runway<3?CF_RED:m.runway<6?CF_AMBER:CF_GREEN}
