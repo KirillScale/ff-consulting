@@ -71,6 +71,8 @@ const NAV_GROUPS=[
       {id:"product",label:"Vizzy Product AI",ic:"M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4",accent:"#9D9D9D"},
       {id:"script",label:"Vizzy Copy AI",ic:"M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z",accent:"#A8A8A8"},
       {id:"stories",label:"Vizzy Stories AI",ic:"M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z",accent:"gradient"},
+      {id:"posts",label:"Vizzy Posts AI",accent:"#A8A8A8",ic:"M4 4h16v16H4z M4 10h16 M10 10v10"},
+      {id:"slides",label:"Vizzy Slides AI",accent:"#A8A8A8",ic:"M2 5h20v12H2z M8 21h8 M12 17v4"},
     ]
   },
   {
@@ -750,7 +752,7 @@ function MobileNav({active,onNav,onLogout}:{active:string,onNav:(id:string)=>voi
       style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4,border:"none",background:"transparent",cursor:"pointer",padding:"8px 2px",position:"relative"}}>
       {a&&<div style={{position:"absolute",top:0,width:22,height:3,borderRadius:"0 0 3px 3px",background:BLUE_ON}}/>}
       <I path={n.ic} size={22} color={a?"#fff":"rgba(255,255,255,0.5)"} sw={a?2:1.6}/>
-      <span style={{fontSize:9.5,color:a?"#fff":"rgba(255,255,255,0.5)",fontWeight:a?700:500,lineHeight:1,letterSpacing:0.2}}>{MOB_LABELS[id]||n.label.split(" ")[0]}</span>
+      <span style={{fontSize:9.5,color:a?"#fff":"rgba(255,255,255,0.5)",fontWeight:a?600:450,lineHeight:1,letterSpacing:0.2}}>{MOB_LABELS[id]||n.label.split(" ")[0]}</span>
     </button>;
   };
 
@@ -865,7 +867,7 @@ export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
   const APP_VERSION="v2.2"; // bump this to force-clear stale localStorage
-  const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","pnl","media","ads","calc","tools","mailings"];
+  const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings"];
 
   // Clear stale localStorage on version change
   useEffect(()=>{
@@ -996,12 +998,14 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
     {page==="script"&&<SafePage name="Copy AI"><CopyAIPage userId={user.id}/></SafePage>}
     {page==="product"&&<SafePage name="Product AI"><ProductAIPage userId={user.id}/></SafePage>}
     {page==="stories"&&<SafePage name="Stories AI"><StoriesAIPage userId={user.id}/></SafePage>}
+    {page==="posts"&&<SafePage name="Vizzy Posts AI"><PostsAIPage userId={user.id}/></SafePage>}
+    {page==="slides"&&<SafePage name="Vizzy Slides AI"><SlidesAIPage userId={user.id}/></SafePage>}
     {page==="forms"&&<SafePage name="Forms"><FormsPage userId={user.id}/></SafePage>}
     {page==="prices"&&<SafePage name="Prices & Product"><PricesPage userId={user.id} onNav={setPage}/></SafePage>}
     {page==="icp"&&<SafePage name="ICP & IVP"><Placeholder title="ICP & IVP" ic="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></SafePage>}
     {page==="bizstrategy"&&<SafePage name="Strategy"><Placeholder title="Strategy" ic="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></SafePage>}
     {page==="team"&&<SafePage name="Team"><Placeholder title="Team" ic="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></SafePage>}
-    {!["dashboard","strategy","crm","cashflow","calls","mailings","content","pnl","media","ads","calc","tools","links","profile","files","ai","script","product","stories","design","offer","prices","icp","bizstrategy","team"].includes(page)&&nav&&<Placeholder title={nav.label} ic={nav.ic}/>}
+    {!["dashboard","strategy","crm","cashflow","calls","posts","slides","mailings","content","pnl","media","ads","calc","tools","links","profile","files","ai","script","product","stories","design","offer","prices","icp","bizstrategy","team"].includes(page)&&nav&&<Placeholder title={nav.label} ic={nav.ic}/>}
   </>;
 
   return (
@@ -4557,6 +4561,667 @@ ${audit?`<section><h2>Разбор воронки</h2><div class="audit">${esc(a
   </>;
 }
 
+/* ============ VIZZY POSTS AI / SLIDES AI ============ */
+// Общая медиатека: тот же bucket и путь, что у Stories AI — фото не нужно грузить дважды.
+function useMediaLib(userId:string){
+  const[images,setImages]=useState<SImg[]>([]);
+  const[libLoading,setLibLoading]=useState(true);
+  const[uploading,setUploading]=useState(0);
+
+  useEffect(()=>{
+    (async()=>{
+      try{
+        const{data}=await supabase.storage.from("stories").list(`${userId}/storiesai`,{limit:500,sortBy:{column:"created_at",order:"asc"}});
+        const imgs:SImg[]=(data||[]).filter(f=>f.name&&!f.name.startsWith(".")).map(f=>{
+          const path=`${userId}/storiesai/${f.name}`;
+          return{id:f.name,url:supabase.storage.from("stories").getPublicUrl(path).data.publicUrl};
+        });
+        setImages(imgs);
+      }catch(e){}
+      setLibLoading(false);
+    })();
+  },[userId]);
+
+  const compress=(file:File)=>new Promise<Blob>((resolve,reject)=>{
+    const img=new Image();const o=URL.createObjectURL(file);
+    img.onload=()=>{
+      const MAX=1600;const scale=Math.min(1,MAX/Math.max(img.width,img.height));
+      const w=Math.round(img.width*scale),h=Math.round(img.height*scale);
+      const c=document.createElement("canvas");c.width=w;c.height=h;
+      c.getContext("2d")!.drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(o);
+      c.toBlob(b=>b?resolve(b):reject(new Error("blob")),"image/jpeg",0.84);
+    };
+    img.onerror=reject;img.src=o;
+  });
+
+  const onUpload=async(files:FileList|null)=>{
+    if(!files)return;
+    const list=Array.from(files).filter(f=>/image\/(jpeg|png|webp|jpg)/.test(f.type)).slice(0,500-images.length);
+    if(!list.length)return;
+    setUploading(list.length);
+    let done=0;
+    for(const file of list){
+      try{
+        const blob=await compress(file);
+        const id=`${Date.now()}_${Math.random().toString(36).slice(2,7)}.jpg`;
+        const path=`${userId}/storiesai/${id}`;
+        const{error}=await supabase.storage.from("stories").upload(path,blob,{contentType:"image/jpeg"});
+        if(!error){
+          const url=supabase.storage.from("stories").getPublicUrl(path).data.publicUrl;
+          setImages(prev=>[...prev,{id,url}]);
+        }
+      }catch(e){}
+      done++;setUploading(list.length-done);
+    }
+    setUploading(0);
+  };
+
+  const removeImg=async(im:SImg)=>{
+    setImages(prev=>prev.filter(x=>x.id!==im.id));
+    try{await supabase.storage.from("stories").remove([`${userId}/storiesai/${im.id}`]);}catch(e){}
+  };
+
+  const pickImages=(n:number)=>{
+    const pool=[...images];const out:string[]=[];
+    for(let i=0;i<n;i++){
+      if(pool.length===0)pool.push(...images);
+      const idx=Math.floor(Math.random()*pool.length);
+      out.push(pool.splice(idx,1)[0].url);
+    }
+    return out;
+  };
+
+  return{images,libLoading,uploading,onUpload,removeImg,pickImages};
+}
+
+type VLayout="bottom-grad"|"top-grad"|"center-plate"|"bottom-plate"|"clean-center"|"left-block";
+const V_LAYOUTS:{id:VLayout,label:string}[]=[
+  {id:"bottom-grad",label:"Градиент снизу"},
+  {id:"top-grad",label:"Градиент сверху"},
+  {id:"bottom-plate",label:"Плашка снизу"},
+  {id:"center-plate",label:"Плашка по центру"},
+  {id:"clean-center",label:"Чистый центр"},
+  {id:"left-block",label:"Блок слева"},
+];
+
+type VFormat={id:string,label:string,w:number,h:number};
+const POST_FORMATS:VFormat[]=[
+  {id:"1:1",label:"Квадрат 1:1",w:1080,h:1080},
+  {id:"3:4",label:"Вертикальный 3:4",w:1080,h:1440},
+];
+const SLIDE_FORMATS:VFormat[]=[
+  {id:"16:9",label:"Презентация 16:9",w:1920,h:1080},
+  {id:"1:1",label:"Квадрат 1:1",w:1080,h:1080},
+];
+
+type VSlide={
+  id:string,text:string,imgUrl:string,
+  layout:VLayout,fontId:string,textAlign:"left"|"center"|"right",
+  textY:number,fontScale:number,grayscale:boolean,
+  cc?:SColorCorrection,titleMode:boolean,
+};
+
+function drawSlide(ctx:CanvasRenderingContext2D,W:number,H:number,o:VSlide,img:HTMLImageElement|null){
+  ctx.clearRect(0,0,W,H);
+  const cc={...CC_DEFAULT,...(o.cc||{})};
+
+  // фон
+  if(img){
+    const ir=img.width/img.height,cr=W/H;let dw,dh,dx,dy;
+    if(ir>cr){dh=H;dw=H*ir;dx=(W-dw)/2;dy=0;}else{dw=W;dh=W/ir;dx=0;dy=(H-dh)/2;}
+    const fx:string[]=[];
+    if(o.grayscale)fx.push("grayscale(1)");
+    if(cc.brightness!==1)fx.push(`brightness(${cc.brightness})`);
+    if(cc.contrast!==1)fx.push(`contrast(${cc.contrast})`);
+    if(cc.saturation!==1&&!o.grayscale)fx.push(`saturate(${cc.saturation})`);
+    ctx.filter=fx.length?fx.join(" "):"none";
+    ctx.drawImage(img,dx,dy,dw,dh);
+    ctx.filter="none";
+    if(cc.warmth!==0){
+      ctx.save();ctx.globalCompositeOperation="soft-light";
+      ctx.globalAlpha=Math.min(0.85,Math.abs(cc.warmth));
+      ctx.fillStyle=cc.warmth>0?"#FF8A1E":"#1E7BFF";
+      ctx.fillRect(0,0,W,H);ctx.restore();
+    }
+  }else{ctx.fillStyle="#141414";ctx.fillRect(0,0,W,H);}
+
+  const f=STORY_FONTS.find(x=>x.id===o.fontId)||STORY_FONTS[0];
+  const family=f.family,weight=f.weight;
+  const base=Math.min(W,H);
+  const pad=Math.round(base*0.075);
+  const maxW=o.layout==="left-block"?Math.round(W*0.52):W-pad*2;
+
+  // размеры текста
+  const bodySize=Math.round(base*0.052*(o.fontScale||1));
+  const titleSize=Math.round(base*0.078*(o.fontScale||1));
+  const setF=(fs:number)=>{ctx.font=`${weight} ${fs}px "${family}",${storyFontFallback(family)}`;};
+
+  // разбор текста: первая строка — заголовок (для titleMode)
+  const rawLines=String(o.text||"").split("\n").map(s=>s.trim()).filter(Boolean);
+  const titleRaw=o.titleMode&&rawLines.length>1?rawLines[0]:"";
+  const bodyRaw=o.titleMode&&rawLines.length>1?rawLines.slice(1).join("\n"):rawLines.join("\n");
+
+  const wrap=(txt:string,fs:number)=>{
+    setF(fs);
+    const out:string[]=[];
+    txt.split("\n").forEach(par=>{
+      const words=par.split(/\s+/).filter(Boolean);
+      let line="";
+      words.forEach(w=>{
+        const test=line?line+" "+w:w;
+        if(ctx.measureText(test).width>maxW&&line){out.push(line);line=w;}
+        else line=test;
+      });
+      if(line)out.push(line);
+    });
+    return out;
+  };
+
+  const titleLines=titleRaw?wrap(titleRaw,titleSize):[];
+  const bodyLines=bodyRaw?wrap(bodyRaw,bodySize):[];
+  const titleLH=Math.round(titleSize*1.18),bodyLH=Math.round(bodySize*1.32);
+  const blockH=titleLines.length*titleLH+(titleLines.length&&bodyLines.length?Math.round(bodySize*0.5):0)+bodyLines.length*bodyLH;
+
+  // позиция блока
+  let topY:number;
+  const yFactor=typeof o.textY==="number"?o.textY:0.5;
+  if(o.layout==="top-grad")topY=pad+Math.round(base*0.03);
+  else if(o.layout==="bottom-grad"||o.layout==="bottom-plate")topY=H-pad-blockH;
+  else topY=Math.round((H-blockH)*Math.min(1,Math.max(0,yFactor)));
+  topY=Math.max(pad,Math.min(H-pad-blockH,topY));
+
+  // подложки
+  if(o.layout==="bottom-grad"){
+    const g=ctx.createLinearGradient(0,H*0.35,0,H);
+    g.addColorStop(0,"rgba(0,0,0,0)");g.addColorStop(1,"rgba(0,0,0,0.82)");
+    ctx.fillStyle=g;ctx.fillRect(0,H*0.35,W,H*0.65);
+  }else if(o.layout==="top-grad"){
+    const g=ctx.createLinearGradient(0,0,0,H*0.6);
+    g.addColorStop(0,"rgba(0,0,0,0.82)");g.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H*0.6);
+  }else if(o.layout==="bottom-plate"||o.layout==="center-plate"){
+    const py=Math.round(pad*0.75);
+    const bx=o.textAlign==="center"?(W-maxW)/2-py:pad-py;
+    ctx.fillStyle="rgba(0,0,0,0.62)";
+    const r=Math.round(base*0.02);
+    const rx=Math.max(0,bx),ry=topY-py,rw=Math.min(W,maxW+py*2),rh=blockH+py*2;
+    ctx.beginPath();
+    ctx.moveTo(rx+r,ry);ctx.lineTo(rx+rw-r,ry);ctx.quadraticCurveTo(rx+rw,ry,rx+rw,ry+r);
+    ctx.lineTo(rx+rw,ry+rh-r);ctx.quadraticCurveTo(rx+rw,ry+rh,rx+rw-r,ry+rh);
+    ctx.lineTo(rx+r,ry+rh);ctx.quadraticCurveTo(rx,ry+rh,rx,ry+rh-r);
+    ctx.lineTo(rx,ry+r);ctx.quadraticCurveTo(rx,ry,rx+r,ry);
+    ctx.closePath();ctx.fill();
+  }else if(o.layout==="left-block"){
+    const g=ctx.createLinearGradient(0,0,W*0.75,0);
+    g.addColorStop(0,"rgba(0,0,0,0.80)");g.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.fillStyle=g;ctx.fillRect(0,0,W*0.75,H);
+  }
+
+  // текст
+  const alignX=o.layout==="left-block"?pad
+    :o.textAlign==="center"?W/2
+    :o.textAlign==="right"?W-pad:pad;
+  ctx.textAlign=o.layout==="left-block"?"left":o.textAlign;
+  ctx.textBaseline="top";
+  ctx.fillStyle="#FFFFFF";
+  if(o.layout==="clean-center"){
+    ctx.shadowColor="rgba(0,0,0,0.55)";ctx.shadowBlur=Math.round(base*0.03);ctx.shadowOffsetY=Math.round(base*0.006);
+  }
+
+  let y=topY;
+  if(titleLines.length){
+    setF(titleSize);
+    titleLines.forEach(l=>{ctx.fillText(l,alignX,y);y+=titleLH;});
+    if(bodyLines.length)y+=Math.round(bodySize*0.5);
+  }
+  if(bodyLines.length){
+    setF(bodySize);
+    bodyLines.forEach(l=>{ctx.fillText(l,alignX,y);y+=bodyLH;});
+  }
+  ctx.shadowColor="transparent";ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+}
+
+function SlideCanvas({slide,fmt,width,rev=0}:{slide:VSlide,fmt:VFormat,width:number,rev?:number}){
+  const ref=useRef<HTMLCanvasElement>(null);
+  const height=Math.round(width*fmt.h/fmt.w);
+  useEffect(()=>{
+    const c=ref.current;if(!c)return;
+    const dpr=Math.min(2,window.devicePixelRatio||1);
+    c.width=width*dpr;c.height=height*dpr;
+    const ctx=c.getContext("2d");if(!ctx)return;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    const draw=(img:HTMLImageElement|null)=>drawSlide(ctx,width,height,slide,img);
+    if(slide.imgUrl){
+      const img=new Image();img.crossOrigin="anonymous";
+      img.onload=()=>draw(img);img.onerror=()=>draw(null);img.src=slide.imgUrl;
+    }else draw(null);
+  },[slide,width,height,rev,fmt.w,fmt.h]);
+  return<canvas ref={ref} style={{width,height,borderRadius:10,display:"block",background:"#141414"}}/>;
+}
+
+async function slideBlob(slide:VSlide,fmt:VFormat):Promise<Blob>{
+  const c=document.createElement("canvas");
+  c.width=fmt.w;c.height=fmt.h;
+  const ctx=c.getContext("2d")!;
+  const img=await new Promise<HTMLImageElement|null>(res=>{
+    if(!slide.imgUrl)return res(null);
+    const i=new Image();i.crossOrigin="anonymous";
+    i.onload=()=>res(i);i.onerror=()=>res(null);i.src=slide.imgUrl;
+  });
+  drawSlide(ctx,fmt.w,fmt.h,slide,img);
+  return await new Promise<Blob>((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(new Error("blob")),"image/png"));
+}
+
+async function generateSlideScript(form:any,kind:"post"|"slide"):Promise<{text:string}[]>{
+  const count=form.count;
+  const isPost=kind==="post";
+  const system=isPost
+    ? "Ты — копирайтер каруселей для Instagram. Пишешь короткие цепляющие тексты для слайдов карусели. Возвращаешь строго валидный JSON без markdown."
+    : "Ты — автор деловых презентаций. Пишешь ёмкие слайды: заголовок и короткое пояснение. Возвращаешь строго валидный JSON без markdown.";
+  const rule=isPost
+    ? `Каждый слайд — 1-2 строки, до ~14 слов. Разделяй строки через \\n. Первый слайд — сильный хук, последний — призыв к действию.`
+    : `Каждый слайд: первая строка — короткий заголовок (до 6 слов), вторая строка — пояснение (до 18 слов). Разделяй через \\n. Первый слайд — титульный, последний — вывод или призыв.`;
+  const user=`Задача: ${isPost?"карусель для Instagram":"презентация"} из ${count} ${isPost?"слайдов":"слайдов"}.
+
+Цель: ${form.goal}
+Тема: ${form.theme}
+Целевая аудитория: ${form.audience}
+Главный посыл: ${form.message}
+Уровень продажности (1 — чистый контент, 10 — жёсткая продажа): ${form.sell}
+Уровень пользы (1 — эмоции, 10 — обучение): ${form.value}
+
+Построй логику: зацепить → раскрыть проблему → дать решение по шагам → доказать → призвать.
+${rule}
+
+Верни строго JSON:
+{"slides":[{"n":1,"text":"..."}]}
+Массив должен содержать РОВНО ${count} элементов.`;
+  const data=paParseJSON(await paChat(system,user,Math.min(4000,600+count*90),0.85));
+  const arr=(data.slides||data.stories||data||[]).slice(0,count);
+  return arr.map((s:any)=>({text:stripMd((typeof s==="string"?s:s.text)||"")}));
+}
+
+function SlideStudio({userId,kind}:{userId:string,kind:"post"|"slide"}){
+  const{dark}=useTheme();
+  const isMobile=useIsMobile();
+  const isPost=kind==="post";
+  const FORMATS=isPost?POST_FORMATS:SLIDE_FORMATS;
+  const MAXN=isPost?20:100;
+  const TITLE=isPost?"Vizzy Posts AI":"Vizzy Slides AI";
+  const SUB=isPost?"Карусели для Instagram":"Презентации";
+
+  const{images,libLoading,uploading,onUpload,removeImg,pickImages}=useMediaLib(userId);
+  const[view,setView]=useState<"library"|"wizard"|"generating"|"editor">("library");
+  const[fmt,setFmt]=useState<VFormat>(FORMATS[0]);
+  const[form,setForm]=useState<any>({goal:"Продажа",goalCustom:"",theme:"",audience:"",message:"",sell:6,value:5,count:isPost?8:12});
+  const[slides,setSlides]=useState<VSlide[]>([]);
+  const[sel,setSel]=useState(0);
+  const[picker,setPicker]=useState(false);
+  const[exporting,setExporting]=useState(false);
+  const[err,setErr]=useState("");
+  const[fontsRev,setFontsRev]=useState(0);
+
+  const bd=C.bd;
+  const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
+  const inputBg=dark?"#1C1C1C":"#F8FAFC";
+
+  // шрифты для canvas (с кириллицей)
+  useEffect(()=>{
+    if(!document.getElementById("ks-story-fonts")){
+      const l=document.createElement("link");l.id="ks-story-fonts";l.rel="stylesheet";
+      l.href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;700;900&family=Inter:wght@300;400;700;900&family=Poppins:wght@700&family=Lora:wght@400;700&display=swap";
+      document.head.appendChild(l);
+    }
+    const fonts:any=(document as any).fonts;
+    if(fonts&&fonts.load){
+      const specs=['300 100px Montserrat','700 100px Montserrat','900 100px Montserrat','300 100px Inter','400 100px Inter','700 100px Inter','900 100px Inter','700 100px Poppins','400 100px Lora','700 100px Lora'];
+      const CYR="Русский текст Ёё";
+      Promise.allSettled([...specs.map((s:string)=>fonts.load(s).catch(()=>{})),...specs.map((s:string)=>fonts.load(s,CYR).catch(()=>{}))])
+        .then(()=>setFontsRev(r=>r+1));
+    }
+  },[]);
+
+  const cur=slides[sel];
+  const patch=(i:number,p:Partial<VSlide>)=>setSlides(prev=>prev.map((s,k)=>k===i?{...s,...p}:s));
+
+  const canGen=images.length>=1&&String(form.theme||"").trim().length>1;
+
+  const runGenerate=async()=>{
+    if(!canGen)return;
+    setView("generating");setErr("");
+    try{
+      const goal=form.goal==="Свой вариант"?(form.goalCustom||"Контент"):form.goal;
+      const scripts=await generateSlideScript({...form,goal},kind);
+      const imgs=pickImages(scripts.length);
+      const layouts:VLayout[]=isPost
+        ?["bottom-grad","center-plate","bottom-plate","top-grad","clean-center"]
+        :["left-block","bottom-grad","center-plate","clean-center"];
+      const built:VSlide[]=scripts.map((s,i)=>({
+        id:"sl"+i+Date.now().toString(36),
+        text:s.text,imgUrl:imgs[i],
+        layout:i===0?(isPost?"center-plate":"left-block"):layouts[i%layouts.length],
+        fontId:isPost?"mont-black":"inter-bold",
+        textAlign:isPost?"center":"left",
+        textY:0.5,fontScale:1,grayscale:false,cc:{...CC_DEFAULT},
+        titleMode:!isPost,
+      }));
+      setSlides(built);setSel(0);setView("editor");
+    }catch(e){
+      setErr("Не удалось сгенерировать. Попробуй ещё раз.");
+      setView("wizard");
+    }
+  };
+
+  const addSlide=()=>{
+    if(slides.length>=MAXN)return;
+    const img=pickImages(1)[0]||"";
+    setSlides(prev=>[...prev,{
+      id:"sl"+Date.now().toString(36),text:"Новый слайд",imgUrl:img,
+      layout:isPost?"bottom-grad":"left-block",fontId:isPost?"mont-black":"inter-bold",
+      textAlign:isPost?"center":"left",textY:0.5,fontScale:1,grayscale:false,cc:{...CC_DEFAULT},titleMode:!isPost,
+    }]);
+    setSel(slides.length);
+  };
+  const delSlide=(i:number)=>{
+    setSlides(prev=>prev.filter((_,k)=>k!==i));
+    setSel(s=>Math.max(0,Math.min(s>i?s-1:s,slides.length-2)));
+  };
+  const moveSlide=(i:number,dir:-1|1)=>{
+    const j=i+dir;if(j<0||j>=slides.length)return;
+    setSlides(prev=>{const c=[...prev];const t=c[i];c[i]=c[j];c[j]=t;return c;});
+    setSel(j);
+  };
+
+  const downloadOne=async()=>{
+    if(!cur)return;
+    setExporting(true);
+    try{
+      const b=await slideBlob(cur,fmt);
+      const a=document.createElement("a");
+      a.href=URL.createObjectURL(b);a.download=`${isPost?"post":"slide"}_${sel+1}.png`;a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+    }catch(e){setErr("Не удалось сохранить файл.");}
+    setExporting(false);
+  };
+  const downloadAll=async()=>{
+    setExporting(true);
+    for(let i=0;i<slides.length;i++){
+      try{
+        const b=await slideBlob(slides[i],fmt);
+        const a=document.createElement("a");
+        a.href=URL.createObjectURL(b);a.download=`${isPost?"post":"slide"}_${String(i+1).padStart(2,"0")}.png`;a.click();
+        await new Promise(r=>setTimeout(r,320));
+        URL.revokeObjectURL(a.href);
+      }catch(e){}
+    }
+    setExporting(false);
+  };
+
+  const lbl:React.CSSProperties={fontSize:12,color:C.t2,fontWeight:600,marginBottom:7,display:"block"};
+  const seg=(active:boolean):React.CSSProperties=>({padding:"8px 14px",borderRadius:9,border:`1px solid ${active?"transparent":bd}`,background:active?"rgba(124,124,124,0.16)":"transparent",color:active?C.t1:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"});
+
+  // ── ЭКРАН: библиотека ──
+  if(view==="library")return<>
+    <div style={{marginBottom:20}}>
+      <div style={{fontSize:isMobile?20:26,fontWeight:600,color:C.t1,letterSpacing:"-0.03em"}}>{TITLE}</div>
+      <div style={{fontSize:13,color:C.t2,marginTop:4,lineHeight:1.5}}>{SUB} · база фото общая со Stories AI</div>
+    </div>
+
+    <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:12,padding:isMobile?16:22,marginBottom:16}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:14,flexWrap:"wrap" as const}}>
+        <div>
+          <div style={{fontSize:14,fontWeight:600,color:C.t1}}>Медиатека</div>
+          <div style={{fontSize:12,color:C.t2,marginTop:2}}>{images.length} фото · те же, что в Stories AI</div>
+        </div>
+        <label style={{padding:"9px 16px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:13,fontWeight:600,cursor:"pointer"}}>
+          {uploading?`Загрузка… ${uploading}`:"Загрузить фото"}
+          <input type="file" accept="image/*" multiple style={{display:"none"}} onChange={e=>{onUpload(e.target.files);e.currentTarget.value="";}}/>
+        </label>
+      </div>
+      {libLoading?<div style={{padding:30,textAlign:"center" as const,color:C.t2,fontSize:13}}>Загрузка медиатеки…</div>
+      :!images.length?<div style={{padding:"30px 16px",textAlign:"center" as const,color:C.t2,fontSize:13,lineHeight:1.6}}>
+        Фотографий пока нет. Загрузи их — они появятся и в Stories AI.
+      </div>
+      :<div style={{display:"grid",gridTemplateColumns:`repeat(auto-fill,minmax(${isMobile?84:104}px,1fr))`,gap:8}}>
+        {images.map(im=>(
+          <div key={im.id} style={{position:"relative" as const,paddingTop:"100%",borderRadius:9,overflow:"hidden",background:inputBg}}>
+            <img src={im.url} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>
+            <button onClick={()=>removeImg(im)} title="Удалить"
+              style={{position:"absolute",top:5,right:5,width:22,height:22,borderRadius:6,border:"none",background:"rgba(0,0,0,0.6)",color:"#fff",cursor:"pointer",fontSize:13,lineHeight:1}}>×</button>
+          </div>
+        ))}
+      </div>}
+    </div>
+
+    <button onClick={()=>setView("wizard")} disabled={!images.length}
+      style={{width:"100%",padding:"14px",borderRadius:11,border:"none",background:images.length?C.t1:inputBg,color:images.length?C.bg:C.t2,fontSize:15,fontWeight:600,cursor:images.length?"pointer":"default"}}>
+      Создать {isPost?"карусель":"презентацию"}
+    </button>
+  </>;
+
+  // ── ЭКРАН: настройка ──
+  if(view==="wizard")return<>
+    <button onClick={()=>setView("library")} style={{background:"none",border:"none",color:C.t2,fontSize:13,cursor:"pointer",marginBottom:14,padding:0}}>← Медиатека</button>
+    <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:12,padding:isMobile?16:24,maxWidth:720}}>
+      <div style={{fontSize:17,fontWeight:600,color:C.t1,marginBottom:18}}>Параметры {isPost?"карусели":"презентации"}</div>
+
+      <label style={lbl}>Формат</label>
+      <div style={{display:"flex",gap:8,marginBottom:18,flexWrap:"wrap" as const}}>
+        {FORMATS.map(f=><button key={f.id} onClick={()=>setFmt(f)} style={seg(fmt.id===f.id)}>{f.label}</button>)}
+      </div>
+
+      <label style={lbl}>Цель</label>
+      <div style={{display:"flex",gap:8,marginBottom:18,flexWrap:"wrap" as const}}>
+        {["Продажа","Прогрев","Экспертность","Вовлечение","Свой вариант"].map(g=>(
+          <button key={g} onClick={()=>setForm({...form,goal:g})} style={seg(form.goal===g)}>{g}</button>
+        ))}
+      </div>
+      {form.goal==="Свой вариант"&&<input value={form.goalCustom} onChange={e=>setForm({...form,goalCustom:e.target.value})} placeholder="Своя цель" style={{...iS(),marginBottom:18}}/>}
+
+      <label style={lbl}>Тема</label>
+      <input value={form.theme} onChange={e=>setForm({...form,theme:e.target.value})} placeholder="О чём этот материал" style={{...iS(),marginBottom:18}}/>
+
+      <label style={lbl}>Целевая аудитория</label>
+      <input value={form.audience} onChange={e=>setForm({...form,audience:e.target.value})} placeholder="Для кого" style={{...iS(),marginBottom:18}}/>
+
+      <label style={lbl}>Главный посыл</label>
+      <textarea value={form.message} onChange={e=>setForm({...form,message:e.target.value})} rows={2} placeholder="Что человек должен понять и сделать"
+        style={{...iS(),marginBottom:18,resize:"vertical" as const,minHeight:62,fontFamily:"'Inter',sans-serif"}}/>
+
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:16,marginBottom:18}}>
+        <div>
+          <label style={lbl}>Продажность: {form.sell}/10</label>
+          <input type="range" min={1} max={10} value={form.sell} onChange={e=>setForm({...form,sell:+e.target.value})} style={{width:"100%",accentColor:"#757575"}}/>
+        </div>
+        <div>
+          <label style={lbl}>Польза: {form.value}/10</label>
+          <input type="range" min={1} max={10} value={form.value} onChange={e=>setForm({...form,value:+e.target.value})} style={{width:"100%",accentColor:"#757575"}}/>
+        </div>
+      </div>
+
+      <label style={lbl}>Количество слайдов: {form.count} (максимум {MAXN})</label>
+      <input type="range" min={3} max={MAXN} value={form.count} onChange={e=>setForm({...form,count:+e.target.value})} style={{width:"100%",accentColor:"#757575",marginBottom:8}}/>
+
+      {err&&<div style={{fontSize:12.5,color:"#DC2626",marginTop:10}}>{err}</div>}
+
+      <button onClick={runGenerate} disabled={!canGen}
+        style={{width:"100%",marginTop:20,padding:"14px",borderRadius:10,border:`1px solid ${canGen?bd:"transparent"}`,background:canGen?"#FFFFFF":inputBg,color:canGen?"#111111":C.t2,fontSize:15,fontWeight:600,cursor:canGen?"pointer":"default",boxShadow:canGen?"0 1px 2px rgba(0,0,0,0.05),0 8px 22px rgba(0,0,0,0.10)":"none"}}>
+        Сгенерировать
+      </button>
+      {!canGen&&<div style={{fontSize:12,color:C.t2,marginTop:10,textAlign:"center" as const}}>Нужно загрузить фото и указать тему</div>}
+    </div>
+  </>;
+
+  // ── ЭКРАН: генерация ──
+  if(view==="generating")return<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"80px 20px",gap:20}}>
+    <div style={{width:76,height:76,borderRadius:16,background:"#757575",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 10px 26px rgba(0,0,0,0.18)",animation:"ksbounce 0.9s ease-in-out infinite",overflow:"hidden"}}>
+      <img src={isPost?"/icon-copy.png":"/icon-design.png"} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{(e.currentTarget as HTMLImageElement).style.display="none";}}/>
+    </div>
+    <style>{`@keyframes ksbounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-20px)}}`}</style>
+    <div style={{fontSize:15,color:C.t1,fontWeight:600}}>Собираю {isPost?"карусель":"презентацию"}…</div>
+    <div style={{fontSize:13,color:C.t2}}>{form.count} слайдов · {fmt.label}</div>
+  </div>;
+
+  // ── ЭКРАН: редактор ──
+  const previewW=isMobile?Math.min(320,typeof window!=="undefined"?window.innerWidth-72:320):(fmt.w>fmt.h?520:360);
+
+  return<>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:16,flexWrap:"wrap" as const}}>
+      <button onClick={()=>setView("wizard")} style={{background:"none",border:"none",color:C.t2,fontSize:13,cursor:"pointer",padding:0}}>← Параметры</button>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap" as const}}>
+        <button onClick={downloadOne} disabled={exporting}
+          style={{padding:"9px 16px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:13,fontWeight:600,cursor:exporting?"default":"pointer"}}>
+          Скачать слайд
+        </button>
+        <button onClick={downloadAll} disabled={exporting}
+          style={{padding:"9px 16px",borderRadius:9,border:"none",background:C.t1,color:C.bg,fontSize:13,fontWeight:600,cursor:exporting?"default":"pointer"}}>
+          {exporting?"Сохраняю…":`Скачать все (${slides.length})`}
+        </button>
+      </div>
+    </div>
+
+    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"auto 1fr",gap:18,alignItems:"start"}}>
+      {/* превью */}
+      <div style={{display:"flex",flexDirection:"column",gap:12,alignItems:"center"}}>
+        {cur&&<SlideCanvas slide={cur} fmt={fmt} width={previewW} rev={fontsRev}/>}
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <button onClick={()=>setSel(s=>Math.max(0,s-1))} disabled={sel===0}
+            style={{width:32,height:32,borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t2,cursor:sel===0?"default":"pointer",opacity:sel===0?0.4:1}}>‹</button>
+          <span style={{fontSize:13,color:C.t2,minWidth:70,textAlign:"center" as const}}>{sel+1} / {slides.length}</span>
+          <button onClick={()=>setSel(s=>Math.min(slides.length-1,s+1))} disabled={sel>=slides.length-1}
+            style={{width:32,height:32,borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t2,cursor:sel>=slides.length-1?"default":"pointer",opacity:sel>=slides.length-1?0.4:1}}>›</button>
+        </div>
+      </div>
+
+      {/* настройки слайда */}
+      {cur&&<div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:12,padding:isMobile?14:20,display:"flex",flexDirection:"column",gap:16}}>
+        <div>
+          <label style={lbl}>Текст слайда</label>
+          <textarea value={cur.text} onChange={e=>patch(sel,{text:e.target.value})} rows={3}
+            style={{...iS(),resize:"vertical" as const,minHeight:76,lineHeight:1.6,fontFamily:"'Inter',sans-serif"}}/>
+          {!isPost&&<label style={{display:"flex",alignItems:"center",gap:8,marginTop:8,fontSize:12.5,color:C.t2,cursor:"pointer"}}>
+            <input type="checkbox" checked={cur.titleMode} onChange={e=>patch(sel,{titleMode:e.target.checked})}/>
+            Первая строка — заголовок
+          </label>}
+        </div>
+
+        <div>
+          <label style={lbl}>Расположение</label>
+          <div style={{display:"flex",gap:7,flexWrap:"wrap" as const}}>
+            {V_LAYOUTS.map(l=><button key={l.id} onClick={()=>patch(sel,{layout:l.id})} style={seg(cur.layout===l.id)}>{l.label}</button>)}
+          </div>
+        </div>
+
+        <div>
+          <label style={lbl}>Шрифт</label>
+          <div style={{display:"flex",gap:7,flexWrap:"wrap" as const}}>
+            {STORY_FONTS.map(f=><button key={f.id} onClick={()=>patch(sel,{fontId:f.id})}
+              style={{...seg(cur.fontId===f.id),fontFamily:`"${f.family}",${storyFontFallback(f.family)}`,fontWeight:f.weight}}>{f.label}</button>)}
+          </div>
+        </div>
+
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+          <div>
+            <label style={lbl}>Выравнивание</label>
+            <div style={{display:"flex",gap:7}}>
+              {(["left","center","right"] as const).map(a=>(
+                <button key={a} onClick={()=>patch(sel,{textAlign:a})} style={seg(cur.textAlign===a)}>{a==="left"?"Слева":a==="center"?"Центр":"Справа"}</button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label style={lbl}>Размер текста: {Math.round((cur.fontScale||1)*100)}%</label>
+            <input type="range" min={0.6} max={1.6} step={0.05} value={cur.fontScale||1}
+              onChange={e=>patch(sel,{fontScale:+e.target.value})} style={{width:"100%",accentColor:"#757575"}}/>
+          </div>
+        </div>
+
+        <div>
+          <label style={lbl}>Положение по вертикали</label>
+          <input type="range" min={0} max={1} step={0.02} value={cur.textY}
+            onChange={e=>patch(sel,{textY:+e.target.value})} style={{width:"100%",accentColor:"#757575"}}/>
+        </div>
+
+        <div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:8}}>
+            <label style={{...lbl,marginBottom:0}}>Фото</label>
+            <button onClick={()=>setPicker(true)} style={{padding:"6px 13px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:12,fontWeight:600,cursor:"pointer"}}>Заменить</button>
+          </div>
+          <div style={{display:"flex",gap:7,flexWrap:"wrap" as const}}>
+            <button onClick={()=>patch(sel,{grayscale:!cur.grayscale})} style={seg(!!cur.grayscale)}>Ч/Б</button>
+          </div>
+        </div>
+
+        <div>
+          <label style={lbl}>Цветокоррекция</label>
+          {([
+            {k:"brightness",label:"Яркость",min:0.5,max:1.5,base:1},
+            {k:"contrast",label:"Контраст",min:0.5,max:1.5,base:1},
+            {k:"saturation",label:"Насыщенность",min:0,max:2,base:1},
+            {k:"warmth",label:"Тепло / холод",min:-1,max:1,base:0},
+          ] as const).map(s=>{
+            const g={...CC_DEFAULT,...(cur.cc||{})};
+            const v=(g as any)[s.k] as number;
+            return<div key={s.k} style={{marginBottom:8}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                <span style={{fontSize:11.5,color:C.t2}}>{s.label}</span>
+                <span style={{fontSize:11,color:C.t2}}>{Math.round((v-s.base)*100)}</span>
+              </div>
+              <input type="range" min={s.min} max={s.max} step={0.01} value={v}
+                onChange={e=>patch(sel,{cc:{...g,[s.k]:+e.target.value}})} style={{width:"100%",accentColor:"#757575"}}/>
+            </div>;
+          })}
+        </div>
+
+        <div style={{display:"flex",gap:8,flexWrap:"wrap" as const,borderTop:`1px solid ${bd}`,paddingTop:14}}>
+          <button onClick={()=>moveSlide(sel,-1)} disabled={sel===0} style={{...seg(false),opacity:sel===0?0.4:1}}>← Сдвинуть</button>
+          <button onClick={()=>moveSlide(sel,1)} disabled={sel>=slides.length-1} style={{...seg(false),opacity:sel>=slides.length-1?0.4:1}}>Сдвинуть →</button>
+          <button onClick={addSlide} disabled={slides.length>=MAXN} style={{...seg(false),opacity:slides.length>=MAXN?0.4:1}}>+ Слайд</button>
+          <button onClick={()=>delSlide(sel)} disabled={slides.length<=1}
+            style={{...seg(false),color:"#DC2626",opacity:slides.length<=1?0.4:1}}>Удалить</button>
+        </div>
+        {slides.length>=MAXN&&<div style={{fontSize:11.5,color:C.t2}}>Достигнут максимум: {MAXN} слайдов</div>}
+      </div>}
+    </div>
+
+    {/* лента слайдов */}
+    <div style={{marginTop:18,display:"flex",gap:8,overflowX:"auto" as const,paddingBottom:8}}>
+      {slides.map((s,i)=>(
+        <button key={s.id} onClick={()=>setSel(i)}
+          style={{flexShrink:0,border:`2px solid ${i===sel?C.t1:bd}`,borderRadius:9,padding:0,background:"transparent",cursor:"pointer",lineHeight:0,position:"relative" as const}}>
+          <SlideCanvas slide={s} fmt={fmt} width={fmt.w>fmt.h?96:64} rev={fontsRev}/>
+          <span style={{position:"absolute",bottom:3,left:3,fontSize:9,color:"#fff",background:"rgba(0,0,0,0.6)",borderRadius:4,padding:"0 4px"}}>{i+1}</span>
+        </button>
+      ))}
+    </div>
+
+    {/* выбор фото */}
+    {picker&&<div onClick={()=>setPicker(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.w,borderRadius:14,padding:20,width:"100%",maxWidth:640,maxHeight:"80vh",overflowY:"auto" as const}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+          <span style={{fontSize:15,fontWeight:600,color:C.t1}}>Выбрать фото</span>
+          <label style={{padding:"7px 13px",borderRadius:8,border:`1px solid ${bd}`,fontSize:12.5,fontWeight:600,color:C.t1,cursor:"pointer"}}>
+            Загрузить
+            <input type="file" accept="image/*" multiple style={{display:"none"}} onChange={e=>{onUpload(e.target.files);e.currentTarget.value="";}}/>
+          </label>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(96px,1fr))",gap:8}}>
+          {images.map(im=>(
+            <button key={im.id} onClick={()=>{patch(sel,{imgUrl:im.url});setPicker(false);}}
+              style={{position:"relative" as const,paddingTop:"100%",border:"none",borderRadius:9,overflow:"hidden",cursor:"pointer",padding:0,background:inputBg}}>
+              <img src={im.url} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>}
+  </>;
+}
+
+function PostsAIPage({userId}:{userId:string}){return <SlideStudio userId={userId} kind="post"/>;}
+function SlidesAIPage({userId}:{userId:string}){return <SlideStudio userId={userId} kind="slide"/>;}
+
 /* ============ CASH FLOW ============ */
 const CF_GREEN="#16A34A";
 const CF_RED="#DC2626";
@@ -4802,8 +5467,8 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
 
   // ── стили ──
   const cardS:React.CSSProperties={background:C.w,border:"1px solid "+C.bd,borderRadius:12,padding:isMobile?14:18};
-  const lblS:React.CSSProperties={fontSize:12,color:C.t2,fontWeight:600,marginBottom:6,display:"block"};
-  const tabS=(a:boolean):React.CSSProperties=>({padding:"8px 16px",borderRadius:9,border:"none",background:a?C.t1:"transparent",color:a?C.bg:C.t2,fontSize:13,fontWeight:a?700:500,cursor:"pointer",whiteSpace:"nowrap"});
+  const lblS:React.CSSProperties={fontSize:12,color:C.t2,fontWeight:500,marginBottom:6,display:"block"};
+  const tabS=(a:boolean):React.CSSProperties=>({padding:"8px 16px",borderRadius:9,border:"none",background:a?C.t1:"transparent",color:a?C.bg:C.t2,fontSize:13,fontWeight:a?600:450,cursor:"pointer",whiteSpace:"nowrap"});
 
   // ── Большой график: цифра сверху, линия снизу (стиль референса) ──
   const CFChart=({series,label,value,delta,dim}:{series:number[],label:string,value:string,delta:number|null,dim:number})=>{
@@ -4819,17 +5484,17 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
     return(
       <div style={{background:C.w,border:"1px solid "+C.bd,borderRadius:14,padding:isMobile?16:22,marginBottom:16}}>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,flexWrap:"wrap" as const}}>
-          <span style={{fontSize:13,color:C.t2,fontWeight:600}}>{label}</span>
+          <span style={{fontSize:13,color:C.t2,fontWeight:500}}>{label}</span>
           <div style={{display:"flex",gap:2,marginLeft:"auto",background:C.ib,borderRadius:9,padding:3,border:"1px solid "+C.bd}}>
             {([["income","Доход"],["expense","Расход"],["profit","Прибыль"]] as const).map(([k,l])=>(
               <button key={k} onClick={()=>setChartMetric(k)}
-                style={{padding:"5px 11px",borderRadius:6,border:"none",background:chartMetric===k?C.w:"transparent",color:chartMetric===k?C.t1:C.t2,fontSize:11.5,fontWeight:chartMetric===k?700:500,cursor:"pointer",boxShadow:chartMetric===k?"0 1px 3px rgba(0,0,0,0.08)":"none"}}>{l}</button>
+                style={{padding:"5px 11px",borderRadius:6,border:"none",background:chartMetric===k?C.w:"transparent",color:chartMetric===k?C.t1:C.t2,fontSize:11.5,fontWeight:chartMetric===k?600:450,cursor:"pointer",boxShadow:chartMetric===k?"0 1px 3px rgba(0,0,0,0.08)":"none"}}>{l}</button>
             ))}
           </div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexWrap:"wrap" as const}}>
-          <span style={{fontSize:isMobile?26:32,fontWeight:800,color:C.t1,letterSpacing:"-0.03em",lineHeight:1}}>{value}</span>
-          {delta!==null&&<span style={{fontSize:12.5,fontWeight:700,padding:"3px 10px",borderRadius:20,
+          <span style={{fontSize:isMobile?26:32,fontWeight:500,color:C.t1,letterSpacing:"-0.03em",lineHeight:1}}>{value}</span>
+          {delta!==null&&<span style={{fontSize:12.5,fontWeight:500,padding:"3px 10px",borderRadius:20,
             color:delta>=0?CF_GREEN:CF_RED,background:(delta>=0?CF_GREEN:CF_RED)+"18"}}>
             {(delta>=0?"+":"−")+cfMoney(Math.abs(delta)).replace("−","")}
           </span>}
@@ -4879,9 +5544,9 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
   const KpiCard=({label,value,sub,color,spark}:{label:string,value:string,sub?:string,color?:string,spark?:number[]})=>(
     <div style={cardS}>
       <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:8}}>
-        <span style={{fontSize:12,color:C.t2,fontWeight:600,letterSpacing:0.2}}>{label}</span>
+        <span style={{fontSize:12,color:C.t2,fontWeight:500,letterSpacing:0.2}}>{label}</span>
       </div>
-      <div style={{fontSize:isMobile?20:24,fontWeight:800,color:color||C.t1,letterSpacing:"-0.02em",lineHeight:1.1}}>{value}</div>
+      <div style={{fontSize:isMobile?20:24,fontWeight:500,color:color||C.t1,letterSpacing:"-0.02em",lineHeight:1.1}}>{value}</div>
       {spark&&<CFSpark series={spark}/>}
       {sub&&<div style={{fontSize:11.5,color:C.t2,marginTop:5,lineHeight:1.45}}>{sub}</div>}
     </div>
@@ -4891,16 +5556,16 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
     {/* Быстрый ввод */}
     <div style={{display:"flex",gap:10,marginBottom:18,flexWrap:"wrap" as const}}>
       <button onClick={()=>openEntry("income")}
-        style={{flex:isMobile?"1 1 100%":"0 0 auto",padding:"13px 22px",borderRadius:11,border:"1px solid rgba(255,255,255,0.14)",background:CF_GLASS_GREEN,backdropFilter:"blur(12px) saturate(1.4)",color:"#fff",fontSize:14.5,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:"0 6px 20px rgba(22,163,74,0.30)"}}>
+        style={{flex:isMobile?"1 1 100%":"0 0 auto",padding:"13px 22px",borderRadius:11,border:"1px solid rgba(255,255,255,0.14)",background:CF_GLASS_GREEN,backdropFilter:"blur(12px) saturate(1.4)",color:"#fff",fontSize:14.5,fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:"0 6px 20px rgba(22,163,74,0.30)"}}>
         Получил оплату
       </button>
       <button onClick={()=>openEntry("expense")}
-        style={{flex:isMobile?"1 1 100%":"0 0 auto",padding:"13px 22px",borderRadius:11,border:"1px solid rgba(255,255,255,0.14)",background:CF_GLASS_RED,backdropFilter:"blur(12px) saturate(1.4)",color:"#fff",fontSize:14.5,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:"0 6px 20px rgba(220,38,38,0.30)"}}>
+        style={{flex:isMobile?"1 1 100%":"0 0 auto",padding:"13px 22px",borderRadius:11,border:"1px solid rgba(255,255,255,0.14)",background:CF_GLASS_RED,backdropFilter:"blur(12px) saturate(1.4)",color:"#fff",fontSize:14.5,fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:"0 6px 20px rgba(220,38,38,0.30)"}}>
         Записать расход
       </button>
       <div style={{flex:1}}/>
       <button onClick={()=>setSettingsOpen(true)}
-        style={{padding:"13px 16px",borderRadius:11,border:"1px solid "+C.bd,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer"}}>Настройки</button>
+        style={{padding:"13px 16px",borderRadius:11,border:"1px solid "+C.bd,background:"transparent",color:C.t2,fontSize:13,fontWeight:500,cursor:"pointer"}}>Настройки</button>
     </div>
 
     {/* Переключение месяцев */}
@@ -4910,7 +5575,7 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <div style={{minWidth:isMobile?130:160,textAlign:"center" as const}}>
-        <div style={{fontSize:isMobile?15:17,fontWeight:800,color:C.t1,letterSpacing:"-0.01em",lineHeight:1.2}}>{cfMonthLabel(curMonth)}</div>
+        <div style={{fontSize:isMobile?15:17,fontWeight:500,color:C.t1,letterSpacing:"-0.01em",lineHeight:1.2}}>{cfMonthLabel(curMonth)}</div>
         <div style={{fontSize:10.5,color:C.t2,marginTop:1}}>
           {m.isNow?"текущий месяц":m.isPast?"завершён":"планирование"}
         </div>
@@ -4920,7 +5585,7 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
       {!m.isNow&&<button onClick={()=>setCurMonth(cfNowMonth())}
-        style={{padding:"7px 15px",borderRadius:9,border:"1px solid "+C.bd,background:"transparent",color:C.t1,fontSize:12.5,fontWeight:600,cursor:"pointer"}}>Текущий месяц</button>}
+        style={{padding:"7px 15px",borderRadius:9,border:"1px solid "+C.bd,background:"transparent",color:C.t1,fontSize:12.5,fontWeight:500,cursor:"pointer"}}>Текущий месяц</button>}
     </div>
 
     {/* Вкладки */}
@@ -4959,26 +5624,26 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
         <div style={cardS}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
             <div style={{display:"flex",alignItems:"center",gap:7}}>
-              <span style={{fontSize:13,fontWeight:700,color:C.t1}}>План прибыли месяца</span>
+              <span style={{fontSize:13,fontWeight:500,color:C.t1}}>План прибыли месяца</span>
             </div>
             {m.goal>0&&<span style={{fontSize:12,color:C.t2}}>цель {cfShort(m.goal)} ₽</span>}
           </div>
           {m.goal>0?<>
             <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:10}}>
-              <span style={{fontSize:30,fontWeight:800,color:(m.planPct||0)>=100?CF_GREEN:C.t1,letterSpacing:"-0.02em"}}>{m.planPct}%</span>
+              <span style={{fontSize:30,fontWeight:500,color:(m.planPct||0)>=100?CF_GREEN:C.t1,letterSpacing:"-0.02em"}}>{m.planPct}%</span>
               <span style={{fontSize:13,color:C.t2}}>{cfMoney(m.mProfit)} из {cfShort(m.goal)} ₽</span>
             </div>
             <div style={{height:10,background:C.ib,borderRadius:6,overflow:"hidden",marginBottom:10}}>
               <div style={{width:Math.max(0,Math.min(100,m.planPct||0))+"%",height:"100%",background:(m.planPct||0)>=100?CF_GREEN:"linear-gradient(90deg,rgba(22,163,74,0.55),rgba(22,163,74,0.9))",transition:"width 0.4s"}}/>
             </div>
             <div style={{fontSize:12.5,color:C.t2,lineHeight:1.55}}>
-              По текущему темпу к концу месяца: <b style={{color:(m.pacePct||0)>=100?CF_GREEN:CF_AMBER,fontWeight:700}}>{cfMoney(m.paceProfit)}</b> ({m.pacePct}% плана).
+              По текущему темпу к концу месяца: <b style={{color:(m.pacePct||0)>=100?CF_GREEN:CF_AMBER,fontWeight:500}}>{cfMoney(m.paceProfit)}</b> ({m.pacePct}% плана).
               Идёт {m.dom}-й день из {m.dim}.
             </div>
           </>:(
             <div style={{padding:"14px 0"}}>
               <div style={{fontSize:13,color:C.t2,lineHeight:1.6,marginBottom:12}}>Цель по прибыли не задана. Поставь её — и платформа посчитает выполнение и темп.</div>
-              <button onClick={()=>setSettingsOpen(true)} style={{padding:"9px 16px",borderRadius:9,border:"1px solid rgba(255,255,255,0.14)",background:CF_GLASS_GREEN,backdropFilter:"blur(10px) saturate(1.4)",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 14px rgba(22,163,74,0.26)"}}>Задать цель</button>
+              <button onClick={()=>setSettingsOpen(true)} style={{padding:"9px 16px",borderRadius:9,border:"1px solid rgba(255,255,255,0.14)",background:CF_GLASS_GREEN,backdropFilter:"blur(10px) saturate(1.4)",color:"#fff",fontSize:13,fontWeight:500,cursor:"pointer",boxShadow:"0 4px 14px rgba(22,163,74,0.26)"}}>Задать цель</button>
             </div>
           )}
         </div>
@@ -4986,14 +5651,14 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
         {/* Что съедает прибыль */}
         <div style={cardS}>
           <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:12}}>
-            <span style={{fontSize:13,fontWeight:700,color:C.t1}}>Что съедает прибыль</span>
+            <span style={{fontSize:13,fontWeight:500,color:C.t1}}>Что съедает прибыль</span>
           </div>
           {m.topExp.length?<div style={{display:"flex",flexDirection:"column",gap:9}}>
             {m.topExp.slice(0,5).map(([k,v])=>{
               const pct=m.mExp>0?Math.round(v/m.mExp*100):0;
               return<div key={k}>
                 <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                  <span style={{fontSize:12.5,color:C.t1,fontWeight:600}}>{k}</span>
+                  <span style={{fontSize:12.5,color:C.t1,fontWeight:500}}>{k}</span>
                   <span style={{fontSize:12.5,color:C.t2,fontVariantNumeric:"tabular-nums" as const}}>{cfShort(v)} ₽ · {pct}%</span>
                 </div>
                 <div style={{height:6,background:C.ib,borderRadius:4,overflow:"hidden"}}>
@@ -5009,14 +5674,23 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
       <div style={{...cardS,marginBottom:16,borderColor:CF_GREEN+"55",background:C.w}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:ai||aiBusy?12:0,flexWrap:"wrap" as const}}>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <div style={{width:32,height:32,borderRadius:9,background:CF_GLASS_GREEN,backdropFilter:"blur(10px)",border:"1px solid rgba(255,255,255,0.16)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:13,fontWeight:800,letterSpacing:0.2}}>V</div>
+            <div style={{width:32,height:32,borderRadius:9,background:CF_GLASS_GREEN,backdropFilter:"blur(10px)",border:"1px solid rgba(255,255,255,0.16)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <rect x="2" y="6" width="20" height="12" rx="2" stroke="#fff" strokeWidth="1.5"/>
+                <circle cx="12" cy="12" r="2.6" stroke="#fff" strokeWidth="1.5"/>
+                <line x1="5" y1="9" x2="5" y2="9.01" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                <line x1="19" y1="9" x2="19" y2="9.01" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                <line x1="5" y1="15" x2="5" y2="15.01" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                <line x1="19" y1="15" x2="19" y2="15.01" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </div>
             <div>
-              <div style={{fontSize:13.5,fontWeight:800,color:C.t1}}>Vizzy CFO <span style={{fontWeight:600,color:C.t2}}>(AI финансовый директор)</span></div>
+              <div style={{fontSize:13.5,fontWeight:500,color:C.t1}}>Vizzy CFO <span style={{fontWeight:500,color:C.t2}}>(AI финансовый директор)</span></div>
               <div style={{fontSize:11.5,color:C.t2}}>Разбор цифр и что делать дальше</div>
             </div>
           </div>
           <button onClick={askCFO} disabled={aiBusy}
-            style={{padding:"9px 18px",borderRadius:9,border:aiBusy?"1px solid "+C.bd:"1px solid rgba(255,255,255,0.14)",background:aiBusy?C.ib:CF_GLASS_GREEN,backdropFilter:aiBusy?"none":"blur(10px) saturate(1.4)",color:aiBusy?C.t2:"#fff",fontSize:13,fontWeight:700,cursor:aiBusy?"default":"pointer",boxShadow:aiBusy?"none":"0 4px 14px rgba(22,163,74,0.28)"}}>
+            style={{padding:"9px 18px",borderRadius:9,border:aiBusy?"1px solid "+C.bd:"1px solid rgba(255,255,255,0.14)",background:aiBusy?C.ib:CF_GLASS_GREEN,backdropFilter:aiBusy?"none":"blur(10px) saturate(1.4)",color:aiBusy?C.t2:"#fff",fontSize:13,fontWeight:500,cursor:aiBusy?"default":"pointer",boxShadow:aiBusy?"none":"0 4px 14px rgba(22,163,74,0.28)"}}>
             {aiBusy?"Считаю…":ai?"Обновить сводку":"Получить сводку"}
           </button>
         </div>
@@ -5028,16 +5702,16 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
       <div style={cardS}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:14,flexWrap:"wrap" as const}}>
           <div style={{display:"flex",alignItems:"center",gap:7}}>
-            <span style={{fontSize:13,fontWeight:700,color:C.t1}}>Распределение денег (Profit First)</span>
+            <span style={{fontSize:13,fontWeight:500,color:C.t1}}>Распределение денег (Profit First)</span>
           </div>
           <span style={{fontSize:12,color:C.t2}}>с дохода {cfShort(m.mInc)} ₽ за месяц</span>
         </div>
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(5,1fr)",gap:10}}>
           {(settings.pf||CF_PF_DEFAULT).map((b:any)=>(
             <div key={b.key} style={{background:dark?"rgba(255,255,255,0.045)":"rgba(255,255,255,0.55)",backdropFilter:"blur(14px) saturate(1.2)",border:"1px solid "+(dark?"rgba(255,255,255,0.09)":"rgba(255,255,255,0.7)"),borderLeft:"3px solid "+b.color,borderRadius:10,padding:"12px 13px",boxShadow:dark?"none":"0 2px 10px rgba(0,0,0,0.05)"}}>
-              <div style={{fontSize:11.5,color:C.t2,fontWeight:600,marginBottom:5,lineHeight:1.3}}>{b.label}</div>
-              <div style={{fontSize:17,fontWeight:800,color:C.t1,letterSpacing:"-0.01em"}}>{cfShort(m.mInc*b.pct/100)} ₽</div>
-              <div style={{fontSize:11,color:b.color,fontWeight:700,marginTop:3}}>{b.pct}%</div>
+              <div style={{fontSize:11.5,color:C.t2,fontWeight:500,marginBottom:5,lineHeight:1.3}}>{b.label}</div>
+              <div style={{fontSize:17,fontWeight:500,color:C.t1,letterSpacing:"-0.01em"}}>{cfShort(m.mInc*b.pct/100)} ₽</div>
+              <div style={{fontSize:11,color:b.color,fontWeight:500,marginTop:3}}>{b.pct}%</div>
             </div>
           ))}
         </div>
@@ -5048,11 +5722,11 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
     {tab==="goal"&&<>
       <div style={{...cardS,marginBottom:14}}>
         <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:14}}>
-          <span style={{fontSize:14,fontWeight:800,color:C.t1}}>Карта цели по прибыли</span>
+          <span style={{fontSize:14,fontWeight:500,color:C.t1}}>Карта цели по прибыли</span>
         </div>
         {goalMap?<>
           <div style={{fontSize:13.5,color:C.t2,lineHeight:1.6,marginBottom:16}}>
-            Чтобы получить <b style={{color:C.t1,fontWeight:700}}>{cfMoney(goalMap.target)}</b> чистой прибыли при текущих расходах <b style={{color:C.t1}}>{cfShort(goalMap.expected)} ₽</b>, нужно:
+            Чтобы получить <b style={{color:C.t1,fontWeight:500}}>{cfMoney(goalMap.target)}</b> чистой прибыли при текущих расходах <b style={{color:C.t1}}>{cfShort(goalMap.expected)} ₽</b>, нужно:
           </div>
           <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(4,1fr)",gap:12,marginBottom:14}}>
             {[
@@ -5062,8 +5736,8 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
               {l:"Расходы",v:cfMoney(goalMap.expected),h:"держать не выше"},
             ].map(x=>(
               <div key={x.l} style={{background:C.ib,borderRadius:10,padding:"13px 14px"}}>
-                <div style={{fontSize:11.5,color:C.t2,fontWeight:600,marginBottom:5}}>{x.l}</div>
-                <div style={{fontSize:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em"}}>{x.v}</div>
+                <div style={{fontSize:11.5,color:C.t2,fontWeight:500,marginBottom:5}}>{x.l}</div>
+                <div style={{fontSize:18,fontWeight:500,color:C.t1,letterSpacing:"-0.01em"}}>{x.v}</div>
                 <div style={{fontSize:11,color:C.t2,marginTop:4,lineHeight:1.4}}>{x.h}</div>
               </div>
             ))}
@@ -5072,7 +5746,7 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
         </>:(
           <div style={{padding:"10px 0"}}>
             <div style={{fontSize:13,color:C.t2,lineHeight:1.6,marginBottom:12}}>Задай цель по прибыли — AI разложит её на продажи, чек, конверсию и потолок расходов.</div>
-            <button onClick={()=>setSettingsOpen(true)} style={{padding:"9px 16px",borderRadius:9,border:"1px solid rgba(255,255,255,0.14)",background:CF_GLASS_GREEN,backdropFilter:"blur(10px) saturate(1.4)",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 14px rgba(22,163,74,0.26)"}}>Задать цель</button>
+            <button onClick={()=>setSettingsOpen(true)} style={{padding:"9px 16px",borderRadius:9,border:"1px solid rgba(255,255,255,0.14)",background:CF_GLASS_GREEN,backdropFilter:"blur(10px) saturate(1.4)",color:"#fff",fontSize:13,fontWeight:500,cursor:"pointer",boxShadow:"0 4px 14px rgba(22,163,74,0.26)"}}>Задать цель</button>
           </div>
         )}
       </div>
@@ -5080,18 +5754,18 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
       <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:14}}>
         <div style={cardS}>
           <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:12}}>
-            <span style={{fontSize:13.5,fontWeight:800,color:C.t1}}>Если нанять человека</span>
+            <span style={{fontSize:13.5,fontWeight:500,color:C.t1}}>Если нанять человека</span>
           </div>
           <label style={lblS}>Расход в месяц, ₽</label>
           <input value={hireCost} onChange={e=>setHireCost(e.target.value)} inputMode="numeric" placeholder="Напр.: 80000" style={iS()}/>
           {hire>0&&<div style={{marginTop:14,display:"flex",flexDirection:"column",gap:9}}>
             <div style={{display:"flex",justifyContent:"space-between",fontSize:13}}>
               <span style={{color:C.t2}}>Прибыль станет</span>
-              <b style={{color:forecastProfit>=0?CF_GREEN:CF_RED,fontWeight:700}}>{cfMoney(forecastProfit)}</b>
+              <b style={{color:forecastProfit>=0?CF_GREEN:CF_RED,fontWeight:500}}>{cfMoney(forecastProfit)}</b>
             </div>
             <div style={{display:"flex",justifyContent:"space-between",fontSize:13}}>
               <span style={{color:C.t2}}>Запас месяцев</span>
-              <b style={{color:!isFinite(forecastRunway)?CF_GREEN:forecastRunway<3?CF_RED:C.t1,fontWeight:700}}>{isFinite(forecastRunway)?forecastRunway.toFixed(1)+" мес":"∞"}</b>
+              <b style={{color:!isFinite(forecastRunway)?CF_GREEN:forecastRunway<3?CF_RED:C.t1,fontWeight:500}}>{isFinite(forecastRunway)?forecastRunway.toFixed(1)+" мес":"∞"}</b>
             </div>
             <div style={{fontSize:12.5,color:C.t2,lineHeight:1.6,borderTop:"1px solid "+C.bd,paddingTop:10}}>
               {forecastProfit>=0
@@ -5103,15 +5777,15 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
 
         <div style={cardS}>
           <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:12}}>
-            <span style={{fontSize:13.5,fontWeight:800,color:C.t1}}>Кассовый разрыв</span>
+            <span style={{fontSize:13.5,fontWeight:500,color:C.t1}}>Кассовый разрыв</span>
           </div>
           {gapDays==null?
             <div style={{padding:"8px 0"}}>
-              <div style={{fontSize:22,fontWeight:800,color:CF_GREEN,marginBottom:6}}>Не грозит</div>
+              <div style={{fontSize:22,fontWeight:500,color:CF_GREEN,marginBottom:6}}>Не грозит</div>
               <div style={{fontSize:12.5,color:C.t2,lineHeight:1.6}}>Средний доход перекрывает расходы. Деньги на счетах не убывают.</div>
             </div>
             :<div style={{padding:"8px 0"}}>
-              <div style={{fontSize:30,fontWeight:800,color:gapDays<45?CF_RED:CF_AMBER,letterSpacing:"-0.02em",marginBottom:6}}>{gapDays} дн.</div>
+              <div style={{fontSize:30,fontWeight:500,color:gapDays<45?CF_RED:CF_AMBER,letterSpacing:"-0.02em",marginBottom:6}}>{gapDays} дн.</div>
               <div style={{fontSize:12.5,color:C.t2,lineHeight:1.6}}>
                 При текущем темпе деньги закончатся через {gapDays} дней. Чтобы этого избежать — поднять доход на {cfShort(Math.abs(m.avgInc-m.burn))} ₽/мес или срезать расходы на столько же.
               </div>
@@ -5151,7 +5825,7 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
         <table style={{width:"100%",borderCollapse:"collapse" as const,fontSize:13.5}}>
           <thead><tr style={{borderBottom:"1px solid "+C.bd}}>
             {["Дата","Тип","Сумма","Категория","Комментарий",""].map((h,i)=>(
-              <th key={i} style={{padding:"12px 14px",textAlign:"left" as const,fontSize:11,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3}}>{h}</th>
+              <th key={i} style={{padding:"12px 14px",textAlign:"left" as const,fontSize:11,fontWeight:500,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3}}>{h}</th>
             ))}
           </tr></thead>
           <tbody>
@@ -5159,9 +5833,9 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
               <tr key={t.id} style={{borderBottom:"1px solid "+C.bd}}>
                 <td style={{padding:"12px 14px",color:C.t2,whiteSpace:"nowrap" as const}}>{t.date}</td>
                 <td style={{padding:"12px 14px"}}>
-                  <span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:6,background:(t.type==="income"?CF_GREEN:CF_RED)+"18",color:t.type==="income"?CF_GREEN:CF_RED}}>{t.type==="income"?"Доход":"Расход"}</span>
+                  <span style={{fontSize:11,fontWeight:500,padding:"2px 8px",borderRadius:6,background:(t.type==="income"?CF_GREEN:CF_RED)+"18",color:t.type==="income"?CF_GREEN:CF_RED}}>{t.type==="income"?"Доход":"Расход"}</span>
                 </td>
-                <td style={{padding:"12px 14px",fontWeight:700,color:t.type==="income"?CF_GREEN:CF_RED,whiteSpace:"nowrap" as const,fontVariantNumeric:"tabular-nums" as const}}>{(t.type==="income"?"+":"−")+cfMoney(+t.amount||0).replace("−","")}</td>
+                <td style={{padding:"12px 14px",fontWeight:500,color:t.type==="income"?CF_GREEN:CF_RED,whiteSpace:"nowrap" as const,fontVariantNumeric:"tabular-nums" as const}}>{(t.type==="income"?"+":"−")+cfMoney(+t.amount||0).replace("−","")}</td>
                 <td style={{padding:"12px 14px",color:C.t1}}>{t.category}</td>
                 <td style={{padding:"12px 14px",color:C.t2}}>{t.comment||"—"}</td>
                 <td style={{padding:"12px 8px"}}>
@@ -5180,19 +5854,19 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
     {/* ============ МОДАЛКА ВВОДА ============ */}
     {entry&&<div onClick={()=>setEntry(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
       <div onClick={e=>e.stopPropagation()} style={{background:C.w,borderRadius:16,padding:24,width:"100%",maxWidth:420,boxShadow:"0 24px 70px rgba(0,0,0,0.25)"}}>
-        <div style={{fontSize:17,fontWeight:800,color:C.t1,marginBottom:4}}>{entry==="income"?"Получил оплату":"Записать расход"}</div>
+        <div style={{fontSize:17,fontWeight:500,color:C.t1,marginBottom:4}}>{entry==="income"?"Получил оплату":"Записать расход"}</div>
         <div style={{fontSize:12.5,color:C.t2,marginBottom:18}}>{entry==="income"?"Сколько и откуда пришло":"Сколько и на что ушло"}</div>
 
         <label style={lblS}>Сумма, ₽</label>
         <input autoFocus value={amount} onChange={e=>setAmount(e.target.value)} inputMode="decimal" placeholder="0"
           onKeyDown={e=>{if(e.key==="Enter")submitEntry();}}
-          style={{...iS(),fontSize:22,fontWeight:800,padding:"12px 14px"}}/>
+          style={{...iS(),fontSize:22,fontWeight:500,padding:"12px 14px"}}/>
 
         <label style={{...lblS,marginTop:14}}>{entry==="income"?"Откуда":"Куда"}</label>
         <div style={{display:"flex",gap:7,flexWrap:"wrap" as const}}>
           {(entry==="income"?CF_INCOME_SRC:CF_EXPENSE_SRC).map(c=>(
             <button key={c} onClick={()=>setCat(c)}
-              style={{padding:"7px 13px",borderRadius:9,border:"1px solid "+(cat===c?"rgba(255,255,255,0.14)":C.bd),background:cat===c?(entry==="income"?CF_GLASS_GREEN:CF_GLASS_RED):"transparent",backdropFilter:cat===c?"blur(10px) saturate(1.4)":"none",color:cat===c?"#fff":C.t2,fontSize:12.5,fontWeight:600,cursor:"pointer",boxShadow:cat===c?(entry==="income"?"0 3px 12px rgba(22,163,74,0.26)":"0 3px 12px rgba(220,38,38,0.26)"):"none"}}>{c}</button>
+              style={{padding:"7px 13px",borderRadius:9,border:"1px solid "+(cat===c?"rgba(255,255,255,0.14)":C.bd),background:cat===c?(entry==="income"?CF_GLASS_GREEN:CF_GLASS_RED):"transparent",backdropFilter:cat===c?"blur(10px) saturate(1.4)":"none",color:cat===c?"#fff":C.t2,fontSize:12.5,fontWeight:500,cursor:"pointer",boxShadow:cat===c?(entry==="income"?"0 3px 12px rgba(22,163,74,0.26)":"0 3px 12px rgba(220,38,38,0.26)"):"none"}}>{c}</button>
           ))}
         </div>
 
@@ -5202,20 +5876,20 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
         </div>
 
         {entry==="income"&&Number(amount)>0&&<div style={{marginTop:16,padding:"12px 14px",background:C.ib,borderRadius:10}}>
-          <div style={{fontSize:11.5,color:C.t2,fontWeight:600,marginBottom:8}}>Распределится так:</div>
+          <div style={{fontSize:11.5,color:C.t2,fontWeight:500,marginBottom:8}}>Распределится так:</div>
           <div style={{display:"flex",flexWrap:"wrap" as const,gap:10}}>
             {(settings.pf||CF_PF_DEFAULT).map((b:any)=>(
               <div key={b.key} style={{fontSize:11.5,color:C.t2}}>
-                <span style={{color:b.color,fontWeight:700}}>{b.label}</span> {cfShort(Number(amount)*b.pct/100)} ₽
+                <span style={{color:b.color,fontWeight:500}}>{b.label}</span> {cfShort(Number(amount)*b.pct/100)} ₽
               </div>
             ))}
           </div>
         </div>}
 
         <div style={{display:"flex",gap:10,marginTop:20}}>
-          <button onClick={()=>setEntry(null)} style={{flex:1,padding:"12px",borderRadius:10,border:"1px solid "+C.bd,background:"transparent",color:C.t1,fontSize:14,fontWeight:600,cursor:"pointer"}}>Отмена</button>
+          <button onClick={()=>setEntry(null)} style={{flex:1,padding:"12px",borderRadius:10,border:"1px solid "+C.bd,background:"transparent",color:C.t1,fontSize:14,fontWeight:500,cursor:"pointer"}}>Отмена</button>
           <button onClick={submitEntry} disabled={!(Number(amount)>0)||saving}
-            style={{flex:1.4,padding:"12px",borderRadius:10,border:Number(amount)>0?"1px solid rgba(255,255,255,0.14)":"none",background:Number(amount)>0?(entry==="income"?CF_GLASS_GREEN:CF_GLASS_RED):C.ib,backdropFilter:Number(amount)>0?"blur(12px) saturate(1.4)":"none",color:Number(amount)>0?"#fff":C.t2,fontSize:14,fontWeight:700,cursor:Number(amount)>0?"pointer":"default",boxShadow:Number(amount)>0?(entry==="income"?"0 5px 16px rgba(22,163,74,0.30)":"0 5px 16px rgba(220,38,38,0.30)"):"none"}}>
+            style={{flex:1.4,padding:"12px",borderRadius:10,border:Number(amount)>0?"1px solid rgba(255,255,255,0.14)":"none",background:Number(amount)>0?(entry==="income"?CF_GLASS_GREEN:CF_GLASS_RED):C.ib,backdropFilter:Number(amount)>0?"blur(12px) saturate(1.4)":"none",color:Number(amount)>0?"#fff":C.t2,fontSize:14,fontWeight:500,cursor:Number(amount)>0?"pointer":"default",boxShadow:Number(amount)>0?(entry==="income"?"0 5px 16px rgba(22,163,74,0.30)":"0 5px 16px rgba(220,38,38,0.30)"):"none"}}>
             {saving?"Сохраняю…":"Записать"}
           </button>
         </div>
@@ -5225,7 +5899,7 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
     {/* ============ НАСТРОЙКИ ============ */}
     {settingsOpen&&<div onClick={()=>setSettingsOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
       <div onClick={e=>e.stopPropagation()} style={{background:C.w,borderRadius:16,padding:24,width:"100%",maxWidth:520,maxHeight:"88vh",overflowY:"auto" as const,boxShadow:"0 24px 70px rgba(0,0,0,0.25)"}}>
-        <div style={{fontSize:17,fontWeight:800,color:C.t1,marginBottom:18}}>Настройки Cash Flow</div>
+        <div style={{fontSize:17,fontWeight:500,color:C.t1,marginBottom:18}}>Настройки Cash Flow</div>
 
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:14,marginBottom:18}}>
           <div>
@@ -5249,7 +5923,7 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
         </div>
 
         <div style={{borderTop:"1px solid "+C.bd,paddingTop:16}}>
-          <div style={{fontSize:13.5,fontWeight:800,color:C.t1,marginBottom:4}}>Profit First — распределение дохода</div>
+          <div style={{fontSize:13.5,fontWeight:500,color:C.t1,marginBottom:4}}>Profit First — распределение дохода</div>
           <div style={{fontSize:12,color:C.t2,marginBottom:14,lineHeight:1.55}}>Каждая оплата делится по этим долям. Настрой под себя — сумма должна быть 100%.</div>
           {(settings.pf||CF_PF_DEFAULT).map((b:any,i:number)=>(
             <div key={b.key} style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
@@ -5268,15 +5942,15 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
           {(()=>{
             const total=(settings.pf||CF_PF_DEFAULT).reduce((s:number,b:any)=>s+(+b.pct||0),0);
             return<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:12,padding:"10px 12px",borderRadius:9,background:total===100?CF_GREEN+"14":CF_AMBER+"14"}}>
-              <span style={{fontSize:12.5,color:C.t2,fontWeight:600}}>Итого</span>
-              <span style={{fontSize:14,fontWeight:800,color:total===100?CF_GREEN:CF_AMBER}}>{total}%{total!==100?" — должно быть 100%":""}</span>
+              <span style={{fontSize:12.5,color:C.t2,fontWeight:500}}>Итого</span>
+              <span style={{fontSize:14,fontWeight:500,color:total===100?CF_GREEN:CF_AMBER}}>{total}%{total!==100?" — должно быть 100%":""}</span>
             </div>;
           })()}
           <button onClick={()=>saveSettings({...settings,pf:CF_PF_DEFAULT})}
-            style={{marginTop:10,padding:"7px 14px",borderRadius:8,border:"1px solid "+C.bd,background:"transparent",color:C.t2,fontSize:12,fontWeight:600,cursor:"pointer"}}>Вернуть стандартные 30/25/20/15/10</button>
+            style={{marginTop:10,padding:"7px 14px",borderRadius:8,border:"1px solid "+C.bd,background:"transparent",color:C.t2,fontSize:12,fontWeight:500,cursor:"pointer"}}>Вернуть стандартные 30/25/20/15/10</button>
         </div>
 
-        <button onClick={()=>setSettingsOpen(false)} style={{width:"100%",marginTop:20,padding:"12px",borderRadius:10,border:"none",background:C.t1,color:C.bg,fontSize:14,fontWeight:700,cursor:"pointer"}}>Готово</button>
+        <button onClick={()=>setSettingsOpen(false)} style={{width:"100%",marginTop:20,padding:"12px",borderRadius:10,border:"none",background:C.t1,color:C.bg,fontSize:14,fontWeight:500,cursor:"pointer"}}>Готово</button>
       </div>
     </div>}
   </>;
