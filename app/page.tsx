@@ -80,6 +80,7 @@ const NAV_GROUPS=[
     items:[
       {id:"links",label:"Links",accent:"#A1A1A1",ic:"M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"},
       {id:"profile",label:"Settings",accent:"#A1A1A1",ic:"M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2 M12 11a4 4 0 100-8 4 4 0 000 8z"},
+      {id:"tracker",label:"Link Tracker",accent:"#2F6BFF",ic:"M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71 M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"},
     ]
   },
 ];
@@ -867,7 +868,7 @@ export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
   const APP_VERSION="v2.2"; // bump this to force-clear stale localStorage
-  const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings"];
+  const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
 
   // Clear stale localStorage on version change
   useEffect(()=>{
@@ -993,6 +994,7 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
     {page==="tools"&&<SafePage name="Инструменты"><ToolsPage/></SafePage>}
     {page==="links"&&<SafePage name="База ссылок"><LinksPage userId={user.id}/></SafePage>}
     {page==="profile"&&<SafePage name="Настройки профиля"><ProfilePage user={user} name={userName} avatar={userAvatar} setName={setUserName} setAvatar={setUserAvatar}/></SafePage>}
+    {page==="tracker"&&<SafePage name="Link Tracker"><LinkTrackerPage userId={user.id}/></SafePage>}
     {page==="files"&&<SafePage name="Файлы"><FilesPage userId={user.id}/></SafePage>}
     {page==="ai"&&<SafePage name="AI"><KirillAIPage userId={user.id}/></SafePage>}
     {page==="script"&&<SafePage name="Copy AI"><CopyAIPage userId={user.id}/></SafePage>}
@@ -1005,7 +1007,7 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
     {page==="icp"&&<SafePage name="ICP & IVP"><Placeholder title="ICP & IVP" ic="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></SafePage>}
     {page==="bizstrategy"&&<SafePage name="Strategy"><Placeholder title="Strategy" ic="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></SafePage>}
     {page==="team"&&<SafePage name="Team"><Placeholder title="Team" ic="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></SafePage>}
-    {!["dashboard","strategy","crm","cashflow","calls","posts","slides","mailings","content","pnl","media","ads","calc","tools","links","profile","files","ai","script","product","stories","design","offer","prices","icp","bizstrategy","team"].includes(page)&&nav&&<Placeholder title={nav.label} ic={nav.ic}/>}
+    {!["dashboard","strategy","crm","cashflow","calls","tracker","posts","slides","mailings","content","pnl","media","ads","calc","tools","links","profile","files","ai","script","product","stories","design","offer","prices","icp","bizstrategy","team"].includes(page)&&nav&&<Placeholder title={nav.label} ic={nav.ic}/>}
   </>;
 
   return (
@@ -5221,6 +5223,774 @@ function SlideStudio({userId,kind}:{userId:string,kind:"post"|"slide"}){
 
 function PostsAIPage({userId}:{userId:string}){return <SlideStudio userId={userId} kind="post"/>;}
 function SlidesAIPage({userId}:{userId:string}){return <SlideStudio userId={userId} kind="slide"/>;}
+
+/* ============ LINK TRACKER ============ */
+const LT_MAX_LINKS=50;
+const LT_CHART="#2F6BFF";
+const LT_ALPHABET="abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+type LtLink={
+  id:string,user_id?:string,name:string,target_url:string,company:string,code:string,
+  description?:string,utm_source?:string,utm_medium?:string,utm_campaign?:string,
+  tags?:string[],expires_at?:string|null,active?:boolean,created_at?:string,
+};
+type LtClick={id?:string,link_id:string,created_at:string,referrer?:string,device?:string};
+type LtFunnel={id:string,name:string,steps:string[]};
+
+const ltCode=(n=6)=>Array.from({length:n},()=>LT_ALPHABET[Math.floor(Math.random()*LT_ALPHABET.length)]).join("");
+const ltSlugify=(s:string)=>String(s||"").toLowerCase().trim()
+  .replace(/[^a-z0-9а-яё\s-]/gi,"").replace(/\s+/g,"-").replace(/-+/g,"-").replace(/^-|-$/g,"").slice(0,32);
+const ltNum=(n:number)=>Math.round(n||0).toLocaleString("ru-RU");
+const ltPct=(cur:number,prev:number):number|null=>{
+  if(prev===0)return cur>0?100:null;
+  return Math.round((cur-prev)/prev*100);
+};
+const ltDayKey=(iso:string)=>String(iso||"").slice(0,10);
+const ltShiftDays=(days:number)=>{const d=new Date();d.setDate(d.getDate()-days);d.setHours(0,0,0,0);return d;};
+
+const LT_PERIODS:{id:string,label:string,days:number}[]=[
+  {id:"today",label:"Сегодня",days:1},
+  {id:"7",label:"7 дней",days:7},
+  {id:"30",label:"30 дней",days:30},
+  {id:"90",label:"90 дней",days:90},
+  {id:"365",label:"Год",days:365},
+  {id:"all",label:"Всё время",days:0},
+];
+
+function LinkTrackerPage({userId}:{userId:string}){
+  const{dark}=useTheme();
+  const isMobile=useIsMobile();
+  const[links,setLinks]=useState<LtLink[]>([]);
+  const[clicks,setClicks]=useState<LtClick[]>([]);
+  const[funnels,setFunnels]=useState<LtFunnel[]>([]);
+  const[loading,setLoading]=useState(true);
+  const[dbError,setDbError]=useState(false);
+
+  const[period,setPeriod]=useState("30");
+  const[gran,setGran]=useState<"day"|"week"|"month">("day");
+  const[search,setSearch]=useState("");
+  const[statusFilter,setStatusFilter]=useState<"all"|"active"|"off">("all");
+  const[sortBy,setSortBy]=useState<"new"|"clicks"|"name">("new");
+  const[modal,setModal]=useState<null|"new"|LtLink>(null);
+  const[funnelModal,setFunnelModal]=useState<null|"new"|LtFunnel>(null);
+  const[copied,setCopied]=useState<string|null>(null);
+  const[toast,setToast]=useState("");
+
+  const bd=C.bd;
+  const glass:React.CSSProperties={
+    background:dark?"rgba(255,255,255,0.04)":"rgba(255,255,255,0.72)",
+    backdropFilter:"blur(18px) saturate(1.3)",
+    border:"1px solid "+(dark?"rgba(255,255,255,0.10)":"rgba(255,255,255,0.85)"),
+    borderRadius:14,
+    boxShadow:dark?"0 4px 24px rgba(0,0,0,0.28)":"0 4px 20px rgba(0,0,0,0.05)",
+  };
+  const lbl:React.CSSProperties={fontSize:12,color:C.t2,fontWeight:500,marginBottom:7,display:"block"};
+
+  const origin=typeof window!=="undefined"?window.location.origin:"https://vizzy.pro";
+  const shortUrl=(l:LtLink)=>`${origin}/l/${l.company||"link"}/${l.code}`;
+
+  // ── загрузка ──
+  const reload=async()=>{
+    try{
+      const[lr,cr,fr]=await Promise.all([
+        supabase.from("tracker_links").select("*").eq("user_id",userId).order("created_at",{ascending:false}),
+        supabase.from("tracker_clicks").select("link_id,created_at,referrer,device").eq("user_id",userId).order("created_at",{ascending:false}).limit(20000),
+        supabase.from("tracker_funnels").select("*").eq("user_id",userId).order("created_at",{ascending:true}),
+      ]);
+      if(lr.error)throw lr.error;
+      setLinks((lr.data||[]) as LtLink[]);
+      setClicks((cr.data||[]) as LtClick[]);
+      setFunnels(((fr.data||[]) as any[]).map(f=>({id:f.id,name:f.name,steps:Array.isArray(f.steps)?f.steps:[]})));
+      setDbError(false);
+    }catch(e){
+      console.error("Link Tracker: таблицы недоступны:",e);
+      setDbError(true);
+    }
+    setLoading(false);
+  };
+  useEffect(()=>{reload();},[userId]);
+
+  const flash=(t:string)=>{setToast(t);setTimeout(()=>setToast(""),2200);};
+
+  // ── статистика ──
+  const stat=useMemo(()=>{
+    const byLink:Record<string,number>={};
+    clicks.forEach(c=>{byLink[c.link_id]=(byLink[c.link_id]||0)+1;});
+
+    const todayK=today();
+    const yK=ltDayKey(ltShiftDays(1).toISOString());
+    const curMonth=todayK.slice(0,7);
+    const d=new Date();const pm=new Date(d.getFullYear(),d.getMonth()-1,1);
+    const prevMonth=pm.getFullYear()+"-"+String(pm.getMonth()+1).padStart(2,"0");
+
+    let cToday=0,cYest=0,cMonth=0,cPrevMonth=0;
+    clicks.forEach(c=>{
+      const k=ltDayKey(c.created_at);
+      if(k===todayK)cToday++;
+      if(k===yK)cYest++;
+      if(k.slice(0,7)===curMonth)cMonth++;
+      if(k.slice(0,7)===prevMonth)cPrevMonth++;
+    });
+
+    // ряд для графика
+    const p=LT_PERIODS.find(x=>x.id===period)||LT_PERIODS[2];
+    let from:Date;
+    if(p.days===0){
+      const oldest=clicks.length?clicks[clicks.length-1].created_at:new Date().toISOString();
+      from=new Date(ltDayKey(oldest)+"T00:00:00");
+    }else{
+      from=ltShiftDays(p.days-1);
+    }
+    const buckets:Record<string,number>={};
+    const keyOf=(iso:string)=>{
+      const k=ltDayKey(iso);
+      if(gran==="month")return k.slice(0,7);
+      if(gran==="week"){
+        const dt=new Date(k+"T00:00:00");
+        const dow=(dt.getDay()+6)%7;dt.setDate(dt.getDate()-dow);
+        return ltDayKey(dt.toISOString());
+      }
+      return k;
+    };
+    // заполняем нулями
+    const cursor=new Date(from);
+    const end=new Date();end.setHours(0,0,0,0);
+    const seen:string[]=[];
+    let guard=0;
+    while(cursor<=end&&guard<1200){
+      const k=keyOf(cursor.toISOString());
+      if(!(k in buckets)){buckets[k]=0;seen.push(k);}
+      cursor.setDate(cursor.getDate()+(gran==="month"?28:gran==="week"?7:1));
+      guard++;
+    }
+    const endK=keyOf(end.toISOString());
+    if(!(endK in buckets)){buckets[endK]=0;seen.push(endK);}
+
+    clicks.forEach(c=>{
+      const dt=new Date(c.created_at);
+      if(dt<from)return;
+      const k=keyOf(c.created_at);
+      if(k in buckets)buckets[k]++;
+    });
+    const keys=seen.sort();
+    const series=keys.map(k=>buckets[k]);
+    const periodTotal=series.reduce((s,v)=>s+v,0);
+
+    return{byLink,cToday,cYest,cMonth,cPrevMonth,series,keys,periodTotal,total:clicks.length};
+  },[clicks,period,gran]);
+
+  // ── список ссылок ──
+  const shown=useMemo(()=>{
+    let arr=[...links];
+    const q=search.trim().toLowerCase();
+    if(q)arr=arr.filter(l=>(l.name||"").toLowerCase().includes(q)||(l.code||"").toLowerCase().includes(q)||(l.target_url||"").toLowerCase().includes(q));
+    if(statusFilter==="active")arr=arr.filter(l=>l.active!==false);
+    if(statusFilter==="off")arr=arr.filter(l=>l.active===false);
+    if(sortBy==="clicks")arr.sort((a,b)=>(stat.byLink[b.id]||0)-(stat.byLink[a.id]||0));
+    else if(sortBy==="name")arr.sort((a,b)=>(a.name||"").localeCompare(b.name||""));
+    return arr;
+  },[links,search,statusFilter,sortBy,stat]);
+
+  // ── действия ──
+  const copy=(text:string,key:string)=>{navigator.clipboard.writeText(text);setCopied(key);setTimeout(()=>setCopied(null),1600);};
+
+  const saveLink=async(l:LtLink,isNew:boolean)=>{
+    const clean={
+      name:l.name.trim()||"Без названия",
+      target_url:l.target_url.trim(),
+      company:ltSlugify(l.company)||"l",
+      code:l.code.trim(),
+      description:l.description||"",
+      utm_source:l.utm_source||"",utm_medium:l.utm_medium||"",utm_campaign:l.utm_campaign||"",
+      tags:l.tags||[],
+      expires_at:l.expires_at||null,
+      active:l.active!==false,
+    };
+    // проверка занятости кода
+    const dup=links.find(x=>x.code===clean.code&&x.company===clean.company&&x.id!==l.id);
+    if(dup)return "Код занят — выберите другой";
+    try{
+      if(isNew){
+        const{data,error}=await supabase.from("tracker_links").insert({...clean,user_id:userId}).select().single();
+        if(error)throw error;
+        setLinks(prev=>[data as LtLink,...prev]);
+      }else{
+        const{error}=await supabase.from("tracker_links").update(clean).eq("id",l.id);
+        if(error)throw error;
+        setLinks(prev=>prev.map(x=>x.id===l.id?{...x,...clean}:x));
+      }
+      return null;
+    }catch(e:any){
+      if(String(e?.message||"").includes("duplicate"))return "Код занят — выберите другой";
+      return "Не удалось сохранить: "+(e?.message||"ошибка");
+    }
+  };
+
+  const delLink=async(l:LtLink)=>{
+    setLinks(prev=>prev.filter(x=>x.id!==l.id));
+    try{await supabase.from("tracker_links").delete().eq("id",l.id);}catch(e){console.error(e);}
+  };
+
+  const toggleActive=async(l:LtLink)=>{
+    const next=l.active===false;
+    setLinks(prev=>prev.map(x=>x.id===l.id?{...x,active:next}:x));
+    try{await supabase.from("tracker_links").update({active:next}).eq("id",l.id);}catch(e){console.error(e);}
+  };
+
+  const saveFunnel=async(f:LtFunnel,isNew:boolean)=>{
+    try{
+      if(isNew){
+        const{data,error}=await supabase.from("tracker_funnels").insert({user_id:userId,name:f.name||"Воронка",steps:f.steps}).select().single();
+        if(error)throw error;
+        setFunnels(prev=>[...prev,{id:(data as any).id,name:(data as any).name,steps:(data as any).steps||[]}]);
+      }else{
+        const{error}=await supabase.from("tracker_funnels").update({name:f.name,steps:f.steps}).eq("id",f.id);
+        if(error)throw error;
+        setFunnels(prev=>prev.map(x=>x.id===f.id?f:x));
+      }
+      return null;
+    }catch(e:any){return "Не удалось сохранить воронку: "+(e?.message||"");}
+  };
+  const delFunnel=async(f:LtFunnel)=>{
+    setFunnels(prev=>prev.filter(x=>x.id!==f.id));
+    try{await supabase.from("tracker_funnels").delete().eq("id",f.id);}catch(e){console.error(e);}
+  };
+
+  const exportCsv=()=>{
+    const rows=[["Название","Короткая ссылка","Исходная ссылка","Переходы всего","Сегодня","Статус","Создана"]];
+    const todayK=today();
+    links.forEach(l=>{
+      const tot=stat.byLink[l.id]||0;
+      const tod=clicks.filter(c=>c.link_id===l.id&&ltDayKey(c.created_at)===todayK).length;
+      rows.push([l.name,shortUrl(l),l.target_url,String(tot),String(tod),l.active===false?"Неактивна":"Активна",ltDayKey(l.created_at||"")]);
+    });
+    const csv="\uFEFF"+rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(";")).join("\n");
+    const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+    a.download=`link-tracker-${todayK}.csv`;a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  };
+
+  // ── график ──
+  const Chart=()=>{
+    const series=stat.series,keys=stat.keys;
+    const W=1000,H=320,padT=16,padB=34,padR=56;
+    const has=series.some(v=>v>0);
+    const max=Math.max(...series,1);
+    const x=(i:number)=>series.length<2?(W-padR)/2:(i/(series.length-1))*(W-padR);
+    const y=(v:number)=>padT+(1-v/max)*(H-padT-padB);
+    const path=series.map((v,i)=>(i?"L":"M")+x(i).toFixed(1)+","+y(v).toFixed(1)).join(" ");
+    const area=has?path+` L${x(series.length-1).toFixed(1)},${y(0)} L${x(0).toFixed(1)},${y(0)} Z`:"";
+    const ticks=[0,0.25,0.5,0.75,1].map(p=>max*p);
+    const fmtKey=(k:string)=>{
+      if(gran==="month"){const[yy,mm]=k.split("-");return CF_MONTHS_RU[Number(mm)-1].slice(0,3)+" "+yy;}
+      const[,mm,dd]=k.split("-");return dd+"."+mm;
+    };
+    return(
+      <div style={{...glass,padding:isMobile?16:22,marginBottom:16}}>
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,marginBottom:14,flexWrap:"wrap" as const}}>
+          <div>
+            <div style={{fontSize:12.5,color:C.t2,fontWeight:500}}>Переходы за период</div>
+            <div style={{fontSize:isMobile?26:32,fontWeight:500,color:C.t1,letterSpacing:"-0.03em",lineHeight:1.15,marginTop:3}}>{ltNum(stat.periodTotal)}</div>
+          </div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap" as const}}>
+            <div style={{display:"flex",gap:2,background:C.ib,borderRadius:9,padding:3,border:"1px solid "+bd}}>
+              {LT_PERIODS.map(p=>(
+                <button key={p.id} onClick={()=>setPeriod(p.id)}
+                  style={{padding:"5px 10px",borderRadius:6,border:"none",background:period===p.id?C.w:"transparent",color:period===p.id?C.t1:C.t2,fontSize:11.5,fontWeight:period===p.id?600:450,cursor:"pointer",whiteSpace:"nowrap" as const}}>{p.label}</button>
+              ))}
+            </div>
+            <div style={{display:"flex",gap:2,background:C.ib,borderRadius:9,padding:3,border:"1px solid "+bd}}>
+              {([["day","Дни"],["week","Недели"],["month","Месяцы"]] as const).map(([g,l])=>(
+                <button key={g} onClick={()=>setGran(g)}
+                  style={{padding:"5px 10px",borderRadius:6,border:"none",background:gran===g?C.w:"transparent",color:gran===g?C.t1:C.t2,fontSize:11.5,fontWeight:gran===g?600:450,cursor:"pointer"}}>{l}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+        {!has
+          ?<div style={{height:isMobile?200:260,display:"flex",alignItems:"center",justifyContent:"center",color:C.t2,fontSize:13,background:dark?"rgba(255,255,255,0.02)":"rgba(0,0,0,0.015)",borderRadius:10}}>
+            Переходов за этот период не было
+          </div>
+          :<div style={{position:"relative" as const}}>
+            <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={isMobile?220:280} preserveAspectRatio="none" style={{display:"block",overflow:"visible"}}>
+              <defs>
+                <linearGradient id="ltgrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={LT_CHART} stopOpacity="0.24"/>
+                  <stop offset="100%" stopColor={LT_CHART} stopOpacity="0"/>
+                </linearGradient>
+              </defs>
+              {ticks.map((t,i)=><line key={i} x1="0" y1={y(t)} x2={W-padR} y2={y(t)} stroke={dark?"rgba(255,255,255,0.07)":"rgba(0,0,0,0.06)"} strokeWidth="1" vectorEffect="non-scaling-stroke"/>)}
+              {area&&<path d={area} fill="url(#ltgrad)"/>}
+              <path d={path} fill="none" stroke={LT_CHART} strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
+              {series.map((v,i)=>(
+                <g key={i}>
+                  <circle cx={x(i)} cy={y(v)} r="9" fill="transparent" style={{cursor:"pointer"}}>
+                    <title>{fmtKey(keys[i])}: {ltNum(v)} переходов</title>
+                  </circle>
+                  {v===max&&v>0&&<circle cx={x(i)} cy={y(v)} r="3.5" fill={LT_CHART} vectorEffect="non-scaling-stroke"/>}
+                </g>
+              ))}
+            </svg>
+            <div style={{position:"absolute" as const,top:0,right:0,height:isMobile?220:280,width:padR,display:"flex",flexDirection:"column-reverse",justifyContent:"space-between",paddingBottom:(padB/H)*(isMobile?220:280),paddingTop:(padT/H)*(isMobile?220:280)}}>
+              {ticks.map((t,i)=><span key={i} style={{fontSize:10,color:C.t2,textAlign:"right" as const,lineHeight:1}}>{ltNum(t)}</span>)}
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",marginTop:8,paddingRight:padR/2}}>
+              <span style={{fontSize:10.5,color:C.t2}}>{keys.length?fmtKey(keys[0]):""}</span>
+              <span style={{fontSize:10.5,color:C.t2}}>{keys.length?fmtKey(keys[keys.length-1]):""}</span>
+            </div>
+          </div>}
+      </div>
+    );
+  };
+
+  // ── KPI ──
+  const Kpi=({label,value,delta,sub}:{label:string,value:string,delta:number|null,sub:string})=>(
+    <div style={{...glass,padding:isMobile?15:20}}>
+      <div style={{fontSize:12,color:C.t2,fontWeight:500,marginBottom:8}}>{label}</div>
+      <div style={{display:"flex",alignItems:"baseline",gap:9,flexWrap:"wrap" as const}}>
+        <span style={{fontSize:isMobile?23:28,fontWeight:500,color:C.t1,letterSpacing:"-0.025em",lineHeight:1}}>{value}</span>
+        {delta!==null&&<span style={{fontSize:12,fontWeight:600,padding:"2px 8px",borderRadius:20,
+          color:delta>=0?"#16A34A":"#DC2626",background:(delta>=0?"#16A34A":"#DC2626")+"18"}}>
+          {(delta>=0?"+":"")+delta}%
+        </span>}
+      </div>
+      <div style={{fontSize:11.5,color:C.t2,marginTop:6}}>{sub}</div>
+    </div>
+  );
+
+  // ── воронка ──
+  const FunnelCard=({f}:{f:LtFunnel})=>{
+    const steps=f.steps.map(id=>{
+      const l=links.find(x=>x.id===id);
+      return{id,link:l,count:stat.byLink[id]||0};
+    }).filter(s=>s.link);
+    const first=steps.length?steps[0].count:0;
+    return(
+      <div style={{...glass,padding:isMobile?15:20}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:14}}>
+          <div style={{fontSize:14,fontWeight:600,color:C.t1}}>{f.name}</div>
+          <div style={{display:"flex",gap:6}}>
+            <button onClick={()=>setFunnelModal(f)} title="Изменить"
+              style={{width:28,height:28,borderRadius:7,border:"1px solid "+bd,background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button onClick={()=>delFunnel(f)} title="Удалить"
+              style={{width:28,height:28,borderRadius:7,border:"1px solid "+bd,background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+            </button>
+          </div>
+        </div>
+        {!steps.length
+          ?<div style={{fontSize:12.5,color:C.t2,lineHeight:1.6}}>Шаги не заданы. Нажми «Изменить» и выбери ссылки по порядку.</div>
+          :<div>
+            {steps.map((s,i)=>{
+              const width=first>0?Math.max(8,Math.round(s.count/first*100)):8;
+              const prev=i>0?steps[i-1].count:null;
+              const conv=prev!==null?(prev>0?Math.round(s.count/prev*100):0):null;
+              return<div key={s.id}>
+                {i>0&&<div style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0 5px 2px"}}>
+                  <svg width="12" height="16" viewBox="0 0 12 16"><line x1="6" y1="0" x2="6" y2="10" stroke={C.t2} strokeWidth="1.4"/><polygon points="6,16 2,10 10,10" fill={C.t2}/></svg>
+                  <span style={{fontSize:11.5,fontWeight:600,color:(conv||0)>=50?"#16A34A":(conv||0)>=20?"#D97706":"#DC2626"}}>
+                    конверсия {conv}%
+                  </span>
+                </div>}
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:12.5,color:C.t1,marginBottom:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{s.link!.name}</div>
+                    <div style={{height:28,borderRadius:7,background:dark?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.05)",overflow:"hidden"}}>
+                      <div style={{width:width+"%",height:"100%",borderRadius:7,
+                        background:`linear-gradient(90deg,${LT_CHART}CC,${LT_CHART})`,
+                        transition:"width 0.6s cubic-bezier(0.4,0,0.2,1)",
+                        display:"flex",alignItems:"center",paddingLeft:10}}>
+                        <span style={{fontSize:12,fontWeight:600,color:"#fff",whiteSpace:"nowrap" as const}}>{ltNum(s.count)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>;
+            })}
+            {steps.length>1&&<div style={{marginTop:12,paddingTop:10,borderTop:"1px solid "+bd,fontSize:12,color:C.t2}}>
+              Сквозная конверсия: <b style={{color:C.t1,fontWeight:600}}>{first>0?Math.round(steps[steps.length-1].count/first*100):0}%</b>
+            </div>}
+          </div>}
+      </div>
+    );
+  };
+
+  if(loading)return <div style={{padding:60,textAlign:"center" as const,color:C.t2}}>Загрузка…</div>;
+
+  return<>
+    <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",gap:14,marginBottom:18,flexWrap:"wrap" as const}}>
+      <div>
+        <div style={{fontSize:isMobile?20:26,fontWeight:500,color:C.t1,letterSpacing:"-0.03em"}}>Link Tracker</div>
+        <div style={{fontSize:13,color:C.t2,marginTop:4}}>Короткие ссылки и аналитика переходов · {links.length}/{LT_MAX_LINKS}</div>
+      </div>
+      <button onClick={()=>setModal("new")} disabled={links.length>=LT_MAX_LINKS}
+        style={{padding:"12px 22px",borderRadius:11,border:"1px solid rgba(255,255,255,0.14)",
+          background:links.length>=LT_MAX_LINKS?C.ib:`linear-gradient(160deg,${LT_CHART}F0,#1D4FD8)`,
+          backdropFilter:"blur(12px) saturate(1.4)",
+          color:links.length>=LT_MAX_LINKS?C.t2:"#fff",fontSize:14,fontWeight:600,
+          cursor:links.length>=LT_MAX_LINKS?"default":"pointer",
+          boxShadow:links.length>=LT_MAX_LINKS?"none":"0 6px 20px rgba(47,107,255,0.30)",
+          display:"flex",alignItems:"center",gap:8}}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Создать ссылку
+      </button>
+    </div>
+
+    {dbError&&<div style={{...glass,padding:16,marginBottom:16,borderColor:"#D9770655"}}>
+      <div style={{fontSize:13,color:C.t1,lineHeight:1.6}}>
+        Таблицы Link Tracker не найдены в базе. Выполни SQL из инструкции — после этого раздел заработает.
+      </div>
+    </div>}
+
+    {/* KPI */}
+    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(auto-fit,minmax(200px,1fr))",gap:isMobile?10:14,marginBottom:16}}>
+      <Kpi label="Переходов за месяц" value={ltNum(stat.cMonth)} delta={ltPct(stat.cMonth,stat.cPrevMonth)} sub={`в прошлом месяце ${ltNum(stat.cPrevMonth)}`}/>
+      <Kpi label="Переходов сегодня" value={ltNum(stat.cToday)} delta={ltPct(stat.cToday,stat.cYest)} sub={`вчера ${ltNum(stat.cYest)}`}/>
+      <Kpi label="Всего переходов" value={ltNum(stat.total)} delta={null} sub={`по ${links.length} ссылкам`}/>
+      <Kpi label="Активных ссылок" value={ltNum(links.filter(l=>l.active!==false).length)} delta={null} sub={`из ${links.length} созданных`}/>
+    </div>
+
+    <Chart/>
+
+    {/* Воронки */}
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:12,flexWrap:"wrap" as const}}>
+      <div style={{fontSize:15,fontWeight:600,color:C.t1}}>Воронки</div>
+      <button onClick={()=>setFunnelModal("new")}
+        style={{padding:"8px 16px",borderRadius:9,border:"1px solid "+bd,background:"transparent",color:C.t1,fontSize:12.5,fontWeight:500,cursor:"pointer"}}>+ Воронка</button>
+    </div>
+    {!funnels.length
+      ?<div style={{...glass,padding:20,marginBottom:16,fontSize:13,color:C.t2,lineHeight:1.6}}>
+        Воронок пока нет. Собери цепочку из своих ссылок — увидишь конверсию между шагами.
+      </div>
+      :<div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fit,minmax(340px,1fr))",gap:14,marginBottom:16}}>
+        {funnels.map(f=><FunnelCard key={f.id} f={f}/>)}
+      </div>}
+
+    {/* Панель управления таблицей */}
+    <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap" as const,alignItems:"center"}}>
+      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Поиск по названию, коду, ссылке"
+        style={{...iS(),maxWidth:isMobile?"100%":300,flex:isMobile?"1 1 100%":"0 1 300px"}}/>
+      <div style={{display:"flex",gap:2,background:C.ib,borderRadius:9,padding:3,border:"1px solid "+bd}}>
+        {([["all","Все"],["active","Активные"],["off","Выкл"]] as const).map(([k,l])=>(
+          <button key={k} onClick={()=>setStatusFilter(k)}
+            style={{padding:"6px 12px",borderRadius:6,border:"none",background:statusFilter===k?C.w:"transparent",color:statusFilter===k?C.t1:C.t2,fontSize:12,fontWeight:statusFilter===k?600:450,cursor:"pointer"}}>{l}</button>
+        ))}
+      </div>
+      <select value={sortBy} onChange={e=>setSortBy(e.target.value as any)} style={{...iS(),width:"auto",padding:"9px 12px"}}>
+        <option value="new">Сначала новые</option>
+        <option value="clicks">По переходам</option>
+        <option value="name">По названию</option>
+      </select>
+      <div style={{flex:1}}/>
+      <button onClick={exportCsv}
+        style={{padding:"9px 16px",borderRadius:9,border:"1px solid "+bd,background:"transparent",color:C.t1,fontSize:12.5,fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",gap:7}}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Экспорт
+      </button>
+    </div>
+
+    {/* Таблица */}
+    <div style={{...glass,padding:0,overflow:"hidden"}}>
+      {!shown.length
+        ?<div style={{padding:"48px 20px",textAlign:"center" as const,color:C.t2,fontSize:14}}>
+          {links.length?"Ничего не найдено":"Ссылок пока нет. Нажми «Создать ссылку»."}
+        </div>
+        :<div style={{overflowX:"auto" as const}}>
+          <table style={{width:"100%",borderCollapse:"collapse" as const,fontSize:13}}>
+            <thead><tr style={{borderBottom:"1px solid "+bd}}>
+              {["Название","Короткая ссылка","Исходная ссылка","Переходы","Статус",""].map((h,i)=>(
+                <th key={i} style={{padding:"12px 14px",textAlign:"left" as const,fontSize:11,fontWeight:600,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,whiteSpace:"nowrap" as const}}>{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {shown.map(l=>{
+                const su=shortUrl(l);
+                const cnt=stat.byLink[l.id]||0;
+                const expired=l.expires_at?new Date(l.expires_at)<new Date():false;
+                return<tr key={l.id} style={{borderBottom:"1px solid "+bd}}>
+                  <td style={{padding:"12px 14px",color:C.t1,maxWidth:200}}>
+                    <div style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{l.name}</div>
+                    {l.tags&&l.tags.length>0&&<div style={{display:"flex",gap:4,marginTop:4,flexWrap:"wrap" as const}}>
+                      {l.tags.slice(0,3).map(t=><span key={t} style={{fontSize:9.5,color:C.t2,background:C.ib,borderRadius:5,padding:"1px 6px"}}>{t}</span>)}
+                    </div>}
+                  </td>
+                  <td style={{padding:"12px 14px",whiteSpace:"nowrap" as const}}>
+                    <span style={{fontFamily:"monospace",fontSize:12,color:LT_CHART}}>/l/{l.company}/{l.code}</span>
+                  </td>
+                  <td style={{padding:"12px 14px",color:C.t2,maxWidth:220}}>
+                    <div style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{l.target_url}</div>
+                  </td>
+                  <td style={{padding:"12px 14px",fontWeight:600,color:C.t1,fontVariantNumeric:"tabular-nums" as const}}>{ltNum(cnt)}</td>
+                  <td style={{padding:"12px 14px"}}>
+                    <button onClick={()=>toggleActive(l)}
+                      style={{fontSize:11,fontWeight:600,padding:"3px 9px",borderRadius:6,border:"none",cursor:"pointer",
+                        background:(expired?"#D97706":l.active===false?"#77777722":"#16A34A")+(l.active===false?"":"22"),
+                        color:expired?"#D97706":l.active===false?C.t2:"#16A34A"}}>
+                      {expired?"Истекла":l.active===false?"Выключена":"Активна"}
+                    </button>
+                  </td>
+                  <td style={{padding:"12px 8px",whiteSpace:"nowrap" as const}}>
+                    <div style={{display:"flex",gap:4}}>
+                      <button onClick={()=>window.open(su,"_blank")} title="Открыть"
+                        style={{width:28,height:28,borderRadius:7,border:"none",background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                      </button>
+                      <button onClick={()=>copy(su,l.id)} title="Копировать"
+                        style={{width:28,height:28,borderRadius:7,border:"none",background:"transparent",color:copied===l.id?"#16A34A":C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        {copied===l.id
+                          ?<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                          :<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>}
+                      </button>
+                      <button onClick={()=>setModal(l)} title="Редактировать"
+                        style={{width:28,height:28,borderRadius:7,border:"none",background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
+                      <button onClick={()=>delLink(l)} title="Удалить"
+                        style={{width:28,height:28,borderRadius:7,border:"none",background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>;
+              })}
+            </tbody>
+          </table>
+        </div>}
+    </div>
+
+    {modal&&<LtLinkModal modal={modal} links={links} origin={origin} dark={dark} isMobile={isMobile}
+      onClose={()=>setModal(null)} onSave={saveLink} onCopy={copy} copied={copied} flash={flash}/>}
+    {funnelModal&&<LtFunnelModal modal={funnelModal} links={links} dark={dark} isMobile={isMobile}
+      onClose={()=>setFunnelModal(null)} onSave={saveFunnel}/>}
+
+    {toast&&<div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",zIndex:600,
+      background:C.t1,color:C.bg,padding:"11px 20px",borderRadius:10,fontSize:13,fontWeight:500,boxShadow:"0 8px 26px rgba(0,0,0,0.3)"}}>{toast}</div>}
+  </>;
+}
+
+function LtLinkModal({modal,links,origin,dark,isMobile,onClose,onSave,onCopy,copied,flash}:{
+  modal:"new"|LtLink,links:LtLink[],origin:string,dark:boolean,isMobile:boolean,
+  onClose:()=>void,onSave:(l:LtLink,isNew:boolean)=>Promise<string|null>,
+  onCopy:(t:string,k:string)=>void,copied:string|null,flash:(t:string)=>void}){
+  const isNew=modal==="new";
+  const base:LtLink=isNew
+    ?{id:"",name:"",target_url:"",company:ltSlugify(links[0]?.company||"")||"",code:ltCode(6),description:"",utm_source:"",utm_medium:"",utm_campaign:"",tags:[],expires_at:null,active:true}
+    :{...(modal as LtLink)};
+  const[f,setF]=useState<LtLink>(base);
+  const[tagInput,setTagInput]=useState("");
+  const[err,setErr]=useState("");
+  const[saving,setSaving]=useState(false);
+  const[done,setDone]=useState<LtLink|null>(null);
+
+  const bd=C.bd;
+  const lbl:React.CSSProperties={fontSize:12,color:C.t2,fontWeight:500,marginBottom:6,display:"block"};
+  const codeTaken=links.some(x=>x.code===f.code&&ltSlugify(x.company)===ltSlugify(f.company)&&x.id!==f.id);
+  const urlOk=/^https?:\/\/.+\..+/.test(f.target_url.trim());
+  const canSave=f.name.trim().length>0&&urlOk&&f.code.trim().length>=4&&!codeTaken;
+
+  const submit=async()=>{
+    if(!canSave||saving)return;
+    setSaving(true);setErr("");
+    const e=await onSave(f,isNew);
+    setSaving(false);
+    if(e){setErr(e);return;}
+    if(isNew)setDone({...f,company:ltSlugify(f.company)||"l"});
+    else{flash("Ссылка обновлена");onClose();}
+  };
+
+  const shortU=done?`${origin}/l/${done.company}/${done.code}`:"";
+
+  return<div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(6px)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:16,overflowY:"auto" as const}}>
+    <div onClick={e=>e.stopPropagation()} style={{
+      background:dark?"rgba(28,28,28,0.92)":"rgba(255,255,255,0.94)",
+      backdropFilter:"blur(24px) saturate(1.4)",
+      border:"1px solid "+(dark?"rgba(255,255,255,0.12)":"rgba(255,255,255,0.9)"),
+      borderRadius:16,padding:isMobile?18:26,width:"100%",maxWidth:560,maxHeight:"88vh",overflowY:"auto" as const,
+      boxShadow:"0 24px 70px rgba(0,0,0,0.32)"}}>
+
+      {done?<>
+        <div style={{fontSize:17,fontWeight:600,color:C.t1,marginBottom:6}}>Ссылка создана</div>
+        <div style={{fontSize:12.5,color:C.t2,marginBottom:18}}>Можно копировать и запускать в работу</div>
+        <div style={{padding:"14px 16px",borderRadius:11,background:dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.03)",border:"1px solid "+bd,marginBottom:16}}>
+          <div style={{fontFamily:"monospace",fontSize:14,color:LT_CHART,wordBreak:"break-all" as const}}>{shortU}</div>
+        </div>
+        <div style={{display:"flex",gap:10}}>
+          <button onClick={()=>onCopy(shortU,"done")}
+            style={{flex:1,padding:"12px",borderRadius:10,border:"1px solid "+bd,background:"transparent",color:copied==="done"?"#16A34A":C.t1,fontSize:13.5,fontWeight:500,cursor:"pointer"}}>
+            {copied==="done"?"Скопировано":"Копировать"}
+          </button>
+          <button onClick={()=>window.open(shortU,"_blank")}
+            style={{flex:1,padding:"12px",borderRadius:10,border:"1px solid "+bd,background:"transparent",color:C.t1,fontSize:13.5,fontWeight:500,cursor:"pointer"}}>Открыть</button>
+          <button onClick={onClose}
+            style={{flex:1,padding:"12px",borderRadius:10,border:"none",background:LT_CHART,color:"#fff",fontSize:13.5,fontWeight:600,cursor:"pointer"}}>Готово</button>
+        </div>
+      </>:<>
+        <div style={{fontSize:17,fontWeight:600,color:C.t1,marginBottom:18}}>{isNew?"Новая ссылка":"Редактировать ссылку"}</div>
+
+        <label style={lbl}>Название</label>
+        <input autoFocus value={f.name} onChange={e=>setF({...f,name:e.target.value})} placeholder="Напр.: Instagram → Telegram бот" style={{...iS(),marginBottom:14}}/>
+
+        <label style={lbl}>Исходная ссылка</label>
+        <input value={f.target_url} onChange={e=>setF({...f,target_url:e.target.value})} placeholder="https://t.me/yourbot" style={{...iS(),marginBottom:4}}/>
+        {f.target_url.trim()&&!urlOk&&<div style={{fontSize:11.5,color:"#D97706",marginBottom:10}}>Ссылка должна начинаться с http:// или https://</div>}
+        <div style={{height:10}}/>
+
+        <label style={lbl}>Короткая ссылка</label>
+        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap" as const,marginBottom:4}}>
+          <span style={{fontSize:12.5,color:C.t2,fontFamily:"monospace"}}>{origin.replace(/^https?:\/\//,"")}/l/</span>
+          <input value={f.company} onChange={e=>setF({...f,company:e.target.value})} placeholder="company"
+            style={{...iS(),width:isMobile?110:130,fontFamily:"monospace",padding:"8px 10px"}}/>
+          <span style={{fontSize:13,color:C.t2}}>/</span>
+          <input value={f.code} onChange={e=>setF({...f,code:e.target.value.replace(/[^a-zA-Z0-9_-]/g,"")})} placeholder="Ab3X9"
+            style={{...iS(),width:isMobile?100:120,fontFamily:"monospace",padding:"8px 10px",
+              borderColor:codeTaken?"#DC2626":undefined}}/>
+          <button onClick={()=>setF({...f,code:ltCode(6)})} title="Сгенерировать заново"
+            style={{padding:"8px 12px",borderRadius:8,border:"1px solid "+bd,background:"transparent",color:C.t2,fontSize:12,cursor:"pointer"}}>Обновить</button>
+        </div>
+        {codeTaken&&<div style={{fontSize:11.5,color:"#DC2626",marginBottom:10}}>Код занят — выберите другой</div>}
+        {f.code.trim().length>0&&f.code.trim().length<4&&<div style={{fontSize:11.5,color:"#D97706",marginBottom:10}}>Минимум 4 символа</div>}
+        <div style={{height:10}}/>
+
+        <label style={lbl}>Описание</label>
+        <textarea value={f.description||""} onChange={e=>setF({...f,description:e.target.value})} rows={2} placeholder="Для чего эта ссылка"
+          style={{...iS(),marginBottom:14,resize:"vertical" as const,minHeight:58,fontFamily:"'Inter',sans-serif"}}/>
+
+        <label style={lbl}>UTM-метки (необязательно)</label>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:8,marginBottom:14}}>
+          <input value={f.utm_source||""} onChange={e=>setF({...f,utm_source:e.target.value})} placeholder="source" style={iS()}/>
+          <input value={f.utm_medium||""} onChange={e=>setF({...f,utm_medium:e.target.value})} placeholder="medium" style={iS()}/>
+          <input value={f.utm_campaign||""} onChange={e=>setF({...f,utm_campaign:e.target.value})} placeholder="campaign" style={iS()}/>
+        </div>
+
+        <label style={lbl}>Теги</label>
+        <div style={{display:"flex",gap:7,flexWrap:"wrap" as const,marginBottom:8}}>
+          {(f.tags||[]).map(t=>(
+            <span key={t} style={{fontSize:11.5,color:C.t1,background:C.ib,borderRadius:7,padding:"4px 9px",display:"flex",alignItems:"center",gap:6}}>
+              {t}
+              <button onClick={()=>setF({...f,tags:(f.tags||[]).filter(x=>x!==t)})}
+                style={{background:"none",border:"none",color:C.t2,cursor:"pointer",padding:0,fontSize:13,lineHeight:1}}>×</button>
+            </span>
+          ))}
+        </div>
+        <input value={tagInput} onChange={e=>setTagInput(e.target.value)}
+          onKeyDown={e=>{if(e.key==="Enter"&&tagInput.trim()){e.preventDefault();setF({...f,tags:[...(f.tags||[]),tagInput.trim()]});setTagInput("");}}}
+          placeholder="Введите тег и нажмите Enter" style={{...iS(),marginBottom:14}}/>
+
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12,marginBottom:18}}>
+          <div>
+            <label style={lbl}>Дата окончания</label>
+            <input type="date" value={f.expires_at?String(f.expires_at).slice(0,10):""}
+              onChange={e=>setF({...f,expires_at:e.target.value||null})} style={iS()}/>
+          </div>
+          <div>
+            <label style={lbl}>Статус</label>
+            <button onClick={()=>setF({...f,active:!(f.active!==false)})}
+              style={{width:"100%",padding:"10px",borderRadius:9,border:"1px solid "+bd,cursor:"pointer",fontSize:13,fontWeight:500,
+                background:f.active!==false?"#16A34A18":"transparent",color:f.active!==false?"#16A34A":C.t2}}>
+              {f.active!==false?"Активна":"Неактивна"}
+            </button>
+          </div>
+        </div>
+
+        {err&&<div style={{fontSize:12.5,color:"#DC2626",marginBottom:12}}>{err}</div>}
+
+        <div style={{display:"flex",gap:10}}>
+          <button onClick={onClose} style={{flex:1,padding:"12px",borderRadius:10,border:"1px solid "+bd,background:"transparent",color:C.t1,fontSize:14,fontWeight:500,cursor:"pointer"}}>Отмена</button>
+          <button onClick={submit} disabled={!canSave||saving}
+            style={{flex:1.5,padding:"12px",borderRadius:10,border:"none",
+              background:canSave?`linear-gradient(160deg,${LT_CHART}F0,#1D4FD8)`:C.ib,
+              color:canSave?"#fff":C.t2,fontSize:14,fontWeight:600,cursor:canSave&&!saving?"pointer":"default",
+              boxShadow:canSave?"0 5px 16px rgba(47,107,255,0.28)":"none"}}>
+            {saving?"Сохраняю…":isNew?"Создать":"Сохранить"}
+          </button>
+        </div>
+      </>}
+    </div>
+  </div>;
+}
+
+function LtFunnelModal({modal,links,dark,isMobile,onClose,onSave}:{
+  modal:"new"|LtFunnel,links:LtLink[],dark:boolean,isMobile:boolean,
+  onClose:()=>void,onSave:(f:LtFunnel,isNew:boolean)=>Promise<string|null>}){
+  const isNew=modal==="new";
+  const[f,setF]=useState<LtFunnel>(isNew?{id:"",name:"",steps:[]}:{...(modal as LtFunnel)});
+  const[err,setErr]=useState("");
+  const[saving,setSaving]=useState(false);
+  const bd=C.bd;
+
+  const toggle=(id:string)=>{
+    setF(p=>p.steps.includes(id)?{...p,steps:p.steps.filter(x=>x!==id)}:{...p,steps:[...p.steps,id]});
+  };
+  const move=(i:number,dir:-1|1)=>{
+    const j=i+dir;if(j<0||j>=f.steps.length)return;
+    const c=[...f.steps];const t=c[i];c[i]=c[j];c[j]=t;setF({...f,steps:c});
+  };
+  const submit=async()=>{
+    if(!f.name.trim()||f.steps.length<2||saving)return;
+    setSaving(true);setErr("");
+    const e=await onSave(f,isNew);
+    setSaving(false);
+    if(e)setErr(e);else onClose();
+  };
+
+  return<div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(6px)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+    <div onClick={e=>e.stopPropagation()} style={{
+      background:dark?"rgba(28,28,28,0.92)":"rgba(255,255,255,0.94)",
+      backdropFilter:"blur(24px) saturate(1.4)",
+      border:"1px solid "+(dark?"rgba(255,255,255,0.12)":"rgba(255,255,255,0.9)"),
+      borderRadius:16,padding:isMobile?18:26,width:"100%",maxWidth:520,maxHeight:"85vh",overflowY:"auto" as const,
+      boxShadow:"0 24px 70px rgba(0,0,0,0.32)"}}>
+      <div style={{fontSize:17,fontWeight:600,color:C.t1,marginBottom:16}}>{isNew?"Новая воронка":"Изменить воронку"}</div>
+
+      <label style={{fontSize:12,color:C.t2,fontWeight:500,marginBottom:6,display:"block"}}>Название</label>
+      <input autoFocus value={f.name} onChange={e=>setF({...f,name:e.target.value})}
+        placeholder="Напр.: Воронка из Instagram в бот" style={{...iS(),marginBottom:18}}/>
+
+      <div style={{fontSize:12,color:C.t2,fontWeight:500,marginBottom:8}}>Шаги — выбери ссылки по порядку</div>
+      {f.steps.length>0&&<div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:12}}>
+        {f.steps.map((id,i)=>{
+          const l=links.find(x=>x.id===id);
+          return<div key={id} style={{display:"flex",alignItems:"center",gap:8,padding:"9px 11px",borderRadius:9,background:C.ib,border:"1px solid "+bd}}>
+            <span style={{fontSize:11,fontWeight:600,color:C.t2,width:16}}>{i+1}</span>
+            <span style={{flex:1,fontSize:12.5,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{l?l.name:"(удалена)"}</span>
+            <button onClick={()=>move(i,-1)} disabled={i===0} style={{background:"none",border:"none",color:C.t2,cursor:i===0?"default":"pointer",opacity:i===0?0.3:1,padding:2}}>↑</button>
+            <button onClick={()=>move(i,1)} disabled={i===f.steps.length-1} style={{background:"none",border:"none",color:C.t2,cursor:i===f.steps.length-1?"default":"pointer",opacity:i===f.steps.length-1?0.3:1,padding:2}}>↓</button>
+            <button onClick={()=>toggle(id)} style={{background:"none",border:"none",color:C.t2,cursor:"pointer",padding:2,fontSize:15,lineHeight:1}}>×</button>
+          </div>;
+        })}
+      </div>}
+
+      <div style={{maxHeight:200,overflowY:"auto" as const,border:"1px solid "+bd,borderRadius:10,padding:8,marginBottom:16}}>
+        {!links.length?<div style={{fontSize:12.5,color:C.t2,padding:10}}>Сначала создай ссылки.</div>
+        :links.filter(l=>!f.steps.includes(l.id)).map(l=>(
+          <button key={l.id} onClick={()=>toggle(l.id)}
+            style={{width:"100%",textAlign:"left" as const,padding:"8px 10px",borderRadius:8,border:"none",background:"transparent",color:C.t1,fontSize:12.5,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
+            <span style={{color:C.t2,fontSize:14}}>+</span>
+            <span style={{flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{l.name}</span>
+            <span style={{fontFamily:"monospace",fontSize:10.5,color:C.t2}}>/{l.code}</span>
+          </button>
+        ))}
+      </div>
+
+      {f.steps.length===1&&<div style={{fontSize:11.5,color:"#D97706",marginBottom:12}}>Нужно минимум 2 шага, чтобы считать конверсию</div>}
+      {err&&<div style={{fontSize:12.5,color:"#DC2626",marginBottom:12}}>{err}</div>}
+
+      <div style={{display:"flex",gap:10}}>
+        <button onClick={onClose} style={{flex:1,padding:"12px",borderRadius:10,border:"1px solid "+bd,background:"transparent",color:C.t1,fontSize:14,fontWeight:500,cursor:"pointer"}}>Отмена</button>
+        <button onClick={submit} disabled={!f.name.trim()||f.steps.length<2||saving}
+          style={{flex:1.5,padding:"12px",borderRadius:10,border:"none",
+            background:(f.name.trim()&&f.steps.length>=2)?`linear-gradient(160deg,${LT_CHART}F0,#1D4FD8)`:C.ib,
+            color:(f.name.trim()&&f.steps.length>=2)?"#fff":C.t2,fontSize:14,fontWeight:600,
+            cursor:(f.name.trim()&&f.steps.length>=2&&!saving)?"pointer":"default"}}>
+          {saving?"Сохраняю…":"Сохранить"}
+        </button>
+      </div>
+    </div>
+  </div>;
+}
 
 /* ============ CASH FLOW ============ */
 const CF_GREEN="#16A34A";
