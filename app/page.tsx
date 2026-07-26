@@ -979,7 +979,7 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
   const sideW=sideCollapsed?64:248;
 
   const pageContent=<>
-    {page==="dashboard"&&<SafePage name="Dashboard"><DashPage userId={user.id} name={userName} avatar={userAvatar} onNav={setPage} onAvatarChange={async(url:string)=>{setUserAvatar(url);await supabase.from("profiles").upsert({id:user.id,avatar_url:url},{onConflict:"id"});}}/></SafePage>}
+    {page==="dashboard"&&<SafePage name="Dashboard"><DashPage userId={user.id} name={userName} avatar={userAvatar} onNav={setPage} onAvatarChange={async(url:string)=>{setUserAvatar(url);const{error}=await supabase.from("profiles").upsert({id:user.id,avatar_url:url},{onConflict:"id"});if(error){console.error("Не удалось сохранить аватар в profiles:",error.message,error);throw error;}}}/></SafePage>}
     {page==="strategy"&&<SafePage name="War Room"><StrategyPage userId={user.id} onNav={setPage}/></SafePage>}
     {page==="crm"&&<SafePage name="CRM"><CrmPage userId={user.id}/></SafePage>}
     {page==="cashflow"&&<SafePage name="Cash Flow"><CashFlowPage userId={user.id}/></SafePage>}
@@ -1318,7 +1318,103 @@ const IgSvg=({size=18}:{size?:number})=><svg width={size} height={size} viewBox=
 const YtSvg=({size=18}:{size?:number})=><svg width={size} height={size} viewBox="0 0 24 24"><rect width="24" height="24" rx="5" fill="#FF0000"/><path d="M19.59 7.35A2.5 2.5 0 0017.83 5.6C16.37 5.2 12 5.2 12 5.2s-4.37 0-5.83.4A2.5 2.5 0 004.41 7.35 26 26 0 004 12a26 26 0 00.41 4.65A2.5 2.5 0 006.17 18.4c1.46.4 5.83.4 5.83.4s4.37 0 5.83-.4a2.5 2.5 0 001.76-1.75A26 26 0 0020 12a26 26 0 00-.41-4.65z" fill="white"/><path d="M10 15.2l5.2-3.2-5.2-3.2v6.4z" fill="#FF0000"/></svg>;
 const TgSvg=({size=18}:{size?:number})=><svg width={size} height={size} viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#29B6F6"/><path d="M5.5 11.8l11.5-4.4c.5-.2 1 .1.8.9l-2 9.2c-.1.6-.5.7-.9.5l-2.5-1.8-1.2 1.1c-.1.1-.3.2-.6.2l.2-2.6 4.8-4.3c.2-.2 0-.3-.3-.1L7.8 13.4 5.3 12.7c-.6-.2-.6-.6.2-.9z" fill="white"/></svg>;
 
+// ── Dashboard: надёжный вызов AI (не проглатывает ошибки, в отличие от paChat) ──
+async function dashAiAsk(system:string,user:string,maxTokens=700):Promise<string>{
+  const key=process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY;
+  if(!key)throw new Error("Не задан ключ AI.");
+  let res:Response;
+  try{
+    res=await fetch("https://api.deepseek.com/v1/chat/completions",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","Authorization":`Bearer ${key}`},
+      body:JSON.stringify({model:"deepseek-chat",max_tokens:maxTokens,temperature:0.5,messages:[{role:"system",content:system},{role:"user",content:user}]}),
+    });
+  }catch(e){throw new Error("Нет связи с AI. Проверь интернет.");}
+  let data:any=null;try{data=await res.json();}catch(e){data=null;}
+  if(!res.ok){
+    if(res.status===401)throw new Error("Ключ AI не принят.");
+    if(res.status===402)throw new Error("Закончился баланс AI-сервиса.");
+    if(res.status===429)throw new Error("Слишком много запросов к AI. Подожди немного.");
+    throw new Error(data?.error?.message||`AI вернул ошибку ${res.status}`);
+  }
+  const text=data?.choices?.[0]?.message?.content||"";
+  if(!String(text).trim())throw new Error("AI вернул пустой ответ.");
+  return stripMd(text);
+}
+
+// ── Радиальный прогресс (замена старому доунат-чарту, тоньше и строже) ──
+function DashRing({pct,size=118}:{pct:number,size?:number}){
+  const stroke=size*0.09;
+  const r=(size-stroke)/2;
+  const c=2*Math.PI*r;
+  const off=c*(1-Math.min(100,Math.max(0,pct))/100);
+  return(
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{display:"block"}}>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#EDEEF1" strokeWidth={stroke}/>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#2F6BFF" strokeWidth={stroke}
+        strokeDasharray={c} strokeDashoffset={off} strokeLinecap="round"
+        transform={`rotate(-90 ${size/2} ${size/2})`}
+        style={{transition:"stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1)"}}/>
+    </svg>
+  );
+}
+
+// ── График активности: колонка = день месяца, квадраты = выполненные задачи ──
+function DashActivityChart({days}:{days:{day:number,done:number,total:number,isToday:boolean}[]}){
+  const isMobile=useIsMobile();
+  const[hover,setHover]=useState<number|null>(null);
+  const maxDone=Math.max(1,...days.map(d=>d.done));
+  const rows=Math.min(8,maxDone);
+  const sq=isMobile?6:8,gap=2;
+  return(
+    <div style={{position:"relative" as const}}>
+      <div style={{display:"flex",alignItems:"flex-end",gap:isMobile?2:3,overflowX:"auto" as const,paddingBottom:6}}>
+        {days.map(d=>{
+          const shown=Math.min(rows,d.done);
+          const extra=d.done>rows;
+          return(
+            <div key={d.day} onMouseEnter={()=>setHover(d.day)} onMouseLeave={()=>setHover(h=>h===d.day?null:h)}
+              style={{display:"flex",flexDirection:"column-reverse",alignItems:"center",gap,cursor:"pointer",flexShrink:0,
+                minHeight:rows*(sq+gap),justifyContent:"flex-start",position:"relative" as const}}>
+              {Array.from({length:shown}).map((_,i)=>(
+                <div key={i} style={{width:sq,height:sq,borderRadius:2,
+                  background:d.isToday?"#2F6BFF":"#2F6BFF",
+                  opacity:d.done===0?0:0.55+0.45*Math.min(1,(i+1)/rows),
+                  animation:`dashSqIn 0.28s ease-out ${(i*22)}ms both`}}/>
+              ))}
+              {d.done===0&&<div style={{width:sq,height:sq,borderRadius:2,background:"#ECEDF0"}}/>}
+              {extra&&<div style={{fontSize:8,color:"#2F6BFF",fontWeight:600,marginBottom:1}}>+{d.done-rows}</div>}
+              <div style={{fontSize:9,color:d.isToday?"#2F6BFF":"#9AA0AC",fontWeight:d.isToday?700:500,marginTop:4}}>{d.day}</div>
+              {hover===d.day&&(
+                <div style={{position:"absolute" as const,bottom:"100%",left:"50%",transform:"translateX(-50%)",marginBottom:8,
+                  background:"#181818",color:"#fff",borderRadius:9,padding:"9px 13px",whiteSpace:"nowrap" as const,zIndex:20,
+                  boxShadow:"0 8px 22px rgba(0,0,0,0.22)",pointerEvents:"none" as const}}>
+                  <div style={{fontSize:11,fontWeight:600,marginBottom:3}}>{d.day} число</div>
+                  <div style={{fontSize:11,color:"rgba(255,255,255,0.7)"}}>Выполнено {d.done} из {d.total} задач</div>
+                  <div style={{fontSize:11,color:"#7FA8FF",fontWeight:700,marginTop:2}}>{d.total?Math.round(d.done/d.total*100):0}%</div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <style>{`@keyframes dashSqIn{from{opacity:0;transform:scaleY(0.4);}to{opacity:var(--o,1);transform:scaleY(1);}}`}</style>
+    </div>
+  );
+}
+
+// ── Индикатор состояния над карточкой (без эмодзи — цветная точка + текст) ──
+function DashStatusPill({level,text}:{level:"ok"|"warn"|"bad",text:string}){
+  const color=level==="bad"?"#EF4444":level==="warn"?"#F59E0B":"#10B981";
+  return(
+    <div style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:11,fontWeight:500,color,marginBottom:8}}>
+      <span style={{width:6,height:6,borderRadius:"50%",background:color,flexShrink:0}}/>{text}
+    </div>
+  );
+}
+
 function DashPage({userId,name,avatar,onNav,onAvatarChange}:{userId:string,name:string,avatar:string,onNav:(p:string)=>void,onAvatarChange:(url:string)=>void}){
+  const{dark}=useTheme();
   const leads = useTable("leads", userId);
   const pnl = useTable("pnl", userId);
   const kanban = useTable("kanban", userId);
@@ -1326,14 +1422,38 @@ function DashPage({userId,name,avatar,onNav,onAvatarChange}:{userId:string,name:
   const planner = useTable("planner_tasks", userId);
   const content = useTable("content", userId);
   const calls = useTable("calls", userId);
-  const media = useTable("media", userId);
+  const goals = useTable("goals", userId);
   const[avatarUploading,setAvatarUploading]=useState(false);
+  const[avatarErr,setAvatarErr]=useState("");
   const isMobile=useIsMobile();
   const td = today();
   const cm = td.substring(0,7);
+  const bd=C.bd;
 
+  // ── ссылки (Link Tracker) для карточки «Переходы» ──
+  const[trLinks,setTrLinks]=useState<any[]>([]);
+  const[trClicks,setTrClicks]=useState<any[]>([]);
+  const[trSel,setTrSel]=useState<string>(()=>{try{return localStorage.getItem("dash_tr_link_"+userId)||"all";}catch{return "all";}});
+  useEffect(()=>{
+    (async()=>{
+      try{
+        const[lr,cr]=await Promise.all([
+          supabase.from("tracker_links").select("id,name,company,code").eq("user_id",userId),
+          supabase.from("tracker_clicks").select("link_id,created_at").eq("user_id",userId).limit(20000),
+        ]);
+        setTrLinks(lr.data||[]);setTrClicks(cr.data||[]);
+      }catch(e){}
+    })();
+  },[userId]);
+  const chooseTrLink=(id:string)=>{setTrSel(id);try{localStorage.setItem("dash_tr_link_"+userId,id);}catch{}};
+  const trMonthClicks=useMemo(()=>{
+    const inMonth=trClicks.filter((c:any)=>String(c.created_at||"").slice(0,7)===cm);
+    return trSel==="all"?inMonth.length:inMonth.filter((c:any)=>c.link_id===trSel).length;
+  },[trClicks,trSel,cm]);
+
+  // ── аватар: загрузка с явной обработкой ошибок (иначе сбой в базе проходит незаметно) ──
   const uploadAvatar=async(file:File)=>{
-    setAvatarUploading(true);
+    setAvatarUploading(true);setAvatarErr("");
     try{
       const compressed=await new Promise<Blob>((resolve,reject)=>{
         const img=new Image();
@@ -1347,189 +1467,359 @@ function DashPage({userId,name,avatar,onNav,onAvatarChange}:{userId:string,name:
           const ox=(img.width-s)/2,oy=(img.height-s)/2;
           ctx.drawImage(img,ox,oy,s,s,0,0,SIZE,SIZE);
           URL.revokeObjectURL(obj);
-          canvas.toBlob(b=>b?resolve(b):reject(),"image/jpeg",0.85);
+          canvas.toBlob(b=>b?resolve(b):reject(new Error("Не удалось обработать изображение")),"image/jpeg",0.85);
         };
-        img.onerror=reject;img.src=obj;
+        img.onerror=()=>reject(new Error("Не удалось открыть файл"));img.src=obj;
       });
       const path=`${userId}/avatar.jpg`;
-      await supabase.storage.from("files").upload(path,compressed,{upsert:true,contentType:"image/jpeg"});
+      const up=await supabase.storage.from("files").upload(path,compressed,{upsert:true,contentType:"image/jpeg"});
+      if(up.error)throw up.error;
       const{data}=supabase.storage.from("files").getPublicUrl(path);
-      onAvatarChange(data.publicUrl+"?t="+Date.now());
-    }catch(e){console.error(e);}
+      const url=data.publicUrl+"?t="+Date.now();
+      await onAvatarChange(url); // сохраняет и в profiles — ошибку теперь видно (см. AppLayout)
+    }catch(e:any){
+      console.error("Загрузка аватара не удалась:",e);
+      setAvatarErr("Не удалось сохранить фото. Попробуй ещё раз.");
+    }
     finally{setAvatarUploading(false);}
   };
 
   const todayTasks = kanban.data.filter((t:any)=>t.date===td&&t.type!=="delegate");
   const todayGoalTasks = goalTasks.data.filter((t:any)=>t.date===td&&t.type!=="delegate");
-  const todayPlanner = planner.data.filter((t:any)=>t.due_date===td).map((t:any)=>({id:t.id,text:t.title,status:t.done?"done":"todo",done:!!t.done,type:"biz",due_time:t.due_time,_planner:true}));
+  const todayPlanner = planner.data.filter((t:any)=>t.due_date===td).map((t:any)=>({id:t.id,text:t.title,status:t.done?"done":"todo",done:!!t.done,type:"biz",due_time:t.due_time,priority:t.priority,_planner:true}));
   const seenIds = new Set(todayTasks.map((t:any)=>t.id));
   const allTodayTasks = [...todayPlanner, ...todayTasks, ...todayGoalTasks.filter((t:any)=>!seenIds.has(t.id))];
   const doneTodayTasks = allTodayTasks.filter((t:any)=>t.status==="done"||t.done);
+  const pctToday = allTodayTasks.length?Math.round(doneTodayTasks.length/allTodayTasks.length*100):0;
 
   const cI = pnl.data.filter((t:any)=>t.type==="income"&&t.date?.startsWith(cm)).reduce((s:number,t:any)=>s+(t.amount||0),0);
   const cE = pnl.data.filter((t:any)=>t.type==="expense"&&t.date?.startsWith(cm)).reduce((s:number,t:any)=>s+(t.amount||0),0);
   const cP = cI-cE;
+  const prevMonth=(()=>{const d=new Date();d.setMonth(d.getMonth()-1);return d.toISOString().slice(0,7);})();
+  const pI = pnl.data.filter((t:any)=>t.type==="income"&&t.date?.startsWith(prevMonth)).reduce((s:number,t:any)=>s+(t.amount||0),0);
+  const pE = pnl.data.filter((t:any)=>t.type==="expense"&&t.date?.startsWith(prevMonth)).reduce((s:number,t:any)=>s+(t.amount||0),0);
+  const pP = pI-pE;
+  const profitUp = pP!==0?cP>pP:cP>0;
+  const profitDeltaPct = pP!==0?Math.round((cP-pP)/Math.abs(pP)*100):null;
 
-  const latestMedia = useMemo(()=>{
-    const sorted=[...media.data].sort((a:any,b:any)=>b.date?.localeCompare(a.date));
-    return sorted[0]||null;
-  },[media.data]);
+  const leadsThisMonth = leads.data.filter((l:any)=>String(l.created_at||"").slice(0,7)===cm);
+  const leadsPrevMonth = leads.data.filter((l:any)=>String(l.created_at||"").slice(0,7)===prevMonth);
+  const leadsDeltaPct = leadsPrevMonth.length>0?Math.round((leadsThisMonth.length-leadsPrevMonth.length)/leadsPrevMonth.length*100):null;
 
-  const upcomingCalls = useMemo(()=>{
+  const contentToday = content.data.filter((c:any)=>c.publish_date===td);
+  const contentOverdue = content.data.filter((c:any)=>c.publish_date&&c.publish_date<td&&c.status!=="published");
+
+  const upcomingCallsToday = useMemo(()=>{
+    return calls.data.filter((c:any)=>c.date===td).sort((a:any,b:any)=>(a.time_start||"").localeCompare(b.time_start||""));
+  },[calls.data, td]);
+  const nextCall = useMemo(()=>{
+    const now=new Date();
     return calls.data
       .filter((c:any)=>c.date>=td&&c.time_start)
-      .sort((a:any,b:any)=>a.date===b.date?(a.time_start||"").localeCompare(b.time_start||""):a.date.localeCompare(b.date))
-      .slice(0,5);
-  },[calls.data, td]);
-
-  const minsUntilCall = (c:any) => {
-    if(!c.time_start)return 999;
-    const now = new Date();
-    const parts = (c.time_start||"00:00").split(":");
-    const h=parseInt(parts[0]||"0"), m2=parseInt(parts[1]||"0");
-    const callTime = new Date(c.date);
-    callTime.setHours(h, m2, 0, 0);
-    return Math.round((callTime.getTime() - now.getTime()) / 60000);
-  };
-
+      .map((c:any)=>({c,mins:(()=>{const[h,m]=(c.time_start||"0:0").split(":").map(Number);const t=new Date(c.date);t.setHours(h,m,0,0);return Math.round((t.getTime()-now.getTime())/60000);})()}))
+      .filter(x=>x.mins>=-5)
+      .sort((a,b)=>a.mins-b.mins)[0]||null;
+  },[calls.data,td]);
   const callLabel = (c:any) => c.goal === "Своя цель" ? (c.custom_goal || "Созвон") : c.goal;
 
+  const leadsNew = leads.data.filter((l:any)=>l.status==="new").length;
+  const leadsWaiting = leads.data.filter((l:any)=>l.status==="contact"||l.status==="call").length;
+  const leadsRejected = leads.data.filter((l:any)=>l.status==="rejected").length;
+
+  const mainGoal = goals.data.find((g:any)=>!g.is_system_pinned&&!g.parent_id)||goals.data.find((g:any)=>!g.is_system_pinned);
+  const subGoals = mainGoal?goals.data.filter((g:any)=>g.parent_id===mainGoal.id):[];
+  const goalProgress=(g:any)=>{
+    const gt=goalTasks.data.filter((t:any)=>t.goal_id===g.id&&t.type!=="delegate");
+    if(!gt.length)return 0;
+    return Math.round(gt.filter((t:any)=>t.done||t.status==="done").length/gt.length*100);
+  };
+
+  // ── 30 дней активности для графика ──
+  const activityDays = useMemo(()=>{
+    const now=new Date();const y=now.getFullYear(),m=now.getMonth();
+    const daysInMonth=new Date(y,m+1,0).getDate();
+    const byDay:Record<number,{done:number,total:number}>={};
+    const all=[...kanban.data,...goalTasks.data,...planner.data.map((t:any)=>({date:t.due_date,done:t.done}))];
+    all.forEach((t:any)=>{
+      const dt=t.date;if(!dt||!dt.startsWith(cm))return;
+      const day=Number(dt.slice(8,10));if(!day)return;
+      byDay[day]=byDay[day]||{done:0,total:0};
+      byDay[day].total++;
+      if(t.done||t.status==="done")byDay[day].done++;
+    });
+    const todayDay=Number(td.slice(8,10));
+    return Array.from({length:daysInMonth},(_,i)=>{
+      const day=i+1;const b=byDay[day]||{done:0,total:0};
+      return{day,done:b.done,total:b.total,isToday:day===todayDay};
+    });
+  },[kanban.data,goalTasks.data,planner.data,cm,td]);
+
+  // ── быстрая сводка дня ──
+  const daySummary=`Сегодня: ${allTodayTasks.length} задач${allTodayTasks.length?` · ${pctToday}% выполнено`:""} · ${upcomingCallsToday.length} созвон${upcomingCallsToday.length===1?"":upcomingCallsToday.length>=2&&upcomingCallsToday.length<=4?"а":"ов"} · ${contentToday.length} публикаци${contentToday.length===1?"я":contentToday.length>=2&&contentToday.length<=4?"и":"й"} · ${leadsNew} новых лидов`;
+
+  // ── интеллектуальные предупреждения по карточкам ──
+  const taskWarn:{level:"ok"|"warn"|"bad",text:string}=
+    allTodayTasks.length===0?{level:"ok",text:"Задач на сегодня нет"}
+    :pctToday>=80?{level:"ok",text:"Всё по плану"}
+    :allTodayTasks.length-doneTodayTasks.length>=8?{level:"warn",text:"Высокая нагрузка сегодня"}
+    :{level:"ok",text:"В работе"};
+  const contentWarn:{level:"ok"|"warn"|"bad",text:string}|null=
+    contentOverdue.length>0?{level:"bad",text:`Просрочено публикаций: ${contentOverdue.length}`}
+    :contentToday.length>0?{level:"warn",text:"Есть публикации на сегодня"}
+    :null;
+  const crmWarn:{level:"ok"|"warn"|"bad",text:string}|null=
+    leadsWaiting>=5?{level:"warn",text:"Много лидов ждут ответа"}:null;
+
+  // ── AI-ассистент по ситуации ──
+  const[aiText,setAiText]=useState("");
+  const[aiBusy,setAiBusy]=useState(false);
+  const[aiErr,setAiErr]=useState("");
+  const runSituationAI=async()=>{
+    if(aiBusy)return;
+    setAiBusy(true);setAiErr("");setAiText("");
+    const ctx=[
+      `Задачи сегодня: всего ${allTodayTasks.length}, выполнено ${doneTodayTasks.length}, осталось ${allTodayTasks.length-doneTodayTasks.length} (${pctToday}%).`,
+      `Контент сегодня: запланировано публикаций ${contentToday.length}${contentOverdue.length?`, просрочено ${contentOverdue.length}`:""}.`,
+      `Созвоны сегодня: ${upcomingCallsToday.length}${nextCall?`, ближайший через ${nextCall.mins} мин ("${callLabel(nextCall.c)}")`:""}.`,
+      `CRM: новых лидов ${leadsNew}, ожидают ответа ${leadsWaiting}, отказов ${leadsRejected}. За месяц лидов: ${leadsThisMonth.length}${leadsDeltaPct!==null?` (${leadsDeltaPct>=0?"+":""}${leadsDeltaPct}% к прошлому месяцу)`:""}.`,
+      `Финансы за месяц: доход ${fmt$(cI)} ₽, расход ${fmt$(cE)} ₽, чистая прибыль ${fmt$(cP)} ₽${profitDeltaPct!==null?` (${profitDeltaPct>=0?"+":""}${profitDeltaPct}% к прошлому месяцу)`:""}.`,
+      mainGoal?`Главная цель: «${mainGoal.name}», дедлайн ${mainGoal.deadline||"не задан"}.`:"",
+    ].filter(Boolean).join("\n");
+    try{
+      const t=await dashAiAsk(
+        "Ты — личный аналитик бизнеса пользователя. По присланным данным дня пишешь связный текст на русском языке, как будто рассказываешь человеку итог дня. Пиши сплошным текстом, БЕЗ списков, БЕЗ таблиц, БЕЗ markdown-разметки, 4-6 предложений. Тон спокойный, деловой, по существу. Упоминай только то, что реально есть в данных — если каких-то данных нет или они нулевые, просто не говори об этом, не выдумывай.",
+        `Данные на сегодня:\n${ctx}\n\nНапиши краткий связный анализ ситуации в стиле личного аналитика.`,
+        500);
+      setAiText(t);
+    }catch(e:any){setAiErr(e?.message||"Не удалось провести анализ.");}
+    setAiBusy(false);
+  };
+
+  const dCard:React.CSSProperties={background:dark?"rgba(255,255,255,0.03)":"#fff",border:"1px solid "+bd,borderRadius:14,padding:isMobile?16:22,transition:"border-color 0.15s"};
+  const clickable=(fn:()=>void):React.CSSProperties=>({cursor:"pointer"});
+  const dow=new Date().getDay();
+
   return <>
-    {/* Hero greeting with avatar */}
-    <div style={{background:`linear-gradient(135deg,${C.dk},${C.da})`,borderRadius:10,padding:isMobile?"18px 20px":"28px 36px",marginBottom:isMobile?16:24,color:"#fff",display:"flex",alignItems:"center",gap:16}}>
-      <label style={{cursor:"pointer",flexShrink:0}}>
-        <div style={{width:isMobile?52:64,height:isMobile?52:64,borderRadius:"50%",border:"3px solid rgba(255,255,255,0.3)",overflow:"hidden",background:"rgba(255,255,255,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-          {avatarUploading
-            ? <div style={{width:20,height:20,border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
-            : avatar
-            ? <img src={avatar} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>
-            : <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          }
-        </div>
-        <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0])uploadAvatar(e.target.files[0]);}}/>
-      </label>
+    <style>{`.dash-card{animation:dashFadeIn 0.22s ease-out both;} @keyframes dashFadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}} .dash-card:hover{border-color:#2F6BFF55 !important;}`}</style>
+
+    {/* ── Шапка ── */}
+    <div style={{display:"flex",alignItems:isMobile?"flex-start":"center",justifyContent:"space-between",gap:16,marginBottom:20,flexWrap:"wrap" as const}}>
       <div>
-        <div style={{fontSize:isMobile?18:24,fontWeight:700,marginBottom:4}}>{getGreeting()}{name?", "+name:""}</div>
-        <div style={{fontSize:isMobile?12:14,opacity:0.6}}>Сегодня {fmtDate(new Date())}</div>
+        <div style={{fontSize:isMobile?19:24,fontWeight:600,color:C.t1,letterSpacing:"-0.02em"}}>{getGreeting()}{name?`, ${name}`:""}.</div>
+        <div style={{fontSize:13,color:C.t2,marginTop:3}}>Сегодня {WD[dow].toLowerCase()}, {new Date().getDate()} {MR[new Date().getMonth()]}</div>
+        <div style={{fontSize:12.5,color:C.t2,marginTop:8}}>{daySummary}</div>
+      </div>
+      <div style={{display:"flex",alignItems:"center",gap:14,flexWrap:"wrap" as const}}>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap" as const}}>
+          {[{l:"Задача",p:"strategy"},{l:"Лид",p:"crm"},{l:"Контент",p:"content"},{l:"Созвон",p:"calls"}].map(a=>(
+            <button key={a.p} onClick={()=>onNav(a.p)}
+              style={{padding:"7px 12px",borderRadius:9,border:"1px solid "+bd,background:"transparent",color:C.t1,fontSize:12,fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              {a.l}
+            </button>
+          ))}
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <label style={{cursor:"pointer",flexShrink:0}}>
+            <div style={{width:38,height:38,borderRadius:"50%",border:"1px solid "+bd,overflow:"hidden",background:C.ib,display:"flex",alignItems:"center",justifyContent:"center"}}>
+              {avatarUploading
+                ? <div style={{width:14,height:14,border:"2px solid "+bd,borderTopColor:C.t2,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+                : avatar
+                ? <img src={avatar} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>
+                : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.6"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              }
+            </div>
+            <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0])uploadAvatar(e.target.files[0]);}}/>
+          </label>
+          {!isMobile&&<span style={{fontSize:13,fontWeight:500,color:C.t1}}>{name}</span>}
+          <button onClick={()=>onNav("profile")} title="Настройки" style={{width:34,height:34,borderRadius:9,border:"1px solid "+bd,background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    {avatarErr&&<div style={{fontSize:12,color:"#DC2626",marginTop:-12,marginBottom:16}}>{avatarErr}</div>}
+
+    {/* ── KPI: 4 карточки ── */}
+    <div className="dash-card" style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)",gap:isMobile?10:14,marginBottom:14}}>
+      {/* 1. Выполнение задач */}
+      <div className="dash-card" onClick={()=>onNav("strategy")} style={{...dCard,...clickable(()=>{}),display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center" as const}}>
+        <DashStatusPill level={taskWarn.level} text={taskWarn.text}/>
+        <div style={{position:"relative" as const,width:isMobile?96:118,height:isMobile?96:118}}>
+          <DashRing pct={pctToday} size={isMobile?96:118}/>
+          <div style={{position:"absolute" as const,inset:0,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column" as const}}>
+            <span style={{fontSize:isMobile?22:28,fontWeight:600,color:C.t1,letterSpacing:"-0.02em"}}>{pctToday}%</span>
+          </div>
+        </div>
+        <div style={{fontSize:12,color:C.t2,marginTop:10}}>Выполнено задач · {doneTodayTasks.length}/{allTodayTasks.length}</div>
+      </div>
+
+      {/* 2. Лиды */}
+      <div className="dash-card" onClick={()=>onNav("crm")} style={{...dCard,...clickable(()=>{})}}>
+        <div style={{fontSize:isMobile?30:38,fontWeight:600,color:C.t1,letterSpacing:"-0.03em",lineHeight:1}}>{leadsThisMonth.length}</div>
+        <div style={{fontSize:12.5,color:C.t2,marginTop:8}}>Лидов за месяц</div>
+        {leadsDeltaPct!==null&&<div style={{display:"flex",alignItems:"center",gap:5,marginTop:10,fontSize:11.5,fontWeight:600,color:leadsDeltaPct>=0?"#10B981":"#EF4444"}}>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="19" x2="12" y2="5"/><polyline points={leadsDeltaPct>=0?"5 12 12 5 19 12":"5 12 12 19 19 12"}/></svg>
+          {leadsDeltaPct>=0?"+":""}{leadsDeltaPct}% к прошлому месяцу
+        </div>}
+        {crmWarn&&<div style={{marginTop:8}}><DashStatusPill level={crmWarn.level} text={crmWarn.text}/></div>}
+      </div>
+
+      {/* 3. Переходы */}
+      <div className="dash-card" style={{...dCard}}>
+        <div onClick={()=>onNav("tracker")} style={{cursor:"pointer"}}>
+          <div style={{fontSize:isMobile?30:38,fontWeight:600,color:C.t1,letterSpacing:"-0.03em",lineHeight:1}}>{trMonthClicks}</div>
+          <div style={{fontSize:12.5,color:C.t2,marginTop:8}}>Переходов за месяц</div>
+        </div>
+        {trLinks.length>0&&<select value={trSel} onChange={e=>{e.stopPropagation();chooseTrLink(e.target.value);}} onClick={e=>e.stopPropagation()}
+          style={{marginTop:10,width:"100%",padding:"6px 8px",borderRadius:7,border:"1px solid "+bd,background:C.ib,color:C.t2,fontSize:11,outline:"none",fontFamily:"'Inter',sans-serif"}}>
+          <option value="all">Все ссылки</option>
+          {trLinks.map((l:any)=><option key={l.id} value={l.id}>{l.name||l.code}</option>)}
+        </select>}
+        {!trLinks.length&&<div style={{fontSize:11,color:C.t2,marginTop:10}}>Ссылок пока нет</div>}
+      </div>
+
+      {/* 4. Чистая прибыль */}
+      <div className="dash-card" onClick={()=>onNav("cashflow")} style={{...dCard,...clickable(()=>{})}}>
+        <div style={{fontSize:isMobile?24:30,fontWeight:600,color:C.t1,letterSpacing:"-0.03em",lineHeight:1}}>{cP>=0?"":"−"}{fmt$(Math.abs(cP))} ₽</div>
+        <div style={{fontSize:12.5,color:C.t2,marginTop:8}}>Чистая прибыль</div>
+        {pP!==0&&<div style={{display:"flex",alignItems:"center",gap:5,marginTop:10,fontSize:11.5,fontWeight:600,color:profitUp?"#10B981":"#EF4444"}}>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="19" x2="12" y2="5"/><polyline points={profitUp?"5 12 12 5 19 12":"5 12 12 19 19 12"}/></svg>
+          {profitDeltaPct!==null?`${profitDeltaPct>=0?"+":""}${profitDeltaPct}%`:""} к прошлому месяцу
+        </div>}
       </div>
     </div>
 
-    {/* Stat cards — 2 cols mobile, 4 cols desktop */}
-    <div style={{display:"grid",gridTemplateColumns:isMobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:isMobile?10:16,marginBottom:isMobile?16:24}}>
-      {[{l:"Задачи",v:allTodayTasks.filter((t:any)=>t.status!=="done"&&!t.done).length,c:C.a},{l:"Лиды",v:leads.data.length,c:C.g},{l:"Публикации",v:content.data.filter((x:any)=>x.status==="published").length,c:C.y},{l:"Прибыль",v:(cP>=0?"+":"")+fmt$(cP)+" ₽",c:cP>=0?C.g:C.r}].map((s,i)=><Card key={i} style={{padding:isMobile?"14px 16px":"22px 24px"}}>
-        <div style={{fontSize:isMobile?22:28,fontWeight:700,marginBottom:4}}>{s.v}</div>
-        <div style={{fontSize:isMobile?11:13,color:C.t2}}>{s.l}</div>
-      </Card>)}
+    {/* ── AI-ассистент по ситуации ── */}
+    <div className="dash-card" style={{...dCard,marginBottom:14}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap" as const,marginBottom:aiText||aiBusy||aiErr?14:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{width:32,height:32,borderRadius:8,background:C.ib,display:"flex",alignItems:"center",justifyContent:"center",color:"#2F6BFF",flexShrink:0}}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 2a4 4 0 014 4v2a4 4 0 01-8 0V6a4 4 0 014-4z"/><path d="M6 12v1a6 6 0 0012 0v-1M12 19v3M8 22h8"/></svg>
+          </div>
+          <div style={{fontSize:15,fontWeight:600,color:C.t1}}>ИИ-ассистент по ситуации</div>
+        </div>
+        <button onClick={runSituationAI} disabled={aiBusy}
+          style={{padding:"9px 18px",borderRadius:9,border:"none",background:aiBusy?C.ib:"#2F6BFF",color:aiBusy?C.t2:"#fff",fontSize:13,fontWeight:600,cursor:aiBusy?"default":"pointer"}}>
+          {aiBusy?"Анализирую…":aiText?"Провести анализ заново":"Провести анализ"}
+        </button>
+      </div>
+      {aiBusy&&<div style={{fontSize:13,color:C.t2}}>Собираю данные по задачам, контенту, созвонам, CRM и финансам…</div>}
+      {aiErr&&!aiBusy&&<div style={{fontSize:13,color:"#DC2626"}}>{aiErr}</div>}
+      {aiText&&!aiBusy&&<div style={{fontSize:14,color:C.t1,lineHeight:1.75}}>{aiText}</div>}
     </div>
 
-    {/* Donut + Media — stack on mobile */}
-    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:isMobile?12:16,marginBottom:isMobile?12:24}}>
-      <Card style={{padding:isMobile?16:24}}>
-        <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}>
-          <span style={{fontSize:isMobile?14:16,fontWeight:600}}>Прогресс задач</span>
-          <button onClick={()=>onNav("strategy")} style={{fontSize:13,color:C.a,background:"none",border:"none",cursor:"pointer"}}>Стратегия</button>
+    {/* ── Задачи сегодня + Контент сегодня ── */}
+    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:14,marginBottom:14}}>
+      <div className="dash-card" style={dCard}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+          <span style={{fontSize:15,fontWeight:600,color:C.t1}}>Задачи сегодня</span>
+          <button onClick={()=>onNav("strategy")} style={{fontSize:12.5,color:"#2F6BFF",background:"none",border:"none",cursor:"pointer",fontWeight:500}}>Все →</button>
         </div>
         {allTodayTasks.length===0
-          ? <div style={{padding:"20px 0",textAlign:"center",color:C.t2,fontSize:14}}>На сегодня задач нет</div>
-          : <div style={{display:"flex",alignItems:"center",gap:isMobile?16:24}}>
-              <DonutChart done={doneTodayTasks.length} total={allTodayTasks.length} size={isMobile?110:140}/>
-              <div style={{display:"flex",flexDirection:"column",gap:8,flex:1}}>
-                <div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:10,height:10,borderRadius:3,background:C.a}}/><span style={{fontSize:13,color:C.t2}}>Выполнено</span><span style={{fontSize:14,fontWeight:700,marginLeft:"auto"}}>{doneTodayTasks.length}</span></div>
-                <div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:10,height:10,borderRadius:3,background:C.bd}}/><span style={{fontSize:13,color:C.t2}}>Осталось</span><span style={{fontSize:14,fontWeight:700,marginLeft:"auto"}}>{allTodayTasks.length-doneTodayTasks.length}</span></div>
-                <div style={{height:1,background:C.bd}}/>
-                <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:13,color:C.t2}}>Всего</span><span style={{fontSize:14,fontWeight:700,marginLeft:"auto"}}>{allTodayTasks.length}</span></div>
-              </div>
-            </div>
-        }
-      </Card>
-
-      <div onClick={()=>onNav("media")} style={{cursor:"pointer",background:C.w,borderRadius:10,padding:isMobile?16:24,boxShadow:C.sh}}>
-        <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}>
-          <span style={{fontSize:isMobile?14:16,fontWeight:600}}>Медийность</span>
-          <span style={{fontSize:12,color:C.a}}>Подробнее →</span>
-        </div>
-        {!latestMedia
-          ? <div style={{padding:"20px 0",textAlign:"center",color:C.t2,fontSize:14}}>Нет данных</div>
-          : <div style={{display:"flex",flexDirection:"column",gap:8}}>
-              <div style={{fontSize:11,color:C.t2,marginBottom:2}}>Обновлено: {latestMedia.date}</div>
-              {[{label:"Instagram",key:"ig",icon:<IgSvg size={16}/>},{label:"YouTube",key:"yt",icon:<YtSvg size={16}/>},{label:"Telegram",key:"tg",icon:<TgSvg size={16}/>}].map(p=><div key={p.key} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:C.bg,borderRadius:8,border:"1px solid "+C.bd}}>
-                {p.icon}
-                <span style={{fontSize:13,flex:1,fontWeight:500}}>{p.label}</span>
-                <span style={{fontSize:isMobile?14:18,fontWeight:800,color:C.t1}}>{fmt$(latestMedia[p.key]||0)}</span>
-              </div>)}
-            </div>
-        }
-      </div>
-    </div>
-
-    {/* Tasks + P&L — stack on mobile */}
-    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:isMobile?12:16,marginBottom:isMobile?12:16}}>
-      <Card style={{padding:isMobile?16:24}}>
-        <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}><span style={{fontSize:isMobile?14:16,fontWeight:600}}>Задачи сегодня</span><button onClick={()=>onNav("strategy")} style={{fontSize:13,color:C.a,background:"none",border:"none",cursor:"pointer"}}>Стратегия</button></div>
-        {allTodayTasks.filter((t:any)=>t.status!=="done"&&!t.done).length===0
-          ? <div style={{padding:"16px 0",textAlign:"center",color:C.t2,fontSize:14}}>Нет задач</div>
-          : <div style={{display:"flex",flexDirection:"column",gap:8}}>{allTodayTasks.filter((t:any)=>t.status!=="done"&&!t.done).slice(0,5).map((t:any)=><div key={t.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:C.bg,borderRadius:8,borderLeft:"3px solid "+(t.type==="biz"?C.a:C.y)}}>
-            <span style={{fontSize:13,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.text}</span>
-            {!isMobile&&<Tag label={tsLbl(t.status||"todo")} color={tsCol(t.status||"todo")}/>}
-            <span style={{fontSize:11,color:C.t2,flexShrink:0}}>{t.mins!=null?t.mins+"м":(t.due_time||"")}</span>
-          </div>)}</div>
-        }
-      </Card>
-      <Card style={{padding:isMobile?16:24}}>
-        <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}><span style={{fontSize:isMobile?14:16,fontWeight:600}}>P&L (месяц)</span><button onClick={()=>onNav("pnl")} style={{fontSize:13,color:C.a,background:"none",border:"none",cursor:"pointer"}}>Подробнее</button></div>
-        {cI===0&&cE===0
-          ? <div style={{padding:"16px 0",textAlign:"center",color:C.t2,fontSize:14}}>Нет данных</div>
-          : <>
-              <PnlBarChart income={cI} expense={cE} width={isMobile?260:280} height={isMobile?70:80}/>
-              <div style={{display:"flex",gap:8,marginTop:8}}>
-                <div style={{flex:1,padding:"8px 10px",background:"#F0FDF4",borderRadius:8,textAlign:"center"}}><div style={{fontSize:10,color:C.g,fontWeight:600}}>Доходы</div><div style={{fontSize:13,fontWeight:700,color:C.g}}>+{fmt$(cI)} ₽</div></div>
-                <div style={{flex:1,padding:"8px 10px",background:"#FEF2F2",borderRadius:8,textAlign:"center"}}><div style={{fontSize:10,color:C.r,fontWeight:600}}>Расходы</div><div style={{fontSize:13,fontWeight:700,color:C.r}}>{fmt$(cE)} ₽</div></div>
-              </div>
-            </>
-        }
-      </Card>
-    </div>
-
-    {/* Calls */}
-    <Card style={{padding:isMobile?16:24,marginBottom:isMobile?8:0}}>
-      <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}>
-        <span style={{fontSize:isMobile?14:16,fontWeight:600}}>Созвоны</span>
-        <button onClick={()=>onNav("calls")} style={{fontSize:13,color:C.a,background:"none",border:"none",cursor:"pointer"}}>Все →</button>
-      </div>
-      {upcomingCalls.length===0
-        ? <div style={{padding:"16px 0",textAlign:"center",color:C.t2,fontSize:14}}>Созвоны не запланированы</div>
-        : <div style={{display:"flex",flexDirection:"column",gap:8}}>
-            {upcomingCalls.map((c:any)=>{
-              const isToday = c.date === td;
-              const mins = isToday ? minsUntilCall(c) : null;
-              const isPast = mins !== null && mins < 0;
-              const isImminentOrNow = mins !== null && mins >= 0;
-              return <div key={c.id} style={{display:"flex",alignItems:"center",gap:10,padding:isMobile?"10px 12px":"12px 16px",background:isToday?"#FFF7ED":C.bg,borderRadius:8,borderLeft:"3px solid "+(isToday?C.y:C.a)}}>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:isMobile?13:14,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{callLabel(c)}</div>
-                  <div style={{fontSize:11,color:C.t2,marginTop:2}}>{c.date} в {c.time_start}</div>
+          ?<div style={{padding:"20px 0",textAlign:"center" as const,color:C.t2,fontSize:13}}>На сегодня задач нет</div>
+          :<div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {allTodayTasks.slice(0,6).map((t:any)=>{
+              const pColor=t.priority==="high"?"#EF4444":t.priority==="medium"?"#F59E0B":t.priority==="low"?"#2F6BFF":C.t2;
+              const isDone=t.status==="done"||t.done;
+              return(
+                <div key={t.id} onClick={()=>onNav("strategy")} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 11px",background:C.ib,borderRadius:9,borderLeft:"3px solid "+pColor,cursor:"pointer"}}>
+                  <span style={{width:15,height:15,borderRadius:4,border:"1.5px solid "+(isDone?"#10B981":bd),background:isDone?"#10B981":"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    {isDone&&<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}
+                  </span>
+                  <span style={{fontSize:13,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:C.t1,textDecoration:isDone?"line-through":"none",opacity:isDone?0.5:1}}>{t.text}</span>
+                  {t.due_time&&<span style={{fontSize:11,color:C.t2,flexShrink:0}}>{t.due_time}</span>}
                 </div>
-                {isToday && isImminentOrNow && <span style={{fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:10,background:C.y+"22",color:C.y,whiteSpace:"nowrap"}}>через {mins}м</span>}
-                {isToday && isPast && <span style={{fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:10,background:C.r+"18",color:C.r}}>Сегодня</span>}
-                {!isToday && <span style={{fontSize:11,color:C.t2,flexShrink:0}}>{c.date}</span>}
-              </div>;
+              );
             })}
-          </div>
-      }
-    </Card>
+          </div>}
+      </div>
 
-    {/* Kirill Scales AI widget */}
-    <div onClick={()=>onNav("ai")} style={{marginTop:isMobile?12:16,background:`linear-gradient(135deg,${C.dk},#2a2a2a)`,borderRadius:10,padding:isMobile?"14px 16px":"18px 24px",cursor:"pointer",display:"flex",alignItems:"center",gap:16,border:"1px solid rgba(255,255,255,0.08)",boxShadow:"0 4px 20px rgba(0,0,0,0.15)",transition:"transform 0.15s,box-shadow 0.15s"}}
-      onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(-1px)";(e.currentTarget as HTMLElement).style.boxShadow="0 8px 28px rgba(0,0,0,0.2)";}}
-      onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(0)";(e.currentTarget as HTMLElement).style.boxShadow="0 4px 20px rgba(0,0,0,0.15)";}}>
-      <img src="/ai-avatar.png" style={{width:isMobile?48:56,height:isMobile?48:56,borderRadius:10,objectFit:"cover",flexShrink:0,border:"2px solid rgba(255,255,255,0.15)"}} alt="AI"/>
-      <div style={{flex:1,minWidth:0}}>
-        <div style={{fontSize:isMobile?14:16,fontWeight:700,color:"#fff",marginBottom:3}}>Kirill Scales AI</div>
-        <div style={{fontSize:isMobile?11:12,color:"rgba(255,255,255,0.5)",lineHeight:1.5}}>Твой AI-ассистент по бизнесу и маркетингу. Спроси что угодно.</div>
+      <div className="dash-card" style={dCard}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+          <span style={{fontSize:15,fontWeight:600,color:C.t1}}>Контент сегодня</span>
+          <button onClick={()=>onNav("content")} style={{fontSize:12.5,color:"#2F6BFF",background:"none",border:"none",cursor:"pointer",fontWeight:500}}>Все →</button>
+        </div>
+        {contentWarn&&<div style={{marginBottom:10}}><DashStatusPill level={contentWarn.level} text={contentWarn.text}/></div>}
+        {contentToday.length===0
+          ?<div style={{padding:"20px 0",textAlign:"center" as const,color:C.t2,fontSize:13}}>На сегодня публикаций нет</div>
+          :<div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {contentToday.slice(0,6).map((c:any)=>(
+              <div key={c.id} onClick={()=>onNav("content")} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 11px",background:C.ib,borderRadius:9,cursor:"pointer"}}>
+                <span style={{fontSize:10,fontWeight:600,color:"#2F6BFF",background:"#2F6BFF14",borderRadius:6,padding:"2px 7px",flexShrink:0}}>{c.type||"Контент"}</span>
+                <span style={{fontSize:13,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:C.t1}}>{c.topic||"Без темы"}</span>
+              </div>
+            ))}
+          </div>}
       </div>
-      <div style={{flexShrink:0,width:36,height:36,borderRadius:8,background:"rgba(255,255,255,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    </div>
+
+    {/* ── Созвоны сегодня ── */}
+    <div className="dash-card" style={{...dCard,marginBottom:14}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+        <span style={{fontSize:15,fontWeight:600,color:C.t1}}>Созвоны сегодня</span>
+        <button onClick={()=>onNav("calls")} style={{fontSize:12.5,color:"#2F6BFF",background:"none",border:"none",cursor:"pointer",fontWeight:500}}>Все →</button>
       </div>
+      {upcomingCallsToday.length===0
+        ?<div style={{padding:"20px 0",textAlign:"center" as const,color:C.t2,fontSize:13}}>Созвоны на сегодня не запланированы</div>
+        :<div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {upcomingCallsToday.map((c:any)=>{
+            const mins=nextCall?.c?.id===c.id?nextCall.mins:null;
+            const status=mins===null?null:mins<0?"Завершён":mins<=15?"Сейчас":"Скоро";
+            return(
+              <div key={c.id} onClick={()=>onNav("crm")} style={{display:"flex",alignItems:"center",gap:14,padding:isMobile?"12px 14px":"14px 18px",background:C.ib,borderRadius:10,cursor:"pointer",flexWrap:isMobile?"wrap" as const:"nowrap" as const}}>
+                <div style={{fontSize:14,fontWeight:600,color:C.t1,flexShrink:0,minWidth:52}}>{c.time_start}</div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:13.5,fontWeight:500,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{callLabel(c)}</div>
+                  {c.responsible_name&&<div style={{fontSize:11,color:C.t2,marginTop:2}}>{c.responsible_name}</div>}
+                </div>
+                {status&&<span style={{fontSize:10.5,fontWeight:600,padding:"3px 9px",borderRadius:20,flexShrink:0,
+                  color:status==="Сейчас"?"#EF4444":status==="Скоро"?"#F59E0B":C.t2,
+                  background:(status==="Сейчас"?"#EF4444":status==="Скоро"?"#F59E0B":C.t2)+"18"}}>{status}</span>}
+                <button onClick={e=>{e.stopPropagation();onNav("crm");}}
+                  style={{flexShrink:0,padding:"6px 12px",borderRadius:8,border:"1px solid "+bd,background:"transparent",color:C.t1,fontSize:11.5,fontWeight:500,cursor:"pointer"}}>Открыть CRM</button>
+              </div>
+            );
+          })}
+        </div>}
+    </div>
+
+    {/* ── График выполнения задач ── */}
+    <div className="dash-card" style={{...dCard,marginBottom:14}}>
+      <div style={{fontSize:15,fontWeight:600,color:C.t1,marginBottom:16}}>Активность за месяц</div>
+      <DashActivityChart days={activityDays}/>
+    </div>
+
+    {/* ── Цели ── */}
+    <div className="dash-card" onClick={()=>onNav("strategy")} style={{...dCard,cursor:"pointer"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <span style={{fontSize:15,fontWeight:600,color:C.t1}}>Цели</span>
+        <span style={{fontSize:12.5,color:"#2F6BFF",fontWeight:500}}>Карта года →</span>
+      </div>
+      {!mainGoal
+        ?<div style={{padding:"16px 0",textAlign:"center" as const,color:C.t2,fontSize:13}}>Цели ещё не заданы</div>
+        :<>
+          <div style={{marginBottom:subGoals.length?18:0}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:8}}>
+              <span style={{fontSize:14,fontWeight:500,color:C.t1}}>{mainGoal.name}</span>
+              <span style={{fontSize:13,fontWeight:600,color:"#2F6BFF"}}>{goalProgress(mainGoal)}%</span>
+            </div>
+            <div style={{height:8,borderRadius:5,background:C.ib,overflow:"hidden"}}>
+              <div style={{height:"100%",width:goalProgress(mainGoal)+"%",background:"#2F6BFF",borderRadius:5,transition:"width 0.5s ease-out"}}/>
+            </div>
+          </div>
+          {subGoals.length>0&&<div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {subGoals.slice(0,4).map((g:any)=>(
+              <div key={g.id} style={{display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontSize:12.5,color:C.t2,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{g.name}</span>
+                <div style={{width:80,height:5,borderRadius:4,background:C.ib,overflow:"hidden",flexShrink:0}}>
+                  <div style={{height:"100%",width:goalProgress(g)+"%",background:"#2F6BFF88",borderRadius:4}}/>
+                </div>
+                <span style={{fontSize:11,color:C.t2,width:32,textAlign:"right" as const,flexShrink:0}}>{goalProgress(g)}%</span>
+              </div>
+            ))}
+          </div>}
+        </>}
     </div>
   </>;
 }
