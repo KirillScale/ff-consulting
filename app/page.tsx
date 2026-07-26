@@ -979,7 +979,7 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
   const sideW=sideCollapsed?64:248;
 
   const pageContent=<>
-    {page==="dashboard"&&<SafePage name="Dashboard"><DashPage userId={user.id} name={userName} avatar={userAvatar} onNav={setPage} onAvatarChange={async(url:string)=>{setUserAvatar(url);const{error}=await supabase.from("profiles").upsert({id:user.id,avatar_url:url},{onConflict:"id"});if(error){console.error("Не удалось сохранить аватар в profiles:",error.message,error);throw error;}}}/></SafePage>}
+    {page==="dashboard"&&<SafePage name="Dashboard"><DashPage userId={user.id} name={userName} avatar={userAvatar} onNav={setPage} onAvatarChange={async(url:string)=>{setUserAvatar(url);const{error}=await supabase.from("profiles").upsert({id:user.id,name:userName||user.email||"Пользователь",avatar_url:url},{onConflict:"id"});if(error){console.error("Не удалось сохранить аватар в profiles:",error.message,error);throw error;}}}/></SafePage>}
     {page==="strategy"&&<SafePage name="War Room"><StrategyPage userId={user.id} onNav={setPage}/></SafePage>}
     {page==="crm"&&<SafePage name="CRM"><CrmPage userId={user.id}/></SafePage>}
     {page==="cashflow"&&<SafePage name="Cash Flow"><CashFlowPage userId={user.id}/></SafePage>}
