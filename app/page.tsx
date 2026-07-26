@@ -2613,7 +2613,40 @@ const PL_MONTHS=["Январь","Февраль","Март","Апрель","Ма
 const pd=(d:Date)=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 const uidp=(p:string)=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
 
+// ── War Room AI: разбор сообщения на естественном языке в список задач ──
+type WrAiTask={title:string,due_date?:string,due_time?:string,description?:string,duration_minutes?:number};
+
+const WR_AI_SYSTEM=`Ты — ИИ по расстановке задач в недельном планировщике War Room. Пользователь присылает список дел обычным текстом на русском. Твоя единственная функция — превращать такой текст в структурированные задачи. Ты НЕ ассистент для общения.
+
+Если в сообщении НЕТ задач (вопрос, разговор, что-то не про дела) — верни {"reject":true,"message":"В вашем запросе нет задач. Я — ИИ по расстановке задач, а не для общения."}, ничего не придумывай.
+
+Если задачи есть — для каждой определи:
+- title — короткое чёткое название задачи (без даты и времени внутри названия);
+- due_date — дата в формате YYYY-MM-DD. Если день/дата явно названы — используй календарь ниже. Если НЕ названы — сам логично распредели задачи по текущей неделе (список дат недели дан ниже), не сваливай всё на один день;
+- due_time — время HH:MM, только если оно явно указано пользователем. Если не указано — не включай это поле;
+- description — на основе текста коротко поясни суть задачи одним предложением (не повторяй дословно title);
+- duration_minutes — если длительность не названа явно, оцени сам разумно по смыслу задачи (например «снять reels» ~ 60, «созвон» ~ 30-60, «подготовить презентацию» ~ 90).
+
+Верни строго валидный JSON без markdown:
+{"reject":false,"tasks":[{"title":"...","due_date":"YYYY-MM-DD","due_time":"HH:MM или не указывай","description":"...","duration_minutes":60}]}`;
+
+async function wrAiParse(message:string,weekDates:{date:string,label:string}[]):Promise<{reject:boolean,message?:string,tasks:WrAiTask[]}>{
+  const weekTxt=weekDates.map(w=>`${w.label}: ${w.date}`).join("\n");
+  const user=`${crmDateContext()}
+
+Дни текущей недели, которую видит пользователь (распределяй сюда задачи без явной даты):
+${weekTxt}
+
+Сообщение пользователя:
+"${message}"`;
+  const raw=await paChat(WR_AI_SYSTEM,user,1400,0.3);
+  const d=paParseJSON(raw);
+  return{reject:!!d.reject,message:d.message,tasks:Array.isArray(d.tasks)?d.tasks:[]};
+}
+
 function TaskPlanner({userId}:{userId:string}){
+
+
   const{dark}=useTheme();
   const isMobile=useIsMobile();
   const{data:tasks,add,update,remove,loading}=useTable("planner_tasks",userId);
@@ -2624,6 +2657,13 @@ function TaskPlanner({userId}:{userId:string}){
   const[saving,setSaving]=useState(false);
   const[boardStart,setBoardStart]=useState(()=>{const d=new Date();const dow=(d.getDay()+6)%7;d.setDate(d.getDate()-dow);d.setHours(0,0,0,0);return d;});
   const board7=()=>Array.from({length:7},(_,i)=>{const d=new Date(boardStart);d.setDate(boardStart.getDate()+i);return d;});
+  const currentWeekStart=()=>{const d=new Date();const dow=(d.getDay()+6)%7;d.setDate(d.getDate()-dow);d.setHours(0,0,0,0);return d;};
+
+  // War Room AI
+  const[wrAiInput,setWrAiInput]=useState("");
+  const[wrAiBusy,setWrAiBusy]=useState(false);
+  const[wrAiNotice,setWrAiNotice]=useState<{ok:boolean,text:string}|null>(null);
+  const[wrHighlight,setWrHighlight]=useState<Set<string>>(new Set());
 
   const bd=C.bd;
   const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
@@ -2648,6 +2688,44 @@ function TaskPlanner({userId}:{userId:string}){
   };
   const del=async()=>{if(edit?.id&&confirm("Удалить задачу?")){await remove(edit.id);setEdit(null);}};
   const toggleDone=(t:any,e?:any)=>{e&&e.stopPropagation();update(t.id,{done:!t.done});};
+
+  const runWrAi=async(message:string)=>{
+    const q=message.trim();
+    if(!q||wrAiBusy)return;
+    setWrAiBusy(true);setWrAiNotice(null);
+    try{
+      const weekDates=board7().map(d=>({date:pd(d),label:`${PL_WD[(d.getDay()+6)%7]} (${d.getDate()} ${shMon(d)})`}));
+      const result=await wrAiParse(q,weekDates);
+      if(result.reject||!result.tasks.length){
+        setWrAiNotice({ok:false,text:result.message||"В вашем запросе нет задач. Я — ИИ по расстановке задач, а не для общения."});
+        setWrAiBusy(false);
+        return;
+      }
+      const createdIds:string[]=[];
+      for(const t of result.tasks){
+        const dur=typeof t.duration_minutes==="number"&&t.duration_minutes>0?t.duration_minutes:null;
+        const descParts=[t.description||"",dur?`Длительность: ~${dur} мин`:""].filter(Boolean);
+        const created=await add({
+          title:t.title||"Задача",
+          description:descParts.join(". "),
+          due_date:t.due_date||pd(new Date()),
+          due_time:t.due_time||null,
+          priority:"none",
+          color:PLANNER_COLORS[createdIds.length%PLANNER_COLORS.length],
+          done:false,
+          subtasks:[],
+        });
+        if(created?.id)createdIds.push(created.id);
+      }
+      setWrHighlight(new Set(createdIds));
+      setTimeout(()=>setWrHighlight(new Set()),3600);
+      setWrAiNotice({ok:true,text:`Готово — добавлено задач: ${result.tasks.length}. Разложил по неделе и календарю.`});
+    }catch(e:any){
+      setWrAiNotice({ok:false,text:"Не удалось обработать запрос: "+(e?.message||"ошибка AI")});
+    }
+    setWrAiBusy(false);setWrAiInput("");
+  };
+
   const addSub=()=>{if(!subInput.trim())return;setEdit((x:any)=>({...x,subtasks:[...(x.subtasks||[]),{id:uidp("s"),text:subInput.trim(),done:false}]}));setSubInput("");};
   const toggleSub=(id:string)=>setEdit((x:any)=>({...x,subtasks:x.subtasks.map((s:any)=>s.id===id?{...s,done:!s.done}:s)}));
   const rmSub=(id:string)=>setEdit((x:any)=>({...x,subtasks:x.subtasks.filter((s:any)=>s.id!==id)}));
@@ -2721,8 +2799,8 @@ function TaskPlanner({userId}:{userId:string}){
           <div/>
           {dates.map((d,i)=>{const isToday=pd(d)===todayStr;return(
             <div key={i} style={{padding:"8px 4px",textAlign:"center" as const,borderLeft:"1px solid "+bd}}>
-              <div style={{fontSize:10,fontWeight:700,color:C.t2,textTransform:"uppercase" as const}}>{PL_WD[(d.getDay()+6)%7]}</div>
-              <div style={{margin:"2px auto 0",width:26,height:26,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:isToday?800:600,color:isToday?C.bg:C.t1,background:isToday?C.t1:"transparent"}}>{d.getDate()}</div>
+              <div style={{fontSize:10,fontWeight:500,color:C.t2,textTransform:"uppercase" as const}}>{PL_WD[(d.getDay()+6)%7]}</div>
+              <div style={{margin:"2px auto 0",width:26,height:26,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:500,color:isToday?C.bg:C.t1,background:isToday?C.t1:"transparent"}}>{d.getDate()}</div>
             </div>
           );})}
         </div>
@@ -2769,7 +2847,7 @@ function TaskPlanner({userId}:{userId:string}){
                       <div style={{display:"flex",alignItems:"center",gap:4}}>
                         <span onClick={e=>toggleDone(t,e)} style={{width:11,height:11,borderRadius:3,border:"1.5px solid "+(t.color||"#64748B"),background:t.done?(t.color||"#64748B"):"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>{t.done&&<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}</span>
                         {prioDot(t.priority)}
-                        <span style={{fontSize:11,fontWeight:600,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.55:1}}>{t.due_time} {t.title}</span>
+                        <span style={{fontSize:11,fontWeight:500,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.55:1}}>{t.due_time} {t.title}</span>
                       </div>
                     </div>
                   );
@@ -2787,14 +2865,15 @@ function TaskPlanner({userId}:{userId:string}){
       {/* ===== ДОСКА 7 ДНЕЙ ===== */}
       <div style={{marginBottom:22}}>
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,flexWrap:"wrap" as const}}>
-          <span style={{fontSize:isMobile?15:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em"}}>Задачи на неделю</span>
+          <span style={{fontSize:isMobile?15:18,fontWeight:500,color:C.t1,letterSpacing:"-0.01em"}}>Задачи на неделю</span>
           <button onClick={()=>setBoardStart(s=>{const d=new Date(s);d.setDate(d.getDate()-7);return d;})} style={{width:30,height:30,borderRadius:8,border:"1px solid "+bd,background:cardBg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
           <button onClick={()=>setBoardStart(s=>{const d=new Date(s);d.setDate(d.getDate()+7);return d;})} style={{width:30,height:30,borderRadius:8,border:"1px solid "+bd,background:cardBg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
-          <button onClick={()=>{const d=new Date();const dow=(d.getDay()+6)%7;d.setDate(d.getDate()-dow);d.setHours(0,0,0,0);setBoardStart(d);}} style={{padding:"6px 14px",background:"transparent",color:C.t1,border:"1px solid "+bd,borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer"}}>Эта неделя</button>
+          <button onClick={()=>setBoardStart(currentWeekStart())}
+            style={{padding:"6px 14px",background:C.w,color:C.t1,border:"1px solid "+bd,borderRadius:8,fontSize:12,fontWeight:500,cursor:"pointer",boxShadow:"0 1px 3px rgba(0,0,0,0.06)"}}>Эта неделя</button>
         </div>
         <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:6,scrollbarWidth:"none" as const}}>
           {board7().map((d,i)=>{
@@ -2803,23 +2882,27 @@ function TaskPlanner({userId}:{userId:string}){
               <div key={i} style={{flex:"1 0 0",minWidth:isMobile?152:0,background:C.ib,border:"1px solid "+(isToday?C.t1+"55":bd),borderRadius:12,display:"flex",flexDirection:"column",overflow:"hidden"}}>
                 <div style={{padding:"9px 11px",borderBottom:"1px solid "+bd,display:"flex",alignItems:"center",justifyContent:"space-between",background:isToday?C.t1+"0D":"transparent"}}>
                   <div style={{display:"flex",flexDirection:"column",lineHeight:1.15}}>
-                    <span style={{fontSize:10,fontWeight:700,color:isToday?C.t1:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3}}>{PL_WD[(d.getDay()+6)%7]}</span>
-                    <span style={{fontSize:14,fontWeight:800,color:C.t1}}>{d.getDate()} {shMon(d)}</span>
+                    <span style={{fontSize:10,fontWeight:500,color:isToday?C.t1:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3}}>{PL_WD[(d.getDay()+6)%7]}</span>
+                    <span style={{fontSize:14,fontWeight:500,color:C.t1}}>{d.getDate()} {shMon(d)}</span>
                   </div>
-                  <span style={{fontSize:10.5,fontWeight:700,color:C.t2,background:C.bd,borderRadius:8,padding:"1px 7px"}}>{dt.length}</span>
+                  <span style={{fontSize:10.5,fontWeight:500,color:C.t2,background:C.bd,borderRadius:8,padding:"1px 7px"}}>{dt.length}</span>
                 </div>
                 <div style={{padding:8,display:"flex",flexDirection:"column",gap:6,flex:1,minHeight:isMobile?110:150}}>
                   {dt.map((t:any)=>(
                     <div key={t.id} onClick={()=>openEdit(t)}
-                      style={{display:"flex",alignItems:"center",gap:6,padding:"7px 9px",borderRadius:8,background:cardBg,border:"1px solid "+bd,borderLeft:"3px solid "+(t.color||"#64748B"),cursor:"pointer"}}>
+                      style={{display:"flex",alignItems:"center",gap:6,padding:"7px 9px",borderRadius:8,background:cardBg,
+                        border:wrHighlight.has(t.id)?"1px solid #16A34A":"1px solid "+bd,
+                        borderLeft:"3px solid "+(t.color||"#64748B"),cursor:"pointer",
+                        boxShadow:wrHighlight.has(t.id)?"0 0 0 3px rgba(22,163,74,0.14)":"none",
+                        animation:wrHighlight.has(t.id)?"plannerAiFlash 1.8s ease-out 2":"none"}}>
                       <span onClick={e=>toggleDone(t,e)} style={{width:14,height:14,borderRadius:4,border:"1.5px solid "+(t.color||"#64748B"),background:t.done?(t.color||"#64748B"):"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
                         {t.done&&<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}
                       </span>
                       {prioDot(t.priority)}
-                      <span style={{flex:1,minWidth:0,fontSize:12.5,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.5:1}}>{t.due_time?<b style={{fontWeight:700}}>{t.due_time} </b>:null}{t.title}</span>
+                      <span style={{flex:1,minWidth:0,fontSize:12.5,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.5:1}}>{t.due_time?<b style={{fontWeight:500}}>{t.due_time} </b>:null}{t.title}</span>
                     </div>
                   ))}
-                  <button onClick={()=>openNew(pd(d))} style={{marginTop:dt.length?2:0,padding:"6px",borderRadius:8,border:"1px dashed "+bd,background:"transparent",color:C.t2,fontSize:11.5,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+                  <button onClick={()=>openNew(pd(d))} style={{marginTop:dt.length?2:0,padding:"6px",borderRadius:8,border:"1px dashed "+bd,background:"transparent",color:C.t2,fontSize:11.5,fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>задача
                   </button>
                 </div>
@@ -2829,8 +2912,48 @@ function TaskPlanner({userId}:{userId:string}){
         </div>
       </div>
 
+      {/* AI-ассистент планирования */}
+      <div style={{background:C.w,borderRadius:12,padding:isMobile?16:18,border:"1px solid "+bd,marginBottom:22,position:"relative",overflow:"hidden"}}>
+        <style>{`@keyframes plannerAiFlash{0%{box-shadow:0 0 0 0 rgba(22,163,74,0.35);}50%{box-shadow:0 0 0 8px rgba(22,163,74,0.10);}100%{box-shadow:0 0 0 0 rgba(22,163,74,0);}}
+@keyframes wrBrainPulse{0%,100%{transform:scale(1);opacity:0.9;}50%{transform:scale(1.08);opacity:1;}}`}</style>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+          <div style={{width:34,height:34,borderRadius:8,background:C.ib,display:"flex",alignItems:"center",justifyContent:"center",color:C.t2,flexShrink:0,
+            animation:wrAiBusy?"wrBrainPulse 1.1s ease-in-out infinite":"none"}}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 2a4 4 0 014 4v2a4 4 0 01-8 0V6a4 4 0 014-4z"/><path d="M6 12v1a6 6 0 0012 0v-1M12 19v3M8 22h8"/></svg>
+          </div>
+          <div>
+            <div style={{fontSize:15,fontWeight:500,color:C.t1}}>AI-ассистент планирования</div>
+            <div style={{fontSize:12,color:C.t2,marginTop:1}}>Опиши дела на неделю обычным текстом — расставлю по дням и календарю</div>
+          </div>
+        </div>
+
+        <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
+          <textarea value={wrAiInput} onChange={e=>setWrAiInput(e.target.value)} rows={2}
+            onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();runWrAi(wrAiInput);}}}
+            placeholder="Например: снять reels во вторник, в среду созвон с клиентом в 15:00, подготовить презентацию к пятнице"
+            disabled={wrAiBusy}
+            style={{flex:1,padding:"13px 14px",border:"1px solid "+bd,borderRadius:10,fontSize:13,outline:"none",background:inputBg,color:C.t1,resize:"none" as const,minHeight:64,maxHeight:140,lineHeight:1.55,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
+          <button onClick={()=>runWrAi(wrAiInput)} disabled={!wrAiInput.trim()||wrAiBusy}
+            style={{flexShrink:0,width:46,height:46,borderRadius:10,border:"none",
+              background:(wrAiInput.trim()&&!wrAiBusy)?C.t1:inputBg,
+              color:(wrAiInput.trim()&&!wrAiBusy)?C.bg:C.t2,
+              cursor:(wrAiInput.trim()&&!wrAiBusy)?"pointer":"default",
+              display:"flex",alignItems:"center",justifyContent:"center"}}>
+            {wrAiBusy
+              ?<div style={{width:16,height:16,border:"2px solid rgba(150,150,150,0.35)",borderTopColor:"currentColor",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+              :<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>}
+          </button>
+        </div>
+
+        {wrAiBusy&&<div style={{fontSize:12.5,color:C.t2,marginTop:10}}>Разбираю задачи и распределяю по неделе…</div>}
+        {wrAiNotice&&!wrAiBusy&&<div style={{fontSize:12.5,color:wrAiNotice.ok?C.t1:"#DC2626",marginTop:10,lineHeight:1.5,display:"flex",gap:7}}>
+          <span style={{flexShrink:0,color:wrAiNotice.ok?"#16A34A":"#DC2626"}}>{wrAiNotice.ok?"✓":"✕"}</span>
+          <span>{wrAiNotice.text}</span>
+        </div>}
+      </div>
+
       <div style={{height:1,background:bd,margin:"0 0 18px"}}/>
-      <div style={{fontSize:isMobile?15:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em",marginBottom:14}}>Календарь</div>
+      <div style={{fontSize:isMobile?15:18,fontWeight:500,color:C.t1,letterSpacing:"-0.01em",marginBottom:14}}>Календарь</div>
 
       {/* Toolbar */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:16,flexWrap:"wrap" as const}}>
@@ -2842,18 +2965,18 @@ function TaskPlanner({userId}:{userId:string}){
             <button onClick={()=>view==="month"?navMonth(1):navRange(1)} style={{width:34,height:34,borderRadius:8,border:"1px solid "+bd,background:cardBg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
-            <span style={{fontSize:isMobile?15:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em",minWidth:isMobile?0:180}}>{view==="month"?`${PL_MONTHS[m]} ${y}`:rangeLabel()}</span>
-            <button onClick={()=>setCur(new Date())} style={{padding:"6px 14px",background:"transparent",color:C.t1,border:"1px solid "+bd,borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer"}}>Сегодня</button>
+            <span style={{fontSize:isMobile?15:18,fontWeight:500,color:C.t1,letterSpacing:"-0.01em",minWidth:isMobile?0:180}}>{view==="month"?`${PL_MONTHS[m]} ${y}`:rangeLabel()}</span>
+            <button onClick={()=>setCur(new Date())} style={{padding:"6px 14px",background:"transparent",color:C.t1,border:"1px solid "+bd,borderRadius:8,fontSize:12,fontWeight:500,cursor:"pointer"}}>Сегодня</button>
           </>}
-          {view==="list"&&<span style={{fontSize:18,fontWeight:800,color:C.t1,letterSpacing:"-0.01em"}}>Текущие задачи</span>}
+          {view==="list"&&<span style={{fontSize:18,fontWeight:500,color:C.t1,letterSpacing:"-0.01em"}}>Текущие задачи</span>}
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap" as const}}>
           <div style={{display:"flex",background:C.ib,borderRadius:8,padding:3,border:"1px solid "+bd,gap:2}}>
             {([["month","Месяц"],["week","Неделя"],["3day","3 дня"],["day","День"],["list","Список"]] as const).map(([v,lbl])=>(
-              <button key={v} onClick={()=>setView(v)} style={{padding:isMobile?"6px 9px":"6px 12px",borderRadius:6,border:"none",background:view===v?cardBg:"transparent",color:view===v?C.t1:C.t2,fontSize:12,fontWeight:600,cursor:"pointer",boxShadow:view===v?"0 1px 3px rgba(0,0,0,0.1)":"none",whiteSpace:"nowrap" as const}}>{lbl}</button>
+              <button key={v} onClick={()=>setView(v)} style={{padding:isMobile?"6px 9px":"6px 12px",borderRadius:6,border:"none",background:view===v?cardBg:"transparent",color:view===v?C.t1:C.t2,fontSize:12,fontWeight:500,cursor:"pointer",boxShadow:view===v?"0 1px 3px rgba(0,0,0,0.1)":"none",whiteSpace:"nowrap" as const}}>{lbl}</button>
             ))}
           </div>
-          <button onClick={()=>openNew(view==="list"?todayStr:(isGrid?pd(cur):""))} style={{padding:"8px 16px",background:C.t1,color:C.bg,border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+          <button onClick={()=>openNew(view==="list"?todayStr:(isGrid?pd(cur):""))} style={{padding:"8px 16px",background:C.t1,color:C.bg,border:"none",borderRadius:8,fontSize:13,fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Задача
           </button>
@@ -2866,7 +2989,7 @@ function TaskPlanner({userId}:{userId:string}){
         /* ---------- MONTH GRID ---------- */
         <div style={{border:"1px solid "+bd,borderRadius:12,overflow:"hidden",background:cardBg}}>
           <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",borderBottom:"1px solid "+bd}}>
-            {PL_WD.map(w=><div key={w} style={{padding:"10px 8px",textAlign:"center" as const,fontSize:11,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3}}>{w}</div>)}
+            {PL_WD.map(w=><div key={w} style={{padding:"10px 8px",textAlign:"center" as const,fontSize:11,fontWeight:500,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3}}>{w}</div>)}
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)"}}>
             {days.map((d,i)=>{
@@ -2875,7 +2998,7 @@ function TaskPlanner({userId}:{userId:string}){
                 <div key={i} onClick={()=>openNew(pd(d))}
                   style={{minHeight:isMobile?84:116,borderRight:(i%7!==6)?"1px solid "+bd:"none",borderBottom:i<35?"1px solid "+bd:"none",padding:6,cursor:"pointer",background:inM?"transparent":(dark?"rgba(255,255,255,0.015)":"rgba(0,0,0,0.015)"),display:"flex",flexDirection:"column",gap:3}}>
                   <div style={{display:"flex",justifyContent:"flex-end"}}>
-                    <span style={{fontSize:12,fontWeight:isToday?800:500,color:isToday?C.bg:(inM?C.t1:C.t2),width:22,height:22,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",background:isToday?C.t1:"transparent"}}>{d.getDate()}</span>
+                    <span style={{fontSize:12,fontWeight:500,color:isToday?C.bg:(inM?C.t1:C.t2),width:22,height:22,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",background:isToday?C.t1:"transparent"}}>{d.getDate()}</span>
                   </div>
                   {dayTasks.slice(0,isMobile?2:3).map((t:any)=>(
                     <div key={t.id} onClick={e=>{e.stopPropagation();openEdit(t);}}
@@ -2899,7 +3022,7 @@ function TaskPlanner({userId}:{userId:string}){
           {listGroups().length===0&&<div style={{padding:"50px 0",textAlign:"center" as const,color:C.t2,fontSize:14}}>Задач пока нет. Нажмите «Задача», чтобы добавить.</div>}
           {listGroups().map(g=>(
             <div key={g.key}>
-              <div style={{fontSize:12,fontWeight:700,color:g.tone,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:10}}>{g.label} · {g.items.length}</div>
+              <div style={{fontSize:12,fontWeight:500,color:g.tone,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:10}}>{g.label} · {g.items.length}</div>
               <div style={{display:"flex",flexDirection:"column",gap:8}}>
                 {g.items.map((t:any)=>(
                   <div key={t.id} onClick={()=>openEdit(t)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:cardBg,border:"1px solid "+bd,borderRadius:10,cursor:"pointer"}}>
@@ -2909,7 +3032,7 @@ function TaskPlanner({userId}:{userId:string}){
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{display:"flex",alignItems:"center",gap:8}}>
                         <span style={{width:8,height:8,borderRadius:"50%",background:t.color||"#64748B",flexShrink:0}}/>
-                        <span style={{fontSize:14,fontWeight:600,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.55:1}}>{t.title}</span>
+                        <span style={{fontSize:14,fontWeight:500,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.55:1}}>{t.title}</span>
                       </div>
                       {(t.description||(t.subtasks&&t.subtasks.length>0))&&<div style={{fontSize:12,color:C.t2,marginTop:3,marginLeft:16,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                         {t.subtasks&&t.subtasks.length>0?`Подзадачи: ${t.subtasks.filter((s:any)=>s.done).length}/${t.subtasks.length}`:""}
@@ -2917,7 +3040,7 @@ function TaskPlanner({userId}:{userId:string}){
                         {t.description?t.description.replace(/\n/g," "):""}
                       </div>}
                     </div>
-                    {t.priority&&t.priority!=="none"&&<span style={{fontSize:11,fontWeight:600,color:PRIO[t.priority].color,background:PRIO[t.priority].color+"1E",padding:"3px 9px",borderRadius:20,flexShrink:0}}>{PRIO[t.priority].label}</span>}
+                    {t.priority&&t.priority!=="none"&&<span style={{fontSize:11,fontWeight:500,color:PRIO[t.priority].color,background:PRIO[t.priority].color+"1E",padding:"3px 9px",borderRadius:20,flexShrink:0}}>{PRIO[t.priority].label}</span>}
                     {t.due_date&&<span style={{fontSize:12,color:g.key==="overdue"?"#EF4444":C.t2,flexShrink:0,fontWeight:500}}>{fmtDue(t)}</span>}
                   </div>
                 ))}
@@ -2935,7 +3058,7 @@ function TaskPlanner({userId}:{userId:string}){
               {edit.done&&<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5"><polyline points="20 6 9 17 4 12"/></svg>}
             </span>
             <input value={edit.title} onChange={e=>setEdit((x:any)=>({...x,title:e.target.value}))} placeholder="Название задачи" autoFocus
-              style={{flex:1,border:"none",outline:"none",background:"transparent",fontSize:19,fontWeight:700,color:C.t1,fontFamily:"'Inter',sans-serif",textDecoration:edit.done?"line-through":"none"}}/>
+              style={{flex:1,border:"none",outline:"none",background:"transparent",fontSize:19,fontWeight:500,color:C.t1,fontFamily:"'Inter',sans-serif",textDecoration:edit.done?"line-through":"none"}}/>
             <button onClick={()=>setEdit(null)} style={{width:32,height:32,borderRadius:8,border:"none",background:"transparent",color:C.t2,cursor:"pointer",flexShrink:0}}>✕</button>
           </div>
 
@@ -2944,33 +3067,33 @@ function TaskPlanner({userId}:{userId:string}){
 
           <div style={{display:"flex",gap:12,marginBottom:16,flexWrap:"wrap" as const}}>
             <div style={{flex:1,minWidth:150}}>
-              <label style={{fontSize:11,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:6,display:"block"}}>Срок</label>
+              <label style={{fontSize:11,fontWeight:500,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:6,display:"block"}}>Срок</label>
               <input type="date" value={edit.due_date} onChange={e=>setEdit((x:any)=>({...x,due_date:e.target.value}))} style={{width:"100%",padding:"10px 12px",border:"1px solid "+bd,borderRadius:9,fontSize:13,background:inputBg,color:C.t1,outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
             </div>
             <div style={{width:120}}>
-              <label style={{fontSize:11,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:6,display:"block"}}>Время</label>
+              <label style={{fontSize:11,fontWeight:500,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:6,display:"block"}}>Время</label>
               <input type="time" value={edit.due_time} onChange={e=>setEdit((x:any)=>({...x,due_time:e.target.value}))} style={{width:"100%",padding:"10px 12px",border:"1px solid "+bd,borderRadius:9,fontSize:13,background:inputBg,color:C.t1,outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
             </div>
           </div>
 
           <div style={{marginBottom:16}}>
-            <label style={{fontSize:11,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8,display:"block"}}>Приоритет</label>
+            <label style={{fontSize:11,fontWeight:500,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8,display:"block"}}>Приоритет</label>
             <div style={{display:"flex",gap:8,flexWrap:"wrap" as const}}>
-              {(["none","low","medium","high"] as const).map(p=><button key={p} onClick={()=>setEdit((x:any)=>({...x,priority:p}))} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:8,border:"1px solid "+(edit.priority===p?PRIO[p].color:bd),background:edit.priority===p?PRIO[p].color+"18":"transparent",color:edit.priority===p?PRIO[p].color:C.t2,fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+              {(["none","low","medium","high"] as const).map(p=><button key={p} onClick={()=>setEdit((x:any)=>({...x,priority:p}))} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:8,border:"1px solid "+(edit.priority===p?PRIO[p].color:bd),background:edit.priority===p?PRIO[p].color+"18":"transparent",color:edit.priority===p?PRIO[p].color:C.t2,fontSize:12.5,fontWeight:500,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
                 {p!=="none"&&<span style={{width:7,height:7,borderRadius:"50%",background:PRIO[p].color}}/>}{PRIO[p].label}
               </button>)}
             </div>
           </div>
 
           <div style={{marginBottom:16}}>
-            <label style={{fontSize:11,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8,display:"block"}}>Цвет</label>
+            <label style={{fontSize:11,fontWeight:500,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8,display:"block"}}>Цвет</label>
             <div style={{display:"flex",gap:8}}>
               {PLANNER_COLORS.map(col=><button key={col} onClick={()=>setEdit((x:any)=>({...x,color:col}))} style={{width:26,height:26,borderRadius:7,border:edit.color===col?"2px solid "+C.t1:"1px solid "+bd,background:col,cursor:"pointer"}}/>)}
             </div>
           </div>
 
           <div style={{marginBottom:20}}>
-            <label style={{fontSize:11,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8,display:"block"}}>Подзадачи{edit.subtasks?.length>0?` · ${edit.subtasks.filter((s:any)=>s.done).length}/${edit.subtasks.length}`:""}</label>
+            <label style={{fontSize:11,fontWeight:500,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8,display:"block"}}>Подзадачи{edit.subtasks?.length>0?` · ${edit.subtasks.filter((s:any)=>s.done).length}/${edit.subtasks.length}`:""}</label>
             <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:8}}>
               {(edit.subtasks||[]).map((s:any)=>(
                 <div key={s.id} style={{display:"flex",alignItems:"center",gap:9,padding:"8px 10px",background:inputBg,borderRadius:8}}>
@@ -2985,15 +3108,15 @@ function TaskPlanner({userId}:{userId:string}){
             <div style={{display:"flex",gap:8}}>
               <input value={subInput} onChange={e=>setSubInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();addSub();}}} placeholder="Добавить подзадачу…"
                 style={{flex:1,padding:"9px 12px",border:"1px solid "+bd,borderRadius:9,fontSize:13,background:inputBg,color:C.t1,outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
-              <button onClick={addSub} style={{padding:"0 16px",borderRadius:9,border:"1px solid "+bd,background:"transparent",color:C.t1,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Добавить</button>
+              <button onClick={addSub} style={{padding:"0 16px",borderRadius:9,border:"1px solid "+bd,background:"transparent",color:C.t1,fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Добавить</button>
             </div>
           </div>
 
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,paddingTop:16,borderTop:"1px solid "+bd}}>
-            {edit.id?<button onClick={del} style={{padding:"11px 16px",borderRadius:10,border:"none",background:"transparent",color:"#EF4444",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Удалить</button>:<span/>}
+            {edit.id?<button onClick={del} style={{padding:"11px 16px",borderRadius:10,border:"none",background:"transparent",color:"#EF4444",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Удалить</button>:<span/>}
             <div style={{display:"flex",gap:10}}>
-              <button onClick={()=>setEdit(null)} style={{padding:"11px 20px",borderRadius:10,border:"1px solid "+bd,background:"transparent",color:C.t2,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Отмена</button>
-              <button onClick={save} disabled={!edit.title.trim()||saving} style={{padding:"11px 24px",borderRadius:10,border:"none",background:edit.title.trim()?C.t1:C.ib,color:edit.title.trim()?C.bg:C.t2,fontSize:14,fontWeight:700,cursor:edit.title.trim()?"pointer":"default",fontFamily:"'Inter',sans-serif"}}>{saving?"Сохраняю…":"Сохранить"}</button>
+              <button onClick={()=>setEdit(null)} style={{padding:"11px 20px",borderRadius:10,border:"1px solid "+bd,background:"transparent",color:C.t2,fontSize:14,fontWeight:500,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Отмена</button>
+              <button onClick={save} disabled={!edit.title.trim()||saving} style={{padding:"11px 24px",borderRadius:10,border:"none",background:edit.title.trim()?C.t1:C.ib,color:edit.title.trim()?C.bg:C.t2,fontSize:14,fontWeight:500,cursor:edit.title.trim()?"pointer":"default",fontFamily:"'Inter',sans-serif"}}>{saving?"Сохраняю…":"Сохранить"}</button>
             </div>
           </div>
         </div>
