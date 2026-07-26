@@ -4097,9 +4097,9 @@ function CrmFunnel({stages,leads,isMobile}:{stages:any[],leads:any[],isMobile:bo
           <div key={s.id} style={{flex:"1 0 0",minWidth:isMobile?120:0,padding:"12px 14px",borderLeft:i>0?"1px solid "+C.bd:"none"}}>
             <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={funnelBlue(i,N)} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={funnelStageIcon(s.id)}/></svg>
-              <span style={{fontSize:11.5,color:C.t2,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.label}</span>
+              <span style={{fontSize:11.5,color:C.t2,fontWeight:500,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.label}</span>
             </div>
-            <div style={{fontSize:22,fontWeight:800,color:C.t1,lineHeight:1,letterSpacing:"-0.02em"}}>{counts[i]}</div>
+            <div style={{fontSize:22,fontWeight:500,color:C.t1,lineHeight:1,letterSpacing:"-0.02em"}}>{counts[i]}</div>
           </div>
         ))}
       </div>
@@ -4117,7 +4117,7 @@ function CrmFunnel({stages,leads,isMobile}:{stages:any[],leads:any[],isMobile:bo
           const pct=from>0?Math.round(to/from*100):null;
           return(
             <div key={s.id} style={{position:"absolute",left:`${((i+1)/N)*100}%`,top:"50%",transform:"translate(-50%,-50%)",background:C.w,border:"1px solid "+C.bd,borderRadius:20,padding:"3px 10px",boxShadow:"0 1px 4px rgba(0,0,0,0.12)",display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
-              <span style={{fontSize:11,fontWeight:700,color:C.t1,fontVariantNumeric:"tabular-nums" as const}}>{pct==null?"—":pct+"%"}</span>
+              <span style={{fontSize:11,fontWeight:500,color:C.t1,fontVariantNumeric:"tabular-nums" as const}}>{pct==null?"—":pct+"%"}</span>
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </div>
           );
@@ -4126,15 +4126,15 @@ function CrmFunnel({stages,leads,isMobile}:{stages:any[],leads:any[],isMobile:bo
       {/* footer */}
       <div style={{display:"flex",alignItems:"center",gap:16,padding:"9px 14px",flexWrap:"wrap" as const}}>
         <span style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:C.t2}}>
-          <span style={{width:7,height:7,borderRadius:"50%",background:funnelBlue(0,N)}}/>Всего: <b style={{color:C.t1,fontWeight:700}}>{total}</b>
+          <span style={{width:7,height:7,borderRadius:"50%",background:funnelBlue(0,N)}}/>Всего: <b style={{color:C.t1,fontWeight:500}}>{total}</b>
         </span>
         <span style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:C.t2}}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22A06B" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-          {wonStage?.label||"Выиграно"}: <b style={{color:C.t1,fontWeight:700}}>{wonLeads.length}</b>{wonSum>0&&<span style={{color:C.t2}}>· {wonSum.toLocaleString("ru-RU")} ₽</span>}
+          {wonStage?.label||"Выиграно"}: <b style={{color:C.t1,fontWeight:500}}>{wonLeads.length}</b>{wonSum>0&&<span style={{color:C.t2}}>· {wonSum.toLocaleString("ru-RU")} ₽</span>}
         </span>
         {rejCount!=null&&<span style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:C.t2}}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E5484D" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          {rejStage.label}: <b style={{color:C.t1,fontWeight:700}}>{rejCount}</b>
+          {rejStage.label}: <b style={{color:C.t1,fontWeight:500}}>{rejCount}</b>
         </span>}
       </div>
     </div>
@@ -4397,8 +4397,8 @@ function ETSPage({userId}:{userId:string}){
         <button onClick={()=>setOpen(active?null:id)}
           style={{width:"100%",textAlign:"left" as const,cursor:"pointer",background:"transparent",border:"none",padding:isMobile?"10px 11px":"12px 14px"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:7}}>
-            <span style={{fontSize:isMobile?12.5:13.5,fontWeight:800,color:C.t1,letterSpacing:"-0.01em",lineHeight:1.25}}>{title}</span>
-            <span style={{flexShrink:0,fontSize:9.5,fontWeight:700,color:done?C.t1:C.t2,background:done?(dark?"rgba(255,255,255,0.14)":"rgba(0,0,0,0.08)"):"transparent",border:done?"none":"1px solid "+C.bd,borderRadius:20,padding:"1px 6px"}}>
+            <span style={{fontSize:isMobile?12.5:13.5,fontWeight:500,color:C.t1,letterSpacing:"-0.01em",lineHeight:1.25}}>{title}</span>
+            <span style={{flexShrink:0,fontSize:9.5,fontWeight:500,color:done?C.t1:C.t2,background:done?(dark?"rgba(255,255,255,0.14)":"rgba(0,0,0,0.08)"):"transparent",border:done?"none":"1px solid "+C.bd,borderRadius:20,padding:"1px 6px"}}>
               {id==="offer"?(offerDone||0):`${f}/${t}`}
             </span>
           </div>
@@ -4411,7 +4411,7 @@ function ETSPage({userId}:{userId:string}){
           <div style={{fontSize:10.5,color:C.t2,lineHeight:1.5,
             display:"-webkit-box",WebkitLineClamp:isExp?99:2,WebkitBoxOrient:"vertical" as const,overflow:"hidden"}}>{sum}</div>
           {sum.length>70&&<button onClick={()=>setExpanded(p=>({...p,[id]:!p[id]}))}
-            style={{marginTop:4,background:"none",border:"none",padding:0,color:C.t2,fontSize:10,fontWeight:700,cursor:"pointer",textDecoration:"underline"}}>
+            style={{marginTop:4,background:"none",border:"none",padding:0,color:C.t2,fontSize:10,fontWeight:500,cursor:"pointer",textDecoration:"underline"}}>
             {isExp?"свернуть":"раскрыть"}
           </button>}
         </div>}
@@ -4531,11 +4531,11 @@ ${audit?`<section><h2>Разбор воронки</h2><div class="audit">${esc(a
   return<>
     <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",gap:16,marginBottom:18,flexWrap:"wrap" as const}}>
       <div>
-        <div style={{fontSize:isMobile?20:26,fontWeight:800,color:C.t1,letterSpacing:"-0.03em",lineHeight:1.15}}>Expert Trust System</div>
+        <div style={{fontSize:isMobile?20:26,fontWeight:500,color:C.t1,letterSpacing:"-0.03em",lineHeight:1.15}}>Expert Trust System</div>
         <div style={{fontSize:13,color:C.t2,marginTop:4,lineHeight:1.5,maxWidth:540}}>От зрителя до оффера — вся система в одной карте. Нажми на блок, чтобы заполнить.</div>
       </div>
       <div style={{textAlign:isMobile?"left":"right" as const,minWidth:150}}>
-        <div style={{fontSize:26,fontWeight:800,color:C.t1,letterSpacing:"-0.02em",lineHeight:1}}>{progress}%</div>
+        <div style={{fontSize:26,fontWeight:500,color:C.t1,letterSpacing:"-0.02em",lineHeight:1}}>{progress}%</div>
         <div style={{fontSize:11.5,color:C.t2,marginTop:3}}>заполнено{savedAt?` · сохранено ${savedAt}`:""}</div>
         <div style={{height:4,borderRadius:4,background:dark?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.08)",overflow:"hidden",marginTop:7,width:isMobile?160:180}}>
           <div style={{height:"100%",width:progress+"%",background:accent,borderRadius:4,transition:"width 0.4s"}}/>
@@ -4611,11 +4611,11 @@ ${audit?`<section><h2>Разбор воронки</h2><div class="audit">${esc(a
       <div style={{background:C.w,border:"1px solid "+C.bd,borderRadius:14,padding:isMobile?16:20,marginBottom:16}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap" as const,marginBottom:audit||auditBusy?14:0}}>
           <div>
-            <div style={{fontSize:13.5,fontWeight:800,color:C.t1}}>Разбор воронки</div>
+            <div style={{fontSize:13.5,fontWeight:500,color:C.t1}}>Разбор воронки</div>
             <div style={{fontSize:12,color:C.t2,marginTop:3,lineHeight:1.5}}>AI пройдёт по всей системе и найдёт разрывы между блоками</div>
           </div>
           <button onClick={runAudit} disabled={auditBusy}
-            style={{padding:"11px 20px",borderRadius:10,border:"none",background:auditBusy?C.ib:C.t1,color:auditBusy?C.t2:C.bg,fontSize:13.5,fontWeight:700,cursor:auditBusy?"default":"pointer",whiteSpace:"nowrap" as const}}>
+            style={{padding:"11px 20px",borderRadius:10,border:"none",background:auditBusy?C.ib:C.t1,color:auditBusy?C.t2:C.bg,fontSize:13.5,fontWeight:500,cursor:auditBusy?"default":"pointer",whiteSpace:"nowrap" as const}}>
             {auditBusy?"Анализирую…":audit?"Проверить заново":"Найти слабые места в воронке"}
           </button>
         </div>
@@ -4628,11 +4628,11 @@ ${audit?`<section><h2>Разбор воронки</h2><div class="audit">${esc(a
       <div style={{background:C.w,border:"1px solid "+C.bd,borderRadius:14,padding:isMobile?16:20,marginBottom:16}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:12,flexWrap:"wrap" as const}}>
           <div>
-            <div style={{fontSize:13.5,fontWeight:800,color:C.t1}}>Разговор о системе</div>
+            <div style={{fontSize:13.5,fontWeight:500,color:C.t1}}>Разговор о системе</div>
             <div style={{fontSize:12,color:C.t2,marginTop:3,lineHeight:1.5}}>AI видит все заполненные блоки и отвечает по ним</div>
           </div>
           {chat.length>0&&<button onClick={()=>{setChat([]);setChatErr("");}}
-            style={{padding:"7px 13px",borderRadius:8,border:"1px solid "+C.bd,background:"transparent",color:C.t2,fontSize:12,fontWeight:600,cursor:"pointer"}}>Очистить</button>}
+            style={{padding:"7px 13px",borderRadius:8,border:"1px solid "+C.bd,background:"transparent",color:C.t2,fontSize:12,fontWeight:500,cursor:"pointer"}}>Очистить</button>}
         </div>
 
         {chat.length===0&&!chatBusy&&<div style={{marginBottom:12}}>
@@ -4688,8 +4688,8 @@ ${audit?`<section><h2>Разбор воронки</h2><div class="audit">${esc(a
         <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,marginBottom:16}}>
           <div>
             <div style={{display:"flex",alignItems:"baseline",gap:9,flexWrap:"wrap" as const}}>
-              <span style={{fontSize:17,fontWeight:800,color:C.t1,letterSpacing:"-0.02em"}}>{curNode.title}</span>
-              <span style={{fontSize:12,color:C.t2,fontWeight:600}}>{curNode.short}</span>
+              <span style={{fontSize:17,fontWeight:500,color:C.t1,letterSpacing:"-0.02em"}}>{curNode.title}</span>
+              <span style={{fontSize:12,color:C.t2,fontWeight:500}}>{curNode.short}</span>
             </div>
             <div style={{fontSize:12.5,color:C.t2,marginTop:5,lineHeight:1.55,maxWidth:560}}>{curNode.desc}</div>
           </div>
@@ -4701,7 +4701,7 @@ ${audit?`<section><h2>Разбор воронки</h2><div class="audit">${esc(a
           {curNode.fields.map(f=>{
             const v=data?.[curNode.id]?.[f.key]||"";
             return<div key={f.key} style={{gridColumn:f.long&&!isMobile?"span 2":"auto"}}>
-              <label style={{fontSize:12,color:C.t2,fontWeight:600,display:"block",marginBottom:6}}>{f.label}</label>
+              <label style={{fontSize:12,color:C.t2,fontWeight:500,display:"block",marginBottom:6}}>{f.label}</label>
               {f.long
                 ?<textarea value={v} onChange={e=>setField(curNode.id,f.key,e.target.value)} placeholder={f.ph} rows={3}
                    style={{...iS(),resize:"vertical" as const,minHeight:74,lineHeight:1.6,fontFamily:"'Inter',sans-serif"}}/>
@@ -4716,8 +4716,8 @@ ${audit?`<section><h2>Разбор воронки</h2><div class="audit">${esc(a
         <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,marginBottom:16}}>
           <div>
             <div style={{display:"flex",alignItems:"baseline",gap:9,flexWrap:"wrap" as const}}>
-              <span style={{fontSize:17,fontWeight:800,color:C.t1,letterSpacing:"-0.02em"}}>{ETS_OFFER.title}</span>
-              <span style={{fontSize:12,color:C.t2,fontWeight:600}}>{ETS_OFFER.short}</span>
+              <span style={{fontSize:17,fontWeight:500,color:C.t1,letterSpacing:"-0.02em"}}>{ETS_OFFER.title}</span>
+              <span style={{fontSize:12,color:C.t2,fontWeight:500}}>{ETS_OFFER.short}</span>
             </div>
             <div style={{fontSize:12.5,color:C.t2,marginTop:5,lineHeight:1.55,maxWidth:560}}>{ETS_OFFER.desc}</div>
           </div>
@@ -4732,7 +4732,7 @@ ${audit?`<section><h2>Разбор воронки</h2><div class="audit">${esc(a
           {products.map((p,i)=>(
             <div key={p.id} style={{border:"1px solid "+C.bd,borderRadius:11,padding:isMobile?13:16,background:dark?"rgba(255,255,255,0.02)":"rgba(0,0,0,0.015)"}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:11}}>
-                <span style={{fontSize:11,fontWeight:700,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.4}}>Продукт {i+1}</span>
+                <span style={{fontSize:11,fontWeight:500,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.4}}>Продукт {i+1}</span>
                 <button onClick={()=>delProduct(p.id)} title="Удалить продукт"
                   style={{width:26,height:26,borderRadius:7,border:"none",background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
@@ -4740,21 +4740,21 @@ ${audit?`<section><h2>Разбор воронки</h2><div class="audit">${esc(a
               </div>
               <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"2fr 1fr",gap:12,marginBottom:12}}>
                 <div>
-                  <label style={{fontSize:12,color:C.t2,fontWeight:600,display:"block",marginBottom:6}}>Название продукта</label>
+                  <label style={{fontSize:12,color:C.t2,fontWeight:500,display:"block",marginBottom:6}}>Название продукта</label>
                   <input value={p.name} onChange={e=>updProduct(p.id,{name:e.target.value})} placeholder="Напр.: GAME PLAN" style={iS()}/>
                 </div>
                 <div>
-                  <label style={{fontSize:12,color:C.t2,fontWeight:600,display:"block",marginBottom:6}}>Цена</label>
+                  <label style={{fontSize:12,color:C.t2,fontWeight:500,display:"block",marginBottom:6}}>Цена</label>
                   <input value={p.price} onChange={e=>updProduct(p.id,{price:e.target.value})} placeholder="Напр.: 150 000 ₽" style={iS()}/>
                 </div>
               </div>
               <div style={{marginBottom:12}}>
-                <label style={{fontSize:12,color:C.t2,fontWeight:600,display:"block",marginBottom:6}}>Что человек получает</label>
+                <label style={{fontSize:12,color:C.t2,fontWeight:500,display:"block",marginBottom:6}}>Что человек получает</label>
                 <textarea value={p.result} onChange={e=>updProduct(p.id,{result:e.target.value})} rows={2}
                   placeholder="Результат, состав, сроки — конкретно" style={{...iS(),resize:"vertical" as const,minHeight:62,lineHeight:1.6,fontFamily:"'Inter',sans-serif"}}/>
               </div>
               <div>
-                <label style={{fontSize:12,color:C.t2,fontWeight:600,display:"block",marginBottom:6}}>Для кого</label>
+                <label style={{fontSize:12,color:C.t2,fontWeight:500,display:"block",marginBottom:6}}>Для кого</label>
                 <input value={p.forWhom} onChange={e=>updProduct(p.id,{forWhom:e.target.value})} placeholder="Кому этот продукт подходит" style={iS()}/>
               </div>
             </div>
@@ -4762,7 +4762,7 @@ ${audit?`<section><h2>Разбор воронки</h2><div class="audit">${esc(a
         </div>
 
         <button onClick={addProduct}
-          style={{padding:"10px 18px",borderRadius:10,border:"1px dashed "+C.bd,background:"transparent",color:C.t1,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:7}}>
+          style={{padding:"10px 18px",borderRadius:10,border:"1px dashed "+C.bd,background:"transparent",color:C.t1,fontSize:13,fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",gap:7}}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Добавить продукт
         </button>
@@ -4770,12 +4770,12 @@ ${audit?`<section><h2>Разбор воронки</h2><div class="audit">${esc(a
 
       {/* ── PDF ── */}
       <div style={{background:C.w,border:"1px solid "+C.bd,borderRadius:14,padding:isMobile?16:22}}>
-        <div style={{fontSize:13.5,fontWeight:800,color:C.t1,marginBottom:6}}>Сводка системы</div>
+        <div style={{fontSize:13.5,fontWeight:500,color:C.t1,marginBottom:6}}>Сводка системы</div>
         <div style={{fontSize:12.5,color:C.t2,lineHeight:1.6,marginBottom:16}}>
           Выгрузи всю систему одним документом — со всеми блоками, продуктами{audit?" и разбором воронки":""}.
         </div>
         <button onClick={exportPDF}
-          style={{width:isMobile?"100%":"auto",padding:"12px 22px",borderRadius:10,border:"none",background:C.t1,color:C.bg,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:9}}>
+          style={{width:isMobile?"100%":"auto",padding:"12px 22px",borderRadius:10,border:"none",background:C.t1,color:C.bg,fontSize:14,fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:9}}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Скачать сводку в PDF
         </button>
@@ -5182,23 +5182,23 @@ function SlideStudio({userId,kind}:{userId:string,kind:"post"|"slide"}){
     setExporting(false);
   };
 
-  const lbl:React.CSSProperties={fontSize:12,color:C.t2,fontWeight:600,marginBottom:7,display:"block"};
-  const seg=(active:boolean):React.CSSProperties=>({padding:"8px 14px",borderRadius:9,border:`1px solid ${active?"transparent":bd}`,background:active?"rgba(124,124,124,0.16)":"transparent",color:active?C.t1:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'Inter',sans-serif"});
+  const lbl:React.CSSProperties={fontSize:12,color:C.t2,fontWeight:500,marginBottom:7,display:"block"};
+  const seg=(active:boolean):React.CSSProperties=>({padding:"8px 14px",borderRadius:9,border:`1px solid ${active?"transparent":bd}`,background:active?"rgba(124,124,124,0.16)":"transparent",color:active?C.t1:C.t2,fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"'Inter',sans-serif"});
 
   // ── ЭКРАН: библиотека ──
   if(view==="library")return<>
     <div style={{marginBottom:20}}>
-      <div style={{fontSize:isMobile?20:26,fontWeight:600,color:C.t1,letterSpacing:"-0.03em"}}>{TITLE}</div>
+      <div style={{fontSize:isMobile?20:26,fontWeight:500,color:C.t1,letterSpacing:"-0.03em"}}>{TITLE}</div>
       <div style={{fontSize:13,color:C.t2,marginTop:4,lineHeight:1.5}}>{SUB} · база фото общая со Stories AI</div>
     </div>
 
     <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:12,padding:isMobile?16:22,marginBottom:16}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:14,flexWrap:"wrap" as const}}>
         <div>
-          <div style={{fontSize:14,fontWeight:600,color:C.t1}}>Медиатека</div>
+          <div style={{fontSize:14,fontWeight:500,color:C.t1}}>Медиатека</div>
           <div style={{fontSize:12,color:C.t2,marginTop:2}}>{images.length} фото · те же, что в Stories AI</div>
         </div>
-        <label style={{padding:"9px 16px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:13,fontWeight:600,cursor:"pointer"}}>
+        <label style={{padding:"9px 16px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:13,fontWeight:500,cursor:"pointer"}}>
           {uploading?`Загрузка… ${uploading}`:"Загрузить фото"}
           <input type="file" accept="image/*" multiple style={{display:"none"}} onChange={e=>{onUpload(e.target.files);e.currentTarget.value="";}}/>
         </label>
@@ -5219,7 +5219,7 @@ function SlideStudio({userId,kind}:{userId:string,kind:"post"|"slide"}){
     </div>
 
     <button onClick={()=>setView("wizard")} disabled={!images.length}
-      style={{width:"100%",padding:"14px",borderRadius:11,border:"none",background:images.length?C.t1:inputBg,color:images.length?C.bg:C.t2,fontSize:15,fontWeight:600,cursor:images.length?"pointer":"default"}}>
+      style={{width:"100%",padding:"14px",borderRadius:11,border:"none",background:images.length?C.t1:inputBg,color:images.length?C.bg:C.t2,fontSize:15,fontWeight:500,cursor:images.length?"pointer":"default"}}>
       Создать {isPost?"карусель":"презентацию"}
     </button>
   </>;
@@ -5228,7 +5228,7 @@ function SlideStudio({userId,kind}:{userId:string,kind:"post"|"slide"}){
   if(view==="wizard")return<>
     <button onClick={()=>setView("library")} style={{background:"none",border:"none",color:C.t2,fontSize:13,cursor:"pointer",marginBottom:14,padding:0}}>← Медиатека</button>
     <div style={{background:cardBg,border:`1px solid ${bd}`,borderRadius:12,padding:isMobile?16:24,maxWidth:720}}>
-      <div style={{fontSize:17,fontWeight:600,color:C.t1,marginBottom:18}}>Параметры {isPost?"карусели":"презентации"}</div>
+      <div style={{fontSize:17,fontWeight:500,color:C.t1,marginBottom:18}}>Параметры {isPost?"карусели":"презентации"}</div>
 
       <label style={lbl}>Формат</label>
       <div style={{display:"flex",gap:8,marginBottom:18,flexWrap:"wrap" as const}}>
@@ -5270,7 +5270,7 @@ function SlideStudio({userId,kind}:{userId:string,kind:"post"|"slide"}){
       {err&&<div style={{fontSize:12.5,color:"#DC2626",marginTop:10}}>{err}</div>}
 
       <button onClick={runGenerate} disabled={!canGen}
-        style={{width:"100%",marginTop:20,padding:"14px",borderRadius:10,border:`1px solid ${canGen?bd:"transparent"}`,background:canGen?"#FFFFFF":inputBg,color:canGen?"#111111":C.t2,fontSize:15,fontWeight:600,cursor:canGen?"pointer":"default",boxShadow:canGen?"0 1px 2px rgba(0,0,0,0.05),0 8px 22px rgba(0,0,0,0.10)":"none"}}>
+        style={{width:"100%",marginTop:20,padding:"14px",borderRadius:10,border:`1px solid ${canGen?bd:"transparent"}`,background:canGen?"#FFFFFF":inputBg,color:canGen?"#111111":C.t2,fontSize:15,fontWeight:500,cursor:canGen?"pointer":"default",boxShadow:canGen?"0 1px 2px rgba(0,0,0,0.05),0 8px 22px rgba(0,0,0,0.10)":"none"}}>
         Сгенерировать
       </button>
       {!canGen&&<div style={{fontSize:12,color:C.t2,marginTop:10,textAlign:"center" as const}}>Нужно загрузить фото и указать тему</div>}
@@ -5283,7 +5283,7 @@ function SlideStudio({userId,kind}:{userId:string,kind:"post"|"slide"}){
       <img src={isPost?"/icon-copy.png":"/icon-design.png"} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{(e.currentTarget as HTMLImageElement).style.display="none";}}/>
     </div>
     <style>{`@keyframes ksbounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-20px)}}`}</style>
-    <div style={{fontSize:15,color:C.t1,fontWeight:600}}>Собираю {isPost?"карусель":"презентацию"}…</div>
+    <div style={{fontSize:15,color:C.t1,fontWeight:500}}>Собираю {isPost?"карусель":"презентацию"}…</div>
     <div style={{fontSize:13,color:C.t2}}>{form.count} слайдов · {fmt.label}</div>
   </div>;
 
@@ -5295,11 +5295,11 @@ function SlideStudio({userId,kind}:{userId:string,kind:"post"|"slide"}){
       <button onClick={()=>setView("wizard")} style={{background:"none",border:"none",color:C.t2,fontSize:13,cursor:"pointer",padding:0}}>← Параметры</button>
       <div style={{display:"flex",gap:8,flexWrap:"wrap" as const}}>
         <button onClick={downloadOne} disabled={exporting}
-          style={{padding:"9px 16px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:13,fontWeight:600,cursor:exporting?"default":"pointer"}}>
+          style={{padding:"9px 16px",borderRadius:9,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:13,fontWeight:500,cursor:exporting?"default":"pointer"}}>
           Скачать слайд
         </button>
         <button onClick={downloadAll} disabled={exporting}
-          style={{padding:"9px 16px",borderRadius:9,border:"none",background:C.t1,color:C.bg,fontSize:13,fontWeight:600,cursor:exporting?"default":"pointer"}}>
+          style={{padding:"9px 16px",borderRadius:9,border:"none",background:C.t1,color:C.bg,fontSize:13,fontWeight:500,cursor:exporting?"default":"pointer"}}>
           {exporting?"Сохраняю…":`Скачать все (${slides.length})`}
         </button>
       </div>
@@ -5370,7 +5370,7 @@ function SlideStudio({userId,kind}:{userId:string,kind:"post"|"slide"}){
         <div>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:8}}>
             <label style={{...lbl,marginBottom:0}}>Фото</label>
-            <button onClick={()=>setPicker(true)} style={{padding:"6px 13px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:12,fontWeight:600,cursor:"pointer"}}>Заменить</button>
+            <button onClick={()=>setPicker(true)} style={{padding:"6px 13px",borderRadius:8,border:`1px solid ${bd}`,background:"transparent",color:C.t1,fontSize:12,fontWeight:500,cursor:"pointer"}}>Заменить</button>
           </div>
           <div style={{display:"flex",gap:7,flexWrap:"wrap" as const}}>
             <button onClick={()=>patch(sel,{grayscale:!cur.grayscale})} style={seg(!!cur.grayscale)}>Ч/Б</button>
@@ -5424,8 +5424,8 @@ function SlideStudio({userId,kind}:{userId:string,kind:"post"|"slide"}){
     {picker&&<div onClick={()=>setPicker(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
       <div onClick={e=>e.stopPropagation()} style={{background:C.w,borderRadius:14,padding:20,width:"100%",maxWidth:640,maxHeight:"80vh",overflowY:"auto" as const}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-          <span style={{fontSize:15,fontWeight:600,color:C.t1}}>Выбрать фото</span>
-          <label style={{padding:"7px 13px",borderRadius:8,border:`1px solid ${bd}`,fontSize:12.5,fontWeight:600,color:C.t1,cursor:"pointer"}}>
+          <span style={{fontSize:15,fontWeight:500,color:C.t1}}>Выбрать фото</span>
+          <label style={{padding:"7px 13px",borderRadius:8,border:`1px solid ${bd}`,fontSize:12.5,fontWeight:500,color:C.t1,cursor:"pointer"}}>
             Загрузить
             <input type="file" accept="image/*" multiple style={{display:"none"}} onChange={e=>{onUpload(e.target.files);e.currentTarget.value="";}}/>
           </label>
@@ -5772,7 +5772,7 @@ function LinkTrackerPage({userId}:{userId:string}){
       <div style={{fontSize:12,color:C.t2,fontWeight:500,marginBottom:8}}>{label}</div>
       <div style={{display:"flex",alignItems:"baseline",gap:9,flexWrap:"wrap" as const}}>
         <span style={{fontSize:isMobile?23:28,fontWeight:500,color:C.t1,letterSpacing:"-0.025em",lineHeight:1}}>{value}</span>
-        {delta!==null&&<span style={{fontSize:12,fontWeight:600,padding:"2px 8px",borderRadius:20,
+        {delta!==null&&<span style={{fontSize:12,fontWeight:500,padding:"2px 8px",borderRadius:20,
           color:delta>=0?"#16A34A":"#DC2626",background:(delta>=0?"#16A34A":"#DC2626")+"18"}}>
           {(delta>=0?"+":"")+delta}%
         </span>}
@@ -5791,7 +5791,7 @@ function LinkTrackerPage({userId}:{userId:string}){
     return(
       <div style={{...glass,padding:isMobile?15:20}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:14}}>
-          <div style={{fontSize:14,fontWeight:600,color:C.t1}}>{f.name}</div>
+          <div style={{fontSize:14,fontWeight:500,color:C.t1}}>{f.name}</div>
           <div style={{display:"flex",gap:6}}>
             <button onClick={()=>setFunnelModal(f)} title="Изменить"
               style={{width:28,height:28,borderRadius:7,border:"1px solid "+bd,background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -5813,7 +5813,7 @@ function LinkTrackerPage({userId}:{userId:string}){
               return<div key={s.id}>
                 {i>0&&<div style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0 5px 2px"}}>
                   <svg width="12" height="16" viewBox="0 0 12 16"><line x1="6" y1="0" x2="6" y2="10" stroke={C.t2} strokeWidth="1.4"/><polygon points="6,16 2,10 10,10" fill={C.t2}/></svg>
-                  <span style={{fontSize:11.5,fontWeight:600,color:(conv||0)>=50?"#16A34A":(conv||0)>=20?"#D97706":"#DC2626"}}>
+                  <span style={{fontSize:11.5,fontWeight:500,color:(conv||0)>=50?"#16A34A":(conv||0)>=20?"#D97706":"#DC2626"}}>
                     конверсия {conv}%
                   </span>
                 </div>}
@@ -5825,7 +5825,7 @@ function LinkTrackerPage({userId}:{userId:string}){
                         background:`linear-gradient(90deg,${LT_CHART}CC,${LT_CHART})`,
                         transition:"width 0.6s cubic-bezier(0.4,0,0.2,1)",
                         display:"flex",alignItems:"center",paddingLeft:10}}>
-                        <span style={{fontSize:12,fontWeight:600,color:"#fff",whiteSpace:"nowrap" as const}}>{ltNum(s.count)}</span>
+                        <span style={{fontSize:12,fontWeight:500,color:"#fff",whiteSpace:"nowrap" as const}}>{ltNum(s.count)}</span>
                       </div>
                     </div>
                   </div>
@@ -5833,7 +5833,7 @@ function LinkTrackerPage({userId}:{userId:string}){
               </div>;
             })}
             {steps.length>1&&<div style={{marginTop:12,paddingTop:10,borderTop:"1px solid "+bd,fontSize:12,color:C.t2}}>
-              Сквозная конверсия: <b style={{color:C.t1,fontWeight:600}}>{first>0?Math.round(steps[steps.length-1].count/first*100):0}%</b>
+              Сквозная конверсия: <b style={{color:C.t1,fontWeight:500}}>{first>0?Math.round(steps[steps.length-1].count/first*100):0}%</b>
             </div>}
           </div>}
       </div>
@@ -5852,7 +5852,7 @@ function LinkTrackerPage({userId}:{userId:string}){
         style={{padding:"12px 22px",borderRadius:11,border:"1px solid rgba(255,255,255,0.14)",
           background:links.length>=LT_MAX_LINKS?C.ib:`linear-gradient(160deg,${LT_CHART}F0,#1D4FD8)`,
           backdropFilter:"blur(12px) saturate(1.4)",
-          color:links.length>=LT_MAX_LINKS?C.t2:"#fff",fontSize:14,fontWeight:600,
+          color:links.length>=LT_MAX_LINKS?C.t2:"#fff",fontSize:14,fontWeight:500,
           cursor:links.length>=LT_MAX_LINKS?"default":"pointer",
           boxShadow:links.length>=LT_MAX_LINKS?"none":"0 6px 20px rgba(47,107,255,0.30)",
           display:"flex",alignItems:"center",gap:8}}>
@@ -5879,7 +5879,7 @@ function LinkTrackerPage({userId}:{userId:string}){
 
     {/* Воронки */}
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:12,flexWrap:"wrap" as const}}>
-      <div style={{fontSize:15,fontWeight:600,color:C.t1}}>Воронки</div>
+      <div style={{fontSize:15,fontWeight:500,color:C.t1}}>Воронки</div>
       <button onClick={()=>setFunnelModal("new")}
         style={{padding:"8px 16px",borderRadius:9,border:"1px solid "+bd,background:"transparent",color:C.t1,fontSize:12.5,fontWeight:500,cursor:"pointer"}}>+ Воронка</button>
     </div>
@@ -5924,7 +5924,7 @@ function LinkTrackerPage({userId}:{userId:string}){
           <table style={{width:"100%",borderCollapse:"collapse" as const,fontSize:13}}>
             <thead><tr style={{borderBottom:"1px solid "+bd}}>
               {["Название","Короткая ссылка","Исходная ссылка","Переходы","Статус",""].map((h,i)=>(
-                <th key={i} style={{padding:"12px 14px",textAlign:"left" as const,fontSize:11,fontWeight:600,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,whiteSpace:"nowrap" as const}}>{h}</th>
+                <th key={i} style={{padding:"12px 14px",textAlign:"left" as const,fontSize:11,fontWeight:500,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,whiteSpace:"nowrap" as const}}>{h}</th>
               ))}
             </tr></thead>
             <tbody>
@@ -5945,10 +5945,10 @@ function LinkTrackerPage({userId}:{userId:string}){
                   <td style={{padding:"12px 14px",color:C.t2,maxWidth:220}}>
                     <div style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{l.target_url}</div>
                   </td>
-                  <td style={{padding:"12px 14px",fontWeight:600,color:C.t1,fontVariantNumeric:"tabular-nums" as const}}>{ltNum(cnt)}</td>
+                  <td style={{padding:"12px 14px",fontWeight:500,color:C.t1,fontVariantNumeric:"tabular-nums" as const}}>{ltNum(cnt)}</td>
                   <td style={{padding:"12px 14px"}}>
                     <button onClick={()=>toggleActive(l)}
-                      style={{fontSize:11,fontWeight:600,padding:"3px 9px",borderRadius:6,border:"none",cursor:"pointer",
+                      style={{fontSize:11,fontWeight:500,padding:"3px 9px",borderRadius:6,border:"none",cursor:"pointer",
                         background:(expired?"#D97706":l.active===false?"#77777722":"#16A34A")+(l.active===false?"":"22"),
                         color:expired?"#D97706":l.active===false?C.t2:"#16A34A"}}>
                       {expired?"Истекла":l.active===false?"Выключена":"Активна"}
@@ -6034,7 +6034,7 @@ function LtLinkModal({modal,links,origin,dark,isMobile,onClose,onSave,onCopy,cop
       boxShadow:"0 24px 70px rgba(0,0,0,0.32)"}}>
 
       {done?<>
-        <div style={{fontSize:17,fontWeight:600,color:C.t1,marginBottom:6}}>Ссылка создана</div>
+        <div style={{fontSize:17,fontWeight:500,color:C.t1,marginBottom:6}}>Ссылка создана</div>
         <div style={{fontSize:12.5,color:C.t2,marginBottom:18}}>Можно копировать и запускать в работу</div>
         <div style={{padding:"14px 16px",borderRadius:11,background:dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.03)",border:"1px solid "+bd,marginBottom:16}}>
           <div style={{fontFamily:"monospace",fontSize:14,color:LT_CHART,wordBreak:"break-all" as const}}>{shortU}</div>
@@ -6047,10 +6047,10 @@ function LtLinkModal({modal,links,origin,dark,isMobile,onClose,onSave,onCopy,cop
           <button onClick={()=>window.open(shortU,"_blank")}
             style={{flex:1,padding:"12px",borderRadius:10,border:"1px solid "+bd,background:"transparent",color:C.t1,fontSize:13.5,fontWeight:500,cursor:"pointer"}}>Открыть</button>
           <button onClick={onClose}
-            style={{flex:1,padding:"12px",borderRadius:10,border:"none",background:LT_CHART,color:"#fff",fontSize:13.5,fontWeight:600,cursor:"pointer"}}>Готово</button>
+            style={{flex:1,padding:"12px",borderRadius:10,border:"none",background:LT_CHART,color:"#fff",fontSize:13.5,fontWeight:500,cursor:"pointer"}}>Готово</button>
         </div>
       </>:<>
-        <div style={{fontSize:17,fontWeight:600,color:C.t1,marginBottom:18}}>{isNew?"Новая ссылка":"Редактировать ссылку"}</div>
+        <div style={{fontSize:17,fontWeight:500,color:C.t1,marginBottom:18}}>{isNew?"Новая ссылка":"Редактировать ссылку"}</div>
 
         <label style={lbl}>Название</label>
         <input autoFocus value={f.name} onChange={e=>setF({...f,name:e.target.value})} placeholder="Напр.: Instagram → Telegram бот" style={{...iS(),marginBottom:14}}/>
@@ -6124,7 +6124,7 @@ function LtLinkModal({modal,links,origin,dark,isMobile,onClose,onSave,onCopy,cop
           <button onClick={submit} disabled={!canSave||saving}
             style={{flex:1.5,padding:"12px",borderRadius:10,border:"none",
               background:canSave?`linear-gradient(160deg,${LT_CHART}F0,#1D4FD8)`:C.ib,
-              color:canSave?"#fff":C.t2,fontSize:14,fontWeight:600,cursor:canSave&&!saving?"pointer":"default",
+              color:canSave?"#fff":C.t2,fontSize:14,fontWeight:500,cursor:canSave&&!saving?"pointer":"default",
               boxShadow:canSave?"0 5px 16px rgba(47,107,255,0.28)":"none"}}>
             {saving?"Сохраняю…":isNew?"Создать":"Сохранить"}
           </button>
@@ -6165,7 +6165,7 @@ function LtFunnelModal({modal,links,dark,isMobile,onClose,onSave}:{
       border:"1px solid "+(dark?"rgba(255,255,255,0.12)":"rgba(255,255,255,0.9)"),
       borderRadius:16,padding:isMobile?18:26,width:"100%",maxWidth:520,maxHeight:"85vh",overflowY:"auto" as const,
       boxShadow:"0 24px 70px rgba(0,0,0,0.32)"}}>
-      <div style={{fontSize:17,fontWeight:600,color:C.t1,marginBottom:16}}>{isNew?"Новая воронка":"Изменить воронку"}</div>
+      <div style={{fontSize:17,fontWeight:500,color:C.t1,marginBottom:16}}>{isNew?"Новая воронка":"Изменить воронку"}</div>
 
       <label style={{fontSize:12,color:C.t2,fontWeight:500,marginBottom:6,display:"block"}}>Название</label>
       <input autoFocus value={f.name} onChange={e=>setF({...f,name:e.target.value})}
@@ -6176,7 +6176,7 @@ function LtFunnelModal({modal,links,dark,isMobile,onClose,onSave}:{
         {f.steps.map((id,i)=>{
           const l=links.find(x=>x.id===id);
           return<div key={id} style={{display:"flex",alignItems:"center",gap:8,padding:"9px 11px",borderRadius:9,background:C.ib,border:"1px solid "+bd}}>
-            <span style={{fontSize:11,fontWeight:600,color:C.t2,width:16}}>{i+1}</span>
+            <span style={{fontSize:11,fontWeight:500,color:C.t2,width:16}}>{i+1}</span>
             <span style={{flex:1,fontSize:12.5,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{l?l.name:"(удалена)"}</span>
             <button onClick={()=>move(i,-1)} disabled={i===0} style={{background:"none",border:"none",color:C.t2,cursor:i===0?"default":"pointer",opacity:i===0?0.3:1,padding:2}}>↑</button>
             <button onClick={()=>move(i,1)} disabled={i===f.steps.length-1} style={{background:"none",border:"none",color:C.t2,cursor:i===f.steps.length-1?"default":"pointer",opacity:i===f.steps.length-1?0.3:1,padding:2}}>↓</button>
@@ -6205,7 +6205,7 @@ function LtFunnelModal({modal,links,dark,isMobile,onClose,onSave}:{
         <button onClick={submit} disabled={!f.name.trim()||f.steps.length<2||saving}
           style={{flex:1.5,padding:"12px",borderRadius:10,border:"none",
             background:(f.name.trim()&&f.steps.length>=2)?`linear-gradient(160deg,${LT_CHART}F0,#1D4FD8)`:C.ib,
-            color:(f.name.trim()&&f.steps.length>=2)?"#fff":C.t2,fontSize:14,fontWeight:600,
+            color:(f.name.trim()&&f.steps.length>=2)?"#fff":C.t2,fontSize:14,fontWeight:500,
             cursor:(f.name.trim()&&f.steps.length>=2&&!saving)?"pointer":"default"}}>
           {saving?"Сохраняю…":"Сохранить"}
         </button>
@@ -7363,7 +7363,7 @@ function CrmPage({userId}:{userId:string}){
       {false&&isEditing&&(
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setEditLeadId(null)}>
           <div style={{background:C.w,borderRadius:12,padding:28,width:"100%",maxWidth:480,border:"1px solid "+C.bd,boxShadow:"0 24px 60px rgba(0,0,0,0.4)"}} onClick={e=>e.stopPropagation()}>
-            <div style={{fontSize:16,fontWeight:700,color:C.t1,marginBottom:20}}>✏️ Редактировать лида</div>
+            <div style={{fontSize:16,fontWeight:500,color:C.t1,marginBottom:20}}>Редактировать лида</div>
 
             {/* Avatar upload in modal */}
             <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:20}}>
@@ -7388,7 +7388,7 @@ function CrmPage({userId}:{userId:string}){
                 <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0]&&editLeadId)uploadLeadAvatar(e.target.files[0],editLeadId);}}/>
               </label>
               <div>
-                <div style={{fontSize:13,fontWeight:600,color:C.t1}}>{editLeadData.name||"Лид"}</div>
+                <div style={{fontSize:13,fontWeight:500,color:C.t1}}>{editLeadData.name||"Лид"}</div>
                 <div style={{fontSize:11,color:C.t2,marginTop:2}}>Нажми на фото чтобы изменить</div>
                 {editLeadData.avatar_url&&<button onClick={()=>setEditLeadData({...editLeadData,avatar_url:""})}
                   style={{fontSize:10,color:C.r,background:"transparent",border:"none",cursor:"pointer",padding:0,marginTop:4}}>✕ Удалить фото</button>}
@@ -7412,7 +7412,7 @@ function CrmPage({userId}:{userId:string}){
             </div>
             <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
               <button onClick={()=>setEditLeadId(null)} style={{padding:"9px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:8,fontSize:13,cursor:"pointer"}}>Отмена</button>
-              <button onClick={saveEditLead} style={{padding:"9px 20px",background:C.a,color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",boxShadow:"0 0 16px "+C.a+"40"}}>Сохранить</button>
+              <button onClick={saveEditLead} style={{padding:"9px 20px",background:C.a,color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:500,cursor:"pointer",boxShadow:"0 0 16px "+C.a+"40"}}>Сохранить</button>
             </div>
           </div>
         </div>
@@ -7422,14 +7422,16 @@ function CrmPage({userId}:{userId:string}){
       {deleteConfirmId===l.id&&(
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setDeleteConfirmId(null)}>
           <div style={{background:C.w,borderRadius:12,padding:28,width:"100%",maxWidth:380,textAlign:"center",border:"1px solid "+C.bd,boxShadow:"0 24px 60px rgba(0,0,0,0.5)"}} onClick={e=>e.stopPropagation()}>
-            <div style={{fontSize:36,marginBottom:12}}>🗑️</div>
-            <div style={{fontSize:16,fontWeight:700,color:C.t1,marginBottom:8}}>Удалить лида «{l.name}»?</div>
+            <div style={{width:44,height:44,borderRadius:10,background:C.ib,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.8"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+            </div>
+            <div style={{fontSize:16,fontWeight:500,color:C.t1,marginBottom:8}}>Удалить лида «{l.name}»?</div>
             <div style={{fontSize:13,color:C.t2,marginBottom:6,lineHeight:1.6}}>Это действие <strong>нельзя отменить</strong>.<br/>Все данные по этому лиду будут удалены безвозвратно.</div>
             <div style={{display:"flex",gap:10,marginTop:22,justifyContent:"center"}}>
               <button onClick={()=>setDeleteConfirmId(null)} style={{padding:"10px 20px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:8,fontSize:13,fontWeight:500,cursor:"pointer"}}>Отмена</button>
               <button onClick={()=>{allLeads.remove(l.id);setDeleteConfirmId(null);setOpenLead(null);}}
-                style={{padding:"10px 22px",background:"linear-gradient(135deg,#9D9D9D,#676767)",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",boxShadow:"0 0 20px rgba(103,103,103,0.4)"}}>
-                🗑 Удалить навсегда
+                style={{padding:"10px 22px",background:"#DC2626",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:500,cursor:"pointer"}}>
+                Удалить навсегда
               </button>
             </div>
           </div>
@@ -7470,30 +7472,26 @@ function CrmPage({userId}:{userId:string}){
           <div style={{width:32,height:32,borderRadius:"50%",flexShrink:0,overflow:"hidden",background:stageColor+"20",border:"2px solid "+stageColor+"30",display:"flex",alignItems:"center",justifyContent:"center"}}>
             {l.avatar_url
               ?<img src={l.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt={l.name}/>
-              :<span style={{fontSize:12,fontWeight:700,color:stageColor}}>{(l.name||"?")[0].toUpperCase()}</span>
+              :<span style={{fontSize:12,fontWeight:500,color:stageColor}}>{(l.name||"?")[0].toUpperCase()}</span>
             }
           </div>
           <div style={{flex:1,minWidth:0}}>
-            <div style={{fontWeight:600,fontSize:13,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.name}</div>
+            <div style={{fontWeight:500,fontSize:13,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.name}</div>
             {(l.phone||l.email||l.contact)&&<div style={{fontSize:11,color:C.t2,marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.phone||l.email||l.contact}</div>}
           </div>
-          {l.deal&&<div style={{fontSize:11,fontWeight:600,color:C.g,flexShrink:0,whiteSpace:"nowrap"}}>{fmt$(l.deal)}₽</div>}
+          {l.deal&&<div style={{fontSize:11,fontWeight:500,color:C.g,flexShrink:0,whiteSpace:"nowrap"}}>{fmt$(l.deal)}₽</div>}
         </div>
 
         {isOpen&&<div style={{marginTop:10,paddingTop:10,borderTop:"1px solid "+C.bd,position:"relative"}}>
-          {/* Clean: only 3 action buttons */}
-          <div style={{display:"flex",gap:6,alignItems:"stretch"}} onClick={e=>e.stopPropagation()}>
-            <button onClick={()=>{setWorkPanelLead(l);setWorkPanelTab("profile");setTouchGenResult("");setTouchGenGoal("");}}
-              style={{flex:1,padding:"9px 10px",background:"linear-gradient(135deg,#626262,#878787)",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
-              Работать с лидом
+          <div style={{display:"flex",gap:8,alignItems:"stretch"}} onClick={e=>e.stopPropagation()}>
+            <button onClick={()=>openEditLead(l)} title="Редактировать"
+              style={{flex:1,padding:"9px 10px",background:C.ib,color:C.t1,border:"1px solid "+C.bd,borderRadius:8,fontSize:12,fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:7}}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Редактировать
             </button>
-            <button onClick={()=>openEditLead(l)}
-              style={{padding:"9px 14px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:8,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-              ✏️
-            </button>
-            <button onClick={()=>setDeleteConfirmId(l.id)}
-              style={{padding:"9px 14px",background:"#FFF1F2",color:"#676767",border:"1px solid #DCDCDC",borderRadius:8,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-              🗑
+            <button onClick={()=>setDeleteConfirmId(l.id)} title="Удалить"
+              style={{padding:"9px 14px",background:"#DC2626",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
             </button>
           </div>
         </div>}
@@ -7529,7 +7527,7 @@ function CrmPage({userId}:{userId:string}){
 
     const ReportBlock=({color,border,title,children}:{color:string,border:string,title:string,children:React.ReactNode})=>(
       <div style={{padding:"12px 14px",background:color,border:"1px solid "+border,borderRadius:8,borderLeft:"3px solid "+border.replace("40","").replace("50","").replace("30","")}}>
-        <div style={{fontSize:10,fontWeight:800,color:border.replace("40","").replace("50","").replace("30",""),marginBottom:7,textTransform:"uppercase",letterSpacing:0.6}}>{title}</div>
+        <div style={{fontSize:10,fontWeight:500,color:border.replace("40","").replace("50","").replace("30",""),marginBottom:7,textTransform:"uppercase",letterSpacing:0.6}}>{title}</div>
         <div style={{fontSize:12,color:C.t1,lineHeight:1.75,whiteSpace:"pre-wrap"}}>{children}</div>
       </div>
     );
@@ -7543,23 +7541,24 @@ function CrmPage({userId}:{userId:string}){
           <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:14}}>
             <div style={{width:50,height:50,borderRadius:"50%",flexShrink:0,overflow:"hidden",background:stageColor+"20",border:"2px solid "+stageColor+"40",display:"flex",alignItems:"center",justifyContent:"center"}}>
               {l.avatar_url?<img src={l.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt={l.name}/>
-                :<span style={{fontSize:20,fontWeight:800,color:stageColor}}>{(l.name||"?")[0].toUpperCase()}</span>}
+                :<span style={{fontSize:20,fontWeight:500,color:stageColor}}>{(l.name||"?")[0].toUpperCase()}</span>}
             </div>
             <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:17,fontWeight:800,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.name}</div>
+              <div style={{fontSize:17,fontWeight:500,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.name}</div>
               {(l.contact||l.phone||l.email)&&<div style={{fontSize:12,color:C.t2,marginTop:2}}>{l.contact||l.phone||l.email}</div>}
-              {l.deal&&<div style={{fontSize:12,fontWeight:700,color:"#6F6F6F",marginTop:2}}>{fmt$(l.deal)} ₽</div>}
+              {l.deal&&<div style={{fontSize:12,fontWeight:500,color:"#6F6F6F",marginTop:2}}>{fmt$(l.deal)} ₽</div>}
             </div>
             <button onClick={()=>setWorkPanelLead(null)} style={{width:32,height:32,borderRadius:8,border:"1px solid "+C.bd,background:C.bg,cursor:"pointer",fontSize:18,color:C.t2,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>×</button>
           </div>
           <div style={{display:"flex",gap:8}}>
             {writeUrl&&<a href={writeUrl} target="_blank" rel="noreferrer"
-              style={{flex:1,padding:"9px 12px",background:"linear-gradient(135deg,#898989,#6F6F6F)",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,textDecoration:"none"}}>
-              ✉ Написать лиду
+              style={{flex:1,padding:"9px 12px",background:"#3F3F3F",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,textDecoration:"none"}}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16v16H4z" style={{display:"none"}}/><path d="M22 6l-10 7L2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
+              Написать лиду
             </a>}
             <button onClick={()=>{openTouchModal(l.id);}}
-              style={{flex:1,padding:"9px 12px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-              📋 История касаний
+              style={{flex:1,padding:"9px 12px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:8,fontSize:12,fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+              История касаний
             </button>
           </div>
         </div>
@@ -7581,7 +7580,7 @@ function CrmPage({userId}:{userId:string}){
           {workPanelTab==="profile"&&<>
             {/* Description */}
             {l.note&&<div>
-              <div style={{fontSize:10,fontWeight:700,color:C.t2,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Описание</div>
+              <div style={{fontSize:10,fontWeight:500,color:C.t2,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Описание</div>
               <div style={{fontSize:12,color:C.t1,lineHeight:1.65,background:C.ib,borderRadius:9,padding:"10px 12px",borderLeft:"3px solid "+stageColor,whiteSpace:"pre-wrap"}}>{l.note}</div>
             </div>}
 
@@ -7595,7 +7594,7 @@ function CrmPage({userId}:{userId:string}){
             ] as const).map(({key,label,ph})=>{
               const val=l[key]||"";
               return<div key={key}>
-                <div style={{fontSize:10,fontWeight:700,color:C.t2,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>{label}</div>
+                <div style={{fontSize:10,fontWeight:500,color:C.t2,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}>{label}</div>
                 <textarea defaultValue={val} placeholder={ph} rows={2}
                   onBlur={async e=>{const v=e.target.value;if(v!==val)await allLeads.update(l.id,{[key]:v});}}
                   style={{width:"100%",padding:"9px 12px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,background:C.ib,color:C.t1,resize:"none",fontFamily:"Inter,sans-serif",lineHeight:1.6,outline:"none",boxSizing:"border-box" as const,transition:"border-color 0.15s"}}
@@ -7608,7 +7607,7 @@ function CrmPage({userId}:{userId:string}){
             <div style={{borderTop:"1px solid "+C.bd,paddingTop:14}}>
               <button disabled={aiReportLoading===l.id}
                 onClick={async()=>{await generateAiReport(l);setWorkPanelLead((prev:any)=>prev?{...prev,...allLeads.data.find((x:any)=>x.id===l.id)}:prev);}}
-                style={{width:"100%",padding:"11px 14px",background:aiReportLoading===l.id?"#515151":"linear-gradient(135deg,#626262,#878787)",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:aiReportLoading===l.id?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
+                style={{width:"100%",padding:"11px 14px",background:aiReportLoading===l.id?"#515151":"linear-gradient(135deg,#626262,#878787)",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:500,cursor:aiReportLoading===l.id?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>
                 {aiReportLoading===l.id?<><div style={{width:14,height:14,border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/> Формирую отчёт...</>:"Сформировать отчёт через ИИ"}
               </button>
 
@@ -7616,23 +7615,23 @@ function CrmPage({userId}:{userId:string}){
                 const r=parseReport(l.ai_report);
                 return<div style={{marginTop:12,display:"flex",flexDirection:"column",gap:10}}>
                   {r.portrait&&<div style={{padding:"12px 14px",background:"#EFF6FF",border:"1px solid #BCBCBC",borderRadius:8,borderLeft:"3px solid #7A7A7A"}}>
-                    <div style={{fontSize:10,fontWeight:800,color:"#4F4F4F",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Портрет лида</div>
+                    <div style={{fontSize:10,fontWeight:500,color:"#4F4F4F",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Портрет лида</div>
                     <div style={{fontSize:12,color:"#363636",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.portrait}</div>
                   </div>}
                   {r.emotions&&<div style={{padding:"12px 14px",background:"#FFF7ED",border:"1px solid #DEDEDE",borderRadius:8,borderLeft:"3px solid #909090"}}>
-                    <div style={{fontSize:10,fontWeight:800,color:"#626262",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Эмоциональное состояние</div>
+                    <div style={{fontSize:10,fontWeight:500,color:"#626262",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Эмоциональное состояние</div>
                     <div style={{fontSize:12,color:"#424242",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.emotions}</div>
                   </div>}
                   {r.probability&&<div style={{padding:"12px 14px",background:"#F0F9FF",border:"1px solid #BEBEBE",borderRadius:8,borderLeft:"3px solid #808080"}}>
-                    <div style={{fontSize:10,fontWeight:800,color:"#515151",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Вероятность покупки</div>
+                    <div style={{fontSize:10,fontWeight:500,color:"#515151",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Вероятность покупки</div>
                     <div style={{fontSize:12,color:"#3C3C3C",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.probability}</div>
                   </div>}
                   {r.risks&&<div style={{padding:"12px 14px",background:"#FFF1F2",border:"1px solid #DCDCDC",borderRadius:8,borderLeft:"3px solid #797979"}}>
-                    <div style={{fontSize:10,fontWeight:800,color:"#4A4A4A",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Риски потери лида</div>
+                    <div style={{fontSize:10,fontWeight:500,color:"#4A4A4A",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Риски потери лида</div>
                     <div style={{fontSize:12,color:"#3A3A3A",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.risks}</div>
                   </div>}
                   {r.steps&&<div style={{padding:"12px 14px",background:"#FAF5FF",border:"1px solid #C7C7C7",borderRadius:8,borderLeft:"3px solid #626262"}}>
-                    <div style={{fontSize:10,fontWeight:800,color:"#515151",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Оптимальный следующий шаг</div>
+                    <div style={{fontSize:10,fontWeight:500,color:"#515151",marginBottom:6,textTransform:"uppercase",letterSpacing:0.6}}>Оптимальный следующий шаг</div>
                     <div style={{fontSize:12,color:"#393939",lineHeight:1.75,whiteSpace:"pre-wrap"}}>{r.steps}</div>
                   </div>}
                 </div>;
@@ -7646,14 +7645,14 @@ function CrmPage({userId}:{userId:string}){
               Для генерации касания нужен отчёт ИИ. Перейди во вкладку Профиль и сначала сформируй его.
             </div>}
             <div>
-              <div style={{fontSize:10,fontWeight:700,color:C.t2,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Цель касания</div>
+              <div style={{fontSize:10,fontWeight:500,color:C.t2,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Цель касания</div>
               <textarea value={touchGenGoal} onChange={e=>setTouchGenGoal(e.target.value)} rows={2}
                 placeholder="Например: закрыть на звонок, дожать до оплаты, отработать возражение, напомнить о себе..."
                 style={{width:"100%",padding:"10px 12px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,background:C.ib,color:C.t1,resize:"none",fontFamily:"Inter,sans-serif",outline:"none",boxSizing:"border-box" as const,lineHeight:1.6}}/>
             </div>
             <button disabled={touchGenLoading||!hasReport}
               onClick={()=>generateTouchpoint(workPanelLead)}
-              style={{width:"100%",padding:"11px 14px",background:!hasReport?"#9CA3AF":touchGenLoading?"#515151":"linear-gradient(135deg,#626262,#878787)",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:(!hasReport||touchGenLoading)?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+              style={{width:"100%",padding:"11px 14px",background:!hasReport?"#9CA3AF":touchGenLoading?"#515151":"linear-gradient(135deg,#626262,#878787)",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:500,cursor:(!hasReport||touchGenLoading)?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
               {touchGenLoading?<><div style={{width:14,height:14,border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/> Генерирую касания...</>:"Сгенерировать касание"}
             </button>
 
@@ -7670,7 +7669,7 @@ function CrmPage({userId}:{userId:string}){
                   return<div key={i} style={{padding:"14px 16px",background:c.bg,border:"1px solid "+c.border,borderRadius:8,borderLeft:"3px solid "+c.accent}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
                       <div>
-                        <div style={{fontSize:11,fontWeight:800,color:c.accent,textTransform:"uppercase",letterSpacing:0.5}}>{t.name}</div>
+                        <div style={{fontSize:11,fontWeight:500,color:c.accent,textTransform:"uppercase",letterSpacing:0.5}}>{t.name}</div>
                         {t.goal&&<div style={{fontSize:11,color:c.accent,opacity:0.7,marginTop:2}}>Цель: {t.goal}</div>}
                       </div>
                     </div>
@@ -7678,7 +7677,7 @@ function CrmPage({userId}:{userId:string}){
                     <button
                       onClick={()=>{navigator.clipboard.writeText(t.text).catch(()=>{});}}
                       title="Скопировать текст"
-                      style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",background:"rgba(255,255,255,0.7)",border:"1px solid "+c.border,borderRadius:7,cursor:"pointer",fontSize:11,color:c.accent,fontWeight:600}}>
+                      style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",background:"rgba(255,255,255,0.7)",border:"1px solid "+c.border,borderRadius:7,cursor:"pointer",fontSize:11,color:c.accent,fontWeight:500}}>
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
                       Скопировать
                     </button>
@@ -7699,11 +7698,11 @@ function CrmPage({userId}:{userId:string}){
     return <>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24}}>
         <div>
-          <h1 style={{margin:0,fontSize:24,fontWeight:800,color:C.t1}}>CRM</h1>
+          <h1 style={{margin:0,fontSize:24,fontWeight:500,color:C.t1}}>CRM</h1>
           <div style={{fontSize:13,color:C.t2,marginTop:2}}>Выбери воронку продаж или создай новую</div>
         </div>
         <button onClick={()=>setNewFunnelModal(true)}
-          style={{padding:"10px 20px",background:"#656565",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
+          style={{padding:"10px 20px",background:"#656565",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Новая воронка
         </button>
@@ -7713,10 +7712,12 @@ function CrmPage({userId}:{userId:string}){
         ?<div style={{textAlign:"center",padding:60,color:C.t2}}>Загрузка...</div>
         :funnels.data.length===0
         ?<div style={{textAlign:"center",padding:"80px 32px",background:C.w,borderRadius:10,border:"1px solid "+C.bd}} className="empty-state">
-            <div style={{fontSize:48,marginBottom:16}}>🎯</div>
-            <div style={{fontSize:18,fontWeight:700,color:C.t1,marginBottom:8}}>Воронок пока нет</div>
+            <div style={{width:56,height:56,borderRadius:14,background:C.ib,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 18px"}}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.6"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+            </div>
+            <div style={{fontSize:18,fontWeight:500,color:C.t1,marginBottom:8}}>Воронок пока нет</div>
             <div style={{fontSize:14,color:C.t2,marginBottom:24}}>Создай первую воронку продаж для управления лидами</div>
-            <button onClick={()=>setNewFunnelModal(true)} style={{padding:"12px 24px",background:C.a,color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:700,cursor:"pointer"}}>
+            <button onClick={()=>setNewFunnelModal(true)} style={{padding:"12px 24px",background:C.a,color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:500,cursor:"pointer"}}>
               + Создать воронку
             </button>
           </div>
@@ -7756,7 +7757,9 @@ function CrmPage({userId}:{userId:string}){
                   <button onClick={()=>{setEditFunnelId(fu.id);setEditFunnelName(fu.name);}}
                     style={{width:26,height:26,borderRadius:8,border:"1px solid "+C.bd,background:C.ib,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.t2,fontSize:12,transition:"all 0.15s"}}
                     onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.a;(e.currentTarget as HTMLElement).style.color=C.a;}}
-                    onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.color=C.t2;}}>✎</button>
+                    onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.color=C.t2;}}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
                   <button onClick={()=>setDeleteFunnelId(fu.id)}
                     style={{width:26,height:26,borderRadius:8,border:"1px solid "+C.bd,background:C.ib,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.15s"}}
                     onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.r+"60";(e.currentTarget as HTMLElement).style.background=C.r+"10";}}
@@ -7777,7 +7780,7 @@ function CrmPage({userId}:{userId:string}){
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={accentColor} strokeWidth="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
                   </div>
                   <div style={{minWidth:0}}>
-                    <div style={{fontSize:14,fontWeight:700,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{fu.name}</div>
+                    <div style={{fontSize:14,fontWeight:500,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{fu.name}</div>
                     {fu.description&&<div style={{fontSize:11,color:C.t2,marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{fu.description}</div>}
                   </div>
                 </div>
@@ -7790,14 +7793,14 @@ function CrmPage({userId}:{userId:string}){
                     {label:"Конверсия",value:convRate+"%"},
                   ].map((s,i)=>(
                     <div key={i} style={{background:C.ib,borderRadius:8,padding:"10px 8px",textAlign:"center",border:"1px solid "+C.bd}}>
-                      <div style={{fontSize:17,fontWeight:700,color:C.t1,lineHeight:1.2}}>{s.value}</div>
+                      <div style={{fontSize:17,fontWeight:500,color:C.t1,lineHeight:1.2}}>{s.value}</div>
                       <div style={{fontSize:10,color:C.t2,marginTop:3}}>{s.label}</div>
                     </div>
                   ))}
                 </div>
 
                 {/* Revenue */}
-                {fuRevenue>0&&<div style={{fontSize:12,color:C.g,fontWeight:600,marginBottom:12,display:"flex",alignItems:"center",gap:5}}>
+                {fuRevenue>0&&<div style={{fontSize:12,color:C.g,fontWeight:500,marginBottom:12,display:"flex",alignItems:"center",gap:5}}>
                   <div style={{width:5,height:5,borderRadius:"50%",background:C.g,boxShadow:`0 0 6px ${C.g}`}}/>
                   {fmt$(fuRevenue)} ₽ закрытых сделок
                 </div>}
@@ -7852,20 +7855,20 @@ function CrmPage({userId}:{userId:string}){
       {newFunnelModal&&(
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setNewFunnelModal(false)}>
           <div style={{background:"#fff",borderRadius:10,padding:32,width:"100%",maxWidth:440,boxShadow:"0 24px 60px rgba(0,0,0,0.18)"}} onClick={e=>e.stopPropagation()}>
-            <div style={{fontSize:18,fontWeight:700,marginBottom:20,color:"#1C1C1E"}}>Новая воронка продаж</div>
+            <div style={{fontSize:18,fontWeight:500,marginBottom:20,color:"#1C1C1E"}}>Новая воронка продаж</div>
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
               <div>
-                <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Название *</label>
+                <label style={{fontSize:12,fontWeight:500,color:C.t2,display:"block",marginBottom:5}}>Название *</label>
                 <input autoFocus value={newFunnelName} onChange={e=>setNewFunnelName(e.target.value)}
                   onKeyDown={e=>{if(e.key==="Enter")createFunnel();}}
                   placeholder="Например: Основная воронка, Instagram, B2B..." style={iS()}/>
               </div>
               <div>
-                <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Описание (необязательно)</label>
+                <label style={{fontSize:12,fontWeight:500,color:C.t2,display:"block",marginBottom:5}}>Описание (необязательно)</label>
                 <input value={newFunnelDesc} onChange={e=>setNewFunnelDesc(e.target.value)} placeholder="Краткое описание..." style={iS()}/>
               </div>
               <div>
-                <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:8}}>Цвет воронки</label>
+                <label style={{fontSize:12,fontWeight:500,color:C.t2,display:"block",marginBottom:8}}>Цвет воронки</label>
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                   {FUNNEL_COLORS.map(color=>(
                     <button key={color} onClick={()=>setNewFunnelColor(color)}
@@ -7875,8 +7878,8 @@ function CrmPage({userId}:{userId:string}){
               </div>
             </div>
             <div style={{display:"flex",gap:10,marginTop:24,justifyContent:"flex-end"}}>
-              <button onClick={()=>setNewFunnelModal(false)} style={{padding:"10px 18px",background:"#F2F2F7",color:"#8E8E93",border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer"}}>Отмена</button>
-              <button onClick={createFunnel} disabled={!newFunnelName.trim()} style={{padding:"10px 20px",background:newFunnelName.trim()?"#656565":"#C6C6C8",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:newFunnelName.trim()?"pointer":"default"}}>Создать</button>
+              <button onClick={()=>setNewFunnelModal(false)} style={{padding:"10px 18px",background:"#F2F2F7",color:"#8E8E93",border:"none",borderRadius:8,fontSize:13,fontWeight:500,cursor:"pointer"}}>Отмена</button>
+              <button onClick={createFunnel} disabled={!newFunnelName.trim()} style={{padding:"10px 20px",background:newFunnelName.trim()?"#656565":"#C6C6C8",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:500,cursor:newFunnelName.trim()?"pointer":"default"}}>Создать</button>
             </div>
           </div>
         </div>
@@ -7886,13 +7889,13 @@ function CrmPage({userId}:{userId:string}){
       {editFunnelId&&(
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setEditFunnelId(null)}>
           <div style={{background:"#fff",borderRadius:10,padding:28,width:"100%",maxWidth:380}} onClick={e=>e.stopPropagation()}>
-            <div style={{fontSize:16,fontWeight:700,marginBottom:16}}>Переименовать воронку</div>
+            <div style={{fontSize:16,fontWeight:500,marginBottom:16}}>Переименовать воронку</div>
             <input autoFocus value={editFunnelName} onChange={e=>setEditFunnelName(e.target.value)}
               onKeyDown={e=>{if(e.key==="Enter"){funnels.update(editFunnelId,{name:editFunnelName});setEditFunnelId(null);}}}
               style={iS()}/>
             <div style={{display:"flex",gap:8,marginTop:16,justifyContent:"flex-end"}}>
               <button onClick={()=>setEditFunnelId(null)} style={{padding:"9px 16px",background:"#F2F2F7",color:"#8E8E93",border:"none",borderRadius:8,fontSize:13,cursor:"pointer"}}>Отмена</button>
-              <button onClick={()=>{funnels.update(editFunnelId,{name:editFunnelName});setEditFunnelId(null);}} style={{padding:"9px 18px",background:"#656565",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer"}}>Сохранить</button>
+              <button onClick={()=>{funnels.update(editFunnelId,{name:editFunnelName});setEditFunnelId(null);}} style={{padding:"9px 18px",background:"#656565",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:500,cursor:"pointer"}}>Сохранить</button>
             </div>
           </div>
         </div>
@@ -7902,12 +7905,14 @@ function CrmPage({userId}:{userId:string}){
       {deleteFunnelId&&(
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setDeleteFunnelId(null)}>
           <div style={{background:"#fff",borderRadius:10,padding:28,maxWidth:360,width:"100%",textAlign:"center"}} onClick={e=>e.stopPropagation()}>
-            <div style={{fontSize:36,marginBottom:12}}>🗑️</div>
-            <div style={{fontSize:16,fontWeight:700,marginBottom:8}}>Удалить воронку?</div>
+            <div style={{width:44,height:44,borderRadius:10,background:C.ib,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.8"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+            </div>
+            <div style={{fontSize:16,fontWeight:500,marginBottom:8}}>Удалить воронку?</div>
             <div style={{fontSize:13,color:C.t2,marginBottom:20}}>Все лиды в этой воронке тоже будут удалены. Отменить нельзя.</div>
             <div style={{display:"flex",gap:10,justifyContent:"center"}}>
-              <button onClick={()=>setDeleteFunnelId(null)} style={{padding:"10px 20px",background:"#F2F2F7",color:"#8E8E93",border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer"}}>Отмена</button>
-              <button onClick={deleteFunnel} style={{padding:"10px 20px",background:"#747474",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer"}}>Удалить</button>
+              <button onClick={()=>setDeleteFunnelId(null)} style={{padding:"10px 20px",background:"#F2F2F7",color:"#8E8E93",border:"none",borderRadius:8,fontSize:13,fontWeight:500,cursor:"pointer"}}>Отмена</button>
+              <button onClick={deleteFunnel} style={{padding:"10px 20px",background:"#DC2626",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:500,cursor:"pointer"}}>Удалить</button>
             </div>
           </div>
         </div>
@@ -7918,16 +7923,18 @@ function CrmPage({userId}:{userId:string}){
   // ── SCREEN: FUNNEL INNER ─────────────────────────────────────────
   return <>
     <WorkPanel/>
-    {crmToast&&<div style={{position:"fixed",bottom:28,right:28,background:"#6F6F6F",color:"#fff",padding:"13px 20px",borderRadius:10,fontSize:13,fontWeight:600,zIndex:600,boxShadow:"0 8px 28px rgba(111,111,111,0.35)",display:"flex",alignItems:"center",gap:10,maxWidth:340,lineHeight:1.5}}>✓ {crmToast}</div>}
+    {crmToast&&<div style={{position:"fixed",bottom:28,right:28,background:"#6F6F6F",color:"#fff",padding:"13px 20px",borderRadius:10,fontSize:13,fontWeight:500,zIndex:600,boxShadow:"0 8px 28px rgba(111,111,111,0.35)",display:"flex",alignItems:"center",gap:10,maxWidth:340,lineHeight:1.5}}>✓ {crmToast}</div>}
     {touchModalLead&&touchModalLeadId&&(
       <div style={{position:"fixed",inset:0,background:"rgba(5,8,15,0.62)",zIndex:320,display:"flex",alignItems:"center",justifyContent:"center",padding:isMobile?12:24,backdropFilter:"blur(8px)"}} onClick={closeTouchModal}>
         <div style={{width:"100%",maxWidth:860,maxHeight:"88dvh",background:C.w,border:"1px solid "+C.bd,borderRadius:12,boxShadow:"0 28px 80px rgba(0,0,0,0.36)",overflow:"hidden",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
           <div style={{padding:isMobile?18:24,borderBottom:"1px solid "+C.bd,background:"linear-gradient(135deg, rgba(91,91,91,0.10), rgba(98,98,98,0.08), transparent)",position:"relative"}}>
             <button onClick={closeTouchModal} style={{position:"absolute",right:16,top:16,width:34,height:34,borderRadius:8,border:"1px solid "+C.bd,background:C.w,color:C.t2,cursor:"pointer",fontSize:18,lineHeight:1}}>×</button>
             <div style={{display:"flex",alignItems:"center",gap:14,paddingRight:42}}>
-              <div style={{width:48,height:48,borderRadius:10,background:"linear-gradient(135deg,#5B5B5B,#626262)",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:22}}>✨</div>
+              <div style={{width:48,height:48,borderRadius:10,background:C.ib,display:"flex",alignItems:"center",justifyContent:"center",color:C.t2}}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+              </div>
               <div style={{minWidth:0}}>
-                <div style={{fontSize:isMobile?20:24,fontWeight:900,color:C.t1,lineHeight:1.15}}>Касания</div>
+                <div style={{fontSize:isMobile?20:24,fontWeight:500,color:C.t1,lineHeight:1.15}}>Касания</div>
                 <div style={{fontSize:13,color:C.t2,marginTop:5,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{touchModalLead.name||"Лид"} · {activeFunnel?.name||"CRM"}</div>
               </div>
             </div>
@@ -7936,10 +7943,10 @@ function CrmPage({userId}:{userId:string}){
           <div style={{padding:isMobile?14:22,overflowY:"auto",display:"grid",gap:12,background:C.ib}}>
             <div style={{background:C.w,border:"1px solid "+C.bd,borderRadius:12,padding:isMobile?14:16,display:"flex",alignItems:isMobile?"stretch":"center",justifyContent:"space-between",gap:12,flexDirection:isMobile?"column":"row"}}>
               <div>
-                <div style={{fontSize:14,fontWeight:800,color:C.t1}}>План касаний по лиду</div>
+                <div style={{fontSize:14,fontWeight:500,color:C.t1}}>План касаний по лиду</div>
                 <div style={{fontSize:12,color:C.t2,marginTop:4,lineHeight:1.5}}>Открывай нужное касание, прописывай сообщение, дату и время отправки. Все касания не раскрываются сразу, чтобы карточка оставалась чистой.</div>
               </div>
-              {touchSavedLeadId===touchModalLeadId&&<div style={{fontSize:12,fontWeight:800,color:"#6F6F6F",padding:"8px 12px",borderRadius:999,background:"#22C55E10",border:"1px solid #22C55E25",whiteSpace:"nowrap"}}>Сохранено</div>}
+              {touchSavedLeadId===touchModalLeadId&&<div style={{fontSize:12,fontWeight:500,color:"#6F6F6F",padding:"8px 12px",borderRadius:999,background:"#22C55E10",border:"1px solid #22C55E25",whiteSpace:"nowrap"}}>Сохранено</div>}
             </div>
 
             {touchModalRows.map((touch:any,index:number)=>{
@@ -7948,43 +7955,43 @@ function CrmPage({userId}:{userId:string}){
               return <div key={touch.id} style={{background:C.w,border:"1px solid "+(isOpen?"rgba(98,98,98,0.36)":C.bd),borderRadius:12,overflow:"hidden",boxShadow:isOpen?"0 14px 36px rgba(98,98,98,0.10)":"none"}}>
                 <button onClick={()=>setOpenTouchItemId(isOpen?null:touch.id)} style={{width:"100%",padding:isMobile?14:16,background:isOpen?"linear-gradient(135deg, rgba(91,91,91,0.08), rgba(98,98,98,0.06))":"transparent",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,textAlign:"left"}}>
                   <div style={{display:"flex",alignItems:"center",gap:12,minWidth:0}}>
-                    <div style={{width:34,height:34,borderRadius:8,background:isFilled?"linear-gradient(135deg,#5B5B5B,#626262)":"rgba(98,98,98,0.10)",color:isFilled?"#fff":"#676767",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:900,flexShrink:0}}>{index+1}</div>
+                    <div style={{width:34,height:34,borderRadius:8,background:isFilled?"linear-gradient(135deg,#5B5B5B,#626262)":"rgba(98,98,98,0.10)",color:isFilled?"#fff":"#676767",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:500,flexShrink:0}}>{index+1}</div>
                     <div style={{minWidth:0}}>
-                      <div style={{fontSize:14,fontWeight:900,color:C.t1}}>{`Касание ${index+1}`}</div>
+                      <div style={{fontSize:14,fontWeight:500,color:C.t1}}>{`Касание ${index+1}`}</div>
                       <div style={{fontSize:12,color:C.t2,marginTop:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:isMobile?220:520}}>{isFilled?touch.message:"Сообщение ещё не заполнено"}</div>
                     </div>
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-                    {(touch.date||touch.time)&&<span style={{fontSize:11,fontWeight:800,color:touch.sent?"#6F6F6F":"#676767",padding:"6px 9px",borderRadius:999,background:touch.sent?"#22C55E10":"rgba(98,98,98,0.08)",border:"1px solid "+(touch.sent?"#22C55E25":"rgba(98,98,98,0.16)"),display:isMobile?"none":"inline-block"}}>{touch.sent?"Отправлено":"Запланировано"}</span>}
+                    {(touch.date||touch.time)&&<span style={{fontSize:11,fontWeight:500,color:touch.sent?"#6F6F6F":"#676767",padding:"6px 9px",borderRadius:999,background:touch.sent?"#22C55E10":"rgba(98,98,98,0.08)",border:"1px solid "+(touch.sent?"#22C55E25":"rgba(98,98,98,0.16)"),display:isMobile?"none":"inline-block"}}>{touch.sent?"Отправлено":"Запланировано"}</span>}
                     <span style={{fontSize:18,color:C.t2,transform:isOpen?"rotate(180deg)":"rotate(0deg)",transition:"transform 0.15s"}}>⌄</span>
                   </div>
                 </button>
 
                 {isOpen&&<div style={{padding:isMobile?14:18,borderTop:"1px solid "+C.bd,display:"grid",gap:14}}>
                   <div>
-                    <label style={{display:"block",fontSize:12,fontWeight:800,color:C.t2,marginBottom:7}}>Текст сообщения</label>
+                    <label style={{display:"block",fontSize:12,fontWeight:500,color:C.t2,marginBottom:7}}>Текст сообщения</label>
                     <textarea value={touch.message||""} onChange={e=>updateTouch(touchModalLeadId!,touch.id,{message:e.target.value,sent:false})} placeholder="Напиши follow-up, напоминание или готовое сообщение для отправки..." rows={5}
                       style={{width:"100%",padding:"14px 15px",border:"1px solid "+C.bd,borderRadius:10,fontSize:14,outline:"none",background:C.ib,color:C.t1,resize:"vertical",fontFamily:"Inter, sans-serif",lineHeight:1.55,boxSizing:"border-box" as const}}/>
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12}}>
                     <div>
-                      <label style={{display:"block",fontSize:12,fontWeight:800,color:C.t2,marginBottom:7}}>Дата отправки</label>
+                      <label style={{display:"block",fontSize:12,fontWeight:500,color:C.t2,marginBottom:7}}>Дата отправки</label>
                       <input type="date" value={touch.date||""} onChange={e=>updateTouch(touchModalLeadId!,touch.id,{date:e.target.value,sent:false})} style={{width:"100%",padding:"12px 13px",border:"1px solid "+C.bd,borderRadius:10,fontSize:14,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"Inter, sans-serif"}}/>
                     </div>
                     <div>
-                      <label style={{display:"block",fontSize:12,fontWeight:800,color:C.t2,marginBottom:7}}>Время отправки</label>
+                      <label style={{display:"block",fontSize:12,fontWeight:500,color:C.t2,marginBottom:7}}>Время отправки</label>
                       <input type="time" value={touch.time||""} onChange={e=>updateTouch(touchModalLeadId!,touch.id,{time:e.target.value,sent:false})} style={{width:"100%",padding:"12px 13px",border:"1px solid "+C.bd,borderRadius:10,fontSize:14,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"Inter, sans-serif"}}/>
                     </div>
                   </div>
 
                   {isFilled&&<div style={{display:"grid",gap:8}}>
-                    <div style={{fontSize:12,fontWeight:800,color:C.t2}}>Предпросмотр</div>
+                    <div style={{fontSize:12,fontWeight:500,color:C.t2}}>Предпросмотр</div>
                     <div style={{maxWidth:"100%",padding:"12px 15px",borderRadius:"18px 18px 18px 6px",background:"linear-gradient(135deg,#5B5B5B,#626262)",color:"#fff",fontSize:14,lineHeight:1.55,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",whiteSpace:"pre-wrap",wordBreak:"break-word",opacity:touch.sent?0.72:1,boxSizing:"border-box" as const}}>{touch.message}</div>
                   </div>}
 
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
-                    <button onClick={()=>updateTouch(touchModalLeadId!,touch.id,{sent:!touch.sent})} style={{padding:"10px 13px",borderRadius:8,border:"1px solid "+(touch.sent?"#22C55E35":"rgba(98,98,98,0.20)"),background:touch.sent?"#22C55E10":"rgba(98,98,98,0.08)",color:touch.sent?"#6F6F6F":"#676767",fontSize:12,fontWeight:900,cursor:"pointer"}}>{touch.sent?"✓ Отправлено":"Отметить отправленным"}</button>
-                    {touchModalRows.length>1&&<button onClick={()=>removeTouchRow(touchModalLeadId!,touch.id)} style={{padding:"10px 13px",borderRadius:8,border:"1px solid rgba(119,119,119,0.22)",background:"rgba(119,119,119,0.08)",color:"#777777",fontSize:12,fontWeight:800,cursor:"pointer"}}>Удалить касание</button>}
+                    <button onClick={()=>updateTouch(touchModalLeadId!,touch.id,{sent:!touch.sent})} style={{padding:"10px 13px",borderRadius:8,border:"1px solid "+(touch.sent?"#22C55E35":"rgba(98,98,98,0.20)"),background:touch.sent?"#22C55E10":"rgba(98,98,98,0.08)",color:touch.sent?"#6F6F6F":"#676767",fontSize:12,fontWeight:500,cursor:"pointer"}}>{touch.sent?"✓ Отправлено":"Отметить отправленным"}</button>
+                    {touchModalRows.length>1&&<button onClick={()=>removeTouchRow(touchModalLeadId!,touch.id)} style={{padding:"10px 13px",borderRadius:8,border:"1px solid rgba(119,119,119,0.22)",background:"rgba(119,119,119,0.08)",color:"#777777",fontSize:12,fontWeight:500,cursor:"pointer"}}>Удалить касание</button>}
                   </div>
                 </div>}
               </div>
@@ -7992,10 +7999,10 @@ function CrmPage({userId}:{userId:string}){
           </div>
 
           <div style={{padding:isMobile?14:18,borderTop:"1px solid "+C.bd,background:C.w,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
-            <button onClick={()=>{const newTouch={id:`touch_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,message:"",date:"",time:"",sent:false};setTouchesByLead(prev=>({...prev,[touchModalLeadId!]:[...(prev[touchModalLeadId!]||[]),newTouch]}));setOpenTouchItemId(newTouch.id);}} style={{padding:"11px 14px",background:"transparent",color:"#676767",border:"1px dashed rgba(98,98,98,0.30)",borderRadius:10,fontSize:13,fontWeight:900,cursor:"pointer"}}>+ Добавить касание</button>
+            <button onClick={()=>{const newTouch={id:`touch_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,message:"",date:"",time:"",sent:false};setTouchesByLead(prev=>({...prev,[touchModalLeadId!]:[...(prev[touchModalLeadId!]||[]),newTouch]}));setOpenTouchItemId(newTouch.id);}} style={{padding:"11px 14px",background:"transparent",color:"#676767",border:"1px dashed rgba(98,98,98,0.30)",borderRadius:10,fontSize:13,fontWeight:500,cursor:"pointer"}}>+ Добавить касание</button>
             <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-              <button onClick={closeTouchModal} style={{padding:"11px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:10,fontSize:13,fontWeight:800,cursor:"pointer"}}>Закрыть</button>
-              <button onClick={()=>saveTouchRows(touchModalLeadId!)} style={{padding:"11px 18px",background:"linear-gradient(135deg,#5B5B5B,#626262)",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:900,cursor:"pointer",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>Сохранить касания</button>
+              <button onClick={closeTouchModal} style={{padding:"11px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:10,fontSize:13,fontWeight:500,cursor:"pointer"}}>Закрыть</button>
+              <button onClick={()=>saveTouchRows(touchModalLeadId!)} style={{padding:"11px 18px",background:"linear-gradient(135deg,#5B5B5B,#626262)",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:500,cursor:"pointer",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>Сохранить касания</button>
             </div>
           </div>
         </div>
@@ -8008,7 +8015,7 @@ function CrmPage({userId}:{userId:string}){
         <div style={{background:C.w,borderRadius:10,padding:isMobile?20:28,width:"100%",maxWidth:520,maxHeight:"calc(100dvh - 40px)",overflowY:"auto",border:"1px solid "+C.bd,boxShadow:"0 24px 60px rgba(0,0,0,0.4)",boxSizing:"border-box" as const}} onClick={e=>e.stopPropagation()}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:20}}>
             <div>
-              <div style={{fontSize:16,fontWeight:800,color:C.t1}}>✏️ Редактировать лида</div>
+              <div style={{fontSize:16,fontWeight:500,color:C.t1}}>Редактировать лида</div>
               <div style={{fontSize:11,color:C.t2,marginTop:3}}>Изменения сохранятся в текущей воронке и будут видны в канбане и списке.</div>
             </div>
             <button onClick={()=>setEditLeadId(null)} style={{width:32,height:32,borderRadius:8,border:"1px solid "+C.bd,background:C.ib,color:C.t2,cursor:"pointer",fontSize:18,lineHeight:1}}>×</button>
@@ -8029,7 +8036,7 @@ function CrmPage({userId}:{userId:string}){
               <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0]&&editLeadId)uploadLeadAvatar(e.target.files[0],editLeadId);}}/>
             </label>
             <div style={{minWidth:0}}>
-              <div style={{fontSize:13,fontWeight:700,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{editLeadData.name||"Лид"}</div>
+              <div style={{fontSize:13,fontWeight:500,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{editLeadData.name||"Лид"}</div>
               <div style={{fontSize:11,color:C.t2,marginTop:2}}>Нажми на фото, чтобы изменить</div>
               {editLeadData.avatar_url&&<button onClick={()=>setEditLeadData({...editLeadData,avatar_url:""})}
                 style={{fontSize:10,color:C.r,background:"transparent",border:"none",cursor:"pointer",padding:0,marginTop:5}}>✕ Удалить фото</button>}
@@ -8039,31 +8046,31 @@ function CrmPage({userId}:{userId:string}){
           <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12,marginBottom:12}}>
             {([["name","Имя *"],["contact","Контакт"],["phone","Телефон"],["email","Email"],["deal","Сделка, ₽"],["source","Источник"]] as const).map(([k,label])=>(
               <div key={k}>
-                <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>{label}</label>
+                <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:5,fontWeight:500}}>{label}</label>
                 <input type={k==="deal"?"number":"text"} value={editLeadData[k]||""} onChange={e=>setEditLeadData({...editLeadData,[k]:e.target.value})}
                   style={{width:"100%",padding:"10px 12px",border:"1px solid "+C.bd,borderRadius:8,fontSize:12,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"Inter, sans-serif"}}/>
               </div>
             ))}
           </div>
           <div style={{marginBottom:18}}>
-            <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:5,fontWeight:600}}>📋 Описание лида</label>
+            <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:5,fontWeight:500}}>Описание лида</label>
             <textarea value={editLeadData.note||""} onChange={e=>setEditLeadData({...editLeadData,note:e.target.value})} rows={4}
               placeholder="Подробный конспект по лиду: откуда пришёл, в чём боль, что обсуждали, договорённости, следующий шаг..."
               style={{width:"100%",padding:"10px 12px",border:"1px solid "+C.bd,borderRadius:8,fontSize:12,outline:"none",background:C.ib,color:C.t1,resize:"vertical",fontFamily:"Inter, sans-serif",boxSizing:"border-box" as const,lineHeight:1.6}}/>
           </div>
           {/* 5 CRM fields */}
           <div style={{marginBottom:18}}>
-            <div style={{fontSize:11,fontWeight:700,color:C.t1,marginBottom:10,paddingBottom:6,borderBottom:"1px solid "+C.bd}}>🧠 Профиль лида</div>
+            <div style={{fontSize:11,fontWeight:500,color:C.t1,marginBottom:10,paddingBottom:6,borderBottom:"1px solid "+C.bd}}>Профиль лида</div>
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               {([
-                {k:"pains",l:"😣 Боли",ph:"Что болит, что мешает"},
-                {k:"desires",l:"✨ Желания",ph:"Чего хочет достичь"},
-                {k:"objections",l:"🚧 Возражения",ph:"Сомнения, страхи, причины не купить"},
-                {k:"leverage",l:"🎯 На что давить",ph:"Триггеры, ценности, что важно"},
-                {k:"next_step",l:"👉 Следующий шаг",ph:"Конкретное следующее действие"},
+                {k:"pains",l:"Боли",ph:"Что болит, что мешает"},
+                {k:"desires",l:"Желания",ph:"Чего хочет достичь"},
+                {k:"objections",l:"Возражения",ph:"Сомнения, страхи, причины не купить"},
+                {k:"leverage",l:"На что давить",ph:"Триггеры, ценности, что важно"},
+                {k:"next_step",l:"Следующий шаг",ph:"Конкретное следующее действие"},
               ] as const).map(({k,l,ph})=>(
                 <div key={k}>
-                  <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4,fontWeight:600}}>{l}</label>
+                  <label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4,fontWeight:500}}>{l}</label>
                   <textarea value={editLeadData[k]||""} onChange={e=>setEditLeadData({...editLeadData,[k]:e.target.value})} rows={2}
                     placeholder={ph}
                     style={{width:"100%",padding:"8px 11px",border:"1px solid "+C.bd,borderRadius:9,fontSize:12,outline:"none",background:C.ib,color:C.t1,resize:"none",fontFamily:"Inter, sans-serif",boxSizing:"border-box" as const,lineHeight:1.55}}/>
@@ -8072,8 +8079,8 @@ function CrmPage({userId}:{userId:string}){
             </div>
           </div>
           <div style={{display:"flex",gap:10,justifyContent:"flex-end",flexWrap:"wrap"}}>
-            <button onClick={()=>setEditLeadId(null)} style={{padding:"10px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:8,fontSize:13,cursor:"pointer",fontWeight:600}}>Отмена</button>
-            <button onClick={saveEditLead} disabled={!String(editLeadData.name||"").trim()} style={{padding:"10px 20px",background:String(editLeadData.name||"").trim()?"linear-gradient(135deg,"+C.a+","+C.ah+")":C.bd,color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:800,cursor:String(editLeadData.name||"").trim()?"pointer":"default",boxShadow:String(editLeadData.name||"").trim()?"0 0 18px "+C.a+"35":"none"}}>Сохранить</button>
+            <button onClick={()=>setEditLeadId(null)} style={{padding:"10px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:8,fontSize:13,cursor:"pointer",fontWeight:500}}>Отмена</button>
+            <button onClick={saveEditLead} disabled={!String(editLeadData.name||"").trim()} style={{padding:"10px 20px",background:String(editLeadData.name||"").trim()?"linear-gradient(135deg,"+C.a+","+C.ah+")":C.bd,color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:500,cursor:String(editLeadData.name||"").trim()?"pointer":"default",boxShadow:String(editLeadData.name||"").trim()?"0 0 18px "+C.a+"35":"none"}}>Сохранить</button>
           </div>
         </div>
       </div>
@@ -8082,7 +8089,7 @@ function CrmPage({userId}:{userId:string}){
     {/* Breadcrumb + funnel switcher */}
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20,flexWrap:"wrap"}}>
       <button onClick={backToList}
-        style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",background:C.ib,border:"1px solid "+C.bd,borderRadius:9,fontSize:12,fontWeight:600,color:C.t2,cursor:"pointer",flexShrink:0,transition:"all 0.15s"}}
+        style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",background:C.ib,border:"1px solid "+C.bd,borderRadius:9,fontSize:12,fontWeight:500,color:C.t2,cursor:"pointer",flexShrink:0,transition:"all 0.15s"}}
         onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.a;(e.currentTarget as HTMLElement).style.color=C.a;}}
         onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.color=C.t2;}}>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
@@ -8119,7 +8126,7 @@ function CrmPage({userId}:{userId:string}){
         <div key={i} style={{background:C.w,borderRadius:10,padding:"14px 16px",border:"1px solid "+C.bd,transition:"all 0.2s"}}
           onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.a+"30";(e.currentTarget as HTMLElement).style.boxShadow="0 0 16px "+C.a+"10";}}
           onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
-          <div style={{fontSize:20,fontWeight:700,color:C.t1,marginBottom:2,lineHeight:1.2}}>{s.v}</div>
+          <div style={{fontSize:20,fontWeight:500,color:C.t1,marginBottom:2,lineHeight:1.2}}>{s.v}</div>
           <div style={{fontSize:11,color:C.t2}}>{s.l}</div>
         </div>
       ))}
@@ -8131,14 +8138,16 @@ function CrmPage({userId}:{userId:string}){
       <div style={{display:"flex",alignItems:isMobile?"flex-start":"center",justifyContent:"space-between",gap:12,marginBottom:todayTouchAgenda.length?14:0,flexDirection:isMobile?"column":"row",position:"relative"}}>
         <div>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
-            <div style={{width:34,height:34,borderRadius:8,background:"linear-gradient(135deg,#5B5B5B,#626262)",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",color:"#fff",fontSize:16}}>✉️</div>
+            <div style={{width:34,height:34,borderRadius:8,background:C.ib,display:"flex",alignItems:"center",justifyContent:"center",color:C.t2}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="22 6 12 13 2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
+            </div>
             <div>
-              <div style={{fontSize:16,fontWeight:800,color:C.t1}}>Кому сегодня, что нужно отправить</div>
+              <div style={{fontSize:16,fontWeight:500,color:C.t1}}>Кому сегодня, что нужно отправить</div>
               <div style={{fontSize:12,color:C.t2,marginTop:2}}>{activeFunnel?.name?`Воронка: ${activeFunnel.name}`:"Текущая воронка"}</div>
             </div>
           </div>
         </div>
-        <div style={{padding:"7px 12px",borderRadius:999,background:"linear-gradient(135deg, rgba(91,91,91,0.12), rgba(98,98,98,0.12))",border:"1px solid rgba(98,98,98,0.18)",fontSize:12,fontWeight:700,color:"#606060",whiteSpace:"nowrap"}}>
+        <div style={{padding:"7px 12px",borderRadius:999,background:"linear-gradient(135deg, rgba(91,91,91,0.12), rgba(98,98,98,0.12))",border:"1px solid rgba(98,98,98,0.18)",fontSize:12,fontWeight:500,color:"#606060",whiteSpace:"nowrap"}}>
           {todayTouchAgenda.length?`${todayTouchAgenda.length} задач на сегодня`:"На сегодня касаний нет"}
         </div>
       </div>
@@ -8149,15 +8158,15 @@ function CrmPage({userId}:{userId:string}){
             const accent=item.overdue?"#777777":"#626262";
             return <div key={item.touch.id} style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"minmax(0,1.2fr) minmax(0,2fr) auto",gap:10,alignItems:"center",padding:"12px 14px",background:C.ib,borderRadius:10,border:"1px solid "+accent+"22"}}>
               <div style={{minWidth:0}}>
-                <div style={{fontSize:13,fontWeight:800,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.lead.name||`Лид ${idx+1}`}</div>
+                <div style={{fontSize:13,fontWeight:500,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.lead.name||`Лид ${idx+1}`}</div>
                 <div style={{fontSize:11,color:C.t2,marginTop:3}}>{item.lead.source||"Без источника"} · {`Касание ${item.touchIndex}`}</div>
               </div>
               <div style={{minWidth:0}}>
                 <div style={{display:"inline-block",maxWidth:"100%",padding:"9px 12px",borderRadius:"16px 16px 16px 6px",background:"linear-gradient(135deg,#5B5B5B,#626262)",color:"#fff",fontSize:12,lineHeight:1.45,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.touch.message}</div>
               </div>
               <div style={{display:"flex",alignItems:isMobile?"stretch":"center",gap:8,justifyContent:isMobile?"flex-start":"flex-end",flexWrap:"wrap"}}>
-                <div style={{fontSize:11,fontWeight:700,color:accent,padding:"7px 10px",borderRadius:999,background:accent+"10",border:"1px solid "+accent+"25"}}>{item.overdue?"Просрочено":"Сегодня"}{item.touch.time?` · ${item.touch.time}`:""}</div>
-                <button onClick={()=>updateTouch(item.lead.id,item.touch.id,{sent:true})} style={{padding:"7px 10px",border:"1px solid #22C55E30",borderRadius:999,background:"#22C55E10",color:"#6F6F6F",fontSize:11,fontWeight:800,cursor:"pointer"}}>Отметить отправленным</button>
+                <div style={{fontSize:11,fontWeight:500,color:accent,padding:"7px 10px",borderRadius:999,background:accent+"10",border:"1px solid "+accent+"25"}}>{item.overdue?"Просрочено":"Сегодня"}{item.touch.time?` · ${item.touch.time}`:""}</div>
+                <button onClick={()=>updateTouch(item.lead.id,item.touch.id,{sent:true})} style={{padding:"7px 10px",border:"1px solid #22C55E30",borderRadius:999,background:"#22C55E10",color:"#6F6F6F",fontSize:11,fontWeight:500,cursor:"pointer"}}>Отметить отправленным</button>
               </div>
             </div>
           })}
@@ -8169,7 +8178,7 @@ function CrmPage({userId}:{userId:string}){
     {/* ── Период по дате создания лида ── */}
     <div style={{border:"1px solid "+C.bd,borderRadius:12,padding:isMobile?12:16,marginBottom:16,background:C.w}}>
       <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap" as const,marginBottom:cohortMode==="all"?0:12}}>
-        <span style={{fontSize:12,color:C.t2,fontWeight:600}}>Когорта по дате создания:</span>
+        <span style={{fontSize:12,color:C.t2,fontWeight:500}}>Когорта по дате создания:</span>
         <div style={{display:"flex",gap:2,background:C.ib,borderRadius:9,padding:3,border:"1px solid "+C.bd,flexWrap:"wrap" as const}}>
           {CRM_COHORT_MODES.map(m=>(
             <button key={m.id} onClick={()=>setCohortMode(m.id)}
@@ -8184,13 +8193,13 @@ function CrmPage({userId}:{userId:string}){
             style={{width:30,height:30,borderRadius:8,border:"1px solid "+C.bd,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
-          <span style={{fontSize:13,fontWeight:700,color:C.t1,minWidth:110,textAlign:"center" as const}}>{range.label}</span>
+          <span style={{fontSize:13,fontWeight:500,color:C.t1,minWidth:110,textAlign:"center" as const}}>{range.label}</span>
           <button onClick={()=>{const[y,m]=cohortAnchor.split("-").map(Number);const d=new Date(y,m,1);setCohortAnchor(d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"));}}
             style={{width:30,height:30,borderRadius:8,border:"1px solid "+C.bd,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
           {cohortAnchor!==today().slice(0,7)&&<button onClick={()=>setCohortAnchor(today().slice(0,7))}
-            style={{padding:"6px 12px",borderRadius:8,border:"1px solid "+C.bd,background:"transparent",color:C.t1,fontSize:12,fontWeight:600,cursor:"pointer"}}>Текущий</button>}
+            style={{padding:"6px 12px",borderRadius:8,border:"1px solid "+C.bd,background:"transparent",color:C.t1,fontSize:12,fontWeight:500,cursor:"pointer"}}>Текущий</button>}
         </div>}
 
         {cohortMode==="custom"&&<div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap" as const}}>
@@ -8214,8 +8223,8 @@ function CrmPage({userId}:{userId:string}){
             <div key={k.l}>
               <div style={{fontSize:11.5,color:C.t2,marginBottom:4}}>{k.l}</div>
               <div style={{display:"flex",alignItems:"baseline",gap:7,flexWrap:"wrap" as const}}>
-                <span style={{fontSize:isMobile?18:21,fontWeight:800,color:C.t1,letterSpacing:"-0.02em",lineHeight:1}}>{k.v}</span>
-                {k.d!==null&&k.d!==undefined&&<span style={{fontSize:11,fontWeight:700,
+                <span style={{fontSize:isMobile?18:21,fontWeight:500,color:C.t1,letterSpacing:"-0.02em",lineHeight:1}}>{k.v}</span>
+                {k.d!==null&&k.d!==undefined&&<span style={{fontSize:11,fontWeight:500,
                   color:k.d>=0?"#16A34A":"#DC2626"}}>{(k.d>=0?"+":"")+k.d}{k.suffix}</span>}
               </div>
             </div>
@@ -8233,7 +8242,7 @@ function CrmPage({userId}:{userId:string}){
               return<button key={mk} onClick={()=>{setCohortMode("month");setCohortAnchor(mk);}}
                 style={{padding:"7px 12px",borderRadius:9,border:"1px solid "+C.bd,background:"transparent",cursor:"pointer",textAlign:"left" as const}}>
                 <div style={{fontSize:11,color:C.t2}}>{CF_MONTHS_RU[Number(mm)-1].slice(0,3)} {yy}</div>
-                <div style={{fontSize:13,fontWeight:700,color:C.t1}}>{b.n} <span style={{fontSize:11,fontWeight:500,color:C.t2}}>· {b.n>0?Math.round(b.won/b.n*100):0}%</span></div>
+                <div style={{fontSize:13,fontWeight:500,color:C.t1}}>{b.n} <span style={{fontSize:11,fontWeight:500,color:C.t2}}>· {b.n>0?Math.round(b.won/b.n*100):0}%</span></div>
               </button>;
             })}
           </div>
@@ -8253,8 +8262,8 @@ function CrmPage({userId}:{userId:string}){
     {/* KANBAN */}
     {tab==="kanban"&&<>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-        <div style={{fontSize:11,color:C.t2}}>Перетаскивай карточки между этапами. Нажми ✎ чтобы переименовать.</div>
-        <button onClick={()=>setShow(!show)} style={{padding:"8px 16px",background:C.a,color:"#fff",border:"none",borderRadius:9,fontSize:12,fontWeight:600,cursor:"pointer",boxShadow:"0 0 16px "+C.a+"30",transition:"all 0.2s"}}
+        <div style={{fontSize:11,color:C.t2}}>Перетаскивай карточки между этапами. Нажми на иконку карандаша, чтобы переименовать.</div>
+        <button onClick={()=>setShow(!show)} style={{padding:"8px 16px",background:C.a,color:"#fff",border:"none",borderRadius:9,fontSize:12,fontWeight:500,cursor:"pointer",boxShadow:"0 0 16px "+C.a+"30",transition:"all 0.2s"}}
           onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 0 24px "+C.a+"50";(e.currentTarget as HTMLElement).style.transform="translateY(-1px)";}}
           onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 0 16px "+C.a+"30";(e.currentTarget as HTMLElement).style.transform="none";}}>
           + Лид
@@ -8262,7 +8271,7 @@ function CrmPage({userId}:{userId:string}){
       </div>
 
       {show&&<div style={{background:C.w,borderRadius:10,padding:18,marginBottom:18,border:"1px solid "+C.bd}} className="form-panel">
-        <div style={{fontSize:14,fontWeight:600,marginBottom:14,color:C.t1}}>Новый лид</div>
+        <div style={{fontSize:14,fontWeight:500,marginBottom:14,color:C.t1}}>Новый лид</div>
         <div style={{display:"flex",gap:14,marginBottom:14,alignItems:"flex-start"}}>
           {/* Avatar upload */}
           <label style={{cursor:"pointer",flexShrink:0}}>
@@ -8302,7 +8311,7 @@ function CrmPage({userId}:{userId:string}){
           </div>
         </div>
         <div style={{display:"flex",gap:8,marginTop:14}}>
-          <button onClick={sub} style={{padding:"9px 18px",background:C.a,color:"#fff",border:"none",borderRadius:9,fontSize:12,fontWeight:600,cursor:"pointer"}}>Добавить</button>
+          <button onClick={sub} style={{padding:"9px 18px",background:C.a,color:"#fff",border:"none",borderRadius:9,fontSize:12,fontWeight:500,cursor:"pointer"}}>Добавить</button>
           <button onClick={()=>setShow(false)} style={{padding:"9px 14px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:9,fontSize:12,cursor:"pointer"}}>Отмена</button>
         </div>
       </div>}
@@ -8333,7 +8342,7 @@ function CrmPage({userId}:{userId:string}){
                     <input autoFocus defaultValue={stage.label}
                       onBlur={e=>{updateStageLabel(stage.id,e.target.value||stage.label);setEditStageId(null);}}
                       onKeyDown={e=>{if(e.key==="Enter"){updateStageLabel(stage.id,(e.target as HTMLInputElement).value||stage.label);setEditStageId(null);}if(e.key==="Escape")setEditStageId(null);}}
-                      style={{width:"100%",fontSize:12,fontWeight:600,padding:"4px 8px",border:"1px solid "+stage.color,borderRadius:7,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const}}/>
+                      style={{width:"100%",fontSize:12,fontWeight:500,padding:"4px 8px",border:"1px solid "+stage.color,borderRadius:7,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const}}/>
                     <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
                       {FUNNEL_COLORS.map(c=><button key={c} onClick={()=>updateStageColor(stage.id,c)}
                         style={{width:16,height:16,borderRadius:"50%",background:c,border:stage.color===c?"2px solid "+C.t1:"1px solid transparent",cursor:"pointer",padding:0}}/>)}
@@ -8346,12 +8355,14 @@ function CrmPage({userId}:{userId:string}){
                 :<div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                     <div style={{display:"flex",alignItems:"center",gap:6}}>
                       <div style={{width:7,height:7,borderRadius:"50%",background:stage.color,boxShadow:"0 0 6px "+stage.color+"80",flexShrink:0}}/>
-                      <span style={{fontSize:12,fontWeight:600,color:C.t1}}>{stage.label}</span>
+                      <span style={{fontSize:12,fontWeight:500,color:C.t1}}>{stage.label}</span>
                     </div>
                     <div style={{display:"flex",alignItems:"center",gap:4}}>
-                      <span style={{fontSize:10,fontWeight:700,color:stage.color,background:stage.color+"18",borderRadius:10,padding:"1px 6px"}}>{stageLeads.length}</span>
+                      <span style={{fontSize:10,fontWeight:500,color:stage.color,background:stage.color+"18",borderRadius:10,padding:"1px 6px"}}>{stageLeads.length}</span>
                       <button onClick={()=>setEditStageId(stage.id)} title="Настроить этап"
-                        style={{width:20,height:20,border:"none",background:"transparent",cursor:"pointer",borderRadius:5,display:"flex",alignItems:"center",justifyContent:"center",color:C.t2,fontSize:11,opacity:0.5}}>✎</button>
+                        style={{width:20,height:20,border:"none",background:"transparent",cursor:"pointer",borderRadius:5,display:"flex",alignItems:"center",justifyContent:"center",color:C.t2,opacity:0.6}}>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
                     </div>
                   </div>
               }
@@ -8381,14 +8392,14 @@ function CrmPage({userId}:{userId:string}){
       <div style={{display:"flex",justifyContent:"space-between",marginBottom:14,gap:12}}>
         <input placeholder="Поиск по имени, телефону, email..." value={search} onChange={e=>setSearch(e.target.value)}
           style={{...iS(),maxWidth:300,borderRadius:9,fontSize:12,padding:"8px 12px",background:C.ib,border:"1px solid "+C.bd}}/>
-        <button onClick={()=>setShow(!show)} style={{padding:"8px 16px",background:C.a,color:"#fff",border:"none",borderRadius:9,fontSize:12,fontWeight:600,cursor:"pointer",boxShadow:"0 0 16px "+C.a+"30",transition:"all 0.2s"}}
+        <button onClick={()=>setShow(!show)} style={{padding:"8px 16px",background:C.a,color:"#fff",border:"none",borderRadius:9,fontSize:12,fontWeight:500,cursor:"pointer",boxShadow:"0 0 16px "+C.a+"30",transition:"all 0.2s"}}
           onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform="translateY(-1px)";(e.currentTarget as HTMLElement).style.boxShadow="0 0 24px "+C.a+"50";}}
           onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform="none";(e.currentTarget as HTMLElement).style.boxShadow="0 0 16px "+C.a+"30";}}>
           + Лид
         </button>
       </div>
       {show&&<div style={{background:C.w,borderRadius:10,padding:18,marginBottom:16,border:"1px solid "+C.bd}} className="form-panel">
-        <div style={{fontSize:14,fontWeight:600,marginBottom:14,color:C.t1}}>Новый лид</div>
+        <div style={{fontSize:14,fontWeight:500,marginBottom:14,color:C.t1}}>Новый лид</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
           {([["name","Имя *"],["contact","Контакт"],["phone","Телефон"],["email","Email"],["note","Описание лида"],["deal","Сделка, ₽"]] as const).map(([k,l])=>(
             <div key={k}>
@@ -8405,7 +8416,7 @@ function CrmPage({userId}:{userId:string}){
           </div>
         </div>
         <div style={{display:"flex",gap:8,marginTop:14}}>
-          <button onClick={sub} style={{padding:"9px 18px",background:C.a,color:"#fff",border:"none",borderRadius:9,fontSize:12,fontWeight:600,cursor:"pointer"}}>Добавить</button>
+          <button onClick={sub} style={{padding:"9px 18px",background:C.a,color:"#fff",border:"none",borderRadius:9,fontSize:12,fontWeight:500,cursor:"pointer"}}>Добавить</button>
           <button onClick={()=>setShow(false)} style={{padding:"9px 14px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:9,fontSize:12,cursor:"pointer"}}>Отмена</button>
         </div>
       </div>}
@@ -8420,22 +8431,22 @@ function CrmPage({userId}:{userId:string}){
               <div style={{width:36,height:36,borderRadius:"50%",flexShrink:0,overflow:"hidden",background:stCol(l.status)+"18",border:"2px solid "+stCol(l.status)+"30",display:"flex",alignItems:"center",justifyContent:"center"}}>
                 {l.avatar_url
                   ?<img src={l.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt={l.name}/>
-                  :<span style={{fontSize:13,fontWeight:700,color:stCol(l.status)}}>{(l.name||"?")[0]?.toUpperCase()}</span>
+                  :<span style={{fontSize:13,fontWeight:500,color:stCol(l.status)}}>{(l.name||"?")[0]?.toUpperCase()}</span>
                 }
               </div>
               <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:13,fontWeight:600,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.name}</div>
+                <div style={{fontSize:13,fontWeight:500,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.name}</div>
                 <div style={{fontSize:11,color:C.t2,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.phone||l.email||l.contact||l.source}</div>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
-                {l.deal&&<span style={{fontSize:11,fontWeight:600,color:C.g}}>{fmt$(l.deal)}₽</span>}
-                <span style={{fontSize:10,fontWeight:600,padding:"2px 9px",borderRadius:10,background:stCol(l.status)+"14",color:stCol(l.status),border:"1px solid "+stCol(l.status)+"25"}}>{stLbl(l.status)}</span>
+                {l.deal&&<span style={{fontSize:11,fontWeight:500,color:C.g}}>{fmt$(l.deal)}₽</span>}
+                <span style={{fontSize:10,fontWeight:500,padding:"2px 9px",borderRadius:10,background:stCol(l.status)+"14",color:stCol(l.status),border:"1px solid "+stCol(l.status)+"25"}}>{stLbl(l.status)}</span>
                 {/* Написать */}
                 {getWriteUrl(l)&&<a href={getWriteUrl(l)!} target="_blank" rel="noreferrer"
-                  style={{padding:"5px 12px",background:"linear-gradient(135deg,#22C55E14,#16A34A10)",color:"#6F6F6F",border:"1px solid #22C55E30",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer",textDecoration:"none",transition:"all 0.15s",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:4}}
-                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#898989,#6F6F6F)";(e.currentTarget as HTMLElement).style.color="#fff";}}
-                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="linear-gradient(135deg,#22C55E14,#16A34A10)";(e.currentTarget as HTMLElement).style.color="#6F6F6F";}}>
-                  ✉️ Написать
+                  style={{padding:"5px 12px",background:"transparent",color:C.t2,border:"1px solid "+C.bd,borderRadius:8,fontSize:11,fontWeight:500,cursor:"pointer",textDecoration:"none",transition:"all 0.15s",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:5}}
+                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.t1;(e.currentTarget as HTMLElement).style.color=C.bg;}}
+                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";(e.currentTarget as HTMLElement).style.color=C.t2;}}>
+                  Написать
                 </a>}
                 {/* Edit */}
                 <button onClick={()=>openEditLead(l)} style={{width:28,height:28,borderRadius:7,border:"1px solid "+C.bd,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.15s"}}
@@ -8460,19 +8471,19 @@ function CrmPage({userId}:{userId:string}){
     {newFunnelModal&&(
       <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setNewFunnelModal(false)}>
         <div style={{background:"#fff",borderRadius:10,padding:32,width:"100%",maxWidth:440,boxShadow:"0 24px 60px rgba(0,0,0,0.18)"}} onClick={e=>e.stopPropagation()}>
-          <div style={{fontSize:18,fontWeight:700,marginBottom:20}}>Новая воронка продаж</div>
+          <div style={{fontSize:18,fontWeight:500,marginBottom:20}}>Новая воронка продаж</div>
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
             <div>
-              <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Название *</label>
+              <label style={{fontSize:12,fontWeight:500,color:C.t2,display:"block",marginBottom:5}}>Название *</label>
               <input autoFocus value={newFunnelName} onChange={e=>setNewFunnelName(e.target.value)}
                 onKeyDown={e=>{if(e.key==="Enter")createFunnel();}} placeholder="Например: Instagram, B2B, Партнёры..." style={iS()}/>
             </div>
             <div>
-              <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:5}}>Описание</label>
+              <label style={{fontSize:12,fontWeight:500,color:C.t2,display:"block",marginBottom:5}}>Описание</label>
               <input value={newFunnelDesc} onChange={e=>setNewFunnelDesc(e.target.value)} placeholder="Краткое описание..." style={iS()}/>
             </div>
             <div>
-              <label style={{fontSize:12,fontWeight:600,color:C.t2,display:"block",marginBottom:8}}>Цвет</label>
+              <label style={{fontSize:12,fontWeight:500,color:C.t2,display:"block",marginBottom:8}}>Цвет</label>
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                 {FUNNEL_COLORS.map(color=>(
                   <button key={color} onClick={()=>setNewFunnelColor(color)}
@@ -8482,8 +8493,8 @@ function CrmPage({userId}:{userId:string}){
             </div>
           </div>
           <div style={{display:"flex",gap:10,marginTop:24,justifyContent:"flex-end"}}>
-            <button onClick={()=>setNewFunnelModal(false)} style={{padding:"10px 18px",background:"#F2F2F7",color:"#8E8E93",border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer"}}>Отмена</button>
-            <button onClick={createFunnel} disabled={!newFunnelName.trim()} style={{padding:"10px 20px",background:newFunnelName.trim()?"#656565":"#C6C6C8",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:newFunnelName.trim()?"pointer":"default"}}>Создать</button>
+            <button onClick={()=>setNewFunnelModal(false)} style={{padding:"10px 18px",background:"#F2F2F7",color:"#8E8E93",border:"none",borderRadius:8,fontSize:13,fontWeight:500,cursor:"pointer"}}>Отмена</button>
+            <button onClick={createFunnel} disabled={!newFunnelName.trim()} style={{padding:"10px 20px",background:newFunnelName.trim()?"#656565":"#C6C6C8",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:500,cursor:newFunnelName.trim()?"pointer":"default"}}>Создать</button>
           </div>
         </div>
       </div>
