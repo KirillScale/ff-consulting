@@ -6948,7 +6948,65 @@ Burn rate (средний расход/мес): ${Math.round(m.burn)} ₽
   </>;
 }
 
+// ── CRM AI: разбор сообщения на естественном языке в создание/обновление лида ──
+function crmDateContext():string{
+  const now=new Date();
+  const fmt=(d:Date)=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  const lines:string[]=[`Сегодня: ${fmt(now)} (${WD[now.getDay()]})`];
+  for(let i=1;i<=13;i++){
+    const d=new Date(now.getTime()+i*86400000);
+    lines.push(`${WD[d.getDay()]}${i===1?" (завтра)":""}: ${fmt(d)}`);
+  }
+  return "Календарь для определения дат (бери ближайшую дату с таким днём недели, если не указано иное):\n"+lines.join("\n");
+}
+
+const CRM_AI_SOURCES=["Instagram","Telegram","YouTube","Сайт","Рекомендация","Реклама","Другое"];
+
+const CRM_AI_SYSTEM=`Ты — CRM-ассистент. Пользователь описывает лида или событие обычным текстом на русском. Твоя задача — понять, нужно ли создать новую карточку лида или обновить существующую, и вернуть СТРОГО валидный JSON без markdown.
+
+Правила:
+- Если сообщение описывает НОВОГО человека/заявку — action:"create".
+- Если сообщение говорит про уже существующего лида (по имени, компании или контексту из списка) — action:"update" и укажи lead_id ТОЧНО из предоставленного списка (нельзя выдумывать id).
+- Если сообщение не относится к CRM (вопрос не про лида) — action:"none" и объясни это в summary.
+- source — выбери ТОЛЬКО из списка: ${CRM_AI_SOURCES.join(", ")}. Если не ясно — "Другое".
+- status — выбери id ТОЛЬКО из предоставленного списка этапов воронки. Если сообщение говорит про оплату/успешную сделку — выбери этап, чей label по смыслу означает закрытие/оплату (обычно самый последний позитивный этап). Если просят "вернуть в работу" — выбери самый ранний рабочий этап (не закрытый и не отказ). Если статус не упоминается — не указывай поле status вообще.
+- meeting_at — если указана дата/день встречи, переведи в точный ISO-формат YYYY-MM-DDTHH:mm по календарю ниже. Если время не указано, используй 12:00. Если не упомянуто — не указывай это поле.
+- next_step — короткая фраза о следующем действии, если оно ясно из текста (например "Созвон", "Отправить презентацию", "Ждём оплату").
+- company — название компании, только если явно упомянуто.
+- interest — конкретный продукт/услуга, которой интересуется лид, если упомянуто.
+- deal — сумма сделки в рублях числом, только если названа конкретная сумма.
+- note_append — короткий текст-комментарий для истории лида (то, что стоит запомнить), пиши по-русски одним предложением. Для update это ДОБАВЛЯЕТСЯ к истории, не заменяет её.
+- Для action:"create" обязательно укажи name.
+- Никогда не выдумывай данные, которых нет в тексте — оставляй поле не указанным.
+- summary — одно короткое предложение по-русски о том, что именно сделано (для показа пользователю).
+
+Верни строго JSON такого вида:
+{"action":"create|update|none","lead_id":"...или null","fields":{"name":"...","source":"...","status":"...","company":"...","interest":"...","next_step":"...","meeting_at":"...","deal":0,"note_append":"..."},"summary":"..."}
+Поля внутри fields, которых нет в сообщении, просто не включай в объект.`;
+
+async function crmAiParse(message:string,stages:{id:string,label:string}[],existingLeads:any[]):Promise<any>{
+  const stagesTxt=stages.map(s=>`${s.id} = ${s.label}`).join("; ");
+  const leadsTxt=existingLeads.slice(0,80).map(l=>
+    `id:${l.id} | имя:${l.name||"—"} | этап:${l.status} | компания:${l.company||"—"} | интерес:${l.interest||"—"} | след.шаг:${l.next_step||"—"}`
+  ).join("\n")||"(лидов в этой воронке пока нет)";
+
+  const user=`${crmDateContext()}
+
+Этапы воронки (используй ровно эти id для поля status):
+${stagesTxt}
+
+Существующие лиды этой воронки (для поиска совпадений при обновлении):
+${leadsTxt}
+
+Сообщение пользователя:
+"${message}"`;
+
+  const raw=await paChat(CRM_AI_SYSTEM,user,900,0.3);
+  return paParseJSON(raw);
+}
+
 function CrmPage({userId}:{userId:string}){
+
   const isMobile=useIsMobile();
 
   // Funnels stored in Supabase
@@ -6970,6 +7028,10 @@ function CrmPage({userId}:{userId:string}){
   const[dragId,setDragId]=useState<string|null>(null);
   const[dragOver,setDragOver]=useState<string|null>(null);
   const[openLead,setOpenLead]=useState<string|null>(null);
+  const[aiHighlightId,setAiHighlightId]=useState<string|null>(null);
+  const[crmAiInput,setCrmAiInput]=useState("");
+  const[crmAiBusy,setCrmAiBusy]=useState(false);
+  const[crmAiLog,setCrmAiLog]=useState<{ok:boolean,text:string}[]>([]);
   const[expandedNote,setExpandedNote]=useState<string|null>(null);
   const[workPanelLead,setWorkPanelLead]=useState<any|null>(null);
   const[workPanelTab,setWorkPanelTab]=useState<"profile"|"touches">("profile");
@@ -7354,9 +7416,97 @@ function CrmPage({userId}:{userId:string}){
     return"https://"+c;
   };
 
+  // ── CRM AI: применить решение модели к базе (безопасно, без потери данных) ──
+  const runCrmAi=async(message:string)=>{
+    const q=message.trim();
+    if(!q||crmAiBusy)return;
+    setCrmAiBusy(true);
+    try{
+      const parsed=await crmAiParse(q,stages.map((s:any)=>({id:s.id,label:s.label})),funnelLeads);
+      const action=parsed?.action;
+      const f=parsed?.fields||{};
+      const validStatus=(v:any)=>v&&stages.some((s:any)=>s.id===v)?v:undefined;
+      const validSource=(v:any)=>v&&CRM_AI_SOURCES.includes(v)?v:undefined;
+
+      if(action==="none"){
+        setCrmAiLog(prev=>[{ok:true,text:parsed?.summary||"Это не похоже на информацию о лиде — ничего не изменил."},...prev].slice(0,6));
+        setCrmAiBusy(false);setCrmAiInput("");
+        return;
+      }
+
+      if(action==="update"){
+        let lead=funnelLeads.find((l:any)=>l.id===parsed?.lead_id);
+        if(!lead&&f.name){
+          const nm=String(f.name).toLowerCase();
+          lead=funnelLeads.find((l:any)=>(l.name||"").toLowerCase().includes(nm)||nm.includes((l.name||"").toLowerCase()));
+        }
+        if(!lead){
+          setCrmAiLog(prev=>[{ok:false,text:"Не нашёл подходящего лида для обновления. Уточни имя или создай нового."},...prev].slice(0,6));
+          setCrmAiBusy(false);setCrmAiInput("");
+          return;
+        }
+        const status=validStatus(f.status);
+        const noteAppend=f.note_append?`\n[${today()}] ${f.note_append}`:"";
+        const patch:any={};
+        if(status)patch.status=status;
+        if(f.next_step)patch.next_step=f.next_step;
+        if(typeof f.deal==="number"&&f.deal>0)patch.deal=f.deal;
+        if(noteAppend)patch.note=(lead.note||"")+noteAppend;
+        await allLeads.update(lead.id,patch);
+        // best-effort: доп. поля (company/interest/meeting_at), если колонки существуют — не блокирует основной патч
+        const extra:any={};
+        if(f.company)extra.company=f.company;
+        if(f.interest)extra.interest=f.interest;
+        if(f.meeting_at)extra.meeting_at=f.meeting_at;
+        if(Object.keys(extra).length){
+          try{await supabase.from("leads").update(extra).eq("id",lead.id);}catch(e){}
+        }
+        setAiHighlightId(lead.id);
+        setTimeout(()=>setAiHighlightId(null),3600);
+        setCrmAiLog(prev=>[{ok:true,text:parsed?.summary||`Обновил карточку «${lead.name}».`},...prev].slice(0,6));
+      }
+
+      if(action==="create"){
+        if(!f.name){
+          setCrmAiLog(prev=>[{ok:false,text:"Не понял имя лида — уточни, пожалуйста."},...prev].slice(0,6));
+          setCrmAiBusy(false);setCrmAiInput("");
+          return;
+        }
+        const status=validStatus(f.status)||stages.find((s:any)=>s.id==="new")?.id||stages[0]?.id||"new";
+        const noteParts=[f.note_append].filter(Boolean);
+        const created=await allLeads.add({
+          ...emptyLead,
+          name:f.name,
+          source:validSource(f.source)||"Другое",
+          status,
+          next_step:f.next_step||"",
+          deal:typeof f.deal==="number"&&f.deal>0?f.deal:null,
+          note:noteParts.join("\n"),
+          funnel_id:activeFunnelId,
+        });
+        if(created){
+          const extra:any={};
+          if(f.company)extra.company=f.company;
+          if(f.interest)extra.interest=f.interest;
+          if(f.meeting_at)extra.meeting_at=f.meeting_at;
+          if(Object.keys(extra).length){
+            try{await supabase.from("leads").update(extra).eq("id",created.id);}catch(e){}
+          }
+          setAiHighlightId(created.id);
+          setTimeout(()=>setAiHighlightId(null),3600);
+        }
+        setCrmAiLog(prev=>[{ok:true,text:parsed?.summary||`Создал карточку «${f.name}».`},...prev].slice(0,6));
+      }
+    }catch(e:any){
+      setCrmAiLog(prev=>[{ok:false,text:"Не удалось обработать сообщение: "+(e?.message||"ошибка AI")},...prev].slice(0,6));
+    }
+    setCrmAiBusy(false);setCrmAiInput("");
+  };
+
   const leadCard=(l:any,stageColor:string)=>{
     const isOpen=openLead===l.id;
     const isEditing=editLeadId===l.id;
+    const isAiHighlighted=aiHighlightId===l.id;
 
     return <div key={l.id}>
       {/* ── Edit modal is rendered globally so it also works from List view */}
@@ -7444,10 +7594,11 @@ function CrmPage({userId}:{userId:string}){
         style={{
           background:C.w,borderRadius:8,padding:"11px 12px",marginBottom:6,
           cursor:"grab",userSelect:"none",boxSizing:"border-box" as const,
-          border:"1px solid "+C.bd,
+          border:isAiHighlighted?"1px solid #16A34A":"1px solid "+C.bd,
           borderLeft:`3px solid ${stageColor}`,
           opacity:dragId===l.id?0.4:1,
-          animation:"leadPulse 4s ease-in-out infinite",
+          animation:isAiHighlighted?"crmAiFlash 1.8s ease-out 2":"leadPulse 4s ease-in-out infinite",
+          boxShadow:isAiHighlighted?"0 0 0 3px rgba(22,163,74,0.14)":"none",
           position:"relative",overflow:"hidden",
         }}
         onMouseEnter={e=>{
@@ -8132,47 +8283,45 @@ function CrmPage({userId}:{userId:string}){
       ))}
     </div>
 
-    {/* Today agenda */}
-    <div style={{background:C.w,borderRadius:12,padding:isMobile?16:18,border:"1px solid "+C.bd,marginBottom:18,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",position:"relative",overflow:"hidden"}}>
-      <div style={{position:"absolute",inset:0,background:"linear-gradient(135deg, rgba(91,91,91,0.06), rgba(98,98,98,0.02) 45%, transparent 70%)",pointerEvents:"none"}}/>
-      <div style={{display:"flex",alignItems:isMobile?"flex-start":"center",justifyContent:"space-between",gap:12,marginBottom:todayTouchAgenda.length?14:0,flexDirection:isMobile?"column":"row",position:"relative"}}>
-        <div>
-          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
-            <div style={{width:34,height:34,borderRadius:8,background:C.ib,display:"flex",alignItems:"center",justifyContent:"center",color:C.t2}}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="22 6 12 13 2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
-            </div>
-            <div>
-              <div style={{fontSize:16,fontWeight:500,color:C.t1}}>Кому сегодня, что нужно отправить</div>
-              <div style={{fontSize:12,color:C.t2,marginTop:2}}>{activeFunnel?.name?`Воронка: ${activeFunnel.name}`:"Текущая воронка"}</div>
-            </div>
-          </div>
+    {/* AI-ассистент CRM */}
+    <div style={{background:C.w,borderRadius:12,padding:isMobile?16:18,border:"1px solid "+C.bd,marginBottom:18,position:"relative",overflow:"hidden"}}>
+      <style>{`@keyframes crmAiFlash{0%{box-shadow:0 0 0 0 rgba(22,163,74,0.35);}50%{box-shadow:0 0 0 8px rgba(22,163,74,0.10);}100%{box-shadow:0 0 0 0 rgba(22,163,74,0);}}`}</style>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+        <div style={{width:34,height:34,borderRadius:8,background:C.ib,display:"flex",alignItems:"center",justifyContent:"center",color:C.t2,flexShrink:0}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 2a4 4 0 014 4v2a4 4 0 01-8 0V6a4 4 0 014-4z"/><path d="M6 12v1a6 6 0 0012 0v-1M12 19v3M8 22h8"/></svg>
         </div>
-        <div style={{padding:"7px 12px",borderRadius:999,background:"linear-gradient(135deg, rgba(91,91,91,0.12), rgba(98,98,98,0.12))",border:"1px solid rgba(98,98,98,0.18)",fontSize:12,fontWeight:500,color:"#606060",whiteSpace:"nowrap"}}>
-          {todayTouchAgenda.length?`${todayTouchAgenda.length} задач на сегодня`:"На сегодня касаний нет"}
+        <div>
+          <div style={{fontSize:15,fontWeight:500,color:C.t1}}>AI-ассистент CRM</div>
+          <div style={{fontSize:12,color:C.t2,marginTop:1}}>{activeFunnel?.name?`Воронка: ${activeFunnel.name}`:"Текущая воронка"} · опиши лида обычным текстом</div>
         </div>
       </div>
 
-      {todayTouchAgenda.length>0
-        ?<div style={{display:"grid",gap:10,position:"relative"}}>
-          {todayTouchAgenda.slice(0,8).map((item:any,idx:number)=>{
-            const accent=item.overdue?"#777777":"#626262";
-            return <div key={item.touch.id} style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"minmax(0,1.2fr) minmax(0,2fr) auto",gap:10,alignItems:"center",padding:"12px 14px",background:C.ib,borderRadius:10,border:"1px solid "+accent+"22"}}>
-              <div style={{minWidth:0}}>
-                <div style={{fontSize:13,fontWeight:500,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.lead.name||`Лид ${idx+1}`}</div>
-                <div style={{fontSize:11,color:C.t2,marginTop:3}}>{item.lead.source||"Без источника"} · {`Касание ${item.touchIndex}`}</div>
-              </div>
-              <div style={{minWidth:0}}>
-                <div style={{display:"inline-block",maxWidth:"100%",padding:"9px 12px",borderRadius:"16px 16px 16px 6px",background:"linear-gradient(135deg,#5B5B5B,#626262)",color:"#fff",fontSize:12,lineHeight:1.45,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.touch.message}</div>
-              </div>
-              <div style={{display:"flex",alignItems:isMobile?"stretch":"center",gap:8,justifyContent:isMobile?"flex-start":"flex-end",flexWrap:"wrap"}}>
-                <div style={{fontSize:11,fontWeight:500,color:accent,padding:"7px 10px",borderRadius:999,background:accent+"10",border:"1px solid "+accent+"25"}}>{item.overdue?"Просрочено":"Сегодня"}{item.touch.time?` · ${item.touch.time}`:""}</div>
-                <button onClick={()=>updateTouch(item.lead.id,item.touch.id,{sent:true})} style={{padding:"7px 10px",border:"1px solid #22C55E30",borderRadius:999,background:"#22C55E10",color:"#6F6F6F",fontSize:11,fontWeight:500,cursor:"pointer"}}>Отметить отправленным</button>
-              </div>
-            </div>
-          })}
-          {todayTouchAgenda.length>8&&<div style={{fontSize:11,color:C.t2,paddingLeft:4}}>Показаны первые 8 касаний. Остальные сохраняются внутри карточек лидов.</div>}
-        </div>
-        :<div style={{position:"relative",padding:"8px 2px 2px",fontSize:12,color:C.t2,lineHeight:1.6}}>Запланируй касания внутри карточек лидов — и здесь автоматически появится список, кому и что нужно отправить именно сегодня по этой воронке.</div>}
+      <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
+        <textarea value={crmAiInput} onChange={e=>setCrmAiInput(e.target.value)} rows={1}
+          onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();runCrmAi(crmAiInput);}}}
+          placeholder="Например: новый лид из Telegram, зовут Андрей, интересуется GamePlan, созвон в среду"
+          disabled={crmAiBusy}
+          style={{flex:1,padding:"12px 14px",border:"1px solid "+C.bd,borderRadius:10,fontSize:13,outline:"none",background:C.ib,color:C.t1,resize:"none" as const,minHeight:46,maxHeight:120,lineHeight:1.55,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
+        <button onClick={()=>runCrmAi(crmAiInput)} disabled={!crmAiInput.trim()||crmAiBusy}
+          style={{flexShrink:0,width:46,height:46,borderRadius:10,border:"none",
+            background:(crmAiInput.trim()&&!crmAiBusy)?C.t1:C.ib,
+            color:(crmAiInput.trim()&&!crmAiBusy)?C.bg:C.t2,
+            cursor:(crmAiInput.trim()&&!crmAiBusy)?"pointer":"default",
+            display:"flex",alignItems:"center",justifyContent:"center"}}>
+          {crmAiBusy
+            ?<div style={{width:16,height:16,border:"2px solid rgba(150,150,150,0.35)",borderTopColor:"currentColor",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+            :<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>}
+        </button>
+      </div>
+
+      {crmAiLog.length>0&&<div style={{marginTop:12,display:"flex",flexDirection:"column",gap:6,paddingTop:12,borderTop:"1px solid "+C.bd}}>
+        {crmAiLog.map((l,i)=>(
+          <div key={i} style={{fontSize:12.5,color:l.ok?C.t1:"#DC2626",lineHeight:1.5,display:"flex",gap:7}}>
+            <span style={{flexShrink:0,color:l.ok?"#16A34A":"#DC2626"}}>{l.ok?"✓":"✕"}</span>
+            <span>{l.text}</span>
+          </div>
+        ))}
+      </div>}
     </div>
 
     {/* ── Период по дате создания лида ── */}
