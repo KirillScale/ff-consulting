@@ -4008,6 +4008,71 @@ function funnelStageIcon(id:string){
   };
   return m[id]||"M12 2a10 10 0 100 20 10 10 0 000-20z";
 }
+// Когорта = месяц СОЗДАНИЯ лида. Лид навсегда закреплён за месяцем, когда пришёл,
+// независимо от того, когда его обработали или закрыли.
+const crmLeadMonth=(l:any)=>String(l?.created_at||"").slice(0,7);
+const crmLeadDay=(l:any)=>String(l?.created_at||"").slice(0,10);
+
+const CRM_COHORT_MODES:{id:string,label:string}[]=[
+  {id:"month",label:"Месяц"},
+  {id:"3m",label:"3 месяца"},
+  {id:"6m",label:"6 месяцев"},
+  {id:"year",label:"Текущий год"},
+  {id:"all",label:"Всё время"},
+  {id:"custom",label:"Период"},
+];
+
+// Возвращает границы периода (включительно) и такой же по длине предыдущий период — для сравнения.
+function crmCohortRange(mode:string,anchor:string,cFrom:string,cTo:string){
+  const pad=(n:number)=>String(n).padStart(2,"0");
+  const ym=(d:Date)=>d.getFullYear()+"-"+pad(d.getMonth()+1);
+  const iso=(d:Date)=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+  const now=new Date();
+
+  if(mode==="all")return{from:"",to:"",prevFrom:"",prevTo:"",label:"Всё время",days:0};
+
+  if(mode==="custom"){
+    const f=cFrom||iso(new Date(now.getFullYear(),now.getMonth(),1));
+    const t=cTo||iso(now);
+    const dF=new Date(f+"T00:00:00"),dT=new Date(t+"T00:00:00");
+    const span=Math.max(1,Math.round((dT.getTime()-dF.getTime())/86400000)+1);
+    const pT=new Date(dF);pT.setDate(pT.getDate()-1);
+    const pF=new Date(pT);pF.setDate(pF.getDate()-span+1);
+    return{from:f,to:t,prevFrom:iso(pF),prevTo:iso(pT),label:`${f} — ${t}`,days:span};
+  }
+
+  if(mode==="month"){
+    const[y,m]=anchor.split("-").map(Number);
+    const start=new Date(y,m-1,1),end=new Date(y,m,0);
+    const pStart=new Date(y,m-2,1),pEnd=new Date(y,m-1,0);
+    return{from:iso(start),to:iso(end),prevFrom:iso(pStart),prevTo:iso(pEnd),
+      label:CF_MONTHS_RU[m-1]+" "+y,days:end.getDate()};
+  }
+
+  if(mode==="year"){
+    const y=now.getFullYear();
+    const start=new Date(y,0,1);
+    return{from:iso(start),to:iso(now),prevFrom:iso(new Date(y-1,0,1)),prevTo:iso(new Date(y-1,11,31)),
+      label:"Год "+y,days:0};
+  }
+
+  const months=mode==="6m"?6:3;
+  const start=new Date(now.getFullYear(),now.getMonth()-(months-1),1);
+  const pStart=new Date(now.getFullYear(),now.getMonth()-(months*2-1),1);
+  const pEnd=new Date(now.getFullYear(),now.getMonth()-(months-1),0);
+  return{from:iso(start),to:iso(now),prevFrom:iso(pStart),prevTo:iso(pEnd),
+    label:`${CF_MONTHS_RU[start.getMonth()].slice(0,3)} ${start.getFullYear()} — ${CF_MONTHS_RU[now.getMonth()].slice(0,3)} ${now.getFullYear()}`,days:0};
+}
+
+const crmInRange=(l:any,from:string,to:string)=>{
+  if(!from&&!to)return true;
+  const d=crmLeadDay(l);
+  if(!d)return false;
+  if(from&&d<from)return false;
+  if(to&&d>to)return false;
+  return true;
+};
+
 function CrmFunnel({stages,leads,isMobile}:{stages:any[],leads:any[],isMobile:boolean}){
   if(!stages||stages.length<2)return null;
   const counts=stages.map((s:any)=>leads.filter((l:any)=>l.status===s.id).length);
@@ -4165,6 +4230,73 @@ type EtsProduct={id:string,name:string,price:string,result:string,forWhom:string
 const etsFilled=(data:any,n:EtsNode)=>n.fields.filter(f=>String(data?.[n.id]?.[f.key]||"").trim()).length;
 const etsProducts=(data:any):EtsProduct[]=>Array.isArray(data?.offer?.products)?data.offer.products:[];
 
+
+// Вызов AI для ETS: в отличие от paChat, честно сообщает об ошибке,
+// а не возвращает пустую строку (из-за чего кнопка «молчала»).
+async function etsAsk(messages:{role:string,content:string}[],maxTokens=1400,temperature=0.5):Promise<string>{
+  const key=process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY;
+  if(!key)throw new Error("Не задан ключ AI (NEXT_PUBLIC_DEEPSEEK_API_KEY).");
+  let res:Response;
+  try{
+    res=await fetch("https://api.deepseek.com/v1/chat/completions",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","Authorization":`Bearer ${key}`},
+      body:JSON.stringify({model:"deepseek-chat",max_tokens:maxTokens,temperature,messages}),
+    });
+  }catch(e){throw new Error("Нет связи с AI. Проверь интернет и попробуй ещё раз.");}
+  let data:any=null;
+  try{data=await res.json();}catch(e){data=null;}
+  if(!res.ok){
+    const msg=data?.error?.message||`Сервис AI вернул ошибку ${res.status}`;
+    if(res.status===401)throw new Error("Ключ AI не принят (401). Проверь NEXT_PUBLIC_DEEPSEEK_API_KEY.");
+    if(res.status===402)throw new Error("Закончился баланс AI-сервиса (402). Пополни счёт DeepSeek.");
+    if(res.status===429)throw new Error("Слишком много запросов к AI (429). Подожди немного.");
+    throw new Error(msg);
+  }
+  const text=data?.choices?.[0]?.message?.content||"";
+  if(!String(text).trim())throw new Error("AI вернул пустой ответ. Попробуй ещё раз.");
+  return stripMd(text);
+}
+
+// Полный срез ETS со всеми полями — чтобы AI отвечал по фактам, а не догадкам.
+function etsBuildContext(data:any,products:any[]):{text:string,filled:number,total:number}{
+  const lines:string[]=[];
+  let filled=0,total=0;
+  ETS_NODES.forEach(n=>{
+    lines.push(`### ${n.title} — ${n.short}`);
+    n.fields.forEach(f=>{
+      total++;
+      const v=String(data?.[n.id]?.[f.key]||"").trim();
+      if(v)filled++;
+      lines.push(`- ${f.label}: ${v||"НЕ ЗАПОЛНЕНО"}`);
+    });
+    lines.push("");
+  });
+  lines.push("### Offer — продукты и цены");
+  total++;
+  if(products.length){
+    filled++;
+    products.forEach((p:any,i:number)=>{
+      lines.push(`- Продукт ${i+1}: ${p.name||"без названия"} | цена: ${p.price||"не указана"} | что получает: ${p.result||"не описано"} | для кого: ${p.forWhom||"не указано"}`);
+    });
+  }else lines.push("- НЕ ЗАПОЛНЕНО (продукты не добавлены)");
+  return{text:lines.join("\n"),filled,total};
+}
+
+const ETS_ANALYST_SYSTEM=`Ты — стратег по позиционированию, работаешь с системой Expert Trust System (ETS).
+
+Цепочка системы: IVP (кто смотрит) → ICP (кто платит) → Reach Based Content (охват) → Value Based Content (ценность) → Positioning (позиционирование) → How you look (визуал), Mission (миссия), Offer (продукты).
+
+Как ты обязан работать:
+- Опирайся ТОЛЬКО на данные системы, которые тебе дали. Не выдумывай факты за пользователя.
+- Чётко разделяй: что прямо следует из данных, что твоё предположение, а чего в данных нет вообще.
+- Не поддакивай. Если видишь слабое место или противоречие — говори прямо, с объяснением последствий.
+- Прежде чем советовать, взвесь минусы решения, а не только плюсы. Если у варианта есть цена — назови её.
+- Когда один вариант объективно сильнее — скажи это прямо, без «зависит от ситуации». Когда правда зависит — назови конкретное условие, от которого зависит.
+- Особое внимание разрывам между блоками: совпадает ли аудитория контента с теми, кто платит; ведёт ли охватный контент к ценностному; закрывает ли оффер боль ICP; отражает ли позиционирование миссию.
+- Если ключевой блок пуст — скажи, что без него вывод будет неполным, и что именно нужно заполнить.
+- Пиши по-русски, коротко и по делу. Без markdown-разметки, без воды и без комплиментов ради вежливости.`;
+
 function ETSPage({userId}:{userId:string}){
   const isMobile=useIsMobile();
   const{dark}=useTheme();
@@ -4175,6 +4307,12 @@ function ETSPage({userId}:{userId:string}){
   const[savedAt,setSavedAt]=useState("");
   const[audit,setAudit]=useState("");
   const[auditBusy,setAuditBusy]=useState(false);
+  const[auditErr,setAuditErr]=useState("");
+  const[chat,setChat]=useState<{role:string,content:string}[]>([]);
+  const[chatInput,setChatInput]=useState("");
+  const[chatBusy,setChatBusy]=useState(false);
+  const[chatErr,setChatErr]=useState("");
+  const chatEndRef=useRef<HTMLDivElement>(null);
   const lsKey="ets_"+userId;
 
   useEffect(()=>{
@@ -4212,6 +4350,8 @@ function ETSPage({userId}:{userId:string}){
 
   // ── прогресс ──
   const offerDone=products.filter(p=>p.name.trim()&&p.price.trim()).length;
+  useEffect(()=>{chatEndRef.current?.scrollIntoView({behavior:"smooth",block:"end"});},[chat,chatBusy]);
+
   const totalFields=ETS_NODES.reduce((s,n)=>s+n.fields.length,0)+1;
   const doneFields=ETS_NODES.reduce((s,n)=>s+etsFilled(data,n),0)+(offerDone>0?1:0);
   const progress=totalFields?Math.round(doneFields/totalFields*100):0;
@@ -4300,32 +4440,54 @@ function ETSPage({userId}:{userId:string}){
   // ── AI-аудит воронки ──
   const runAudit=async()=>{
     if(auditBusy)return;
-    setAuditBusy(true);setAudit("");
-    const part=(id:string,title:string)=>{
-      const s=summaryOf(id);
-      return `${title}: ${s||"НЕ ЗАПОЛНЕНО"}`;
-    };
-    const prodTxt=products.length
-      ?products.map(p=>`«${p.name||"без названия"}» — ${p.price||"цена не указана"}; результат: ${p.result||"не описан"}; для кого: ${p.forWhom||"не указано"}`).join("\n")
-      :"НЕ ЗАПОЛНЕНО";
-    const ctx=[
-      part("ivp","IVP (кто смотрит)"),
-      part("icp","ICP (кто платит)"),
-      part("reach","Reach Based Content (контент на охват)"),
-      part("value","Value Based Content (контент на ценность)"),
-      part("positioning","Позиционирование"),
-      part("look","How you look (визуал)"),
-      part("mission","Mission (миссия)"),
-      "Offer (продукты):\n"+prodTxt,
-    ].join("\n\n");
+    setAuditBusy(true);setAudit("");setAuditErr("");
+    const ctx=etsBuildContext(data,products);
     try{
-      const t=await paChat(
-        "Ты — стратег по позиционированию и воронкам. Разбираешь систему эксперта по цепочке: зритель (IVP) → клиент (ICP) → контент на охват → контент на ценность → позиционирование → визуал, миссия, оффер. Пишешь по-русски, коротко, без markdown и без воды. Говоришь прямо, не хвалишь из вежливости.",
-        `Вот система эксперта:\n\n${ctx}\n\nНайди слабые места в воронке. Ответь строго в таком виде, без вступлений:\n\nЧТО РАБОТАЕТ\n— 1-2 пункта, что уже сильно (если есть).\n\nСЛАБЫЕ МЕСТА\n— 3-4 пункта. Для каждого: где именно разрыв и чем это грозит. Особое внимание на разрывы между блоками: не совпадает ли аудитория контента с тем, кто платит; ведёт ли контент на охват к контенту на ценность; закрывает ли оффер боль ICP; отражает ли позиционирование то, что заявлено в миссии.\n\nЧТО СДЕЛАТЬ\n— 3 конкретных действия по порядку приоритета.\n\nЕсли блок не заполнен — прямо скажи, что без него воронку оценить нельзя, и поставь его первым в действиях.`,
-        1100,0.6);
-      setAudit(stripMd(t));
-    }catch{setAudit("Не удалось выполнить разбор. Попробуй ещё раз.");}
+      const t=await etsAsk([
+        {role:"system",content:ETS_ANALYST_SYSTEM},
+        {role:"user",content:`Вот моя система ETS (заполнено ${ctx.filled} из ${ctx.total} полей):
+
+${ctx.text}
+
+Найди слабые места в воронке. Ответь строго по этой структуре, без вступлений:
+
+ЧТО РАБОТАЕТ
+— 1-2 пункта с опорой на конкретные формулировки из системы. Если опереться не на что — так и напиши.
+
+СЛАБЫЕ МЕСТА
+— 3-4 пункта. Для каждого: где именно разрыв, из каких блоков это видно и чем это грозит на практике.
+
+ЧТО СДЕЛАТЬ
+— 3 действия по приоритету. Для каждого — что именно сделать и какой ценой (что придётся ужать или чем рискуешь).
+
+Если ключевые блоки пусты — скажи прямо, что вывод будет неполным, и поставь их заполнение первым действием.`},
+      ],1400,0.5);
+      setAudit(t);
+    }catch(e:any){
+      setAuditErr(e?.message||"Не удалось выполнить разбор.");
+    }
     setAuditBusy(false);
+  };
+
+  const sendChat=async()=>{
+    const q=chatInput.trim();
+    if(!q||chatBusy)return;
+    setChatInput("");setChatErr("");
+    const next=[...chat,{role:"user",content:q}];
+    setChat(next);
+    setChatBusy(true);
+    const ctx=etsBuildContext(data,products);
+    try{
+      const t=await etsAsk([
+        {role:"system",content:ETS_ANALYST_SYSTEM},
+        {role:"system",content:`Актуальное состояние системы пользователя (заполнено ${ctx.filled} из ${ctx.total} полей). Сверяйся с этими данными перед каждым ответом:\n\n${ctx.text}`},
+        ...next.slice(-10),
+      ],1200,0.5);
+      setChat(prev=>[...prev,{role:"assistant",content:t}]);
+    }catch(e:any){
+      setChatErr(e?.message||"Не удалось получить ответ.");
+    }
+    setChatBusy(false);
   };
 
   // ── PDF ──
@@ -4458,7 +4620,67 @@ ${audit?`<section><h2>Разбор воронки</h2><div class="audit">${esc(a
           </button>
         </div>
         {auditBusy&&<div style={{fontSize:13,color:C.t2}}>Сверяю аудиторию, контент, позиционирование и оффер…</div>}
+        {auditErr&&!auditBusy&&<div style={{fontSize:13,color:"#DC2626",lineHeight:1.6,borderTop:"1px solid "+C.bd,paddingTop:14}}>{auditErr}</div>}
         {audit&&!auditBusy&&<div style={{fontSize:13.5,color:C.t1,lineHeight:1.75,whiteSpace:"pre-wrap" as const,borderTop:"1px solid "+C.bd,paddingTop:14}}>{audit}</div>}
+      </div>
+
+      {/* ── Чат по системе ── */}
+      <div style={{background:C.w,border:"1px solid "+C.bd,borderRadius:14,padding:isMobile?16:20,marginBottom:16}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:12,flexWrap:"wrap" as const}}>
+          <div>
+            <div style={{fontSize:13.5,fontWeight:800,color:C.t1}}>Разговор о системе</div>
+            <div style={{fontSize:12,color:C.t2,marginTop:3,lineHeight:1.5}}>AI видит все заполненные блоки и отвечает по ним</div>
+          </div>
+          {chat.length>0&&<button onClick={()=>{setChat([]);setChatErr("");}}
+            style={{padding:"7px 13px",borderRadius:8,border:"1px solid "+C.bd,background:"transparent",color:C.t2,fontSize:12,fontWeight:600,cursor:"pointer"}}>Очистить</button>}
+        </div>
+
+        {chat.length===0&&!chatBusy&&<div style={{marginBottom:12}}>
+          <div style={{fontSize:12.5,color:C.t2,lineHeight:1.6,marginBottom:10}}>
+            Спроси о позиционировании, оффере или аудитории — ответ будет с опорой на твои данные{doneFields===0?". Пока блоки пустые, поэтому разбор будет общим":""}.
+          </div>
+          <div style={{display:"flex",gap:7,flexWrap:"wrap" as const}}>
+            {["Мой оффер закрывает боль ICP?","Совпадает ли аудитория контента с теми, кто платит?","Что усилить в позиционировании в первую очередь?","Какой продукт продвигать сейчас?"].map(q=>(
+              <button key={q} onClick={()=>setChatInput(q)}
+                style={{padding:"7px 12px",borderRadius:9,border:"1px solid "+C.bd,background:"transparent",color:C.t2,fontSize:12,cursor:"pointer",textAlign:"left" as const}}>{q}</button>
+            ))}
+          </div>
+        </div>}
+
+        {chat.length>0&&<div style={{display:"flex",flexDirection:"column",gap:12,maxHeight:isMobile?320:420,overflowY:"auto" as const,marginBottom:12,paddingRight:4}}>
+          {chat.map((m,i)=>(
+            <div key={i} style={{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start"}}>
+              <div style={{
+                maxWidth:"86%",padding:"10px 13px",borderRadius:12,
+                background:m.role==="user"?(dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.05)"):(dark?"rgba(255,255,255,0.03)":"rgba(0,0,0,0.02)"),
+                border:"1px solid "+C.bd,
+                fontSize:13.5,color:C.t1,lineHeight:1.7,whiteSpace:"pre-wrap" as const}}>{m.content}</div>
+            </div>
+          ))}
+          {chatBusy&&<div style={{display:"flex",justifyContent:"flex-start"}}>
+            <div style={{padding:"10px 13px",borderRadius:12,background:dark?"rgba(255,255,255,0.03)":"rgba(0,0,0,0.02)",border:"1px solid "+C.bd,fontSize:13,color:C.t2}}>
+              Сверяюсь с твоей системой…
+            </div>
+          </div>}
+          <div ref={chatEndRef}/>
+        </div>}
+
+        {chatErr&&<div style={{fontSize:12.5,color:"#DC2626",marginBottom:10,lineHeight:1.5}}>{chatErr}</div>}
+
+        <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
+          <textarea value={chatInput} onChange={e=>setChatInput(e.target.value)} rows={1}
+            onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendChat();}}}
+            placeholder="Спроси о своей системе…"
+            style={{...iS(),flex:1,resize:"none" as const,minHeight:44,maxHeight:120,lineHeight:1.55,fontFamily:"'Inter',sans-serif",paddingTop:12}}/>
+          <button onClick={sendChat} disabled={!chatInput.trim()||chatBusy}
+            style={{flexShrink:0,width:44,height:44,borderRadius:10,border:"none",
+              background:(chatInput.trim()&&!chatBusy)?C.t1:C.ib,
+              color:(chatInput.trim()&&!chatBusy)?C.bg:C.t2,
+              cursor:(chatInput.trim()&&!chatBusy)?"pointer":"default",
+              display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
       </div>
 
       {/* ── Редактор: обычный блок ── */}
@@ -6890,7 +7112,43 @@ function CrmPage({userId}:{userId:string}){
   const[stageLabels,setStageLabels]=useState<Record<string,Record<string,string>>>({});
 
   // Leads for the active funnel
-  const leads=useMemo(()=>allLeads.data.filter((l:any)=>l.funnel_id===activeFunnelId),[allLeads.data,activeFunnelId]);
+  const funnelLeads=useMemo(()=>allLeads.data.filter((l:any)=>l.funnel_id===activeFunnelId),[allLeads.data,activeFunnelId]);
+
+  // ── Когортный фильтр по месяцу создания лида ──
+  const[cohortMode,setCohortMode]=useState<string>("all");
+  const[cohortAnchor,setCohortAnchor]=useState<string>(()=>today().slice(0,7));
+  const[cohortFrom,setCohortFrom]=useState<string>("");
+  const[cohortTo,setCohortTo]=useState<string>("");
+
+  const range=useMemo(()=>crmCohortRange(cohortMode,cohortAnchor,cohortFrom,cohortTo),[cohortMode,cohortAnchor,cohortFrom,cohortTo]);
+
+  // Ниже по коду всё (канбан, воронка, список) работает с когортой
+  const leads=useMemo(()=>funnelLeads.filter((l:any)=>crmInRange(l,range.from,range.to)),[funnelLeads,range]);
+  const prevLeads=useMemo(()=>range.prevFrom?funnelLeads.filter((l:any)=>crmInRange(l,range.prevFrom,range.prevTo)):[],[funnelLeads,range]);
+
+  const cohortStats=useMemo(()=>{
+    const total=leads.length;
+    const won=leads.filter((l:any)=>l.status==="closed").length;
+    const lost=leads.filter((l:any)=>l.status==="rejected").length;
+    const inWork=total-won-lost;
+    const conv=total>0?Math.round(won/total*100):0;
+    const pTotal=prevLeads.length;
+    const pWon=prevLeads.filter((l:any)=>l.status==="closed").length;
+    const pConv=pTotal>0?Math.round(pWon/pTotal*100):0;
+    const dTotal=pTotal>0?Math.round((total-pTotal)/pTotal*100):(total>0?100:null);
+    const dConv=pTotal>0?conv-pConv:null;
+    // помесячная разбивка внутри периода
+    const byMonth:Record<string,{n:number,won:number}>={};
+    leads.forEach((l:any)=>{
+      const k=crmLeadMonth(l);if(!k)return;
+      byMonth[k]=byMonth[k]||{n:0,won:0};
+      byMonth[k].n++;
+      if(l.status==="closed")byMonth[k].won++;
+    });
+    const months=Object.keys(byMonth).sort();
+    return{total,won,lost,inWork,conv,dTotal,dConv,pTotal,byMonth,months};
+  },[leads,prevLeads]);
+
 
   const found=useMemo(()=>{
     if(!search)return leads;
@@ -7906,6 +8164,84 @@ function CrmPage({userId}:{userId:string}){
           {todayTouchAgenda.length>8&&<div style={{fontSize:11,color:C.t2,paddingLeft:4}}>Показаны первые 8 касаний. Остальные сохраняются внутри карточек лидов.</div>}
         </div>
         :<div style={{position:"relative",padding:"8px 2px 2px",fontSize:12,color:C.t2,lineHeight:1.6}}>Запланируй касания внутри карточек лидов — и здесь автоматически появится список, кому и что нужно отправить именно сегодня по этой воронке.</div>}
+    </div>
+
+    {/* ── Период по дате создания лида ── */}
+    <div style={{border:"1px solid "+C.bd,borderRadius:12,padding:isMobile?12:16,marginBottom:16,background:C.w}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap" as const,marginBottom:cohortMode==="all"?0:12}}>
+        <span style={{fontSize:12,color:C.t2,fontWeight:600}}>Когорта по дате создания:</span>
+        <div style={{display:"flex",gap:2,background:C.ib,borderRadius:9,padding:3,border:"1px solid "+C.bd,flexWrap:"wrap" as const}}>
+          {CRM_COHORT_MODES.map(m=>(
+            <button key={m.id} onClick={()=>setCohortMode(m.id)}
+              style={{padding:"6px 11px",borderRadius:6,border:"none",background:cohortMode===m.id?C.w:"transparent",
+                color:cohortMode===m.id?C.t1:C.t2,fontSize:12,fontWeight:cohortMode===m.id?700:500,cursor:"pointer",whiteSpace:"nowrap" as const,
+                boxShadow:cohortMode===m.id?"0 1px 3px rgba(0,0,0,0.08)":"none"}}>{m.label}</button>
+          ))}
+        </div>
+
+        {cohortMode==="month"&&<div style={{display:"flex",alignItems:"center",gap:8}}>
+          <button onClick={()=>{const[y,m]=cohortAnchor.split("-").map(Number);const d=new Date(y,m-2,1);setCohortAnchor(d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"));}}
+            style={{width:30,height:30,borderRadius:8,border:"1px solid "+C.bd,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span style={{fontSize:13,fontWeight:700,color:C.t1,minWidth:110,textAlign:"center" as const}}>{range.label}</span>
+          <button onClick={()=>{const[y,m]=cohortAnchor.split("-").map(Number);const d=new Date(y,m,1);setCohortAnchor(d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"));}}
+            style={{width:30,height:30,borderRadius:8,border:"1px solid "+C.bd,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+          {cohortAnchor!==today().slice(0,7)&&<button onClick={()=>setCohortAnchor(today().slice(0,7))}
+            style={{padding:"6px 12px",borderRadius:8,border:"1px solid "+C.bd,background:"transparent",color:C.t1,fontSize:12,fontWeight:600,cursor:"pointer"}}>Текущий</button>}
+        </div>}
+
+        {cohortMode==="custom"&&<div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap" as const}}>
+          <input type="date" value={cohortFrom} onChange={e=>setCohortFrom(e.target.value)} style={{...iS(),width:"auto",padding:"7px 10px",fontSize:12}}/>
+          <span style={{fontSize:12,color:C.t2}}>—</span>
+          <input type="date" value={cohortTo} onChange={e=>setCohortTo(e.target.value)} style={{...iS(),width:"auto",padding:"7px 10px",fontSize:12}}/>
+        </div>}
+
+        {cohortMode!=="all"&&cohortMode!=="month"&&cohortMode!=="custom"&&
+          <span style={{fontSize:12,color:C.t2}}>{range.label}</span>}
+      </div>
+
+      {cohortMode!=="all"&&<>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)",gap:isMobile?8:12,paddingTop:12,borderTop:"1px solid "+C.bd}}>
+          {[
+            {l:"Новых лидов",v:String(cohortStats.total),d:cohortStats.dTotal,suffix:"%"},
+            {l:"Конверсия в продажу",v:cohortStats.conv+"%",d:cohortStats.dConv,suffix:" п.п."},
+            {l:"В работе",v:String(cohortStats.inWork),d:null,suffix:""},
+            {l:"Закрыто / отказ",v:`${cohortStats.won} / ${cohortStats.lost}`,d:null,suffix:""},
+          ].map(k=>(
+            <div key={k.l}>
+              <div style={{fontSize:11.5,color:C.t2,marginBottom:4}}>{k.l}</div>
+              <div style={{display:"flex",alignItems:"baseline",gap:7,flexWrap:"wrap" as const}}>
+                <span style={{fontSize:isMobile?18:21,fontWeight:800,color:C.t1,letterSpacing:"-0.02em",lineHeight:1}}>{k.v}</span>
+                {k.d!==null&&k.d!==undefined&&<span style={{fontSize:11,fontWeight:700,
+                  color:k.d>=0?"#16A34A":"#DC2626"}}>{(k.d>=0?"+":"")+k.d}{k.suffix}</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+        {cohortStats.pTotal>0&&<div style={{fontSize:11,color:C.t2,marginTop:9}}>
+          Сравнение с предыдущим периодом: было {cohortStats.pTotal} лидов
+        </div>}
+        {cohortStats.months.length>1&&<div style={{marginTop:12,paddingTop:12,borderTop:"1px solid "+C.bd}}>
+          <div style={{fontSize:11.5,color:C.t2,marginBottom:8}}>По месяцам создания</div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap" as const}}>
+            {cohortStats.months.map(mk=>{
+              const b=cohortStats.byMonth[mk];
+              const[yy,mm]=mk.split("-");
+              return<button key={mk} onClick={()=>{setCohortMode("month");setCohortAnchor(mk);}}
+                style={{padding:"7px 12px",borderRadius:9,border:"1px solid "+C.bd,background:"transparent",cursor:"pointer",textAlign:"left" as const}}>
+                <div style={{fontSize:11,color:C.t2}}>{CF_MONTHS_RU[Number(mm)-1].slice(0,3)} {yy}</div>
+                <div style={{fontSize:13,fontWeight:700,color:C.t1}}>{b.n} <span style={{fontSize:11,fontWeight:500,color:C.t2}}>· {b.n>0?Math.round(b.won/b.n*100):0}%</span></div>
+              </button>;
+            })}
+          </div>
+        </div>}
+      </>}
+      {cohortMode==="all"&&<div style={{fontSize:11.5,color:C.t2,marginTop:8}}>
+        Показаны все лиды. Выбери период, чтобы увидеть когорту и её конверсию.
+      </div>}
     </div>
 
     {/* Tabs */}
