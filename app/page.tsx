@@ -2810,6 +2810,24 @@ function TaskPlanner({userId}:{userId:string}){
   const tmin=(s:string)=>{const[h,mm]=(s||"10:00").split(":").map(Number);return h*60+(mm||0);};
   const HOUR_START=0,HOUR_END=24,HOURS=HOUR_END-HOUR_START;
   const HH=isMobile?38:46;
+
+  // Автопрокрутка сетки времени к текущему часу (или к 6:00). Хуки живут здесь,
+  // на уровне самого TaskPlanner, а не внутри TimeGridView — та вызывается как обычная
+  // функция (не JSX-компонент), и хуки внутри неё вызывались бы условно (только при
+  // isGrid), что нарушает правила хуков React и роняет страницу (ошибка #310).
+  const gridRef=useRef<HTMLDivElement>(null);
+  const rangeKey=isGrid?rangeDates().map(d=>pd(d)).join(","):"";
+  useEffect(()=>{
+    if(!isGrid)return;
+    const dates=rangeDates();
+    const nowMin=new Date().getHours()*60+new Date().getMinutes();
+    const hasToday=dates.some(d=>pd(d)===todayStr);
+    const anchorMin=hasToday?Math.max(0,nowMin-90):6*60;
+    const top=Math.max(0,((anchorMin-HOUR_START*60)/60)*HH);
+    if(gridRef.current)gridRef.current.scrollTop=top;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[isGrid,rangeKey]);
+
   // lane packing for overlapping timed tasks (assumes ~60min blocks)
   const packDay=(items:any[])=>{
     const arr=items.map((t:any)=>({t,s:tmin(t.due_time),e:tmin(t.due_time)+(wrParseDuration(t.description)||60)}));
@@ -2825,15 +2843,6 @@ function TaskPlanner({userId}:{userId:string}){
   const TimeGridView=({dates}:{dates:Date[]})=>{
     const nowMin=new Date().getHours()*60+new Date().getMinutes();
     const colW=dates.length===1?1:dates.length;
-    const gridRef=useRef<HTMLDivElement>(null);
-    const rangeKey=dates.map(d=>pd(d)).join(",");
-    useEffect(()=>{
-      const hasToday=dates.some(d=>pd(d)===todayStr);
-      const anchorMin=hasToday?Math.max(0,nowMin-90):6*60; // прокручиваем к текущему часу (с запасом) либо к 6:00
-      const top=Math.max(0,((anchorMin-HOUR_START*60)/60)*HH);
-      if(gridRef.current)gridRef.current.scrollTop=top;
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    },[rangeKey]);
     return(
       <div style={{border:"1px solid "+bd,borderRadius:12,overflow:"hidden",background:cardBg}}>
         {/* day headers */}
