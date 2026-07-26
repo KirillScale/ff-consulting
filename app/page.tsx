@@ -3987,13 +3987,15 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
 
 /* ============ CRM ============ */
 const CRM_DEFAULT_STAGES=[
-  {id:"new",label:"Новый",color:"#656565"},
-  {id:"contact",label:"Взаимодействовали",color:"#7E7E7E"},
-  {id:"call",label:"Созвон",color:"#A4A4A4"},
-  {id:"closed",label:"Закрыт",color:"#8F8F8F"},
-  {id:"rejected",label:"Отказ",color:"#747474"},
+  {id:"new",label:"Новый",color:"#3B82F6",description:""},
+  {id:"contact",label:"Взаимодействовали",color:"#8B5CF6",description:""},
+  {id:"call",label:"Созвон",color:"#F59E0B",description:""},
+  {id:"closed",label:"Закрыт",color:"#10B981",description:""},
+  {id:"rejected",label:"Отказ",color:"#EF4444",description:""},
 ];
 const FUNNEL_COLORS=["#656565","#7E7E7E","#A4A4A4","#8F8F8F","#707070","#ADADAD","#747474","#A2A2A2"];
+// Палитра для цвета колонок CRM — насыщенные, легко различимые цвета вместо серого
+const CRM_STAGE_COLORS=["#3B82F6","#8B5CF6","#EC4899","#EF4444","#F97316","#F59E0B","#10B981","#14B8A6","#06B6D4","#64748B"];
 
 // Воронка продаж над канбаном: метрики по этапам + сужающаяся лента с конверсией
 const FUNNEL_BLUES=["#DCEBFF","#B8D6FF","#8FBEFF","#5E9BFF","#3B7DF5","#2463DD","#1A4FBE"];
@@ -7122,28 +7124,14 @@ function CrmPage({userId}:{userId:string}){
   };
   const stages=activeFunnelId?getStages(activeFunnelId):CRM_DEFAULT_STAGES;
 
-  // Stage drag-n-drop
-  const[stageDragId,setStageDragId]=useState<string|null>(null);
-  const[stageDragOver,setStageDragOver]=useState<string|null>(null);
-  const onStageDragStart=(id:string)=>setStageDragId(id);
-  const onStageDragOver=(id:string,e:React.DragEvent)=>{e.preventDefault();setStageDragOver(id);};
-  const onStageDrop=(targetId:string)=>{
-    if(!stageDragId||!activeFunnelId||stageDragId===targetId){setStageDragId(null);setStageDragOver(null);return;}
-    const arr=[...stages];
-    const fi=arr.findIndex(s=>s.id===stageDragId);
-    const ti=arr.findIndex(s=>s.id===targetId);
-    if(fi<0||ti<0)return;
-    const[moved]=arr.splice(fi,1);arr.splice(ti,0,moved);
-    saveStages(activeFunnelId,arr);
-    setStageDragId(null);setStageDragOver(null);
-  };
+  // Порядок колонок фиксирован — перетаскивание колонок отключено намеренно (см. ТЗ).
 
   // Add new stage
   const addStage=()=>{
     if(!activeFunnelId)return;
     const id="stage_"+Date.now();
-    const color=FUNNEL_COLORS[stages.length%FUNNEL_COLORS.length];
-    const newStages=[...stages,{id,label:"Новый этап",color}];
+    const color=CRM_STAGE_COLORS[stages.length%CRM_STAGE_COLORS.length];
+    const newStages=[...stages,{id,label:"Новый этап",color,description:""}];
     saveStages(activeFunnelId,newStages);
     setEditStageId(id);
   };
@@ -7168,6 +7156,15 @@ function CrmPage({userId}:{userId:string}){
     const newStages=stages.map(s=>s.id===stageId?{...s,color}:s);
     saveStages(activeFunnelId,newStages);
   };
+
+  // Edit stage description
+  const updateStageDescription=(stageId:string,description:string)=>{
+    if(!activeFunnelId)return;
+    const newStages=stages.map(s=>s.id===stageId?{...s,description}:s);
+    saveStages(activeFunnelId,newStages);
+  };
+
+  const[deleteStageId,setDeleteStageId]=useState<string|null>(null);
 
   const activeFunnel=funnels.data.find((fu:any)=>fu.id===activeFunnelId)||null;
   // Stage labels per funnel (legacy — keep for compat)
@@ -8471,48 +8468,61 @@ function CrmPage({userId}:{userId:string}){
         {stages.map(stage=>{
           const stageLeads=leads.filter((l:any)=>l.status===stage.id);
           const isOver=dragOver===stage.id;
-          const isStageDragOver=stageDragOver===stage.id&&stageDragId!==stage.id;
           const isDefaultStage=CRM_DEFAULT_STAGES.some(s=>s.id===stage.id);
           return <div key={stage.id}
-            draggable
-            onDragStart={e=>{e.stopPropagation();onStageDragStart(stage.id);}}
-            onDragOver={e=>{onStageDragOver(stage.id,e);onDragOver(stage.id,e);}}
-            onDrop={e=>{e.stopPropagation();onStageDrop(stage.id);onDrop(stage.id);}}
-            onDragLeave={()=>{setDragOver(null);setStageDragOver(null);}}
-            onDragEnd={()=>{setStageDragId(null);setStageDragOver(null);}}
+            onDragOver={e=>onDragOver(stage.id,e)}
+            onDrop={()=>onDrop(stage.id)}
+            onDragLeave={()=>setDragOver(null)}
             style={{minWidth:228,width:228,flexShrink:0,background:isOver?C.a+"06":C.ib,borderRadius:10,padding:"0 0 10px",
-              border:"1px solid "+(isStageDragOver?stage.color+"80":isOver?C.a+"40":C.bd),
-              boxShadow:isStageDragOver?"0 0 16px "+stage.color+"30":isOver?"0 0 20px "+C.a+"15":"none",
-              opacity:stageDragId===stage.id?0.45:1,
-              transition:"all 0.2s",cursor:"grab"}}>
-            <div style={{padding:"11px 11px 8px",borderBottom:"1px solid "+C.bd}}>
+              border:"1px solid "+(isOver?C.a+"40":C.bd),
+              boxShadow:isOver?"0 0 20px "+C.a+"15":"none",
+              transition:"all 0.2s"}}>
+            <div style={{padding:"11px 11px 8px",borderBottom:"1px solid "+C.bd,position:"relative"}}>
               {editStageId===stage.id
-                ?<div style={{display:"flex",flexDirection:"column",gap:6}}>
-                    <input autoFocus defaultValue={stage.label}
-                      onBlur={e=>{updateStageLabel(stage.id,e.target.value||stage.label);setEditStageId(null);}}
-                      onKeyDown={e=>{if(e.key==="Enter"){updateStageLabel(stage.id,(e.target as HTMLInputElement).value||stage.label);setEditStageId(null);}if(e.key==="Escape")setEditStageId(null);}}
-                      style={{width:"100%",fontSize:12,fontWeight:500,padding:"4px 8px",border:"1px solid "+stage.color,borderRadius:7,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const}}/>
-                    <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-                      {FUNNEL_COLORS.map(c=><button key={c} onClick={()=>updateStageColor(stage.id,c)}
-                        style={{width:16,height:16,borderRadius:"50%",background:c,border:stage.color===c?"2px solid "+C.t1:"1px solid transparent",cursor:"pointer",padding:0}}/>)}
+                ?<div style={{display:"flex",flexDirection:"column",gap:8}}>
+                    <div>
+                      <label style={{fontSize:9.5,color:C.t2,display:"block",marginBottom:3}}>Название</label>
+                      <input autoFocus defaultValue={stage.label}
+                        onBlur={e=>updateStageLabel(stage.id,e.target.value||stage.label)}
+                        onKeyDown={e=>{if(e.key==="Enter")(e.target as HTMLInputElement).blur();if(e.key==="Escape")setEditStageId(null);}}
+                        style={{width:"100%",fontSize:12,fontWeight:500,padding:"5px 8px",border:"1px solid "+stage.color,borderRadius:7,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const}}/>
                     </div>
-                    {!isDefaultStage&&<button onClick={()=>{deleteStage(stage.id);setEditStageId(null);}}
-                      style={{fontSize:10,color:C.r,background:"transparent",border:"none",cursor:"pointer",textAlign:"left",padding:0}}>
-                      Удалить этот этап
-                    </button>}
+                    <div>
+                      <label style={{fontSize:9.5,color:C.t2,display:"block",marginBottom:3}}>Описание (необязательно)</label>
+                      <input defaultValue={stage.description||""} placeholder="Например: лид ждёт ответа"
+                        onBlur={e=>updateStageDescription(stage.id,e.target.value)}
+                        onKeyDown={e=>{if(e.key==="Enter")(e.target as HTMLInputElement).blur();}}
+                        style={{width:"100%",fontSize:11,padding:"5px 8px",border:"1px solid "+C.bd,borderRadius:7,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const}}/>
+                    </div>
+                    <div>
+                      <label style={{fontSize:9.5,color:C.t2,display:"block",marginBottom:4}}>Цвет</label>
+                      <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                        {CRM_STAGE_COLORS.map(c=><button key={c} onClick={()=>updateStageColor(stage.id,c)} title={c}
+                          style={{width:18,height:18,borderRadius:"50%",background:c,border:stage.color===c?"2px solid "+C.t1:"1px solid rgba(0,0,0,0.1)",cursor:"pointer",padding:0,boxShadow:stage.color===c?"0 0 0 1.5px "+C.w:"none"}}/>)}
+                      </div>
+                    </div>
+                    <div style={{display:"flex",gap:8,marginTop:2}}>
+                      <button onClick={()=>setEditStageId(null)}
+                        style={{flex:1,fontSize:11,fontWeight:500,color:C.t1,background:C.w,border:"1px solid "+C.bd,borderRadius:7,padding:"6px 0",cursor:"pointer"}}>Готово</button>
+                      {!isDefaultStage&&<button onClick={()=>{setDeleteStageId(stage.id);setEditStageId(null);}}
+                        style={{flex:1,fontSize:11,fontWeight:500,color:"#DC2626",background:"transparent",border:"1px solid #DC262640",borderRadius:7,padding:"6px 0",cursor:"pointer"}}>Удалить</button>}
+                    </div>
                   </div>
-                :<div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:6}}>
-                      <div style={{width:7,height:7,borderRadius:"50%",background:stage.color,boxShadow:"0 0 6px "+stage.color+"80",flexShrink:0}}/>
-                      <span style={{fontSize:12,fontWeight:500,color:C.t1}}>{stage.label}</span>
+                :<div>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0}}>
+                        <div style={{width:7,height:7,borderRadius:"50%",background:stage.color,flexShrink:0}}/>
+                        <span style={{fontSize:12,fontWeight:500,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={stage.description||undefined}>{stage.label}</span>
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
+                        <span style={{fontSize:10,fontWeight:500,color:stage.color,background:stage.color+"18",borderRadius:10,padding:"1px 6px"}}>{stageLeads.length}</span>
+                        <button onClick={()=>setEditStageId(stage.id)} title="Настроить колонку"
+                          style={{width:20,height:20,border:"none",background:"transparent",cursor:"pointer",borderRadius:5,display:"flex",alignItems:"center",justifyContent:"center",color:C.t2,opacity:0.6}}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+                        </button>
+                      </div>
                     </div>
-                    <div style={{display:"flex",alignItems:"center",gap:4}}>
-                      <span style={{fontSize:10,fontWeight:500,color:stage.color,background:stage.color+"18",borderRadius:10,padding:"1px 6px"}}>{stageLeads.length}</span>
-                      <button onClick={()=>setEditStageId(stage.id)} title="Настроить этап"
-                        style={{width:20,height:20,border:"none",background:"transparent",cursor:"pointer",borderRadius:5,display:"flex",alignItems:"center",justifyContent:"center",color:C.t2,opacity:0.6}}>
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                      </button>
-                    </div>
+                    {stage.description&&<div style={{fontSize:10,color:C.t2,marginTop:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{stage.description}</div>}
                   </div>
               }
             </div>
@@ -8533,6 +8543,33 @@ function CrmPage({userId}:{userId:string}){
           </button>
         </div>
       </div>
+
+      {/* Подтверждение удаления колонки */}
+      {deleteStageId&&(()=>{
+        const st=stages.find((s:any)=>s.id===deleteStageId);
+        if(!st)return null;
+        const affected=leads.filter((l:any)=>l.status===deleteStageId).length;
+        return(
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={()=>setDeleteStageId(null)}>
+            <div style={{background:C.w,borderRadius:12,padding:26,width:"100%",maxWidth:380,textAlign:"center",border:"1px solid "+C.bd}} onClick={e=>e.stopPropagation()}>
+              <div style={{width:44,height:44,borderRadius:10,background:C.ib,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.8"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+              </div>
+              <div style={{fontSize:16,fontWeight:600,color:C.t1,marginBottom:8}}>Удалить колонку «{st.label}»?</div>
+              <div style={{fontSize:13,color:C.t2,marginBottom:20,lineHeight:1.6}}>
+                {affected>0
+                  ?`В этой колонке ${affected} лид(ов). Сама колонка будет удалена, лиды не пропадут — им нужно будет назначить другой этап.`
+                  :"Это действие нельзя отменить."}
+              </div>
+              <div style={{display:"flex",gap:10,justifyContent:"center"}}>
+                <button onClick={()=>setDeleteStageId(null)} style={{padding:"10px 20px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:8,fontSize:13,fontWeight:500,cursor:"pointer"}}>Отмена</button>
+                <button onClick={()=>{deleteStage(deleteStageId);setDeleteStageId(null);}}
+                  style={{padding:"10px 22px",background:"#DC2626",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:500,cursor:"pointer"}}>Удалить</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </>}
 
 
