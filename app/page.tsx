@@ -1913,9 +1913,29 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
   const currentYear=new Date().getFullYear();
   const MONTHS_RU=["Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"];
   const[showForm,setShowForm]=useState(false);
-  const[gf,sGf]=useState({name:"",description:"",color:C.a,start_date:"",end_date:""});
+  const emptyGoalForm=()=>({name:"",description:"",color:C.a,start_date:"",end_date:"",goal_type:"" as ""|"financial"|"scale",target_income:"",avg_check:"",conversion:""});
+  const[gf,sGf]=useState(emptyGoalForm());
+  const pnl=useTable("pnl",userId);
+  const GOAL_TYPE_COLOR:Record<string,string>={financial:"#10B981",scale:"#3B82F6"};
+  const goalFinancialProgress=(g:any)=>{
+    const target=Number(g.target_income)||0;
+    if(!target)return 0;
+    const from=g.start_date||"0000-01-01",to=g.end_date||"9999-12-31";
+    const achieved=pnl.data.filter((p:any)=>p.type==="income"&&p.date>=from&&p.date<=to).reduce((s:number,p:any)=>s+(+p.amount||0),0);
+    return Math.max(0,Math.min(100,Math.round(achieved/target*100)));
+  };
+  const goalFinancialAchieved=(g:any)=>{
+    const from=g.start_date||"0000-01-01",to=g.end_date||"9999-12-31";
+    return pnl.data.filter((p:any)=>p.type==="income"&&p.date>=from&&p.date<=to).reduce((s:number,p:any)=>s+(+p.amount||0),0);
+  };
+  const goalCalc=(income:number,check:number,conv:number)=>{
+    const sales=check>0?Math.ceil(income/check):0;
+    const leads=conv>0&&sales>0?Math.ceil(sales/(conv/100)):0;
+    return{sales,leads,calls:leads};
+  };
   const[editGoal,setEditGoal]=useState<any|null>(null);
   const[openGoalId,setOpenGoalId]=useState<string|null>(null);
+  const[stInput,setStInput]=useState("");
   const[period,setPeriod]=useState<1|3|6|12>(3); // default 3 months
   const[viewYear,setViewYear]=useState(currentYear);
   const[startMonth,setStartMonth]=useState(()=>Math.max(0,new Date().getMonth()-1));
@@ -1957,16 +1977,44 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
     });
   },[goals.data]);
 
+  const goalMonthlyPlan=(income:number,start:string,end:string)=>{
+    if(!start||!end||!income)return 0;
+    const s=new Date(start),e=new Date(end);
+    const months=Math.max(1,Math.round((e.getTime()-s.getTime())/(1000*60*60*24*30.44)));
+    return Math.round(income/months);
+  };
+
+  const goalCanSave=(g:any)=>{
+    if(!g.name.trim()||!g.description.trim()||!g.start_date||!g.end_date)return false;
+    if(!g.goal_type)return false;
+    if(g.goal_type==="financial"&&(!Number(g.target_income)||!Number(g.avg_check)))return false;
+    return true;
+  };
+
   const addGoal=async()=>{
-    if(!gf.name.trim()||!gf.start_date||!gf.end_date)return;
-    await goalAdd({name:gf.name,description:gf.description,color:gf.color,start_date:gf.start_date,end_date:gf.end_date,deadline:gf.end_date});
-    sGf({name:"",description:"",color:C.a,start_date:"",end_date:""});
+    if(!goalCanSave(gf))return;
+    await goalAdd({
+      name:gf.name,description:gf.description,color:GOAL_TYPE_COLOR[gf.goal_type]||C.a,
+      start_date:gf.start_date,end_date:gf.end_date,deadline:gf.end_date,
+      goal_type:gf.goal_type,
+      target_income:gf.goal_type==="financial"?Number(gf.target_income)||null:null,
+      avg_check:gf.goal_type==="financial"?Number(gf.avg_check)||null:null,
+      conversion:gf.goal_type==="financial"&&gf.conversion?Number(gf.conversion):null,
+    });
+    sGf(emptyGoalForm());
     setShowForm(false);
   };
 
   const saveEdit=async()=>{
-    if(!editGoal||!editGoal.name.trim())return;
-    await goalUpdate(editGoal.id,{name:editGoal.name,description:editGoal.description,color:editGoal.color,start_date:editGoal.start_date,end_date:editGoal.end_date,deadline:editGoal.end_date});
+    if(!editGoal||!goalCanSave(editGoal))return;
+    await goalUpdate(editGoal.id,{
+      name:editGoal.name,description:editGoal.description,color:GOAL_TYPE_COLOR[editGoal.goal_type]||editGoal.color,
+      start_date:editGoal.start_date,end_date:editGoal.end_date,deadline:editGoal.end_date,
+      goal_type:editGoal.goal_type,
+      target_income:editGoal.goal_type==="financial"?Number(editGoal.target_income)||null:null,
+      avg_check:editGoal.goal_type==="financial"?Number(editGoal.avg_check)||null:null,
+      conversion:editGoal.goal_type==="financial"&&editGoal.conversion?Number(editGoal.conversion):null,
+    });
     setEditGoal(null);
   };
 
@@ -2014,12 +2062,13 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
   },[visibleMonths]);
 
   // Progress-based bar color: 0%=red, 50%=orange/yellow, 100%=green
-  const progressColor=(pct:number,achieved:boolean)=>{
-    if(achieved||pct>=100)return{bg:"linear-gradient(90deg,#A7A7A7,#6F6F6F)",shadow:"0 3px 14px rgba(167,167,167,0.5)"};
-    if(pct>=75)return{bg:"linear-gradient(90deg,#C8C8C8,#898989)",shadow:"0 3px 12px rgba(137,137,137,0.35)"};
-    if(pct>=50)return{bg:"linear-gradient(90deg,#E2E2E2,#A7A7A7)",shadow:"0 3px 12px rgba(167,167,167,0.35)"};
-    if(pct>=25)return{bg:"linear-gradient(90deg,#BFBFBF,#909090)",shadow:"0 3px 12px rgba(144,144,144,0.35)"};
-    return{bg:"linear-gradient(90deg,#BFBFBF,#777777)",shadow:"0 3px 12px rgba(119,119,119,0.35)"};
+  const progressColor=(pct:number,achieved:boolean,goalType?:string)=>{
+    const base=goalType==="financial"?"16,163,105":goalType==="scale"?"37,99,235":"137,137,137";
+    const hex=goalType==="financial"?"#10B981":goalType==="scale"?"#3B82F6":"#898989";
+    const dark=goalType==="financial"?"#0D9668":goalType==="scale"?"#2563EB":"#6F6F6F";
+    if(achieved||pct>=100)return{bg:`linear-gradient(90deg,${hex},${dark})`,shadow:`0 3px 14px rgba(${base},0.45)`};
+    const op=pct>=75?0.9:pct>=50?0.75:pct>=25?0.6:0.45;
+    return{bg:`linear-gradient(90deg,${hex}${Math.round(op*255).toString(16).padStart(2,"0")},${dark}${Math.round(op*255).toString(16).padStart(2,"0")})`,shadow:`0 3px 12px rgba(${base},0.3)`};
   };
 
   const goalProgress=(gid:string)=>{
@@ -2096,28 +2145,107 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
     </div>}
 
     {/* Add/Edit form */}
-    {(showForm||editGoal)&&<div style={{background:C.w,borderRadius:10,padding:20,marginBottom:16,border:"1px solid "+C.bd}}>
-      <div style={{fontSize:14,fontWeight:700,marginBottom:14,color:C.t1}}>{editGoal?"Изменить цель":"Новая цель"}</div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginBottom:12}}>
-        <div style={{gridColumn:"span 3"}}><label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4}}>Название</label>
-          <input value={editGoal?editGoal.name:gf.name} onChange={e=>editGoal?setEditGoal({...editGoal,name:e.target.value}):sGf({...gf,name:e.target.value})} style={{...iS(),fontSize:13}}/></div>
-        <div><label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4}}>Начало</label>
-          <input type="date" value={editGoal?editGoal.start_date:gf.start_date} onChange={e=>editGoal?setEditGoal({...editGoal,start_date:e.target.value}):sGf({...gf,start_date:e.target.value})} style={{...iS(),fontSize:13}}/></div>
-        <div><label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4}}>Конец (дедлайн)</label>
-          <input type="date" value={editGoal?editGoal.end_date:gf.end_date} onChange={e=>editGoal?setEditGoal({...editGoal,end_date:e.target.value}):sGf({...gf,end_date:e.target.value})} style={{...iS(),fontSize:13}}/></div>
-        <div><label style={{fontSize:10,color:C.t2,display:"block",marginBottom:4}}>Цвет</label>
-          <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-            {COLORS.map(c=><button key={c} onClick={()=>editGoal?setEditGoal({...editGoal,color:c}):sGf({...gf,color:c})} style={{width:22,height:22,borderRadius:6,background:c,border:(editGoal?editGoal.color:gf.color)===c?"3px solid "+C.t1:"3px solid transparent",cursor:"pointer"}}/>)}
+    {(showForm||editGoal)&&(()=>{
+      const v:any=editGoal||gf;
+      const set=(patch:any)=>editGoal?setEditGoal({...editGoal,...patch}):sGf({...gf,...patch});
+      const calc=goalCalc(Number(v.target_income)||0,Number(v.avg_check)||0,Number(v.conversion)||0);
+      const monthly=goalMonthlyPlan(Number(v.target_income)||0,v.start_date,v.end_date);
+      const fld:React.CSSProperties={...iS(),fontSize:13};
+      const lbl:React.CSSProperties={fontSize:10,color:C.t2,display:"block",marginBottom:4};
+      return<div style={{background:C.w,borderRadius:12,padding:22,marginBottom:16,border:"1px solid "+C.bd}}>
+        <div style={{fontSize:14,fontWeight:700,marginBottom:16,color:C.t1}}>{editGoal?"Изменить цель":"Новая цель"}</div>
+
+        <div style={{marginBottom:14}}>
+          <label style={lbl}>Название цели</label>
+          <input value={v.name} onChange={e=>set({name:e.target.value})} style={fld} placeholder="Например: 100 клиентов"/>
+        </div>
+
+        <div style={{marginBottom:14}}>
+          <label style={lbl}>Описание цели <span style={{color:"#EF4444"}}>*</span></label>
+          <textarea value={v.description} onChange={e=>set({description:e.target.value})} rows={3}
+            placeholder="Зачем нужна эта цель, какой ожидаемый результат, по каким критериям поймём, что цель достигнута"
+            style={{...fld,resize:"vertical" as const,minHeight:70,lineHeight:1.55,fontFamily:"'Inter',sans-serif"}}/>
+          {!v.description.trim()&&<div style={{fontSize:11,color:"#F59E0B",marginTop:4}}>Без описания цель сохранить нельзя</div>}
+        </div>
+
+        <div style={{marginBottom:14}}>
+          <label style={lbl}>Тип цели <span style={{color:"#EF4444"}}>*</span></label>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <button onClick={()=>set({goal_type:"financial"})}
+              style={{padding:"14px 16px",borderRadius:11,textAlign:"left" as const,cursor:"pointer",
+                border:v.goal_type==="financial"?"2px solid #10B981":"1px solid "+C.bd,
+                background:v.goal_type==="financial"?"#10B98112":C.ib}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+                <span style={{width:9,height:9,borderRadius:"50%",background:"#10B981"}}/>
+                <span style={{fontSize:13,fontWeight:700,color:C.t1}}>Финансовая цель</span>
+              </div>
+              <div style={{fontSize:11,color:C.t2,lineHeight:1.4}}>Конкретная сумма дохода с калькулятором продаж</div>
+            </button>
+            <button onClick={()=>set({goal_type:"scale"})}
+              style={{padding:"14px 16px",borderRadius:11,textAlign:"left" as const,cursor:"pointer",
+                border:v.goal_type==="scale"?"2px solid #3B82F6":"1px solid "+C.bd,
+                background:v.goal_type==="scale"?"#3B82F612":C.ib}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+                <span style={{width:9,height:9,borderRadius:"50%",background:"#3B82F6"}}/>
+                <span style={{fontSize:13,fontWeight:700,color:C.t1}}>Цель масштаба</span>
+              </div>
+              <div style={{fontSize:11,color:C.t2,lineHeight:1.4}}>Прогресс по этапам и подзадачам</div>
+            </button>
           </div>
         </div>
-      </div>
-      <div style={{display:"flex",gap:8}}>
-        <button onClick={editGoal?saveEdit:addGoal} style={{padding:"8px 18px",background:C.a,color:"#fff",border:"none",borderRadius:9,fontSize:13,fontWeight:600,cursor:"pointer"}}>
-          {editGoal?"Сохранить":"Создать"}
-        </button>
-        <button onClick={()=>{setShowForm(false);setEditGoal(null);}} style={{padding:"8px 14px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:9,fontSize:13,cursor:"pointer"}}>Отмена</button>
-      </div>
-    </div>}
+
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:v.goal_type?14:0}}>
+          <div><label style={lbl}>Начало</label>
+            <input type="date" value={v.start_date} onChange={e=>set({start_date:e.target.value})} style={fld}/></div>
+          <div><label style={lbl}>Конец (дедлайн)</label>
+            <input type="date" value={v.end_date} onChange={e=>set({end_date:e.target.value})} style={fld}/></div>
+        </div>
+
+        {v.goal_type==="financial"&&<div style={{background:"#10B98108",border:"1px solid #10B98130",borderRadius:11,padding:16,marginBottom:14}}>
+          <div style={{fontSize:12,fontWeight:700,color:"#10B981",marginBottom:12,textTransform:"uppercase" as const,letterSpacing:0.3}}>Калькулятор</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:14}}>
+            <div><label style={lbl}>Желаемый доход, ₽</label>
+              <input type="number" value={v.target_income} onChange={e=>set({target_income:e.target.value})} style={fld} placeholder="5000000"/></div>
+            <div><label style={lbl}>Средний чек, ₽</label>
+              <input type="number" value={v.avg_check} onChange={e=>set({avg_check:e.target.value})} style={fld} placeholder="100000"/></div>
+            <div><label style={lbl}>Конверсия, % <span style={{opacity:0.6}}>(необязательно)</span></label>
+              <input type="number" value={v.conversion} onChange={e=>set({conversion:e.target.value})} style={fld} placeholder="25"/></div>
+          </div>
+          {calc.sales>0&&<div style={{display:"grid",gridTemplateColumns:v.conversion?"repeat(4,1fr)":"1fr",gap:8}}>
+            <div style={{background:C.w,borderRadius:9,padding:"10px 12px",border:"1px solid #10B98125"}}>
+              <div style={{fontSize:10,color:C.t2,marginBottom:3}}>Продаж нужно</div>
+              <div style={{fontSize:17,fontWeight:700,color:C.t1}}>{calc.sales}</div>
+            </div>
+            {!!v.conversion&&<>
+              <div style={{background:C.w,borderRadius:9,padding:"10px 12px",border:"1px solid #10B98125"}}>
+                <div style={{fontSize:10,color:C.t2,marginBottom:3}}>Лидов нужно</div>
+                <div style={{fontSize:17,fontWeight:700,color:C.t1}}>{calc.leads}</div>
+              </div>
+              <div style={{background:C.w,borderRadius:9,padding:"10px 12px",border:"1px solid #10B98125"}}>
+                <div style={{fontSize:10,color:C.t2,marginBottom:3}}>Звонков нужно</div>
+                <div style={{fontSize:17,fontWeight:700,color:C.t1}}>{calc.calls}</div>
+              </div>
+              <div style={{background:C.w,borderRadius:9,padding:"10px 12px",border:"1px solid #10B98125"}}>
+                <div style={{fontSize:10,color:C.t2,marginBottom:3}}>План в месяц</div>
+                <div style={{fontSize:17,fontWeight:700,color:C.t1}}>{fmt$(monthly)} ₽</div>
+              </div>
+            </>}
+          </div>}
+        </div>}
+
+        {v.goal_type==="scale"&&<div style={{background:"#3B82F608",border:"1px solid #3B82F630",borderRadius:11,padding:14,marginBottom:14,fontSize:12,color:C.t2,lineHeight:1.5}}>
+          Этапы (подзадачи) достижения цели можно добавить сразу после сохранения — открой карточку цели.
+        </div>}
+
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={editGoal?saveEdit:addGoal} disabled={!goalCanSave(v)}
+            style={{padding:"9px 20px",background:goalCanSave(v)?(GOAL_TYPE_COLOR[v.goal_type]||C.a):C.ib,color:goalCanSave(v)?"#fff":C.t2,border:"none",borderRadius:9,fontSize:13,fontWeight:600,cursor:goalCanSave(v)?"pointer":"default"}}>
+            {editGoal?"Сохранить":"Создать"}
+          </button>
+          <button onClick={()=>{setShowForm(false);setEditGoal(null);}} style={{padding:"9px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:9,fontSize:13,cursor:"pointer"}}>Отмена</button>
+        </div>
+      </div>;
+    })()}
 
     {/* Grid */}
     <div className="yearmap-table" style={{background:C.w,borderRadius:10,border:"1px solid "+C.bd,overflow:"hidden"}}
@@ -2161,9 +2289,10 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
         const bar=goalToBar(g);
         const isOpen=openGoalId===g.id;
         const isLast=idx===visibleGoals.length-1;
-        const pct=goalProgress(g.id);
+        const pct=g.goal_type==="financial"?goalFinancialProgress(g):goalProgress(g.id);
         const gAchieved=g.is_achieved||pct>=100;
-        const{bg:barBg,shadow:barShadow}=progressColor(pct,gAchieved);
+        const{bg:barBg,shadow:barShadow}=progressColor(pct,gAchieved,g.goal_type);
+        const typeDot=g.goal_type==="financial"?"#10B981":g.goal_type==="scale"?"#3B82F6":"#898989";
         const isRowDragOver=rowOver===g.id&&rowDrag!==g.id;
 
         return <div key={g.id}
@@ -2263,22 +2392,97 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
           </div>
 
           {/* Expanded detail */}
-          {isOpen&&<div style={{borderTop:"1px solid "+C.bd,padding:"12px 16px",background:C.ib,display:"flex",justifyContent:"space-between",alignItems:"center",gap:16}}>
-            <div style={{flex:1}}>
-              <div style={{fontSize:13,fontWeight:700,color:C.t1,marginBottom:4}}>{g.name}</div>
-              {g.description&&<div style={{fontSize:11,color:C.t2,marginBottom:6}}>{g.description}</div>}
-              <div style={{display:"flex",gap:12,fontSize:11,color:C.t2,flexWrap:"wrap"}}>
-                {g.start_date&&<span>Начало: <b style={{color:C.t1}}>{g.start_date}</b></span>}
-                {g.end_date&&<span>Дедлайн: <b style={{color:C.t1}}>{g.end_date}</b></span>}
-                <span>Прогресс: <b style={{color:pct>=100?C.g:pct>=50?C.y:C.r}}>{pct}%</b></span>
+          {isOpen&&<div style={{borderTop:"1px solid "+C.bd,padding:"14px 16px",background:C.ib}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:16,marginBottom:g.goal_type?14:0}}>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:13,fontWeight:700,color:C.t1,marginBottom:4}}>{g.name}</div>
+                {g.description&&<div style={{fontSize:11.5,color:C.t2,marginBottom:6,lineHeight:1.5}}>{g.description}</div>}
+                <div style={{display:"flex",gap:12,fontSize:11,color:C.t2,flexWrap:"wrap" as const}}>
+                  {g.start_date&&<span>Начало: <b style={{color:C.t1}}>{g.start_date}</b></span>}
+                  {g.end_date&&<span>Дедлайн: <b style={{color:C.t1}}>{g.end_date}</b></span>}
+                  <span>Прогресс: <b style={{color:typeDot}}>{pct}%</b></span>
+                </div>
+              </div>
+              <div style={{display:"flex",gap:8,flexShrink:0}}>
+                <button onClick={()=>{setEditGoal({goal_type:"",target_income:"",avg_check:"",conversion:"",...g});setOpenGoalId(null);setShowForm(false);}}
+                  style={{padding:"6px 14px",fontSize:12,fontWeight:600,background:C.a+"14",color:C.a,border:"1px solid "+C.a+"33",borderRadius:8,cursor:"pointer"}}>Изменить</button>
+                <button onClick={()=>goals.remove(g.id)}
+                  style={{padding:"6px 12px",fontSize:12,background:C.r+"10",color:C.r,border:"1px solid "+C.r+"22",borderRadius:8,cursor:"pointer"}}>Удалить</button>
               </div>
             </div>
-            <div style={{display:"flex",gap:8,flexShrink:0}}>
-              <button onClick={()=>{setEditGoal({...g});setOpenGoalId(null);setShowForm(false);}}
-                style={{padding:"6px 14px",fontSize:12,fontWeight:600,background:C.a+"14",color:C.a,border:"1px solid "+C.a+"33",borderRadius:8,cursor:"pointer"}}>Изменить</button>
-              <button onClick={()=>goals.remove(g.id)}
-                style={{padding:"6px 12px",fontSize:12,background:C.r+"10",color:C.r,border:"1px solid "+C.r+"22",borderRadius:8,cursor:"pointer"}}>Удалить</button>
-            </div>
+
+            {g.goal_type==="scale"&&(()=>{
+              const subtasks=(goalTasks?.data||[]).filter((t:any)=>t.goal_id===g.id&&t.type!=="delegate");
+              const doneCount=subtasks.filter((t:any)=>t.done||t.status==="done").length;
+              return<div>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                  <span style={{fontSize:11.5,fontWeight:600,color:"#3B82F6"}}>Этапы: {doneCount} из {subtasks.length} выполнено</span>
+                </div>
+                <div style={{height:6,borderRadius:4,background:C.bd,overflow:"hidden",marginBottom:12}}>
+                  <div style={{height:"100%",width:pct+"%",background:"#3B82F6",borderRadius:4,transition:"width 0.4s"}}/>
+                </div>
+                <div style={{display:"flex",flexDirection:"column" as const,gap:6,marginBottom:10}}>
+                  {subtasks.map((t:any)=>{
+                    const done=t.done||t.status==="done";
+                    return<div key={t.id} style={{display:"flex",alignItems:"center",gap:9,padding:"8px 10px",background:C.w,borderRadius:8,border:"1px solid "+C.bd}}>
+                      <button onClick={()=>goalTasks.update(t.id,{done:!done,status:!done?"done":"todo"})}
+                        style={{width:16,height:16,borderRadius:5,border:"1.5px solid "+(done?"#3B82F6":C.bd),background:done?"#3B82F6":"transparent",flexShrink:0,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0}}>
+                        {done&&<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}
+                      </button>
+                      <span style={{flex:1,fontSize:12.5,color:C.t1,textDecoration:done?"line-through":"none",opacity:done?0.55:1}}>{t.text}</span>
+                      <button onClick={()=>goalTasks.remove(t.id)} title="Удалить этап"
+                        style={{background:"none",border:"none",color:C.t2,cursor:"pointer",padding:2,flexShrink:0}}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                      </button>
+                    </div>;
+                  })}
+                  {subtasks.length===0&&<div style={{fontSize:11.5,color:C.t2,padding:"6px 0"}}>Этапов пока нет — добавь первый ниже.</div>}
+                </div>
+                <div style={{display:"flex",gap:8}}>
+                  <input value={openGoalId===g.id?stInput:""} onChange={e=>setStInput(e.target.value)}
+                    onKeyDown={e=>{if(e.key==="Enter"&&stInput.trim()){goalTasks.add({goal_id:g.id,text:stInput.trim(),mins:0,type:"",date:null,done:false,status:"todo",sort_order:subtasks.length});setStInput("");}}}
+                    placeholder="Например: Нанять менеджера" style={{...iS(),flex:1,fontSize:12.5}}/>
+                  <button onClick={()=>{if(stInput.trim()){goalTasks.add({goal_id:g.id,text:stInput.trim(),mins:0,type:"",date:null,done:false,status:"todo",sort_order:subtasks.length});setStInput("");}}}
+                    style={{padding:"0 16px",background:"#3B82F6",color:"#fff",border:"none",borderRadius:8,fontSize:12.5,fontWeight:600,cursor:"pointer"}}>+ Этап</button>
+                </div>
+              </div>;
+            })()}
+
+            {g.goal_type==="financial"&&(()=>{
+              const achieved=goalFinancialAchieved(g);
+              const target=Number(g.target_income)||0;
+              const calc=goalCalc(target,Number(g.avg_check)||0,Number(g.conversion)||0);
+              const monthly=goalMonthlyPlan(target,g.start_date,g.end_date);
+              return<div>
+                <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",marginBottom:8}}>
+                  <span style={{fontSize:11.5,color:C.t2}}>Заработано в периоде цели</span>
+                  <span style={{fontSize:15,fontWeight:700,color:"#10B981"}}>{fmt$(achieved)} ₽ <span style={{fontSize:11,color:C.t2,fontWeight:400}}>из {fmt$(target)} ₽</span></span>
+                </div>
+                <div style={{height:6,borderRadius:4,background:C.bd,overflow:"hidden",marginBottom:12}}>
+                  <div style={{height:"100%",width:pct+"%",background:"#10B981",borderRadius:4,transition:"width 0.4s"}}/>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:g.conversion?"repeat(4,1fr)":"repeat(2,1fr)",gap:8}}>
+                  <div style={{background:C.w,borderRadius:9,padding:"9px 11px",border:"1px solid "+C.bd}}>
+                    <div style={{fontSize:10,color:C.t2,marginBottom:2}}>Чек</div>
+                    <div style={{fontSize:14,fontWeight:700,color:C.t1}}>{fmt$(Number(g.avg_check)||0)} ₽</div>
+                  </div>
+                  <div style={{background:C.w,borderRadius:9,padding:"9px 11px",border:"1px solid "+C.bd}}>
+                    <div style={{fontSize:10,color:C.t2,marginBottom:2}}>Продаж нужно</div>
+                    <div style={{fontSize:14,fontWeight:700,color:C.t1}}>{calc.sales}</div>
+                  </div>
+                  {!!g.conversion&&<>
+                    <div style={{background:C.w,borderRadius:9,padding:"9px 11px",border:"1px solid "+C.bd}}>
+                      <div style={{fontSize:10,color:C.t2,marginBottom:2}}>Лидов нужно</div>
+                      <div style={{fontSize:14,fontWeight:700,color:C.t1}}>{calc.leads}</div>
+                    </div>
+                    <div style={{background:C.w,borderRadius:9,padding:"9px 11px",border:"1px solid "+C.bd}}>
+                      <div style={{fontSize:10,color:C.t2,marginBottom:2}}>План в месяц</div>
+                      <div style={{fontSize:14,fontWeight:700,color:C.t1}}>{fmt$(monthly)} ₽</div>
+                    </div>
+                  </>}
+                </div>
+              </div>;
+            })()}
           </div>}
         </div>;
       })}
@@ -2977,15 +3181,88 @@ function TaskPlanner({userId}:{userId:string}){
   const[edit,setEdit]=useState<any>(null);
   const[subInput,setSubInput]=useState("");
   const[saving,setSaving]=useState(false);
-  const[boardStart,setBoardStart]=useState(()=>{const d=new Date();const dow=(d.getDay()+6)%7;d.setDate(d.getDate()-dow);d.setHours(0,0,0,0);return d;});
-  const board7=()=>Array.from({length:7},(_,i)=>{const d=new Date(boardStart);d.setDate(boardStart.getDate()+i);return d;});
+  const[boardMode,setBoardMode]=useState<"today"|"3day"|"week">("3day");
+  const boardModeDays:Record<string,number>={today:1,"3day":3,week:7};
+  const todayAnchor=()=>{const d=new Date();d.setHours(0,0,0,0);return d;};
+  const[boardStart,setBoardStart]=useState(()=>todayAnchor());
   const currentWeekStart=()=>{const d=new Date();const dow=(d.getDay()+6)%7;d.setDate(d.getDate()-dow);d.setHours(0,0,0,0);return d;};
+  const board7=()=>{
+    const n=boardModeDays[boardMode];
+    return Array.from({length:n},(_,i)=>{const d=new Date(boardStart);d.setDate(boardStart.getDate()+i);return d;});
+  };
+  const boardResetToCurrent=()=>setBoardStart(boardMode==="week"?currentWeekStart():todayAnchor());
+  const boardStep=(dir:number)=>setBoardStart(s=>{const d=new Date(s);d.setDate(d.getDate()+dir*boardModeDays[boardMode]);return d;});
+  const boardIsCurrent=pd(boardStart)===pd(boardMode==="week"?currentWeekStart():todayAnchor());
 
   // War Room AI
   const[wrAiInput,setWrAiInput]=useState("");
   const[wrAiBusy,setWrAiBusy]=useState(false);
   const[wrAiNotice,setWrAiNotice]=useState<{ok:boolean,text:string}|null>(null);
   const[wrHighlight,setWrHighlight]=useState<Set<string>>(new Set());
+
+  // AI-аудит задач
+  const[auditBusy,setAuditBusy]=useState(false);
+  const[auditErr,setAuditErr]=useState("");
+  const[audit,setAudit]=useState<{score:number,rating:string,good:string,problems:string,advice:string}|null>(null);
+
+  const runTaskAudit=async()=>{
+    if(auditBusy)return;
+    setAuditBusy(true);setAuditErr("");setAudit(null);
+    try{
+      const withDate=tasks.filter((t:any)=>t.due_date);
+      const noDeadline=tasks.length-withDate.length;
+      const done=tasks.filter((t:any)=>t.done);
+      const overdue=withDate.filter((t:any)=>!t.done&&t.due_date<todayStr);
+      const byDay:Record<string,{total:number,done:number}>=Object.create(null);
+      withDate.forEach((t:any)=>{byDay[t.due_date]=byDay[t.due_date]||{total:0,done:0};byDay[t.due_date].total++;if(t.done)byDay[t.due_date].done++;});
+      const dayEntries=Object.entries(byDay);
+      const loadedDays=dayEntries.filter(([,v])=>v.total>=5).length;
+      const emptyDays=dayEntries.filter(([,v])=>v.total===0).length;
+      const avgPerDay=dayEntries.length?(dayEntries.reduce((s,[,v])=>s+v.total,0)/dayEntries.length).toFixed(1):"0";
+      const byWeekday:Record<string,{total:number,done:number}>=Object.create(null);
+      withDate.forEach((t:any)=>{
+        const wd=WD[new Date(t.due_date+"T12:00:00").getDay()];
+        byWeekday[wd]=byWeekday[wd]||{total:0,done:0};byWeekday[wd].total++;if(t.done)byWeekday[wd].done++;
+      });
+      const bestDay=Object.entries(byWeekday).sort((a,b)=>(b[1].done/Math.max(1,b[1].total))-(a[1].done/Math.max(1,a[1].total)))[0]?.[0]||"—";
+      // повторяющиеся переносы: одинаковые названия задач с разными датами, невыполненные
+      const titleCounts:Record<string,number>=Object.create(null);
+      tasks.forEach((t:any)=>{const k=(t.title||"").trim().toLowerCase();if(k)titleCounts[k]=(titleCounts[k]||0)+1;});
+      const repeated=Object.values(titleCounts).filter(n=>n>=2).length;
+      const completionPct=tasks.length?Math.round(done.length/tasks.length*100):0;
+
+      const ctx=`Всего задач: ${tasks.length}
+Выполнено: ${done.length}
+Не выполнено: ${tasks.length-done.length}
+Просрочено (дата прошла, не выполнена): ${overdue.length}
+Без дедлайна: ${noDeadline}
+Задач с повторяющимся названием (похоже на регулярные переносы): ${repeated}
+Дней с высокой нагрузкой (5+ задач в день): ${loadedDays}
+Пустых дней (задачи запланированы, но 0 в этот день не считается — дней без единой задачи в диапазоне встречавшихся дат): ${emptyDays}
+Среднее количество задач в день (по дням, где есть хотя бы одна задача): ${avgPerDay}
+Процент выполнения от общего числа: ${completionPct}%
+Наиболее продуктивный день недели (по доле выполненных): ${bestDay}`;
+
+      const t=await etsAsk(
+        [
+          {role:"system",content:"Ты — аналитик продуктивности. По статистике задач пользователя пишешь честный аудит. Отвечай СТРОГО валидным JSON без markdown, без пояснений вокруг. Пиши по-русски, конкретно, без воды, опираясь только на цифры, которые тебе дали — не выдумывай факты."},
+          {role:"user",content:`Данные по задачам пользователя:\n${ctx}\n\nСформируй аудит. Верни JSON строго такого вида:\n{"score":72,"rating":"Планирование: 8.4 / 10","good":"2-3 коротких предложения о том, что получается хорошо, с опорой на цифры.","problems":"2-4 коротких предложения об основных проблемах, с опорой на цифры.","advice":"2-4 конкретные рекомендации одним связным текстом, без списка."}\nscore — это процент эффективности (целое число 0-100). rating — итоговая оценка в формате "Планирование: X.X / 10" или "Уровень дисциплины: <Низкий/Средний/Высокий>".`},
+        ] as any,
+        900,0.4
+      );
+      const parsed=paParseJSON(t);
+      setAudit({
+        score:Math.max(0,Math.min(100,Number(parsed.score)||completionPct)),
+        rating:parsed.rating||"",
+        good:parsed.good||"",
+        problems:parsed.problems||"",
+        advice:parsed.advice||"",
+      });
+    }catch(e:any){
+      setAuditErr(e?.message||"Не удалось провести аудит.");
+    }
+    setAuditBusy(false);
+  };
 
   const bd=C.bd;
   const cardBg=dark?"rgba(255,255,255,0.03)":"#fff";
@@ -3207,18 +3484,28 @@ function TaskPlanner({userId}:{userId:string}){
 
   return(
     <div style={{width:"100%"}}>
-      {/* ===== ДОСКА 7 ДНЕЙ ===== */}
+      {/* ===== ДОСКА ЗАДАЧ (сегодня / 3 дня / неделя) ===== */}
       <div style={{marginBottom:22}}>
-        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,flexWrap:"wrap" as const}}>
-          <span style={{fontSize:isMobile?15:18,fontWeight:500,color:C.t1,letterSpacing:"-0.01em"}}>Задачи на неделю</span>
-          <button onClick={()=>setBoardStart(s=>{const d=new Date(s);d.setDate(d.getDate()-7);return d;})} style={{width:30,height:30,borderRadius:8,border:"1px solid "+bd,background:cardBg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-          <button onClick={()=>setBoardStart(s=>{const d=new Date(s);d.setDate(d.getDate()+7);return d;})} style={{width:30,height:30,borderRadius:8,border:"1px solid "+bd,background:cardBg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
-          <button onClick={()=>setBoardStart(currentWeekStart())}
-            style={{padding:"6px 14px",background:C.w,color:C.t1,border:"1px solid "+bd,borderRadius:8,fontSize:12,fontWeight:500,cursor:"pointer",boxShadow:"0 1px 3px rgba(0,0,0,0.06)"}}>Эта неделя</button>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:12,flexWrap:"wrap" as const}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap" as const}}>
+            <span style={{fontSize:isMobile?15:18,fontWeight:500,color:C.t1,letterSpacing:"-0.01em"}}>{boardMode==="today"?"Задачи на сегодня":boardMode==="3day"?"Задачи на 3 дня":"Задачи на неделю"}</span>
+            <button onClick={()=>boardStep(-1)} style={{width:30,height:30,borderRadius:8,border:"1px solid "+bd,background:cardBg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <button onClick={()=>boardStep(1)} style={{width:30,height:30,borderRadius:8,border:"1px solid "+bd,background:cardBg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginLeft:"auto",flexWrap:"wrap" as const}}>
+            <div style={{display:"flex",background:C.ib,borderRadius:8,padding:3,border:"1px solid "+bd,gap:2}}>
+              {([["today","Сегодня"],["3day","3 дня"],["week","Неделя"]] as const).map(([mv,lbl])=>(
+                <button key={mv} onClick={()=>{setBoardMode(mv);setBoardStart(mv==="week"?currentWeekStart():todayAnchor());}}
+                  style={{padding:"6px 12px",borderRadius:6,border:"none",background:boardMode===mv?cardBg:"transparent",color:boardMode===mv?C.t1:C.t2,fontSize:12,fontWeight:500,cursor:"pointer",boxShadow:boardMode===mv?"0 1px 3px rgba(0,0,0,0.08)":"none",whiteSpace:"nowrap" as const}}>{lbl}</button>
+              ))}
+            </div>
+            {!boardIsCurrent&&<button onClick={boardResetToCurrent}
+              style={{padding:"6px 14px",background:C.w,color:C.t1,border:"1px solid "+bd,borderRadius:8,fontSize:12,fontWeight:500,cursor:"pointer",boxShadow:"0 1px 3px rgba(0,0,0,0.06)",whiteSpace:"nowrap" as const}}>{boardMode==="week"?"Эта неделя":"Сегодня"}</button>}
+          </div>
         </div>
         <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:6,scrollbarWidth:"none" as const}}>
           {board7().map((d,i)=>{
@@ -3297,6 +3584,46 @@ function TaskPlanner({userId}:{userId:string}){
         </div>}
       </div>
 
+      {/* AI-аудит задач */}
+      <button onClick={runTaskAudit} disabled={auditBusy}
+        style={{width:"100%",padding:isMobile?"16px 20px":"18px 26px",borderRadius:15,border:"none",
+          background:auditBusy?"#2F6BFF99":"linear-gradient(135deg,#2F6BFF,#1D4FD8)",
+          color:"#fff",fontSize:isMobile?14.5:15.5,fontWeight:600,cursor:auditBusy?"default":"pointer",
+          display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:16,
+          boxShadow:"0 8px 24px rgba(47,107,255,0.32)",transition:"box-shadow 0.2s,transform 0.15s"}}
+        onMouseEnter={e=>{if(!auditBusy){(e.currentTarget as HTMLElement).style.boxShadow="0 10px 30px rgba(47,107,255,0.46)";(e.currentTarget as HTMLElement).style.transform="translateY(-1px)";}}}
+        onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 8px 24px rgba(47,107,255,0.32)";(e.currentTarget as HTMLElement).style.transform="translateY(0)";}}>
+        {auditBusy
+          ?<div style={{width:18,height:18,border:"2.5px solid rgba(255,255,255,0.4)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+          :<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 2a4 4 0 014 4v2a4 4 0 01-8 0V6a4 4 0 014-4z"/><path d="M6 12v1a6 6 0 0012 0v-1M12 19v3M8 22h8"/></svg>}
+        {auditBusy?"Анализирую задачи…":"Провести AI-аудит задач"}
+      </button>
+
+      {auditErr&&<div style={{fontSize:13,color:"#DC2626",marginBottom:16}}>{auditErr}</div>}
+
+      {audit&&<div style={{background:C.w,borderRadius:14,border:"1px solid "+bd,padding:isMobile?18:24,marginBottom:22,animation:"dashFadeIn 0.25s ease-out both"}}>
+        <style>{`@keyframes dashFadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}`}</style>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,marginBottom:20,flexWrap:"wrap" as const}}>
+          <div>
+            <div style={{fontSize:12,color:C.t2,marginBottom:4}}>Общая оценка</div>
+            <div style={{fontSize:isMobile?32:40,fontWeight:600,color:"#2F6BFF",letterSpacing:"-0.02em"}}>{audit.score}%</div>
+          </div>
+          {audit.rating&&<div style={{padding:"9px 16px",borderRadius:10,background:"#2F6BFF14",color:"#2F6BFF",fontSize:13.5,fontWeight:600}}>{audit.rating}</div>}
+        </div>
+        {audit.good&&<div style={{marginBottom:16}}>
+          <div style={{fontSize:12,fontWeight:600,color:"#10B981",textTransform:"uppercase" as const,letterSpacing:0.4,marginBottom:6}}>Что получается хорошо</div>
+          <div style={{fontSize:13.5,color:C.t1,lineHeight:1.65}}>{audit.good}</div>
+        </div>}
+        {audit.problems&&<div style={{marginBottom:16}}>
+          <div style={{fontSize:12,fontWeight:600,color:"#F59E0B",textTransform:"uppercase" as const,letterSpacing:0.4,marginBottom:6}}>Основные проблемы</div>
+          <div style={{fontSize:13.5,color:C.t1,lineHeight:1.65}}>{audit.problems}</div>
+        </div>}
+        {audit.advice&&<div>
+          <div style={{fontSize:12,fontWeight:600,color:"#2F6BFF",textTransform:"uppercase" as const,letterSpacing:0.4,marginBottom:6}}>Рекомендации AI</div>
+          <div style={{fontSize:13.5,color:C.t1,lineHeight:1.65}}>{audit.advice}</div>
+        </div>}
+      </div>}
+
       <div style={{height:1,background:bd,margin:"0 0 18px"}}/>
       <div style={{fontSize:isMobile?15:18,fontWeight:500,color:C.t1,letterSpacing:"-0.01em",marginBottom:14}}>Календарь</div>
 
@@ -3311,11 +3638,11 @@ function TaskPlanner({userId}:{userId:string}){
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
             <span style={{fontSize:isMobile?15:18,fontWeight:500,color:C.t1,letterSpacing:"-0.01em",minWidth:isMobile?0:180}}>{view==="month"?`${PL_MONTHS[m]} ${y}`:rangeLabel()}</span>
-            <button onClick={()=>setCur(new Date())} style={{padding:"6px 14px",background:"transparent",color:C.t1,border:"1px solid "+bd,borderRadius:8,fontSize:12,fontWeight:500,cursor:"pointer"}}>Сегодня</button>
           </>}
           {view==="list"&&<span style={{fontSize:18,fontWeight:500,color:C.t1,letterSpacing:"-0.01em"}}>Текущие задачи</span>}
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap" as const}}>
+          {(view==="month"||isGrid)&&<button onClick={()=>setCur(new Date())} style={{padding:"6px 14px",background:"transparent",color:C.t1,border:"1px solid "+bd,borderRadius:8,fontSize:12,fontWeight:500,cursor:"pointer",whiteSpace:"nowrap" as const}}>Сегодня</button>}
           <div style={{display:"flex",background:C.ib,borderRadius:8,padding:3,border:"1px solid "+bd,gap:2}}>
             {([["month","Месяц"],["week","Неделя"],["3day","3 дня"],["day","День"],["list","Список"]] as const).map(([v,lbl])=>(
               <button key={v} onClick={()=>setView(v)} style={{padding:isMobile?"6px 9px":"6px 12px",borderRadius:6,border:"none",background:view===v?cardBg:"transparent",color:view===v?C.t1:C.t2,fontSize:12,fontWeight:500,cursor:"pointer",boxShadow:view===v?"0 1px 3px rgba(0,0,0,0.1)":"none",whiteSpace:"nowrap" as const}}>{lbl}</button>
