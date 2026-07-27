@@ -79,6 +79,7 @@ const NAV_GROUPS=[
     label:"OTHER",
     items:[
       {id:"links",label:"Links",accent:"#A1A1A1",ic:"M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"},
+      {id:"forms",label:"Vizzy Form",accent:"#2F6BFF",ic:"M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"},
       {id:"profile",label:"Settings",accent:"#A1A1A1",ic:"M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2 M12 11a4 4 0 100-8 4 4 0 000 8z"},
       {id:"tracker",label:"Link Tracker",accent:"#2F6BFF",ic:"M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71 M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"},
     ]
@@ -1007,7 +1008,7 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
     {page==="icp"&&<SafePage name="ICP & IVP"><Placeholder title="ICP & IVP" ic="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></SafePage>}
     {page==="bizstrategy"&&<SafePage name="Strategy"><Placeholder title="Strategy" ic="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></SafePage>}
     {page==="team"&&<SafePage name="Team"><Placeholder title="Team" ic="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></SafePage>}
-    {!["dashboard","strategy","crm","cashflow","calls","tracker","posts","slides","mailings","content","pnl","media","ads","calc","tools","links","profile","files","ai","script","product","stories","design","offer","prices","icp","bizstrategy","team"].includes(page)&&nav&&<Placeholder title={nav.label} ic={nav.ic}/>}
+    {!["dashboard","strategy","crm","cashflow","calls","forms","tracker","posts","slides","mailings","content","pnl","media","ads","calc","tools","links","profile","files","ai","script","product","stories","design","offer","prices","icp","bizstrategy","team"].includes(page)&&nav&&<Placeholder title={nav.label} ic={nav.ic}/>}
   </>;
 
   return (
@@ -19041,11 +19042,31 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
 
 /* ============ FORMS PAGE ============ */
 type Question={id:string,type:string,label:string,required:boolean,options:string[]};
-type FormData={id:string,user_id:string,title:string,description:string,slug:string,questions:Question[],completion_title:string,completion_subtitle:string,completion_url:string,completion_btn_label:string,accent_color:string,is_active:boolean,created_at:string};
+type BookingCfg={
+  enabled:boolean,
+  duration:number,          // длительность встречи, мин
+  buffer:number,            // перерыв между встречами, мин
+  max_per_day:number,       // максимум встреч в день (0 = без лимита)
+  days:number[],            // рабочие дни: 1=Пн ... 7=Вс
+  from:string,              // начало рабочего дня "10:00"
+  to:string,                // конец рабочего дня "19:00"
+  lead_hours:number,        // за сколько часов до встречи закрывать запись
+  horizon_days:number,      // на сколько дней вперёд открыта запись
+  exceptions:string[],      // выходные даты YYYY-MM-DD
+  tz:string,                // часовой пояс владельца
+};
+const BOOKING_DEFAULT:BookingCfg={
+  enabled:false,duration:45,buffer:15,max_per_day:0,
+  days:[1,2,3,4,5],from:"10:00",to:"19:00",
+  lead_hours:2,horizon_days:30,exceptions:[],
+  tz:typeof Intl!=="undefined"?(Intl.DateTimeFormat().resolvedOptions().timeZone||"Europe/Moscow"):"Europe/Moscow",
+};
+type FormData={id:string,user_id:string,title:string,description:string,slug:string,questions:Question[],completion_title:string,completion_subtitle:string,completion_url:string,completion_btn_label:string,accent_color:string,is_active:boolean,created_at:string,booking?:BookingCfg|null};
 
 function FormsPage({userId}:{userId:string}){
   const{dark}=useTheme();
-  const[tab,setTab]=useState<"list"|"builder"|"analytics">("list");
+  const[tab,setTab]=useState<"list"|"builder"|"analytics"|"bookings">("list");
+  const[bookings,setBookings]=useState<any[]>([]);
   const[forms,setForms]=useState<FormData[]>([]);
   const[loading,setLoading]=useState(true);
   const[selectedForm,setSelectedForm]=useState<FormData|null>(null);
@@ -19066,6 +19087,7 @@ function FormsPage({userId}:{userId:string}){
   const[bCompSub,setBCompSub]=useState("");
   const[bCompUrl,setBCompUrl]=useState("");
   const[bCompBtn,setBCompBtn]=useState("Перейти");
+  const[bBooking,setBBooking]=useState<BookingCfg>({...BOOKING_DEFAULT});
 
   useEffect(()=>{if(userId)loadForms();},[userId]);
 
@@ -19098,11 +19120,25 @@ function FormsPage({userId}:{userId:string}){
       setBCompSub(form.completion_subtitle||"");
       setBCompUrl(form.completion_url||"");
       setBCompBtn(form.completion_btn_label||"Перейти");
+      setBBooking({...BOOKING_DEFAULT,...(form.booking||{})});
     }else{
       setEditId(null);setBTitle("");setBDesc("");setBAccent("#808080");
       setBQuestions([]);setBCompTitle("Спасибо за ответы!");setBCompSub("");setBCompUrl("");setBCompBtn("Перейти");
+      setBBooking({...BOOKING_DEFAULT});
     }
     setBuilderStep(1);setTab("builder");
+  };
+
+  const loadBookings=async(form:FormData)=>{
+    setSelectedForm(form);
+    const{data}=await supabase.from("calls").select("*").eq("user_id",userId).eq("form_id",form.id).order("date",{ascending:false});
+    setBookings(data||[]);
+    setTab("bookings");
+  };
+
+  const cancelBooking=async(id:string)=>{
+    await supabase.from("calls").update({status:"cancelled"}).eq("id",id);
+    setBookings(prev=>prev.map(b=>b.id===id?{...b,status:"cancelled"}:b));
   };
 
   const addQuestion=()=>{
@@ -19128,6 +19164,7 @@ function FormsPage({userId}:{userId:string}){
       completion_title:bCompTitle,completion_subtitle:bCompSub,
       completion_url:bCompUrl,completion_btn_label:bCompBtn,
       is_active:true,
+      booking:bBooking,
     };
     if(editId){
       await supabase.from("forms").update(payload).eq("id",editId);
@@ -19304,6 +19341,7 @@ function FormsPage({userId}:{userId:string}){
                     {copied===form.slug?"Скопировано":"Ссылка"}
                   </GhostBtn>
                   <GhostBtn onClick={()=>loadAnalytics(form)} icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>}>Ответы</GhostBtn>
+                  {form.booking?.enabled&&<GhostBtn onClick={()=>loadBookings(form)} icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>}>Записи</GhostBtn>}
                   <GhostBtn onClick={()=>openBuilder(form)} icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>}/>
                   <button onClick={()=>toggleActive(form)} style={{padding:"7px 8px",borderRadius:9,border:`1px solid ${gl.cardBorder}`,background:gl.card,cursor:"pointer",color:C.t2,fontSize:11,fontWeight:600}}>{form.is_active?"Откл.":"Вкл."}</button>
                   <button onClick={()=>deleteForm(form.id)} style={{padding:"7px 8px",borderRadius:9,border:"1px solid rgba(119,119,119,0.15)",background:"transparent",cursor:"pointer",color:"#777777",fontSize:12}}>
@@ -19417,6 +19455,108 @@ function FormsPage({userId}:{userId:string}){
           {builderStep===3&&(
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
               <SectionCard>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:bBooking.enabled?16:0}}>
+                  <div>
+                    <div style={{fontSize:14,fontWeight:600,color:C.t1}}>Запись на созвон</div>
+                    <div style={{fontSize:12,color:C.t2,marginTop:3,lineHeight:1.5}}>Перед формой человек выберет удобное время. Созвон и лид создадутся автоматически.</div>
+                  </div>
+                  <button onClick={()=>setBBooking({...bBooking,enabled:!bBooking.enabled})}
+                    style={{flexShrink:0,width:46,height:26,borderRadius:14,border:"none",cursor:"pointer",padding:2,
+                      background:bBooking.enabled?"#2F6BFF":C.bd,transition:"background 0.2s"}}>
+                    <div style={{width:22,height:22,borderRadius:"50%",background:"#fff",transform:bBooking.enabled?"translateX(20px)":"translateX(0)",transition:"transform 0.2s"}}/>
+                  </button>
+                </div>
+
+                {bBooking.enabled&&<div style={{display:"flex",flexDirection:"column",gap:14}}>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
+                    <div>
+                      <FieldLabel>Длительность, мин</FieldLabel>
+                      <select value={bBooking.duration} onChange={e=>setBBooking({...bBooking,duration:+e.target.value})} style={gInput}>
+                        {[15,20,30,45,60,90,120].map(m=><option key={m} value={m}>{m} мин</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <FieldLabel>Перерыв между, мин</FieldLabel>
+                      <select value={bBooking.buffer} onChange={e=>setBBooking({...bBooking,buffer:+e.target.value})} style={gInput}>
+                        {[0,5,10,15,30].map(m=><option key={m} value={m}>{m} мин</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <FieldLabel>Максимум в день</FieldLabel>
+                      <select value={bBooking.max_per_day} onChange={e=>setBBooking({...bBooking,max_per_day:+e.target.value})} style={gInput}>
+                        <option value={0}>Без лимита</option>
+                        {[1,2,3,4,5,6,8,10].map(m=><option key={m} value={m}>{m}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <FieldLabel>Рабочие дни</FieldLabel>
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                      {[[1,"Пн"],[2,"Вт"],[3,"Ср"],[4,"Чт"],[5,"Пт"],[6,"Сб"],[7,"Вс"]].map(([d,l])=>{
+                        const on=bBooking.days.includes(d as number);
+                        return<button key={d as number} onClick={()=>setBBooking({...bBooking,days:on?bBooking.days.filter(x=>x!==d):[...bBooking.days,d as number].sort()})}
+                          style={{padding:"7px 14px",borderRadius:9,cursor:"pointer",fontSize:12.5,fontWeight:500,
+                            border:on?"1px solid #2F6BFF":"1px solid "+C.bd,
+                            background:on?"#2F6BFF14":"transparent",color:on?"#2F6BFF":C.t2}}>{l as string}</button>;
+                      })}
+                    </div>
+                  </div>
+
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                    <div>
+                      <FieldLabel>Начало дня</FieldLabel>
+                      <input type="time" value={bBooking.from} onChange={e=>setBBooking({...bBooking,from:e.target.value})} style={gInput}/>
+                    </div>
+                    <div>
+                      <FieldLabel>Конец дня</FieldLabel>
+                      <input type="time" value={bBooking.to} onChange={e=>setBBooking({...bBooking,to:e.target.value})} style={gInput}/>
+                    </div>
+                  </div>
+
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                    <div>
+                      <FieldLabel>Записывать не позднее чем за</FieldLabel>
+                      <select value={bBooking.lead_hours} onChange={e=>setBBooking({...bBooking,lead_hours:+e.target.value})} style={gInput}>
+                        {[0,1,2,4,12,24,48].map(h=><option key={h} value={h}>{h===0?"без ограничения":h+" ч"}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <FieldLabel>Открыть запись на</FieldLabel>
+                      <select value={bBooking.horizon_days} onChange={e=>setBBooking({...bBooking,horizon_days:+e.target.value})} style={gInput}>
+                        {[7,14,30,60,90].map(d=><option key={d} value={d}>{d} дней вперёд</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <FieldLabel>Выходные и исключения</FieldLabel>
+                    <div style={{display:"flex",gap:8,marginBottom:8}}>
+                      <input type="date" id="vf-exc" style={{...gInput,flex:1}}/>
+                      <button onClick={()=>{
+                        const el=document.getElementById("vf-exc") as HTMLInputElement|null;
+                        const v=el?.value;
+                        if(v&&!bBooking.exceptions.includes(v)){setBBooking({...bBooking,exceptions:[...bBooking.exceptions,v].sort()});if(el)el.value="";}
+                      }} style={{padding:"0 16px",borderRadius:9,border:"1px solid "+C.bd,background:"transparent",color:C.t1,fontSize:12.5,fontWeight:500,cursor:"pointer"}}>Добавить</button>
+                    </div>
+                    {bBooking.exceptions.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                      {bBooking.exceptions.map(d=>(
+                        <span key={d} style={{display:"flex",alignItems:"center",gap:6,padding:"4px 10px",borderRadius:8,background:C.ib,fontSize:11.5,color:C.t1}}>
+                          {d}
+                          <button onClick={()=>setBBooking({...bBooking,exceptions:bBooking.exceptions.filter(x=>x!==d)})}
+                            style={{background:"none",border:"none",color:C.t2,cursor:"pointer",padding:0,fontSize:13,lineHeight:1}}>×</button>
+                        </span>
+                      ))}
+                    </div>}
+                  </div>
+
+                  <div style={{fontSize:11.5,color:C.t2,lineHeight:1.5,paddingTop:4,borderTop:"1px solid "+C.bd}}>
+                    Часовой пояс: <b style={{color:C.t1}}>{bBooking.tz}</b>. Посетителю время показывается в его собственном поясе.
+                  </div>
+                </div>}
+              </SectionCard>
+
+              <SectionCard>
                 <FieldLabel>Заголовок финального экрана</FieldLabel>
                 <input value={bCompTitle} onChange={e=>setBCompTitle(e.target.value)} placeholder="Спасибо за ответы!" style={{...gInput,marginBottom:12}}/>
                 <FieldLabel>Подзаголовок</FieldLabel>
@@ -19451,6 +19591,66 @@ function FormsPage({userId}:{userId:string}){
       )}
 
       {/* ══ ANALYTICS ══ */}
+      {tab==="bookings"&&selectedForm&&(
+        <div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:18,flexWrap:"wrap" as const}}>
+            <div>
+              <button onClick={()=>setTab("list")} style={{background:"none",border:"none",color:C.t2,fontSize:13,cursor:"pointer",padding:0,marginBottom:6}}>← Все формы</button>
+              <div style={{fontSize:18,fontWeight:600,color:C.t1}}>Записи · {selectedForm.title}</div>
+            </div>
+            <div style={{display:"flex",gap:14,flexWrap:"wrap" as const}}>
+              {[
+                {l:"Всего",v:bookings.length},
+                {l:"Запланировано",v:bookings.filter(b=>b.status!=="cancelled"&&b.date>=today()).length},
+                {l:"Отменено",v:bookings.filter(b=>b.status==="cancelled").length},
+              ].map(x=>(
+                <div key={x.l} style={{textAlign:"right" as const}}>
+                  <div style={{fontSize:20,fontWeight:600,color:C.t1,lineHeight:1}}>{x.v}</div>
+                  <div style={{fontSize:11,color:C.t2,marginTop:3}}>{x.l}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {bookings.length===0
+            ?<div style={{padding:"48px 20px",textAlign:"center" as const,color:C.t2,fontSize:14,border:"1px solid "+C.bd,borderRadius:12}}>
+              Записей пока нет. Поделись ссылкой на форму — записи появятся здесь автоматически.
+            </div>
+            :<div style={{border:"1px solid "+C.bd,borderRadius:12,overflow:"hidden"}}>
+              <table style={{width:"100%",borderCollapse:"collapse" as const,fontSize:13}}>
+                <thead><tr style={{borderBottom:"1px solid "+C.bd}}>
+                  {["Дата","Время","Клиент","Контакт","Статус",""].map((h,i)=>(
+                    <th key={i} style={{padding:"12px 14px",textAlign:"left" as const,fontSize:11,fontWeight:600,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,whiteSpace:"nowrap" as const}}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody>
+                  {bookings.map(b=>{
+                    const cancelled=b.status==="cancelled";
+                    const past=b.date<today();
+                    return<tr key={b.id} style={{borderBottom:"1px solid "+C.bd,opacity:cancelled?0.5:1}}>
+                      <td style={{padding:"12px 14px",color:C.t1,whiteSpace:"nowrap" as const}}>{b.date}</td>
+                      <td style={{padding:"12px 14px",color:C.t1,whiteSpace:"nowrap" as const}}>{b.time_start}{b.time_end?`–${b.time_end}`:""}</td>
+                      <td style={{padding:"12px 14px",color:C.t1}}>{b.responsible_name||b.title||"—"}</td>
+                      <td style={{padding:"12px 14px",color:C.t2,fontSize:12}}>{b.description||"—"}</td>
+                      <td style={{padding:"12px 14px"}}>
+                        <span style={{fontSize:11,fontWeight:600,padding:"3px 9px",borderRadius:6,
+                          color:cancelled?"#DC2626":past?C.t2:"#16A34A",
+                          background:(cancelled?"#DC2626":past?C.t2:"#16A34A")+"18"}}>
+                          {cancelled?"Отменён":past?"Прошёл":"Запланирован"}
+                        </span>
+                      </td>
+                      <td style={{padding:"12px 8px",whiteSpace:"nowrap" as const}}>
+                        {!cancelled&&<button onClick={()=>cancelBooking(b.id)}
+                          style={{padding:"5px 11px",borderRadius:7,border:"1px solid "+C.bd,background:"transparent",color:C.t2,fontSize:11.5,cursor:"pointer"}}>Отменить</button>}
+                      </td>
+                    </tr>;
+                  })}
+                </tbody>
+              </table>
+            </div>}
+        </div>
+      )}
+
       {tab==="analytics"&&selectedForm&&(
         <div style={{display:"flex",flexDirection:"column",gap:16}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
