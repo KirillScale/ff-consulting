@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef, createContext
 import { supabase } from "@/lib/supabase";
 
 /* ============ THEME SYSTEM ============ */
-const ThemeCtx=createContext<{dark:boolean;toggle:()=>void}>({dark:false,toggle:()=>{}});
+const ThemeCtx=createContext<{dark:boolean;toggle:()=>void}>({dark:true,toggle:()=>{}});
 const useTheme=()=>useContext(ThemeCtx);
 
 const LIGHT={
@@ -35,7 +35,7 @@ const DARK={
   glassBd:"rgba(255,255,255,0.08)",
 };
 
-let C:{[k:string]:string}={...LIGHT};
+let C:{[k:string]:string}={...DARK};
 const applyTheme=(dark:boolean)=>{Object.assign(C,dark?DARK:LIGHT);};
 
 /* ============ CONSTANTS ============ */
@@ -61,6 +61,8 @@ const NAV_GROUPS=[
       {id:"cashflow",label:"Cash Flow",accent:"#16A34A",ic:"M12 1v22 M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"},
       {id:"content",label:"Content",accent:"#808080",ic:"M7 4v16M17 4v16M3 8h4m10 0h4M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"},
       {id:"calls",label:"Calls",accent:"#9C9C9C",ic:"M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"},
+      {id:"tracker",label:"Link Tracker",accent:"#2F6BFF",ic:"M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71 M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"},
+      {id:"forms",label:"Vizzy Form",accent:"#2F6BFF",ic:"M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"},
       {id:"offer",label:"ETS",accent:"#A7A7A7",ic:"M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"},
     ]
   },
@@ -79,9 +81,7 @@ const NAV_GROUPS=[
     label:"OTHER",
     items:[
       {id:"links",label:"Links",accent:"#A1A1A1",ic:"M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"},
-      {id:"forms",label:"Vizzy Form",accent:"#2F6BFF",ic:"M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"},
       {id:"profile",label:"Settings",accent:"#A1A1A1",ic:"M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2 M12 11a4 4 0 100-8 4 4 0 000 8z"},
-      {id:"tracker",label:"Link Tracker",accent:"#2F6BFF",ic:"M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71 M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"},
     ]
   },
 ];
@@ -396,6 +396,8 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
   const AI_ICONS:Record<string,string>={
     ai:"/icon-ai.png",script:"/icon-copy.png",
     product:"/icon-product.png",stories:"/icon-stories.png",
+    posts:"/icon-vizzy-posts.png",
+    slides:"/icon-vizzy-presentation.png",
     design:"/icon-design.png",
   };
 
@@ -741,12 +743,17 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
 const MOB_MORE_EXCLUDE=["dashboard","strategy","content","ai"];
 const MOB_LABELS:Record<string,string>={dashboard:"Дашборд",strategy:"War",content:"Контент"};
 function MobileNav({active,onNav,onLogout}:{active:string,onNav:(id:string)=>void,onLogout:()=>void}){
+  const{dark,toggle}=useTheme();
   const[drawerOpen,setDrawerOpen]=useState(false);
   const byId=(id:string)=>NAV.find(n=>n.id===id)!;
   const more=NAV.filter(n=>!MOB_MORE_EXCLUDE.includes(n.id));
   const BLUE_ON="#5B9BFF";
   const aiActive=active==="ai";
   const moreActive=!MOB_MORE_EXCLUDE.includes(active);
+  const MOBILE_CUSTOM_ICONS:Record<string,string>={
+    posts:"/icon-vizzy-posts.png",
+    slides:"/icon-vizzy-presentation.png",
+  };
 
   const tabBtn=(id:string)=>{
     const n=byId(id);const a=active===id;
@@ -804,10 +811,25 @@ function MobileNav({active,onNav,onLogout}:{active:string,onNav:(id:string)=>voi
           const a=active===n.id;
           return <button key={n.id} onClick={()=>{onNav(n.id);setDrawerOpen(false);}}
             style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",border:"none",borderRadius:10,background:a?"#2563EB":"rgba(255,255,255,0.07)",cursor:"pointer"}}>
-            <I path={n.ic} size={18} color={a?"#fff":"rgba(255,255,255,0.7)"}/>
+            {MOBILE_CUSTOM_ICONS[n.id]
+              ?<img src={MOBILE_CUSTOM_ICONS[n.id]} width={22} height={22}
+                style={{borderRadius:6,objectFit:"cover",display:"block",flexShrink:0,opacity:a?1:0.72}} alt={n.label}/>
+              :<I path={n.ic} size={18} color={a?"#fff":"rgba(255,255,255,0.7)"}/>}
             <span style={{fontSize:13,color:a?"#fff":"rgba(255,255,255,0.7)",fontWeight:a?600:400,textAlign:"left",lineHeight:1.2}}>{n.label}</span>
           </button>;
         })}
+        <button onClick={toggle}
+          style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,padding:"12px 14px",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,background:"rgba(255,255,255,0.05)",cursor:"pointer",gridColumn:"span 2"}}>
+          <span style={{display:"flex",alignItems:"center",gap:10}}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.72)" strokeWidth="1.7">
+              {dark?<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>:<><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"/></>}
+            </svg>
+            <span style={{fontSize:13,color:"rgba(255,255,255,0.75)",fontWeight:500}}>Тема интерфейса</span>
+          </span>
+          <span style={{width:42,height:24,borderRadius:12,background:dark?"#2563EB":"rgba(255,255,255,0.12)",position:"relative",display:"inline-block",border:"1px solid rgba(255,255,255,0.1)"}}>
+            <span style={{position:"absolute",top:2,left:dark?20:2,width:18,height:18,borderRadius:"50%",background:"#fff",transition:"left .2s ease"}}/>
+          </span>
+        </button>
         <button onClick={()=>{onLogout();setDrawerOpen(false);}}
           style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",border:"none",borderRadius:10,background:"rgba(119,119,119,0.15)",cursor:"pointer",gridColumn:"span 2"}}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#777777" strokeWidth="1.5"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -868,7 +890,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v2.2"; // bump this to force-clear stale localStorage
+  const APP_VERSION="v2.4"; // Vizzy brand assets + animated loading logo
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
 
   // Clear stale localStorage on version change
@@ -903,8 +925,15 @@ export default function App() {
   const [userName, setUserName] = useState("");
   const [userAvatar, setUserAvatar] = useState("");
   const [dark, setDark] = useState<boolean>(()=>{
-    try{return localStorage.getItem("ff_theme")==="dark";}catch{return false;}
+    try{
+      const saved=localStorage.getItem("ff_theme");
+      return saved===null?true:saved==="dark";
+    }catch{return true;}
   });
+
+  // Apply palette immediately during render so the first visit starts in dark mode
+  // without a light-theme flash. A saved user choice still takes priority.
+  applyTheme(dark);
 
   // Apply theme tokens + body class
   useEffect(()=>{
@@ -940,7 +969,26 @@ export default function App() {
     setPage("dashboard");
   };
 
-  if (loading) return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.bg,fontFamily:"'Inter',sans-serif"}}><div style={{fontSize:18,color:C.t2}}>Загрузка...</div></div>;
+  if (loading) return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0A0A0A",fontFamily:"'Inter',sans-serif"}}>
+    <style>{`
+      @keyframes vizzyLogoBounce{
+        0%,100%{transform:translateY(0) scale(1)}
+        45%{transform:translateY(-14px) scale(1.025)}
+        70%{transform:translateY(0) scale(.985)}
+      }
+      @keyframes vizzyLogoShadow{
+        0%,100%{transform:scaleX(1);opacity:.22}
+        45%{transform:scaleX(.72);opacity:.10}
+        70%{transform:scaleX(1.05);opacity:.24}
+      }
+    `}</style>
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:16}}>
+      <div style={{animation:"vizzyLogoBounce 1.15s cubic-bezier(.45,.05,.55,.95) infinite",willChange:"transform"}}>
+        <Logo s={76}/>
+      </div>
+      <div style={{width:54,height:8,borderRadius:"50%",background:"rgba(255,255,255,.18)",filter:"blur(5px)",animation:"vizzyLogoShadow 1.15s cubic-bezier(.45,.05,.55,.95) infinite"}}/>
+    </div>
+  </div>;
   if (recovery) return <ResetPassword onDone={() => setRecovery(false)} />;
   if (!user) return <Auth onLogin={(u) => { setUser(u); loadProfile(u.id); }} />;
 
