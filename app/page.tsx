@@ -130,7 +130,7 @@ const iS = ():React.CSSProperties => ({
   fontFamily:"'Inter',sans-serif",
   transition:"border-color 0.15s",
 });
-const Logo = ({s=28}:{s?:number}) => <img src="/logo.png" width={s} height={s} style={{objectFit:"contain",display:"block",flexShrink:0}} alt="Vizzy"/>;
+const Logo = ({s=28}:{s?:number}) => <img src="/logo.png" width={s} height={s} style={{objectFit:"cover",display:"block",flexShrink:0,borderRadius:Math.max(7,Math.round(s*.22)),overflow:"hidden"}} alt="Vizzy"/>;
 const Brand = ({size="md"}:{size?:string}) => {
   const sz:any={sm:{f:12,sub:8,gap:1},md:{f:15,sub:9,gap:2},lg:{f:20,sub:11,gap:3}};
   const s=sz[size]||sz.md;
@@ -576,16 +576,7 @@ function Side({active,onNav,onLogout,collapsed:controlledCollapsed,onCollapsedCh
         borderBottom:"1px solid rgba(255,255,255,0.05)",
         flexShrink:0,position:"relative",
       }}>
-        <div style={{
-          width:36,height:36,borderRadius:8,
-          background:"linear-gradient(135deg,#1E1E1E,#141414)",
-          border:"1px solid rgba(255,255,255,0.1)",
-          display:"flex",alignItems:"center",justifyContent:"center",
-          boxShadow:"inset 0 1px 0 rgba(255,255,255,0.05)",
-          flexShrink:0,
-        }}>
-          <Logo s={26}/>
-        </div>
+        <Logo s={36}/>
         {!collapsed&&<div style={{display:"flex",flexDirection:"column",lineHeight:1.2}}>
           <span style={{fontSize:14,fontWeight:800,color:"#ECECEC",letterSpacing:1.5}}>VIZZY</span>
           <span style={{fontSize:8,color:"rgba(255,255,255,0.25)",letterSpacing:1}}>by Kirill Scales</span>
@@ -868,17 +859,8 @@ const Head=({name,onMenuOpen}:{name:string,onMenuOpen?:()=>void})=>{
     boxShadow:dark?"0 1px 0 rgba(255,255,255,0.03), 0 4px 20px rgba(0,0,0,0.3)":"none",
   }}>
     <div style={{fontSize:15,fontWeight:600,color:C.t1}}>{greeting}{displayName?", "+displayName:""}</div>
-    <div style={{display:"inline-flex",alignItems:"center",gap:10,
-      background:dark?"rgba(255,255,255,0.04)":"#1F1F1F",
-      border:dark?"1px solid rgba(255,255,255,0.08)":"none",
-      padding:"8px 20px",borderRadius:8,
-      boxShadow:dark?"inset 0 1px 0 rgba(255,255,255,0.04)":"none",
-    }}>
-      <Logo s={28}/>
-      <div style={{display:"flex",flexDirection:"column",lineHeight:1.15}}>
-        <span style={{color:"#fff",fontSize:11,fontWeight:800,letterSpacing:1.5}}>VIZZY</span>
-        <span style={{color:"rgba(255,255,255,0.5)",fontSize:8,fontWeight:300,letterSpacing:1}}>by Kirill Scales</span>
-      </div>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <Logo s={38}/>
     </div>
     <div style={{fontSize:13,color:C.t2}}>{fmtDate(new Date())}</div>
   </div>;
@@ -890,7 +872,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v2.6"; // force production refresh for rebuilt Vizzy Slides Pro
+  const APP_VERSION="v2.7"; // unified Vizzy logo treatment
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
 
   // Clear stale localStorage on version change
