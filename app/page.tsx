@@ -890,7 +890,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v2.5"; // rebuilt Vizzy Slides workflow and Pro editor
+  const APP_VERSION="v2.6"; // force production refresh for rebuilt Vizzy Slides Pro
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
 
   // Clear stale localStorage on version change
@@ -6578,11 +6578,30 @@ function VizzySlidesPro({userId}:{userId:string}){
     return canvas;
   };
 
+  const loadBrowserLibrary=(src:string,globalCheck:()=>boolean)=>new Promise<void>((resolve,reject)=>{
+    if(globalCheck()){resolve();return;}
+    const existing=document.querySelector(`script[src="${src}"]`) as HTMLScriptElement|null;
+    if(existing){
+      existing.addEventListener("load",()=>resolve(),{once:true});
+      existing.addEventListener("error",()=>reject(new Error(`Не удалось загрузить ${src}`)),{once:true});
+      return;
+    }
+    const script=document.createElement("script");
+    script.src=src;
+    script.async=true;
+    script.onload=()=>resolve();
+    script.onerror=()=>reject(new Error(`Не удалось загрузить ${src}`));
+    document.head.appendChild(script);
+  });
+
   const exportPdf=async()=>{
     setExporting("pdf");setErr("");
     try{
-      const mod:any=await import("jspdf");
-      const jsPDF=mod.jsPDF||mod.default;
+      await loadBrowserLibrary(
+        "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
+        ()=>Boolean((window as any).jspdf?.jsPDF)
+      );
+      const jsPDF=(window as any).jspdf.jsPDF;
       const f=PRES_FMTS[format],orientation=format==="16:9"?"landscape":"portrait";
       const pdf=new jsPDF({orientation,unit:"px",format:[f.w,f.h],hotfixes:["px_scaling"]});
       for(let i=0;i<slides.length;i++){
@@ -6598,8 +6617,11 @@ function VizzySlidesPro({userId}:{userId:string}){
   const exportPptx=async()=>{
     setExporting("pptx");setErr("");
     try{
-      const mod:any=await import("pptxgenjs");
-      const PptxGenJS=mod.default||mod;
+      await loadBrowserLibrary(
+        "https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js",
+        ()=>Boolean((window as any).PptxGenJS)
+      );
+      const PptxGenJS=(window as any).PptxGenJS;
       const pptx=new PptxGenJS();
       pptx.layout=format==="16:9"?"LAYOUT_WIDE":"LAYOUT_SQUARE";
       for(const s of slides){
