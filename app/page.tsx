@@ -872,7 +872,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v2.7"; // unified Vizzy logo treatment
+  const APP_VERSION="v2.8"; // simplified year map and task outcomes
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
 
   // Clear stale localStorage on version change
@@ -1940,593 +1940,177 @@ function TaskModal({task,taskType,userId,onClose}:{task:any,taskType:"kanban"|"g
 
 // Year map (Gantt-style) — full rewrite
 function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goals:any,goalUpdate:any,goalAdd:any,goalTasks:any}){
-  // v3 — progress colors, drag reorder, resize bars, default 3 months
-  const currentYear=new Date().getFullYear();
-  const MONTHS_RU=["Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"];
+  const isMobile=useIsMobile();
   const[showForm,setShowForm]=useState(false);
-  const emptyGoalForm=()=>({name:"",description:"",color:C.a,start_date:"",end_date:"",goal_type:"" as ""|"financial"|"scale",target_income:"",avg_check:"",conversion:""});
-  const[gf,sGf]=useState(emptyGoalForm());
-  const pnl=useTable("pnl",userId);
-  const GOAL_TYPE_COLOR:Record<string,string>={financial:"#10B981",scale:"#3B82F6"};
-  const goalFinancialProgress=(g:any)=>{
-    const target=Number(g.target_income)||0;
-    if(!target)return 0;
-    const from=g.start_date||"0000-01-01",to=g.end_date||"9999-12-31";
-    const achieved=pnl.data.filter((p:any)=>p.type==="income"&&p.date>=from&&p.date<=to).reduce((s:number,p:any)=>s+(+p.amount||0),0);
-    return Math.max(0,Math.min(100,Math.round(achieved/target*100)));
-  };
-  const goalFinancialAchieved=(g:any)=>{
-    const from=g.start_date||"0000-01-01",to=g.end_date||"9999-12-31";
-    return pnl.data.filter((p:any)=>p.type==="income"&&p.date>=from&&p.date<=to).reduce((s:number,p:any)=>s+(+p.amount||0),0);
-  };
-  const goalCalc=(income:number,check:number,conv:number)=>{
-    const sales=check>0?Math.ceil(income/check):0;
-    const leads=conv>0&&sales>0?Math.ceil(sales/(conv/100)):0;
-    return{sales,leads,calls:leads};
-  };
   const[editGoal,setEditGoal]=useState<any|null>(null);
   const[openGoalId,setOpenGoalId]=useState<string|null>(null);
-  const[stInput,setStInput]=useState("");
-  const[period,setPeriod]=useState<1|3|6|12>(3); // default 3 months
-  const[viewYear,setViewYear]=useState(currentYear);
-  const[startMonth,setStartMonth]=useState(()=>Math.max(0,new Date().getMonth()-1));
+  const[subtaskText,setSubtaskText]=useState("");
+  const emptyGoal=()=>({name:"",description:"",start_date:"",end_date:""});
+  const[form,setForm]=useState(emptyGoal());
 
-  // Row reorder drag
-  const[rowDrag,setRowDrag]=useState<string|null>(null);
-  const[rowOver,setRowOver]=useState<string|null>(null);
-  const[goalOrder,setGoalOrder]=useState<string[]>([]);
+  const visibleGoals=(goals.data||[]).filter((g:any)=>!g.is_system_pinned);
+  const canSave=(g:any)=>Boolean(g?.name?.trim()&&g?.start_date&&g?.end_date);
 
-  // Bar resize drag: {id, side:'left'|'right', startX, origDate}
-  const barResizeRef=useRef<{id:string;side:"left"|"right";startX:number;origDate:string;containerW:number;containerLeft:number}|null>(null);
-  const[resizingId,setResizingId]=useState<string|null>(null);
-
-  const YEARS=[currentYear, currentYear+1, currentYear+2];
-  const COLORS=[C.a,"#7C7C7C",C.g,C.r,C.y,C.pk,"#858585","#909090"];
-  const PERIODS:Array<[number,string]>=[[1,"1 мес"],[3,"3 мес"],[6,"6 мес"],[12,"Год"]];
-
-  const visibleGoals=useMemo(()=>{
-    const all=goals.data.filter((g:any)=>!g.is_system_pinned);
-    if(goalOrder.length===0)return all;
-    const ordered=[...all].sort((a:any,b:any)=>{
-      const ai=goalOrder.indexOf(a.id);
-      const bi=goalOrder.indexOf(b.id);
-      if(ai===-1&&bi===-1)return 0;
-      if(ai===-1)return 1;
-      if(bi===-1)return -1;
-      return ai-bi;
-    });
-    return ordered;
-  },[goals.data,goalOrder]);
-
-  // Sync order when goals change
-  useEffect(()=>{
-    setGoalOrder(p=>{
-      const ids=goals.data.filter((g:any)=>!g.is_system_pinned).map((g:any)=>g.id);
-      if(p.length===0)return ids;
-      const merged=[...p.filter((id:string)=>ids.includes(id)),...ids.filter((id:string)=>!p.includes(id))];
-      return merged;
-    });
-  },[goals.data]);
-
-  const goalMonthlyPlan=(income:number,start:string,end:string)=>{
-    if(!start||!end||!income)return 0;
-    const s=new Date(start),e=new Date(end);
-    const months=Math.max(1,Math.round((e.getTime()-s.getTime())/(1000*60*60*24*30.44)));
-    return Math.round(income/months);
-  };
-
-  const goalCanSave=(g:any)=>{
-    if(!g.name.trim()||!g.description.trim()||!g.start_date||!g.end_date)return false;
-    if(!g.goal_type)return false;
-    if(g.goal_type==="financial"&&(!Number(g.target_income)||!Number(g.avg_check)))return false;
-    return true;
-  };
-
-  const addGoal=async()=>{
-    if(!goalCanSave(gf))return;
+  const saveNew=async()=>{
+    if(!canSave(form))return;
     await goalAdd({
-      name:gf.name,description:gf.description,color:GOAL_TYPE_COLOR[gf.goal_type]||C.a,
-      start_date:gf.start_date,end_date:gf.end_date,deadline:gf.end_date,
-      goal_type:gf.goal_type,
-      target_income:gf.goal_type==="financial"?Number(gf.target_income)||null:null,
-      avg_check:gf.goal_type==="financial"?Number(gf.avg_check)||null:null,
-      conversion:gf.goal_type==="financial"&&gf.conversion?Number(gf.conversion):null,
+      name:form.name.trim(),
+      description:form.description.trim()||null,
+      start_date:form.start_date,
+      end_date:form.end_date,
+      deadline:form.end_date,
+      color:C.a,
+      goal_type:null,
+      target_income:null,
+      avg_check:null,
+      conversion:null,
     });
-    sGf(emptyGoalForm());
-    setShowForm(false);
+    setForm(emptyGoal());setShowForm(false);
   };
 
   const saveEdit=async()=>{
-    if(!editGoal||!goalCanSave(editGoal))return;
+    if(!editGoal||!canSave(editGoal))return;
     await goalUpdate(editGoal.id,{
-      name:editGoal.name,description:editGoal.description,color:GOAL_TYPE_COLOR[editGoal.goal_type]||editGoal.color,
-      start_date:editGoal.start_date,end_date:editGoal.end_date,deadline:editGoal.end_date,
-      goal_type:editGoal.goal_type,
-      target_income:editGoal.goal_type==="financial"?Number(editGoal.target_income)||null:null,
-      avg_check:editGoal.goal_type==="financial"?Number(editGoal.avg_check)||null:null,
-      conversion:editGoal.goal_type==="financial"&&editGoal.conversion?Number(editGoal.conversion):null,
+      name:editGoal.name.trim(),
+      description:editGoal.description?.trim()||null,
+      start_date:editGoal.start_date,
+      end_date:editGoal.end_date,
+      deadline:editGoal.end_date,
     });
     setEditGoal(null);
   };
 
-  const now=new Date();
-  const visibleMonths=useMemo(()=>{
-    const months=[];
-    for(let i=0;i<period;i++){
-      const m=(startMonth+i)%12;
-      const y=viewYear+Math.floor((startMonth+i)/12);
-      months.push({m,y,label:MONTHS_RU[m]});
-    }
-    return months;
-  },[period,startMonth,viewYear]);
-
-  const navigatePeriod=(dir:number)=>{
-    const next=startMonth+dir*period;
-    if(next<0)setStartMonth(Math.max(0,startMonth-period));
-    else setStartMonth(Math.min(11,next));
+  const dateLabel=(v:string)=>{
+    if(!v)return"";
+    try{return new Date(v+"T12:00:00").toLocaleDateString("ru-RU",{day:"2-digit",month:"short",year:"numeric"});}
+    catch{return v;}
   };
 
-  const goalToBar=(g:any)=>{
-    if(!g.start_date||!g.end_date)return null;
-    const start=new Date(g.start_date);
-    const end=new Date(g.end_date);
-    const vm=visibleMonths;
-    if(!vm.length)return null;
-    const rangeStart=new Date(vm[0].y,vm[0].m,1);
-    const rangeEnd=new Date(vm[vm.length-1].y,vm[vm.length-1].m+1,0);
-    if(end<rangeStart||start>rangeEnd)return null;
-    const totalDays=(rangeEnd.getTime()-rangeStart.getTime())/(1000*60*60*24)+1;
-    const barStart=Math.max(0,(start.getTime()-rangeStart.getTime())/(1000*60*60*24));
-    const barEnd=Math.min(totalDays,(end.getTime()-rangeStart.getTime())/(1000*60*60*24)+1);
-    return{left:(barStart/totalDays)*100,width:((barEnd-barStart)/totalDays)*100};
-  };
-
-  const todayCol=useMemo(()=>{
-    const vm=visibleMonths;
-    if(!vm.length)return -1;
-    const rangeStart=new Date(vm[0].y,vm[0].m,1);
-    const rangeEnd=new Date(vm[vm.length-1].y,vm[vm.length-1].m+1,0);
-    if(now<rangeStart||now>rangeEnd)return -1;
-    const total=(rangeEnd.getTime()-rangeStart.getTime())/(1000*60*60*24)+1;
-    const elapsed=(now.getTime()-rangeStart.getTime())/(1000*60*60*24);
-    return(elapsed/total)*100;
-  },[visibleMonths]);
-
-  // Progress-based bar color: 0%=red, 50%=orange/yellow, 100%=green
-  const progressColor=(pct:number,achieved:boolean,goalType?:string)=>{
-    const base=goalType==="financial"?"16,163,105":goalType==="scale"?"37,99,235":"137,137,137";
-    const hex=goalType==="financial"?"#10B981":goalType==="scale"?"#3B82F6":"#898989";
-    const dark=goalType==="financial"?"#0D9668":goalType==="scale"?"#2563EB":"#6F6F6F";
-    if(achieved||pct>=100)return{bg:`linear-gradient(90deg,${hex},${dark})`,shadow:`0 3px 14px rgba(${base},0.45)`};
-    const op=pct>=75?0.9:pct>=50?0.75:pct>=25?0.6:0.45;
-    return{bg:`linear-gradient(90deg,${hex}${Math.round(op*255).toString(16).padStart(2,"0")},${dark}${Math.round(op*255).toString(16).padStart(2,"0")})`,shadow:`0 3px 12px rgba(${base},0.3)`};
-  };
-
-  const goalProgress=(gid:string)=>{
-    const tasks=(goalTasks?.data||[]).filter((t:any)=>t.goal_id===gid&&t.type!=="delegate");
-    if(!tasks.length)return 0;
-    return Math.round(tasks.filter((t:any)=>t.status==="done"||t.done).length/tasks.length*100);
-  };
-
-  // Convert pixel delta to date change
-  const dateDeltaFromPx=(px:number,containerW:number)=>{
-    const vm=visibleMonths;
-    if(!vm.length)return 0;
-    const rangeStart=new Date(vm[0].y,vm[0].m,1);
-    const rangeEnd=new Date(vm[vm.length-1].y,vm[vm.length-1].m+1,0);
-    const totalDays=(rangeEnd.getTime()-rangeStart.getTime())/(1000*60*60*24)+1;
-    return Math.round((px/containerW)*totalDays);
-  };
-
-  const addDays=(dateStr:string,days:number)=>{
-    const d=new Date(dateStr);
-    d.setDate(d.getDate()+days);
-    return d.toISOString().split("T")[0];
-  };
-
-  const periodLabel=useMemo(()=>{
-    if(period===12)return`${viewYear}`;
-    if(!visibleMonths.length)return"";
-    const first=visibleMonths[0],last=visibleMonths[visibleMonths.length-1];
-    return`${MONTHS_RU[first.m]} ${first.y} — ${MONTHS_RU[last.m]} ${last.y}`;
-  },[period,visibleMonths,viewYear]);
-
-  // Row reorder handlers
-  const onRowDrop=(targetId:string)=>{
-    if(!rowDrag||rowDrag===targetId)return;
-    setGoalOrder(p=>{
-      const arr=[...p];
-      const fromIdx=arr.indexOf(rowDrag);
-      const toIdx=arr.indexOf(targetId);
-      if(fromIdx===-1||toIdx===-1)return arr;
-      arr.splice(fromIdx,1);arr.splice(toIdx,0,rowDrag);
-      return arr;
-    });
-    setRowDrag(null);setRowOver(null);
-  };
-
-  return <>
-    {/* Controls */}
-    <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20,flexWrap:"wrap"}}>
-      <h2 style={{margin:0,fontSize:20,fontWeight:700,color:C.t1}}>Карта года</h2>
-      <div style={{flex:1}}/>
-      {/* Year tabs */}
-      <div style={{display:"flex",gap:4,background:C.ib,borderRadius:8,padding:3,border:"1px solid "+C.bd}}>
-        {YEARS.map(y=><button key={y} onClick={()=>{setViewYear(y);setStartMonth(0);}} style={{padding:"5px 12px",border:"none",borderRadius:7,background:viewYear===y&&period===12?C.a:"transparent",color:viewYear===y&&period===12?"#fff":C.t2,fontSize:12,fontWeight:700,cursor:"pointer"}}>{y}</button>)}
+  const renderForm=(value:any,setValue:(v:any)=>void,onSave:()=>void,title:string)=>(
+    <div style={{background:C.w,border:"1px solid "+C.bd,borderRadius:12,padding:isMobile?16:20,marginBottom:16}}>
+      <div style={{fontSize:15,fontWeight:500,color:C.t1,marginBottom:16}}>{title}</div>
+      <div style={{display:"grid",gap:12}}>
+        <div>
+          <label style={{fontSize:11.5,color:C.t2,display:"block",marginBottom:6}}>Цель</label>
+          <input value={value.name||""} onChange={e=>setValue({...value,name:e.target.value})}
+            placeholder="Например: запустить новый продукт" style={{...iS(),fontSize:13,fontWeight:400}}/>
+        </div>
+        <div>
+          <label style={{fontSize:11.5,color:C.t2,display:"block",marginBottom:6}}>Описание <span style={{opacity:.65}}>необязательно</span></label>
+          <textarea value={value.description||""} onChange={e=>setValue({...value,description:e.target.value})}
+            placeholder="Коротко опиши результат" rows={3}
+            style={{...iS(),fontSize:13,fontWeight:400,resize:"vertical",minHeight:76,lineHeight:1.5,fontFamily:"'Inter',sans-serif"}}/>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12}}>
+          <div>
+            <label style={{fontSize:11.5,color:C.t2,display:"block",marginBottom:6}}>Начало</label>
+            <input type="date" value={value.start_date||""} onChange={e=>setValue({...value,start_date:e.target.value})} style={{...iS(),fontSize:13}}/>
+          </div>
+          <div>
+            <label style={{fontSize:11.5,color:C.t2,display:"block",marginBottom:6}}>Конец</label>
+            <input type="date" value={value.end_date||""} onChange={e=>setValue({...value,end_date:e.target.value})} style={{...iS(),fontSize:13}}/>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={onSave} disabled={!canSave(value)}
+            style={{padding:"9px 18px",borderRadius:8,border:"none",background:canSave(value)?C.a:C.ib,color:canSave(value)?"#fff":C.t2,fontSize:12.5,fontWeight:500,cursor:canSave(value)?"pointer":"default"}}>
+            Сохранить
+          </button>
+          <button onClick={()=>{setShowForm(false);setEditGoal(null);}}
+            style={{padding:"9px 16px",borderRadius:8,border:"1px solid "+C.bd,background:C.ib,color:C.t2,fontSize:12.5,cursor:"pointer"}}>
+            Отмена
+          </button>
+        </div>
       </div>
-      {/* Period tabs */}
-      <div style={{display:"flex",gap:4,background:C.ib,borderRadius:8,padding:3,border:"1px solid "+C.bd}}>
-        {PERIODS.map(([p,l])=><button key={p} onClick={()=>{setPeriod(p as any);if(p===12)setStartMonth(0);else setStartMonth(Math.max(0,now.getMonth()-1));}} style={{padding:"5px 12px",border:"none",borderRadius:7,background:period===p?C.a:"transparent",color:period===p?"#fff":C.t2,fontSize:12,fontWeight:700,cursor:"pointer"}}>{l}</button>)}
+    </div>
+  );
+
+  return <div>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:16}}>
+      <div>
+        <h2 style={{margin:0,fontSize:isMobile?18:20,fontWeight:500,color:C.t1,letterSpacing:"-.02em"}}>Карта года</h2>
+        <div style={{fontSize:12,color:C.t2,marginTop:4}}>Цели, сроки и подзадачи без лишней сложности</div>
       </div>
-      <button onClick={()=>{setShowForm(!showForm);setEditGoal(null);}}
-        style={{padding:"8px 18px",background:C.a,color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",boxShadow:"0 0 16px "+C.a+"30"}}>
+      <button onClick={()=>{setShowForm(true);setEditGoal(null);}}
+        style={{padding:"9px 16px",background:C.a,color:"#fff",border:"none",borderRadius:8,fontSize:12.5,fontWeight:500,cursor:"pointer"}}>
         + Цель
       </button>
     </div>
 
-    {/* Nav arrows for sub-year periods */}
-    {period<12&&<div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-      <button onClick={()=>navigatePeriod(-1)} style={{width:28,height:28,border:"1px solid "+C.bd,borderRadius:8,background:C.ib,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.t2}}>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-      </button>
-      <span style={{fontSize:13,fontWeight:600,color:C.t1}}>{periodLabel}</span>
-      <button onClick={()=>navigatePeriod(1)} style={{width:28,height:28,border:"1px solid "+C.bd,borderRadius:8,background:C.ib,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.t2}}>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
-    </div>}
+    {showForm&&renderForm(form,setForm,saveNew,"Новая цель")}
+    {editGoal&&renderForm(editGoal,setEditGoal,saveEdit,"Изменить цель")}
 
-    {/* Add/Edit form */}
-    {(showForm||editGoal)&&(()=>{
-      const v:any=editGoal||gf;
-      const set=(patch:any)=>editGoal?setEditGoal({...editGoal,...patch}):sGf({...gf,...patch});
-      const calc=goalCalc(Number(v.target_income)||0,Number(v.avg_check)||0,Number(v.conversion)||0);
-      const monthly=goalMonthlyPlan(Number(v.target_income)||0,v.start_date,v.end_date);
-      const fld:React.CSSProperties={...iS(),fontSize:13};
-      const lbl:React.CSSProperties={fontSize:10,color:C.t2,display:"block",marginBottom:4};
-      return<div style={{background:C.w,borderRadius:12,padding:22,marginBottom:16,border:"1px solid "+C.bd}}>
-        <div style={{fontSize:14,fontWeight:700,marginBottom:16,color:C.t1}}>{editGoal?"Изменить цель":"Новая цель"}</div>
-
-        <div style={{marginBottom:14}}>
-          <label style={lbl}>Название цели</label>
-          <input value={v.name} onChange={e=>set({name:e.target.value})} style={fld} placeholder="Например: 100 клиентов"/>
-        </div>
-
-        <div style={{marginBottom:14}}>
-          <label style={lbl}>Описание цели <span style={{color:"#EF4444"}}>*</span></label>
-          <textarea value={v.description} onChange={e=>set({description:e.target.value})} rows={3}
-            placeholder="Зачем нужна эта цель, какой ожидаемый результат, по каким критериям поймём, что цель достигнута"
-            style={{...fld,resize:"vertical" as const,minHeight:70,lineHeight:1.55,fontFamily:"'Inter',sans-serif"}}/>
-          {!v.description.trim()&&<div style={{fontSize:11,color:"#F59E0B",marginTop:4}}>Без описания цель сохранить нельзя</div>}
-        </div>
-
-        <div style={{marginBottom:14}}>
-          <label style={lbl}>Тип цели <span style={{color:"#EF4444"}}>*</span></label>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-            <button onClick={()=>set({goal_type:"financial"})}
-              style={{padding:"14px 16px",borderRadius:11,textAlign:"left" as const,cursor:"pointer",
-                border:v.goal_type==="financial"?"2px solid #10B981":"1px solid "+C.bd,
-                background:v.goal_type==="financial"?"#10B98112":C.ib}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-                <span style={{width:9,height:9,borderRadius:"50%",background:"#10B981"}}/>
-                <span style={{fontSize:13,fontWeight:700,color:C.t1}}>Финансовая цель</span>
-              </div>
-              <div style={{fontSize:11,color:C.t2,lineHeight:1.4}}>Конкретная сумма дохода с калькулятором продаж</div>
-            </button>
-            <button onClick={()=>set({goal_type:"scale"})}
-              style={{padding:"14px 16px",borderRadius:11,textAlign:"left" as const,cursor:"pointer",
-                border:v.goal_type==="scale"?"2px solid #3B82F6":"1px solid "+C.bd,
-                background:v.goal_type==="scale"?"#3B82F612":C.ib}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-                <span style={{width:9,height:9,borderRadius:"50%",background:"#3B82F6"}}/>
-                <span style={{fontSize:13,fontWeight:700,color:C.t1}}>Цель масштаба</span>
-              </div>
-              <div style={{fontSize:11,color:C.t2,lineHeight:1.4}}>Прогресс по этапам и подзадачам</div>
-            </button>
-          </div>
-        </div>
-
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:v.goal_type?14:0}}>
-          <div><label style={lbl}>Начало</label>
-            <input type="date" value={v.start_date} onChange={e=>set({start_date:e.target.value})} style={fld}/></div>
-          <div><label style={lbl}>Конец (дедлайн)</label>
-            <input type="date" value={v.end_date} onChange={e=>set({end_date:e.target.value})} style={fld}/></div>
-        </div>
-
-        {v.goal_type==="financial"&&<div style={{background:"#10B98108",border:"1px solid #10B98130",borderRadius:11,padding:16,marginBottom:14}}>
-          <div style={{fontSize:12,fontWeight:700,color:"#10B981",marginBottom:12,textTransform:"uppercase" as const,letterSpacing:0.3}}>Калькулятор</div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:14}}>
-            <div><label style={lbl}>Желаемый доход, ₽</label>
-              <input type="number" value={v.target_income} onChange={e=>set({target_income:e.target.value})} style={fld} placeholder="5000000"/></div>
-            <div><label style={lbl}>Средний чек, ₽</label>
-              <input type="number" value={v.avg_check} onChange={e=>set({avg_check:e.target.value})} style={fld} placeholder="100000"/></div>
-            <div><label style={lbl}>Конверсия, % <span style={{opacity:0.6}}>(необязательно)</span></label>
-              <input type="number" value={v.conversion} onChange={e=>set({conversion:e.target.value})} style={fld} placeholder="25"/></div>
-          </div>
-          {calc.sales>0&&<div style={{display:"grid",gridTemplateColumns:v.conversion?"repeat(4,1fr)":"1fr",gap:8}}>
-            <div style={{background:C.w,borderRadius:9,padding:"10px 12px",border:"1px solid #10B98125"}}>
-              <div style={{fontSize:10,color:C.t2,marginBottom:3}}>Продаж нужно</div>
-              <div style={{fontSize:17,fontWeight:700,color:C.t1}}>{calc.sales}</div>
-            </div>
-            {!!v.conversion&&<>
-              <div style={{background:C.w,borderRadius:9,padding:"10px 12px",border:"1px solid #10B98125"}}>
-                <div style={{fontSize:10,color:C.t2,marginBottom:3}}>Лидов нужно</div>
-                <div style={{fontSize:17,fontWeight:700,color:C.t1}}>{calc.leads}</div>
-              </div>
-              <div style={{background:C.w,borderRadius:9,padding:"10px 12px",border:"1px solid #10B98125"}}>
-                <div style={{fontSize:10,color:C.t2,marginBottom:3}}>Звонков нужно</div>
-                <div style={{fontSize:17,fontWeight:700,color:C.t1}}>{calc.calls}</div>
-              </div>
-              <div style={{background:C.w,borderRadius:9,padding:"10px 12px",border:"1px solid #10B98125"}}>
-                <div style={{fontSize:10,color:C.t2,marginBottom:3}}>План в месяц</div>
-                <div style={{fontSize:17,fontWeight:700,color:C.t1}}>{fmt$(monthly)} ₽</div>
-              </div>
-            </>}
-          </div>}
-        </div>}
-
-        {v.goal_type==="scale"&&<div style={{background:"#3B82F608",border:"1px solid #3B82F630",borderRadius:11,padding:14,marginBottom:14,fontSize:12,color:C.t2,lineHeight:1.5}}>
-          Этапы (подзадачи) достижения цели можно добавить сразу после сохранения — открой карточку цели.
-        </div>}
-
-        <div style={{display:"flex",gap:8}}>
-          <button onClick={editGoal?saveEdit:addGoal} disabled={!goalCanSave(v)}
-            style={{padding:"9px 20px",background:goalCanSave(v)?(GOAL_TYPE_COLOR[v.goal_type]||C.a):C.ib,color:goalCanSave(v)?"#fff":C.t2,border:"none",borderRadius:9,fontSize:13,fontWeight:600,cursor:goalCanSave(v)?"pointer":"default"}}>
-            {editGoal?"Сохранить":"Создать"}
-          </button>
-          <button onClick={()=>{setShowForm(false);setEditGoal(null);}} style={{padding:"9px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:9,fontSize:13,cursor:"pointer"}}>Отмена</button>
-        </div>
-      </div>;
-    })()}
-
-    {/* Grid */}
-    <div className="yearmap-table" style={{background:C.w,borderRadius:10,border:"1px solid "+C.bd,overflow:"hidden"}}
-      onMouseMove={e=>{
-        if(!barResizeRef.current)return;
-        const{id,side,startX,origDate,containerW}=barResizeRef.current;
-        const dx=e.clientX-startX;
-        const days=dateDeltaFromPx(dx,containerW);
-        if(days===0)return;
-        const g=goals.data.find((gg:any)=>gg.id===id);
-        if(!g)return;
-        const newDate=addDays(origDate,days);
-        if(side==="right"){
-          if(newDate<=g.start_date)return;
-          goalUpdate(id,{end_date:newDate,deadline:newDate});
-        } else {
-          if(newDate>=g.end_date)return;
-          goalUpdate(id,{start_date:newDate});
-        }
-        barResizeRef.current.origDate=newDate;
-        barResizeRef.current.startX=e.clientX;
-      }}
-      onMouseUp={()=>{barResizeRef.current=null;setResizingId(null);}}
-      onMouseLeave={()=>{barResizeRef.current=null;setResizingId(null);}}>
-
-      {/* Column headers */}
-      <div style={{display:"flex",background:C.ib,borderBottom:"1px solid "+C.bd}}>
-        <div style={{width:200,flexShrink:0,padding:"10px 14px",fontSize:11,fontWeight:700,color:C.t2,letterSpacing:0.5,borderRight:"1px solid "+C.bd}}>ЦЕЛЬ</div>
-        {visibleMonths.map((vm,i)=>(
-          <div key={i} style={{flex:1,textAlign:"center",padding:"10px 4px",fontSize:11,fontWeight:600,color:C.t2,borderRight:i<visibleMonths.length-1?"1px solid "+C.bd+"66":"none"}}>
-            {vm.label}{period===12?"":" "+vm.y.toString().slice(2)}
-          </div>
-        ))}
-      </div>
-
-      {visibleGoals.length===0&&<div style={{padding:"60px 0",textAlign:"center",color:C.t2,fontSize:14}}>
-        Нет целей. Нажми «+ Цель» чтобы добавить.
-      </div>}
-
-      {visibleGoals.map((g:any,idx:number)=>{
-        const bar=goalToBar(g);
-        const isOpen=openGoalId===g.id;
-        const isLast=idx===visibleGoals.length-1;
-        const pct=g.goal_type==="financial"?goalFinancialProgress(g):goalProgress(g.id);
-        const gAchieved=g.is_achieved||pct>=100;
-        const{bg:barBg,shadow:barShadow}=progressColor(pct,gAchieved,g.goal_type);
-        const typeDot=g.goal_type==="financial"?"#10B981":g.goal_type==="scale"?"#3B82F6":"#898989";
-        const isRowDragOver=rowOver===g.id&&rowDrag!==g.id;
-
-        return <div key={g.id}
-          style={{borderBottom:isLast?"none":"1px solid "+C.bd+"66",background:isRowDragOver?C.a+"06":"transparent",transition:"background 0.15s"}}
-          onDragOver={e=>{e.preventDefault();setRowOver(g.id);}}
-          onDrop={()=>onRowDrop(g.id)}
-          onDragLeave={()=>setRowOver(null)}>
-
-          <div style={{display:"flex",minHeight:52,alignItems:"stretch"}}>
-            {/* Label — draggable for row reorder */}
-            <div
-              draggable
-              onDragStart={()=>setRowDrag(g.id)}
-              onDragEnd={()=>{setRowDrag(null);setRowOver(null);}}
-              style={{width:200,flexShrink:0,display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRight:"1px solid "+C.bd,cursor:"grab",background:isOpen?C.a+"06":"transparent",transition:"background 0.15s",userSelect:"none"}}
-              onClick={()=>setOpenGoalId(isOpen?null:g.id)}>
-              {/* Drag handle */}
-              <div style={{flexShrink:0,color:C.t2,opacity:0.3,fontSize:12,cursor:"grab"}}>⠿</div>
-              {/* Progress dot — color matches bar */}
-              <div style={{width:9,height:9,borderRadius:"50%",flexShrink:0,
-                background:gAchieved?"#6F6F6F":pct>=75?"#898989":pct>=50?"#A7A7A7":pct>=25?"#909090":"#777777",
-                boxShadow:gAchieved?"0 0 6px rgba(111,111,111,0.6)":"none",
-                transition:"background 0.4s",
-              }}/>
+    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(2,minmax(0,1fr))",gap:12}}>
+      {visibleGoals.map((g:any)=>{
+        const open=openGoalId===g.id;
+        const subtasks=(goalTasks.data||[]).filter((t:any)=>t.goal_id===g.id&&t.type!=="delegate");
+        const doneCount=subtasks.filter((t:any)=>t.done||t.status==="done").length;
+        const pct=subtasks.length?Math.round(doneCount/subtasks.length*100):0;
+        return <div key={g.id} style={{background:C.w,border:"1px solid "+C.bd,borderRadius:12,overflow:"hidden"}}>
+          <button onClick={()=>setOpenGoalId(open?null:g.id)}
+            style={{width:"100%",textAlign:"left",padding:isMobile?15:17,background:"transparent",border:"none",cursor:"pointer",color:C.t1}}>
+            <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
+              <div style={{width:8,height:8,borderRadius:"50%",background:C.a,marginTop:6,flexShrink:0}}/>
               <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:12,fontWeight:600,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{g.name}</div>
-                {g.start_date&&g.end_date&&(
-                  <div style={{fontSize:10,color:C.t2,marginTop:1}}>{g.start_date.substring(5)} — {g.end_date.substring(5)}</div>
-                )}
-                {/* Progress bar mini */}
-                <div style={{height:2,borderRadius:2,background:C.bd,marginTop:4,overflow:"hidden"}}>
-                  <div style={{height:"100%",width:pct+"%",background:gAchieved?"#6F6F6F":pct>=50?"#A7A7A7":"#777777",borderRadius:2,transition:"width 0.4s,background 0.4s"}}/>
+                <div style={{fontSize:14,fontWeight:500,lineHeight:1.35}}>{g.name}</div>
+                {g.description&&<div style={{fontSize:12,color:C.t2,lineHeight:1.5,marginTop:6,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{g.description}</div>}
+                <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginTop:10,fontSize:11.5,color:C.t2}}>
+                  <span>{dateLabel(g.start_date)}</span><span>—</span><span>{dateLabel(g.end_date)}</span>
+                  {subtasks.length>0&&<span style={{marginLeft:"auto"}}>{doneCount}/{subtasks.length}</span>}
                 </div>
-              </div>
-              <span style={{fontSize:10,fontWeight:600,color:C.t2,flexShrink:0}}>{pct}%</span>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points={isOpen?"18 15 12 9 6 15":"6 9 12 15 18 9"}/></svg>
-            </div>
-
-            {/* Timeline */}
-            <div style={{flex:1,position:"relative",background:idx%2===0?"transparent":C.bd+"18"}}
-              id={`ym-row-${g.id}`}>
-              {visibleMonths.map((_,i)=>(
-                <div key={i} style={{position:"absolute",left:`${i*(100/period)}%`,top:0,bottom:0,width:1,background:C.bd,opacity:0.35}}/>
-              ))}
-              {todayCol>=0&&<div style={{position:"absolute",left:`${todayCol}%`,top:0,bottom:0,width:2,background:"#777777",zIndex:3,borderRadius:1,opacity:0.7}}/>}
-
-              {bar
-                ?<div style={{
-                    position:"absolute",top:"50%",transform:"translateY(-50%)",
-                    left:`${bar.left}%`,width:`${bar.width}%`,
-                    minWidth:8,height:30,
-                    background:barBg,borderRadius:8,
-                    display:"flex",alignItems:"center",
-                    boxSizing:"border-box" as const,zIndex:2,
-                    boxShadow:barShadow,
-                    cursor:resizingId===g.id?"ew-resize":"pointer",
-                    overflow:"visible",
-                    transition:resizingId===g.id?"none":"box-shadow 0.3s",
-                  }}>
-                    {/* Left resize handle */}
-                    <div
-                      style={{position:"absolute",left:-4,top:0,bottom:0,width:10,cursor:"ew-resize",zIndex:10,display:"flex",alignItems:"center",justifyContent:"center"}}
-                      onMouseDown={e=>{
-                        e.stopPropagation();
-                        const row=document.getElementById(`ym-row-${g.id}`);
-                        if(!row)return;
-                        barResizeRef.current={id:g.id,side:"left",startX:e.clientX,origDate:g.start_date,containerW:row.clientWidth,containerLeft:row.getBoundingClientRect().left};
-                        setResizingId(g.id);
-                      }}>
-                      <div style={{width:3,height:16,background:"rgba(255,255,255,0.5)",borderRadius:2}}/>
-                    </div>
-
-                    {/* Bar label */}
-                    <div style={{flex:1,padding:"0 10px",overflow:"hidden"}}>
-                      <span style={{fontSize:11,fontWeight:700,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",textShadow:"0 1px 3px rgba(0,0,0,0.3)",display:"block"}}>
-                        {gAchieved?"🏆 ":""}{g.name}
-                      </span>
-                    </div>
-
-                    {/* Right resize handle */}
-                    <div
-                      style={{position:"absolute",right:-4,top:0,bottom:0,width:10,cursor:"ew-resize",zIndex:10,display:"flex",alignItems:"center",justifyContent:"center"}}
-                      onMouseDown={e=>{
-                        e.stopPropagation();
-                        const row=document.getElementById(`ym-row-${g.id}`);
-                        if(!row)return;
-                        barResizeRef.current={id:g.id,side:"right",startX:e.clientX,origDate:g.end_date,containerW:row.clientWidth,containerLeft:row.getBoundingClientRect().left};
-                        setResizingId(g.id);
-                      }}>
-                      <div style={{width:3,height:16,background:"rgba(255,255,255,0.5)",borderRadius:2}}/>
-                    </div>
-                  </div>
-                :<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",paddingLeft:12}}>
-                  <span style={{fontSize:10,color:C.t2,fontStyle:"italic",opacity:0.6}}>Вне диапазона</span>
+                {subtasks.length>0&&<div style={{height:3,background:C.bd,borderRadius:2,overflow:"hidden",marginTop:9}}>
+                  <div style={{width:pct+"%",height:"100%",background:C.a,borderRadius:2}}/>
                 </div>}
+              </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><polyline points={open?"18 15 12 9 6 15":"6 9 12 15 18 9"}/></svg>
             </div>
-          </div>
+          </button>
 
-          {/* Expanded detail */}
-          {isOpen&&<div style={{borderTop:"1px solid "+C.bd,padding:"14px 16px",background:C.ib}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:16,marginBottom:g.goal_type?14:0}}>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:13,fontWeight:700,color:C.t1,marginBottom:4}}>{g.name}</div>
-                {g.description&&<div style={{fontSize:11.5,color:C.t2,marginBottom:6,lineHeight:1.5}}>{g.description}</div>}
-                <div style={{display:"flex",gap:12,fontSize:11,color:C.t2,flexWrap:"wrap" as const}}>
-                  {g.start_date&&<span>Начало: <b style={{color:C.t1}}>{g.start_date}</b></span>}
-                  {g.end_date&&<span>Дедлайн: <b style={{color:C.t1}}>{g.end_date}</b></span>}
-                  <span>Прогресс: <b style={{color:typeDot}}>{pct}%</b></span>
-                </div>
-              </div>
-              <div style={{display:"flex",gap:8,flexShrink:0}}>
-                <button onClick={()=>{setEditGoal({goal_type:"",target_income:"",avg_check:"",conversion:"",...g});setOpenGoalId(null);setShowForm(false);}}
-                  style={{padding:"6px 14px",fontSize:12,fontWeight:600,background:C.a+"14",color:C.a,border:"1px solid "+C.a+"33",borderRadius:8,cursor:"pointer"}}>Изменить</button>
-                <button onClick={()=>goals.remove(g.id)}
-                  style={{padding:"6px 12px",fontSize:12,background:C.r+"10",color:C.r,border:"1px solid "+C.r+"22",borderRadius:8,cursor:"pointer"}}>Удалить</button>
-              </div>
+          {open&&<div style={{borderTop:"1px solid "+C.bd,padding:isMobile?15:17,background:C.ib}}>
+            <div style={{display:"flex",gap:8,marginBottom:14}}>
+              <button onClick={()=>{setEditGoal({...g});setShowForm(false);}}
+                style={{padding:"7px 13px",borderRadius:7,border:"none",background:"#2F6BFF",color:"#fff",fontSize:12,fontWeight:500,cursor:"pointer"}}>
+                Изменить
+              </button>
+              <button onClick={()=>{if(confirm("Удалить цель?"))goals.remove(g.id);}}
+                style={{padding:"7px 13px",borderRadius:7,border:"none",background:"#DC2626",color:"#fff",fontSize:12,fontWeight:500,cursor:"pointer"}}>
+                Удалить
+              </button>
             </div>
 
-            {g.goal_type==="scale"&&(()=>{
-              const subtasks=(goalTasks?.data||[]).filter((t:any)=>t.goal_id===g.id&&t.type!=="delegate");
-              const doneCount=subtasks.filter((t:any)=>t.done||t.status==="done").length;
-              return<div>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-                  <span style={{fontSize:11.5,fontWeight:600,color:"#3B82F6"}}>Этапы: {doneCount} из {subtasks.length} выполнено</span>
-                </div>
-                <div style={{height:6,borderRadius:4,background:C.bd,overflow:"hidden",marginBottom:12}}>
-                  <div style={{height:"100%",width:pct+"%",background:"#3B82F6",borderRadius:4,transition:"width 0.4s"}}/>
-                </div>
-                <div style={{display:"flex",flexDirection:"column" as const,gap:6,marginBottom:10}}>
-                  {subtasks.map((t:any)=>{
-                    const done=t.done||t.status==="done";
-                    return<div key={t.id} style={{display:"flex",alignItems:"center",gap:9,padding:"8px 10px",background:C.w,borderRadius:8,border:"1px solid "+C.bd}}>
-                      <button onClick={()=>goalTasks.update(t.id,{done:!done,status:!done?"done":"todo"})}
-                        style={{width:16,height:16,borderRadius:5,border:"1.5px solid "+(done?"#3B82F6":C.bd),background:done?"#3B82F6":"transparent",flexShrink:0,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0}}>
-                        {done&&<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}
-                      </button>
-                      <span style={{flex:1,fontSize:12.5,color:C.t1,textDecoration:done?"line-through":"none",opacity:done?0.55:1}}>{t.text}</span>
-                      <button onClick={()=>goalTasks.remove(t.id)} title="Удалить этап"
-                        style={{background:"none",border:"none",color:C.t2,cursor:"pointer",padding:2,flexShrink:0}}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
-                      </button>
-                    </div>;
-                  })}
-                  {subtasks.length===0&&<div style={{fontSize:11.5,color:C.t2,padding:"6px 0"}}>Этапов пока нет — добавь первый ниже.</div>}
-                </div>
-                <div style={{display:"flex",gap:8}}>
-                  <input value={openGoalId===g.id?stInput:""} onChange={e=>setStInput(e.target.value)}
-                    onKeyDown={e=>{if(e.key==="Enter"&&stInput.trim()){goalTasks.add({goal_id:g.id,text:stInput.trim(),mins:0,type:"",date:null,done:false,status:"todo",sort_order:subtasks.length});setStInput("");}}}
-                    placeholder="Например: Нанять менеджера" style={{...iS(),flex:1,fontSize:12.5}}/>
-                  <button onClick={()=>{if(stInput.trim()){goalTasks.add({goal_id:g.id,text:stInput.trim(),mins:0,type:"",date:null,done:false,status:"todo",sort_order:subtasks.length});setStInput("");}}}
-                    style={{padding:"0 16px",background:"#3B82F6",color:"#fff",border:"none",borderRadius:8,fontSize:12.5,fontWeight:600,cursor:"pointer"}}>+ Этап</button>
-                </div>
-              </div>;
-            })()}
-
-            {g.goal_type==="financial"&&(()=>{
-              const achieved=goalFinancialAchieved(g);
-              const target=Number(g.target_income)||0;
-              const calc=goalCalc(target,Number(g.avg_check)||0,Number(g.conversion)||0);
-              const monthly=goalMonthlyPlan(target,g.start_date,g.end_date);
-              return<div>
-                <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",marginBottom:8}}>
-                  <span style={{fontSize:11.5,color:C.t2}}>Заработано в периоде цели</span>
-                  <span style={{fontSize:15,fontWeight:700,color:"#10B981"}}>{fmt$(achieved)} ₽ <span style={{fontSize:11,color:C.t2,fontWeight:400}}>из {fmt$(target)} ₽</span></span>
-                </div>
-                <div style={{height:6,borderRadius:4,background:C.bd,overflow:"hidden",marginBottom:12}}>
-                  <div style={{height:"100%",width:pct+"%",background:"#10B981",borderRadius:4,transition:"width 0.4s"}}/>
-                </div>
-                <div style={{display:"grid",gridTemplateColumns:g.conversion?"repeat(4,1fr)":"repeat(2,1fr)",gap:8}}>
-                  <div style={{background:C.w,borderRadius:9,padding:"9px 11px",border:"1px solid "+C.bd}}>
-                    <div style={{fontSize:10,color:C.t2,marginBottom:2}}>Чек</div>
-                    <div style={{fontSize:14,fontWeight:700,color:C.t1}}>{fmt$(Number(g.avg_check)||0)} ₽</div>
-                  </div>
-                  <div style={{background:C.w,borderRadius:9,padding:"9px 11px",border:"1px solid "+C.bd}}>
-                    <div style={{fontSize:10,color:C.t2,marginBottom:2}}>Продаж нужно</div>
-                    <div style={{fontSize:14,fontWeight:700,color:C.t1}}>{calc.sales}</div>
-                  </div>
-                  {!!g.conversion&&<>
-                    <div style={{background:C.w,borderRadius:9,padding:"9px 11px",border:"1px solid "+C.bd}}>
-                      <div style={{fontSize:10,color:C.t2,marginBottom:2}}>Лидов нужно</div>
-                      <div style={{fontSize:14,fontWeight:700,color:C.t1}}>{calc.leads}</div>
-                    </div>
-                    <div style={{background:C.w,borderRadius:9,padding:"9px 11px",border:"1px solid "+C.bd}}>
-                      <div style={{fontSize:10,color:C.t2,marginBottom:2}}>План в месяц</div>
-                      <div style={{fontSize:14,fontWeight:700,color:C.t1}}>{fmt$(monthly)} ₽</div>
-                    </div>
-                  </>}
-                </div>
-              </div>;
-            })()}
+            <div style={{fontSize:11.5,fontWeight:500,color:C.t2,marginBottom:8}}>Подзадачи</div>
+            <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:10}}>
+              {subtasks.map((t:any)=>{
+                const done=t.done||t.status==="done";
+                return <div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:C.w,border:"1px solid "+C.bd,borderRadius:8}}>
+                  <button onClick={()=>goalTasks.update(t.id,{done:!done,status:!done?"done":"todo"})}
+                    style={{width:16,height:16,borderRadius:4,border:"1.5px solid "+(done?C.a:C.bd),background:done?C.a:"transparent",padding:0,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                    {done&&<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}
+                  </button>
+                  <span style={{flex:1,fontSize:12.5,color:C.t1,textDecoration:done?"line-through":"none",opacity:done?.55:1}}>{t.text}</span>
+                  <button onClick={()=>goalTasks.remove(t.id)} style={{border:"none",background:"transparent",color:C.t2,cursor:"pointer",padding:2}}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                  </button>
+                </div>;
+              })}
+              {subtasks.length===0&&<div style={{fontSize:12,color:C.t2}}>Подзадач пока нет</div>}
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <input value={openGoalId===g.id?subtaskText:""} onChange={e=>setSubtaskText(e.target.value)}
+                onKeyDown={e=>{if(e.key==="Enter"&&subtaskText.trim()){goalTasks.add({goal_id:g.id,text:subtaskText.trim(),mins:0,type:"",date:null,done:false,status:"todo",sort_order:subtasks.length});setSubtaskText("");}}}
+                placeholder="Добавить подзадачу" style={{...iS(),flex:1,fontSize:12.5}}/>
+              <button onClick={()=>{if(subtaskText.trim()){goalTasks.add({goal_id:g.id,text:subtaskText.trim(),mins:0,type:"",date:null,done:false,status:"todo",sort_order:subtasks.length});setSubtaskText("");}}}
+                style={{padding:"0 14px",borderRadius:8,border:"none",background:C.a,color:"#fff",fontSize:12,fontWeight:500,cursor:"pointer"}}>Добавить</button>
+            </div>
           </div>}
         </div>;
       })}
-
-      {/* Today label */}
-      {visibleGoals.length>0&&todayCol>=0&&<div style={{display:"flex",borderTop:"1px solid "+C.bd+"44"}}>
-        <div style={{width:200,flexShrink:0}}/>
-        <div style={{flex:1,position:"relative",height:18}}>
-          <div style={{position:"absolute",left:`${todayCol}%`,transform:"translateX(-50%)",top:2,fontSize:9,fontWeight:700,color:"#777777",whiteSpace:"nowrap"}}>▲ Сегодня</div>
-        </div>
-      </div>}
     </div>
-  </>;
+
+    {visibleGoals.length===0&&<div style={{padding:"50px 20px",textAlign:"center",background:C.w,border:"1px solid "+C.bd,borderRadius:12,color:C.t2,fontSize:13}}>
+      Целей пока нет
+    </div>}
+  </div>;
 }
 /* ============ GOALS BLOCK ============ */
 // Priority system helpers
@@ -3222,7 +2806,7 @@ function TaskPlanner({userId}:{userId:string}){
     return Array.from({length:n},(_,i)=>{const d=new Date(boardStart);d.setDate(boardStart.getDate()+i);return d;});
   };
   const boardResetToCurrent=()=>setBoardStart(boardMode==="week"?currentWeekStart():todayAnchor());
-  const boardStep=(dir:number)=>setBoardStart(s=>{const d=new Date(s);d.setDate(d.getDate()+dir*boardModeDays[boardMode]);return d;});
+  const boardStep=(dir:number)=>setBoardStart(s=>{const d=new Date(s);d.setDate(d.getDate()+dir);return d;});
   const boardIsCurrent=pd(boardStart)===pd(boardMode==="week"?currentWeekStart():todayAnchor());
 
   // War Room AI
@@ -3242,7 +2826,8 @@ function TaskPlanner({userId}:{userId:string}){
     try{
       const withDate=tasks.filter((t:any)=>t.due_date);
       const noDeadline=tasks.length-withDate.length;
-      const done=tasks.filter((t:any)=>t.done);
+      const done=tasks.filter((t:any)=>t.done||t.completion_status==="done");
+      const failed=tasks.filter((t:any)=>t.completion_status==="failed");
       const overdue=withDate.filter((t:any)=>!t.done&&t.due_date<todayStr);
       const byDay:Record<string,{total:number,done:number}>=Object.create(null);
       withDate.forEach((t:any)=>{byDay[t.due_date]=byDay[t.due_date]||{total:0,done:0};byDay[t.due_date].total++;if(t.done)byDay[t.due_date].done++;});
@@ -3264,7 +2849,8 @@ function TaskPlanner({userId}:{userId:string}){
 
       const ctx=`Всего задач: ${tasks.length}
 Выполнено: ${done.length}
-Не выполнено: ${tasks.length-done.length}
+Отмечено как не сделано: ${failed.length}
+В ожидании решения: ${tasks.length-done.length-failed.length}
 Просрочено (дата прошла, не выполнена): ${overdue.length}
 Без дедлайна: ${noDeadline}
 Задач с повторяющимся названием (похоже на регулярные переносы): ${repeated}
@@ -3305,7 +2891,7 @@ function TaskPlanner({userId}:{userId:string}){
   const days:Date[]=[];for(let i=0;i<42;i++){const d=new Date(gridStart);d.setDate(gridStart.getDate()+i);days.push(d);}
   const forDay=(d:Date)=>tasks.filter((t:any)=>t.due_date===pd(d)).sort((a:any,b:any)=>String(a.due_time||"99").localeCompare(String(b.due_time||"99")));
 
-  const blank=(date?:string,time?:string)=>({title:"",description:"",due_date:date||"",due_time:time||"",priority:"none",color:PLANNER_COLORS[0],done:false,subtasks:[],_duration:60});
+  const blank=(date?:string,time?:string)=>({title:"",description:"",due_date:date||"",due_time:time||"",priority:"none",color:PLANNER_COLORS[0],done:false,completion_status:"pending",subtasks:[],_duration:60});
   const openNew=(date?:string,time?:string)=>{setEdit(blank(date,time));setSubInput("");};
   const openEdit=(t:any)=>{setEdit({...t,due_time:wrNormTime(t.due_time),description:wrCleanDescription(t.description),_duration:wrParseDuration(t.description)||60,subtasks:t.subtasks||[]});setSubInput("");};
 
@@ -3313,12 +2899,13 @@ function TaskPlanner({userId}:{userId:string}){
     if(!edit||!edit.title.trim())return;
     setSaving(true);
     const due_time=edit.due_time?wrNormTime(edit.due_time):null;
-    const payload={title:edit.title.trim(),description:wrComposeDescription(edit.description||"",due_time?(edit._duration||60):null),due_date:edit.due_date||null,due_time,priority:edit.priority||"none",color:edit.color||PLANNER_COLORS[0],done:!!edit.done,subtasks:edit.subtasks||[],updated_at:new Date().toISOString()};
+    const payload={title:edit.title.trim(),description:wrComposeDescription(edit.description||"",due_time?(edit._duration||60):null),due_date:edit.due_date||null,due_time,priority:edit.priority||"none",color:edit.color||PLANNER_COLORS[0],done:!!edit.done,completion_status:edit.done?"done":(edit.completion_status||"pending"),subtasks:edit.subtasks||[],updated_at:new Date().toISOString()};
     if(edit.id)await update(edit.id,payload); else await add(payload);
     setSaving(false);setEdit(null);
   };
   const del=async()=>{if(edit?.id&&confirm("Удалить задачу?")){await remove(edit.id);setEdit(null);}};
-  const toggleDone=(t:any,e?:any)=>{e&&e.stopPropagation();update(t.id,{done:!t.done});};
+  const toggleDone=(t:any,e?:any)=>{e&&e.stopPropagation();const next=!t.done;update(t.id,{done:next,completion_status:next?"done":"pending"});};
+  const toggleFailed=(t:any,e?:any)=>{e&&e.stopPropagation();const failed=t.completion_status==="failed";update(t.id,{done:false,completion_status:failed?"pending":"failed"});};
 
   const runWrAi=async(message:string)=>{
     const q=message.trim();
@@ -3462,7 +3049,7 @@ function TaskPlanner({userId}:{userId:string}){
                 {forDay(d).filter((t:any)=>!t.due_time).map((t:any)=>(
                   <div key={t.id} onClick={e=>{e.stopPropagation();openEdit(t);}} style={{display:"flex",alignItems:"center",gap:4,padding:"2px 6px",borderRadius:5,background:(t.color||"#64748B")+"1E",borderLeft:"2px solid "+(t.color||"#64748B"),cursor:"pointer",minWidth:0}}>
                     <span onClick={e=>toggleDone(t,e)} style={{width:11,height:11,borderRadius:3,border:"1.5px solid "+(t.color||"#64748B"),background:t.done?(t.color||"#64748B"):"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>{t.done&&<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}</span>
-                    <span style={{fontSize:11,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.5:1}}>{t.title}</span>
+                    <span style={{fontSize:11,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:(t.done||t.completion_status==="failed")?"line-through":"none",opacity:t.done?0.5:t.completion_status==="failed"?0.42:1}}>{t.title}</span>
                   </div>
                 ))}
               </div>
@@ -3561,8 +3148,10 @@ function TaskPlanner({userId}:{userId:string}){
                       <span onClick={e=>toggleDone(t,e)} style={{width:14,height:14,borderRadius:4,border:"1.5px solid "+(t.color||"#64748B"),background:t.done?(t.color||"#64748B"):"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
                         {t.done&&<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}
                       </span>
+                      <button onClick={e=>toggleFailed(t,e)} title={t.completion_status==="failed"?"Вернуть в ожидание":"Отметить как не сделано"}
+                        style={{width:16,height:16,borderRadius:4,border:"1px solid "+(t.completion_status==="failed"?"#DC2626":bd),background:t.completion_status==="failed"?"#DC2626":"transparent",color:t.completion_status==="failed"?"#fff":C.t2,padding:0,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:11,lineHeight:1}}>×</button>
                       {prioDot(t.priority)}
-                      <span style={{flex:1,minWidth:0,fontSize:12.5,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.5:1}}>{t.due_time?<b style={{fontWeight:500}}>{wrNormTime(t.due_time)} </b>:null}{t.title}</span>
+                      <span style={{flex:1,minWidth:0,fontSize:12.5,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:(t.done||t.completion_status==="failed")?"line-through":"none",opacity:t.done?0.5:t.completion_status==="failed"?0.42:1}}>{t.due_time?<b style={{fontWeight:500}}>{wrNormTime(t.due_time)} </b>:null}{t.title}</span>
                     </div>
                   ))}
                   <button onClick={()=>openNew(pd(d))} style={{marginTop:dt.length?2:0,padding:"6px",borderRadius:8,border:"1px dashed "+bd,background:"transparent",color:C.t2,fontSize:11.5,fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
@@ -3617,13 +3206,10 @@ function TaskPlanner({userId}:{userId:string}){
 
       {/* AI-аудит задач */}
       <button onClick={runTaskAudit} disabled={auditBusy}
-        style={{width:"100%",padding:isMobile?"16px 20px":"18px 26px",borderRadius:15,border:"none",
-          background:auditBusy?"#2F6BFF99":"linear-gradient(135deg,#2F6BFF,#1D4FD8)",
-          color:"#fff",fontSize:isMobile?14.5:15.5,fontWeight:600,cursor:auditBusy?"default":"pointer",
-          display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:16,
-          boxShadow:"0 8px 24px rgba(47,107,255,0.32)",transition:"box-shadow 0.2s,transform 0.15s"}}
-        onMouseEnter={e=>{if(!auditBusy){(e.currentTarget as HTMLElement).style.boxShadow="0 10px 30px rgba(47,107,255,0.46)";(e.currentTarget as HTMLElement).style.transform="translateY(-1px)";}}}
-        onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 8px 24px rgba(47,107,255,0.32)";(e.currentTarget as HTMLElement).style.transform="translateY(0)";}}>
+        style={{width:"100%",padding:isMobile?"15px 20px":"17px 24px",borderRadius:10,border:"none",
+          background:auditBusy?"#2F6BFF99":"#2F6BFF",
+          color:"#fff",fontSize:isMobile?14:15,fontWeight:500,cursor:auditBusy?"default":"pointer",
+          display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:16}}>
         {auditBusy
           ?<div style={{width:18,height:18,border:"2.5px solid rgba(255,255,255,0.4)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
           :<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 2a4 4 0 014 4v2a4 4 0 01-8 0V6a4 4 0 014-4z"/><path d="M6 12v1a6 6 0 0012 0v-1M12 19v3M8 22h8"/></svg>}
@@ -3710,7 +3296,7 @@ function TaskPlanner({userId}:{userId:string}){
                         {t.done&&<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}
                       </span>
                       {prioDot(t.priority)}
-                      <span style={{fontSize:11,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.5:1}}>{t.due_time?t.due_time+" ":""}{t.title}</span>
+                      <span style={{fontSize:11,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:(t.done||t.completion_status==="failed")?"line-through":"none",opacity:t.done?0.5:t.completion_status==="failed"?0.42:1}}>{t.due_time?t.due_time+" ":""}{t.title}</span>
                     </div>
                   ))}
                   {dayTasks.length>(isMobile?2:3)&&<span style={{fontSize:10,color:C.t2,paddingLeft:4}}>+{dayTasks.length-(isMobile?2:3)} ещё</span>}
