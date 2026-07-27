@@ -5,13 +5,15 @@
 //
 // СКОРОСТЬ (что изменилось по сравнению с прошлой версией):
 //  1) runtime = "edge" — роут выполняется на Edge-сети Vercel, а не в обычной
-//     Node.js serverless-функции. У обычных функций бывает «холодный старт»
-//     (несколько секунд на первый заход после простоя) — у edge-функций
-//     холодного старта практически нет.
-//  2) Запись перехода в аналитику больше НЕ блокирует редирект. Раньше страница
-//     ждала до 2 секунд, пока в базу запишется клик, и только потом отправляла
-//     пользователя дальше. Теперь редирект происходит сразу, как только найдена
-//     ссылка, а запись клика уходит в фоне.
+//     Node.js serverless-функции. Холодного старта почти нет.
+//  2) Запись перехода в аналитику НЕ блокирует редирект — уходит в фоне.
+//  3) НОВОЕ: поиск ссылки идёт через fetch() к Supabase напрямую (в обход SDK)
+//     с кэшированием на edge-сети Vercel на 30 секунд (next.revalidate=30).
+//     Раньше каждый клик — это поход в базу заново, что и давало основную
+//     часть тех 6-7 секунд. Теперь повторный клик по той же ссылке в течение
+//     30 секунд отвечает из кэша на edge практически мгновенно, без похода
+//     в Supabase вообще. Первый клик после истечения кэша всё ещё идёт в базу
+//     (это неизбежно — надо же откуда-то узнать целевой адрес).
 //
 // Надёжность (осталось как было):
 //  - переход не ломается, если аналитика недоступна;
@@ -31,6 +33,56 @@ export const revalidate = 0;
 
 const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPA_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+type TrackerLink = {
+  id: string;
+  user_id: string;
+  target_url: string;
+  active: boolean | null;
+  expires_at: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+};
+
+// Явный тип опций fetch с расширением Next.js (next.revalidate) — так объект
+// проверяется корректно и в этом изолированном чек-окружении, и в самом проекте.
+type NextFetchInit = RequestInit & { next?: { revalidate?: number } };
+
+// Поиск ссылки напрямую через PostgREST (в обход supabase-js), чтобы можно было
+// задать Next.js кэш ответа на уровне edge-сети — это и есть основной прирост скорости.
+async function fetchLinkCached(company: string, code: string): Promise<TrackerLink | null> {
+  const url =
+    `${SUPA_URL}/rest/v1/tracker_links` +
+    `?company=eq.${encodeURIComponent(company)}` +
+    `&code=eq.${encodeURIComponent(code)}` +
+    `&select=id,user_id,target_url,active,expires_at,utm_source,utm_medium,utm_campaign` +
+    `&limit=1`;
+  const opts: NextFetchInit = {
+    headers: {
+      apikey: SUPA_KEY as string,
+      Authorization: `Bearer ${SUPA_KEY}`,
+    },
+    // Кэш ответа на edge-сети Vercel на 30 секунд. Смена адреса или отключение
+    // ссылки в Link Tracker станет заметна в течение этого окна, не мгновенно —
+    // разумный компромен между скоростью для посетителей и свежестью данных.
+    next: { revalidate: 30 },
+  };
+  let res: Response;
+  try {
+    res = await fetch(url, opts);
+  } catch {
+    return null;
+  }
+  if (!res.ok) return null;
+  let rows: TrackerLink[];
+  try {
+    rows = await res.json();
+  } catch {
+    return null;
+  }
+  return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+}
 
 // не даём медленному запросу задержать переход
 function withTimeout<T>(p: PromiseLike<T>, ms: number): Promise<T | null> {
@@ -96,21 +148,9 @@ export default async function ShortLinkRedirect({
     return <Notice title="Сервис ссылок не настроен" text="Не заданы ключи подключения к базе." />;
   }
 
-  const supabase = createClient(SUPA_URL, SUPA_KEY);
-
-  // Поиск ссылки — единственный шаг, который ОБЯЗАН завершиться до редиректа
-  // (без него нечего некуда перенаправлять). Таймаут снижен до 2.5с: поиск идёт
-  // по уникальному индексу (company, code), в норме это заметно быстрее.
-  const link = await withTimeout(
-    supabase
-      .from("tracker_links")
-      .select("id,user_id,target_url,active,expires_at,utm_source,utm_medium,utm_campaign")
-      .eq("company", company)
-      .eq("code", code)
-      .maybeSingle()
-      .then((r) => (r.error ? null : r.data)),
-    2500
-  );
+  // Поиск ссылки — единственный шаг, который ОБЯЗАН завершиться до редиректа.
+  // Кэшируется на edge на 30с (см. fetchLinkCached) — повторные клики почти мгновенны.
+  const link = await withTimeout(fetchLinkCached(company, code), 2500);
 
   if (!link) {
     return <Notice title="Ссылка не найдена" text="Возможно, она была удалена или адрес указан с ошибкой." />;
@@ -139,11 +179,10 @@ export default async function ShortLinkRedirect({
   }
 
   // Фиксируем переход БЕЗ ожидания — пользователь не должен ждать запись аналитики.
-  // Промис намеренно не await'ится: запрос уходит сейчас же, редирект не стоит в очереди за ним.
-  // Если Vercel оборвёт функцию раньше, чем допишется клик — потеряется только
-  // одна строка статистики, а не сам переход, что абсолютно приемлемо.
+  // Используем SDK здесь (не критично к скорости, зато удобнее и надёжнее для записи).
   try {
     const h = await headers();
+    const supabase = createClient(SUPA_URL, SUPA_KEY);
     supabase
       .from("tracker_clicks")
       .insert({
@@ -164,3 +203,4 @@ export default async function ShortLinkRedirect({
   // внутри он бросает служебное исключение, и catch его бы «проглотил».
   redirect(target);
 }
+
