@@ -238,7 +238,63 @@ export default function PublicFormPage({params}:{params:Promise<{slug:string}>})
   const inputStyle:React.CSSProperties={width:"100%",height:44,padding:"0 13px",border:"1px solid var(--vf-border)",borderRadius:8,fontSize:14,fontWeight:400,outline:"none",background:"var(--vf-input)",color:"var(--vf-text)",fontFamily:"inherit"};
   const labelStyle:React.CSSProperties={display:"block",fontSize:12,fontWeight:500,color:"var(--vf-muted-strong)",marginBottom:7};
 
-  if(loading)return<div className="vf-page"><div className="vf-loader">Загрузка формы…</div></div>;
+  if(loading)return(
+    <div className="vf-page vf-loading-page">
+      <style>{`
+        @keyframes vfVizzyBounce{
+          0%,100%{transform:translateY(0) scale(1)}
+          45%{transform:translateY(-14px) scale(1.025)}
+          70%{transform:translateY(0) scale(.985)}
+        }
+        @keyframes vfVizzyShadow{
+          0%,100%{transform:scaleX(1);opacity:.22}
+          45%{transform:scaleX(.72);opacity:.10}
+          70%{transform:scaleX(1.05);opacity:.24}
+        }
+        .vf-loading-page{
+          min-height:100vh;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          padding:20px;
+        }
+        .vf-loading-wrap{
+          display:flex;
+          flex-direction:column;
+          align-items:center;
+          gap:16px;
+        }
+        .vf-loading-logo{
+          width:76px;
+          height:76px;
+          object-fit:cover;
+          border-radius:17px;
+          display:block;
+          animation:vfVizzyBounce 1.15s cubic-bezier(.45,.05,.55,.95) infinite;
+          will-change:transform;
+        }
+        .vf-loading-shadow{
+          width:54px;
+          height:8px;
+          border-radius:50%;
+          background:rgba(255,255,255,.18);
+          filter:blur(5px);
+          animation:vfVizzyShadow 1.15s cubic-bezier(.45,.05,.55,.95) infinite;
+        }
+        @media(max-width:640px){
+          .vf-loading-logo{width:66px;height:66px;border-radius:15px}
+          .vf-loading-shadow{width:48px}
+        }
+        @media(prefers-reduced-motion:reduce){
+          .vf-loading-logo,.vf-loading-shadow{animation:none}
+        }
+      `}</style>
+      <div className="vf-loading-wrap" aria-label="Загрузка формы">
+        <img className="vf-loading-logo" src="/logo.png" alt="Vizzy"/>
+        <div className="vf-loading-shadow"/>
+      </div>
+    </div>
+  );
   if(notFound||!form)return<div className="vf-page"><div className="vf-unavailable"><div className="vf-unavailable-title">Форма недоступна</div><div>Ссылка могла устареть или запись временно закрыта.</div></div></div>;
 
   const selectedDateLabel=pickedSlot?`${Number(pickedSlot.visitorDate.slice(8,10))} ${MONTHS_GEN[Number(pickedSlot.visitorDate.slice(5,7))-1]} ${pickedSlot.visitorDate.slice(0,4)}, ${pickedSlot.visitorTime}`:"";
