@@ -19041,743 +19041,321 @@ function PricesPage({userId,onNav}:{userId:string,onNav:(id:string)=>void}){
 }
 
 /* ============ FORMS PAGE ============ */
-type Question={id:string,type:string,label:string,required:boolean,options:string[]};
+type Question={
+  id:string,type:string,label:string,required:boolean,options:string[],
+  hidden?:boolean,placeholder?:string,help_text?:string,
+};
 type BookingCfg={
-  enabled:boolean,
-  duration:number,          // длительность встречи, мин
-  buffer:number,            // перерыв между встречами, мин
-  max_per_day:number,       // максимум встреч в день (0 = без лимита)
-  days:number[],            // рабочие дни: 1=Пн ... 7=Вс
-  from:string,              // начало рабочего дня "10:00"
-  to:string,                // конец рабочего дня "19:00"
-  lead_hours:number,        // за сколько часов до встречи закрывать запись
-  horizon_days:number,      // на сколько дней вперёд открыта запись
-  exceptions:string[],      // выходные даты YYYY-MM-DD
-  tz:string,                // часовой пояс владельца
+  enabled:boolean,duration:number,buffer:number,max_per_day:number,days:number[],
+  from:string,to:string,lead_hours:number,horizon_days:number,exceptions:string[],tz:string,
 };
+type FormNotifications={internal:boolean,email:boolean,telegram:boolean,sms:boolean,subject:string,message:string};
 const BOOKING_DEFAULT:BookingCfg={
-  enabled:false,duration:45,buffer:15,max_per_day:0,
-  days:[1,2,3,4,5],from:"10:00",to:"19:00",
-  lead_hours:2,horizon_days:30,exceptions:[],
-  tz:typeof Intl!=="undefined"?(Intl.DateTimeFormat().resolvedOptions().timeZone||"Europe/Moscow"):"Europe/Moscow",
+  enabled:false,duration:45,buffer:15,max_per_day:0,days:[1,2,3,4,5],from:"10:00",to:"19:00",
+  lead_hours:2,horizon_days:30,exceptions:[],tz:typeof Intl!=="undefined"?(Intl.DateTimeFormat().resolvedOptions().timeZone||"Europe/Moscow"):"Europe/Moscow",
 };
-type FormData={id:string,user_id:string,title:string,description:string,slug:string,questions:Question[],completion_title:string,completion_subtitle:string,completion_url:string,completion_btn_label:string,accent_color:string,is_active:boolean,created_at:string,booking?:BookingCfg|null};
+const FORM_NOTIFICATION_DEFAULT:FormNotifications={internal:true,email:false,telegram:false,sms:false,subject:"Новая запись через Vizzy Form",message:"Новая запись: {{name}}, {{date}} {{time}}"};
+type FormData={
+  id:string,user_id:string,title:string,description:string,slug:string,questions:Question[],
+  completion_title:string,completion_subtitle:string,completion_text?:string,completion_url:string,
+  completion_btn_label:string,completion_image_url?:string,completion_video_url?:string,
+  accent_color:string,is_active:boolean,created_at:string,updated_at?:string,
+  booking?:BookingCfg|null,notification_settings?:FormNotifications|null,
+};
+
+const VF_TEMPLATES:{id:string;name:string;description:string;questions:Question[]}[]=[
+  {id:"qualification",name:"Квалификация лида",description:"Для первичного отбора и записи на консультацию",questions:[
+    {id:"business",type:"text",label:"Чем вы занимаетесь?",required:true,options:[],placeholder:"Ниша, продукт, роль"},
+    {id:"revenue",type:"select",label:"Текущий доход в месяц",required:true,options:["До 100 000 ₽","100 000–300 000 ₽","300 000–1 000 000 ₽","Более 1 000 000 ₽"]},
+    {id:"goal",type:"textarea",label:"Какой результат вы хотите получить?",required:true,options:[],placeholder:"Опишите цель на ближайшие 3–6 месяцев"},
+    {id:"blocker",type:"textarea",label:"Что сейчас мешает прийти к результату?",required:false,options:[]},
+  ]},
+  {id:"application",name:"Заявка на работу",description:"Короткая форма для услуги или проекта",questions:[
+    {id:"task",type:"textarea",label:"Опишите задачу",required:true,options:[],placeholder:"Что нужно сделать и какой результат ожидаете"},
+    {id:"budget",type:"select",label:"Планируемый бюджет",required:true,options:["До 50 000 ₽","50 000–150 000 ₽","150 000–500 000 ₽","Более 500 000 ₽"]},
+    {id:"deadline",type:"date",label:"Желаемый срок запуска",required:false,options:[]},
+  ]},
+  {id:"brief",name:"Бриф клиента",description:"Подробный сбор контекста перед созвоном",questions:[
+    {id:"company",type:"text",label:"Компания или проект",required:true,options:[]},
+    {id:"product",type:"textarea",label:"Что вы продаёте и кому?",required:true,options:[]},
+    {id:"channels",type:"multi_select",label:"Какие каналы уже используете?",required:false,options:["Instagram","Telegram","YouTube","Реклама","Партнёрства","Другое"]},
+    {id:"metric",type:"number",label:"Средний чек, ₽",required:false,options:[]},
+  ]},
+];
 
 function FormsPage({userId}:{userId:string}){
   const{dark}=useTheme();
+  const isMobile=useIsMobile();
   const[tab,setTab]=useState<"list"|"builder"|"analytics"|"bookings">("list");
-  const[bookings,setBookings]=useState<any[]>([]);
   const[forms,setForms]=useState<FormData[]>([]);
   const[loading,setLoading]=useState(true);
+  const[err,setErr]=useState("");
+  const[toast,setToast]=useState("");
   const[selectedForm,setSelectedForm]=useState<FormData|null>(null);
   const[responses,setResponses]=useState<any[]>([]);
+  const[bookings,setBookings]=useState<any[]>([]);
   const[views,setViews]=useState(0);
   const[clicks,setClicks]=useState(0);
+  const[counts,setCounts]=useState<Record<string,{responses:number;bookings:number;views:number}>>({});
   const[saving,setSaving]=useState(false);
   const[copied,setCopied]=useState<string|null>(null);
+  const[openResponse,setOpenResponse]=useState<string|null>(null);
+  const[reschedule,setReschedule]=useState<{id:string;date:string;time:string}|null>(null);
+  const[dragQ,setDragQ]=useState<string|null>(null);
+  const[overQ,setOverQ]=useState<string|null>(null);
 
-  // Builder state
-  const[builderStep,setBuilderStep]=useState<1|2|3>(1);
+  const[builderStep,setBuilderStep]=useState<1|2|3|4>(1);
   const[editId,setEditId]=useState<string|null>(null);
   const[bTitle,setBTitle]=useState("");
   const[bDesc,setBDesc]=useState("");
-  const[bAccent,setBAccent]=useState("#808080");
+  const[bAccent,setBAccent]=useState("#2F6BFF");
   const[bQuestions,setBQuestions]=useState<Question[]>([]);
-  const[bCompTitle,setBCompTitle]=useState("Спасибо за ответы!");
+  const[bBooking,setBBooking]=useState<BookingCfg>({...BOOKING_DEFAULT});
+  const[bCompTitle,setBCompTitle]=useState("Запись подтверждена");
   const[bCompSub,setBCompSub]=useState("");
+  const[bCompText,setBCompText]=useState("");
   const[bCompUrl,setBCompUrl]=useState("");
   const[bCompBtn,setBCompBtn]=useState("Перейти");
-  const[bBooking,setBBooking]=useState<BookingCfg>({...BOOKING_DEFAULT});
+  const[bCompImage,setBCompImage]=useState("");
+  const[bCompVideo,setBCompVideo]=useState("");
+  const[bNotifications,setBNotifications]=useState<FormNotifications>({...FORM_NOTIFICATION_DEFAULT});
+
+  const showToast=(text:string)=>{setToast(text);setTimeout(()=>setToast(""),2600);};
 
   useEffect(()=>{if(userId)loadForms();},[userId]);
 
   const loadForms=async()=>{
-    setLoading(true);
-    const{data}=await supabase.from("forms").select("*").eq("user_id",userId).order("created_at",{ascending:false});
-    setForms((data||[]) as FormData[]);
-    setLoading(false);
-  };
-
-  const loadAnalytics=async(form:FormData)=>{
-    setSelectedForm(form);
-    const[{data:resp},{data:vw},{data:cl}]=await Promise.all([
-      supabase.from("form_responses").select("*").eq("form_id",form.id).order("created_at",{ascending:false}),
-      supabase.from("form_views").select("id").eq("form_id",form.id),
-      supabase.from("form_clicks").select("id").eq("form_id",form.id),
+    setLoading(true);setErr("");
+    const[{data:fs,error:fe},{data:rs},{data:cs},{data:vs}]=await Promise.all([
+      supabase.from("forms").select("*").eq("user_id",userId).order("created_at",{ascending:false}),
+      supabase.from("form_responses").select("form_id"),
+      supabase.from("calls").select("form_id,status").eq("user_id",userId).not("form_id","is",null),
+      supabase.from("form_views").select("form_id"),
     ]);
-    setResponses(resp||[]);
-    setViews((vw as any)?.length||0);
-    setClicks((cl as any)?.length||0);
-    setTab("analytics");
+    if(fe){setErr("Не удалось загрузить формы: "+fe.message);setForms([]);}else setForms((fs||[]) as FormData[]);
+    const next:Record<string,{responses:number;bookings:number;views:number}>={};
+    const ensure=(id:string)=>next[id]||(next[id]={responses:0,bookings:0,views:0});
+    (rs||[]).forEach((r:any)=>{if(r.form_id)ensure(r.form_id).responses++;});
+    (cs||[]).forEach((c:any)=>{if(c.form_id&&c.status!=="cancelled")ensure(c.form_id).bookings++;});
+    (vs||[]).forEach((v:any)=>{if(v.form_id)ensure(v.form_id).views++;});
+    setCounts(next);setLoading(false);
   };
 
+  const resetBuilder=()=>{
+    setEditId(null);setBTitle("");setBDesc("");setBAccent("#2F6BFF");setBQuestions([]);
+    setBBooking({...BOOKING_DEFAULT});setBCompTitle("Запись подтверждена");setBCompSub("");setBCompText("");
+    setBCompUrl("");setBCompBtn("Перейти");setBCompImage("");setBCompVideo("");setBNotifications({...FORM_NOTIFICATION_DEFAULT});
+  };
   const openBuilder=(form?:FormData)=>{
+    setErr("");
     if(form){
-      setEditId(form.id);setBTitle(form.title);setBDesc(form.description);
-      setBAccent(form.accent_color||"#808080");
-      setBQuestions(form.questions||[]);
-      setBCompTitle(form.completion_title||"Спасибо!");
-      setBCompSub(form.completion_subtitle||"");
-      setBCompUrl(form.completion_url||"");
-      setBCompBtn(form.completion_btn_label||"Перейти");
-      setBBooking({...BOOKING_DEFAULT,...(form.booking||{})});
-    }else{
-      setEditId(null);setBTitle("");setBDesc("");setBAccent("#808080");
-      setBQuestions([]);setBCompTitle("Спасибо за ответы!");setBCompSub("");setBCompUrl("");setBCompBtn("Перейти");
-      setBBooking({...BOOKING_DEFAULT});
-    }
+      setEditId(form.id);setBTitle(form.title||"");setBDesc(form.description||"");setBAccent(form.accent_color||"#2F6BFF");
+      setBQuestions((form.questions||[]).map(q=>({...q,hidden:!!q.hidden,options:q.options||[]})));
+      setBBooking({...BOOKING_DEFAULT,...(form.booking||{})});setBCompTitle(form.completion_title||"Запись подтверждена");
+      setBCompSub(form.completion_subtitle||"");setBCompText(form.completion_text||"");setBCompUrl(form.completion_url||"");
+      setBCompBtn(form.completion_btn_label||"Перейти");setBCompImage(form.completion_image_url||"");setBCompVideo(form.completion_video_url||"");
+      setBNotifications({...FORM_NOTIFICATION_DEFAULT,...(form.notification_settings||{})});
+    }else resetBuilder();
     setBuilderStep(1);setTab("builder");
   };
 
-  const loadBookings=async(form:FormData)=>{
-    setSelectedForm(form);
-    const{data}=await supabase.from("calls").select("*").eq("user_id",userId).eq("form_id",form.id).order("date",{ascending:false});
-    setBookings(data||[]);
-    setTab("bookings");
+  const applyTemplate=(id:string)=>{
+    const t=VF_TEMPLATES.find(x=>x.id===id);if(!t)return;
+    setBTitle(p=>p||t.name);setBDesc(p=>p||t.description);
+    setBQuestions(t.questions.map((q,i)=>({...q,id:`${q.id}-${Date.now()}-${i}`})));
+    showToast("Шаблон применён");
   };
 
-  const cancelBooking=async(id:string)=>{
-    await supabase.from("calls").update({status:"cancelled"}).eq("id",id);
-    setBookings(prev=>prev.map(b=>b.id===id?{...b,status:"cancelled"}:b));
-  };
+  const updateQ=(id:string,patch:Partial<Question>)=>setBQuestions(p=>p.map(q=>q.id===id?{...q,...patch}:q));
+  const addQuestion=(type="text")=>setBQuestions(p=>[...p,{id:`q-${Date.now()}-${Math.random().toString(36).slice(2,5)}`,type,label:"",required:false,hidden:false,options:type==="select"||type==="radio"||type==="checkbox"||type==="multi_select"?["Вариант 1","Вариант 2"]:[],placeholder:"",help_text:""}]);
+  const removeQ=(id:string)=>setBQuestions(p=>p.filter(q=>q.id!==id));
+  const moveQ=(id:string,dir:-1|1)=>setBQuestions(p=>{const a=[...p],i=a.findIndex(q=>q.id===id),j=i+dir;if(i<0||j<0||j>=a.length)return p;[a[i],a[j]]=[a[j],a[i]];return a;});
+  const dropQ=(target:string)=>{if(!dragQ||dragQ===target)return;setBQuestions(p=>{const a=[...p],from=a.findIndex(q=>q.id===dragQ),to=a.findIndex(q=>q.id===target);if(from<0||to<0)return p;const[x]=a.splice(from,1);a.splice(to,0,x);return a;});setDragQ(null);setOverQ(null);};
 
-  const addQuestion=()=>{
-    const q:Question={id:Date.now().toString(),type:"text",label:"",required:false,options:["",""]};
-    setBQuestions(prev=>[...prev,q]);
-  };
-
-  const updateQ=(id:string,patch:Partial<Question>)=>setBQuestions(prev=>prev.map(q=>q.id===id?{...q,...patch}:q));
-  const removeQ=(id:string)=>setBQuestions(prev=>prev.filter(q=>q.id!==id));
-  const moveQ=(i:number,dir:-1|1)=>{
-    const arr=[...bQuestions];const j=i+dir;
-    if(j<0||j>=arr.length)return;
-    [arr[i],arr[j]]=[arr[j],arr[i]];setBQuestions(arr);
+  const builderValid=()=>{
+    if(bTitle.trim().length<2)return"Введите название формы";
+    const bad=bQuestions.find(q=>!q.hidden&&!q.label.trim());if(bad)return"У каждого видимого поля должен быть вопрос";
+    const badOpts=bQuestions.find(q=>["select","radio","checkbox","multi_select"].includes(q.type)&&!q.hidden&&(q.options||[]).filter(x=>x.trim()).length<2);
+    if(badOpts)return"Для поля с выбором нужно минимум два варианта";
+    if(bBooking.enabled){if(!bBooking.days.length)return"Выберите хотя бы один рабочий день";if(bBooking.from>=bBooking.to)return"Время окончания должно быть позже начала";}
+    return"";
   };
 
   const saveForm=async()=>{
-    if(!bTitle.trim())return;
-    setSaving(true);
-    const slug=editId?(forms.find(f=>f.id===editId)?.slug||`f-${Date.now()}`):`f-${Math.random().toString(36).slice(2,8)}`;
+    const validation=builderValid();if(validation){setErr(validation);return;}
+    setSaving(true);setErr("");
+    const existing=editId?forms.find(f=>f.id===editId):null;
+    const slug=existing?.slug||`vizzy-${Math.random().toString(36).slice(2,10)}`;
     const payload={
-      user_id:userId,title:bTitle,description:bDesc,slug,
-      questions:bQuestions,accent_color:bAccent,
-      completion_title:bCompTitle,completion_subtitle:bCompSub,
-      completion_url:bCompUrl,completion_btn_label:bCompBtn,
-      is_active:true,
-      booking:bBooking,
+      user_id:userId,title:bTitle.trim(),description:bDesc.trim(),slug,
+      questions:bQuestions.map(q=>({...q,label:q.label.trim(),options:(q.options||[]).map(x=>x.trim()).filter(Boolean)})),
+      accent_color:bAccent,is_active:existing?.is_active??true,booking:bBooking,
+      completion_title:bCompTitle.trim(),completion_subtitle:bCompSub.trim(),completion_text:bCompText.trim(),
+      completion_url:bCompUrl.trim(),completion_btn_label:bCompBtn.trim(),completion_image_url:bCompImage.trim(),completion_video_url:bCompVideo.trim(),
+      notification_settings:bNotifications,updated_at:new Date().toISOString(),
     };
-    if(editId){
-      await supabase.from("forms").update(payload).eq("id",editId);
-    }else{
-      await supabase.from("forms").insert(payload);
-    }
-    await loadForms();setSaving(false);setTab("list");
+    const result=editId?await supabase.from("forms").update(payload).eq("id",editId):await supabase.from("forms").insert(payload);
+    setSaving(false);
+    if(result.error){setErr("Форма не сохранена: "+result.error.message);return;}
+    await loadForms();setTab("list");showToast(editId?"Изменения сохранены":"Форма создана");
   };
 
-  const toggleActive=async(form:FormData)=>{
-    await supabase.from("forms").update({is_active:!form.is_active}).eq("id",form.id);
-    setForms(prev=>prev.map(f=>f.id===form.id?{...f,is_active:!f.is_active}:f));
+  const duplicateForm=async(form:FormData)=>{
+    setErr("");const copy:any={...form};delete copy.id;delete copy.created_at;delete copy.updated_at;
+    copy.title=`${form.title} — копия`;copy.slug=`vizzy-${Math.random().toString(36).slice(2,10)}`;copy.is_active=false;copy.user_id=userId;
+    const{error}=await supabase.from("forms").insert(copy);if(error)setErr("Не удалось дублировать: "+error.message);else{await loadForms();showToast("Копия создана");}
   };
+  const toggleActive=async(form:FormData)=>{const{error}=await supabase.from("forms").update({is_active:!form.is_active,updated_at:new Date().toISOString()}).eq("id",form.id);if(error)setErr(error.message);else setForms(p=>p.map(f=>f.id===form.id?{...f,is_active:!f.is_active}:f));};
+  const deleteForm=async(id:string)=>{if(!confirm("Удалить форму, ответы и связанную аналитику?"))return;const{error}=await supabase.from("forms").delete().eq("id",id);if(error)setErr("Не удалось удалить: "+error.message);else{setForms(p=>p.filter(f=>f.id!==id));showToast("Форма удалена");}};
+  const copyLink=(slug:string)=>{const url=`${location.origin}/f/${slug}`;navigator.clipboard.writeText(url);setCopied(slug);setTimeout(()=>setCopied(null),1800);};
 
-  const deleteForm=async(id:string)=>{
-    if(!confirm("Удалить форму и все ответы?"))return;
-    await supabase.from("form_responses").delete().eq("form_id",id);
-    await supabase.from("form_views").delete().eq("form_id",id);
-    await supabase.from("form_clicks").delete().eq("form_id",id);
-    await supabase.from("forms").delete().eq("id",id);
-    setForms(prev=>prev.filter(f=>f.id!==id));
+  const loadAnalytics=async(form:FormData)=>{
+    setSelectedForm(form);setErr("");
+    const[{data:r,error:re},{data:v},{data:c}]=await Promise.all([
+      supabase.from("form_responses").select("*").eq("form_id",form.id).order("created_at",{ascending:false}),
+      supabase.from("form_views").select("id").eq("form_id",form.id),supabase.from("form_clicks").select("id,event").eq("form_id",form.id),
+    ]);
+    if(re)setErr(re.message);setResponses(r||[]);setViews(v?.length||0);setClicks(c?.length||0);setTab("analytics");
   };
+  const loadBookings=async(form:FormData)=>{setSelectedForm(form);const{data,error}=await supabase.from("calls").select("*").eq("user_id",userId).eq("form_id",form.id).order("start_datetime",{ascending:false});if(error)setErr(error.message);setBookings(data||[]);setTab("bookings");};
 
-  const deleteResponse=async(responseId:string)=>{
-    await supabase.from("form_responses").delete().eq("id",responseId);
-    setResponses(prev=>prev.filter(r=>r.id!==responseId));
+  const answerFor=(r:any,q:Question)=>{
+    const a=r.answers;
+    if(a&&Array.isArray(a)){const found=a.find((x:any)=>x.question_id===q.id||x.question_label===q.label);return found?.answer??"";}
+    if(a&&typeof a==="object")return a[q.id]??"";return"";
   };
-
-  const deleteAllResponses=async()=>{
-    if(!selectedForm||!confirm("Удалить все ответы? Это нельзя отменить."))return;
-    await supabase.from("form_responses").delete().eq("form_id",selectedForm.id);
-    setResponses([]);
-  };
-
-  const copyLink=(slug:string)=>{
-    const url=`${window.location.origin}/f/${slug}`;
-    navigator.clipboard.writeText(url);setCopied(slug);setTimeout(()=>setCopied(null),2000);
-  };
-
+  const displayAnswer=(v:any)=>Array.isArray(v)?v.join(", "):v&&typeof v==="object"?(v.name||JSON.stringify(v)):String(v??"");
   const exportCSV=()=>{
-    if(!selectedForm||!responses.length)return;
-    const qs=selectedForm.questions.map(q=>q.label);
-    const header=["Дата",...qs,"Email"].join(",");
-    const rows=responses.map(r=>{
-      const date=new Date(r.created_at).toLocaleDateString("ru-RU");
-      const vals=qs.map(q=>{
-        const ans=r.answers?.find((a:any)=>a.question_label===q);
-        const v=Array.isArray(ans?.answer)?ans.answer.join("; "):(ans?.answer||"");
-        return `"${String(v).replace(/"/g,'""')}"`;
-      });
-      return[date,...vals,r.respondent_email||""].join(",");
-    });
-    const csv=[header,...rows].join("\n");
-    const blob=new Blob([csv],{type:"text/csv"});
-    const a=document.createElement("a");a.href=URL.createObjectURL(blob);
-    a.download=`${selectedForm.title}-responses.csv`;a.click();
+    if(!selectedForm||!responses.length)return;const qs=(selectedForm.questions||[]).filter(q=>!q.hidden);
+    const esc=(v:any)=>`"${displayAnswer(v).replace(/"/g,'""')}"`;
+    const rows=[["Дата","Имя","Email","Телефон",...qs.map(q=>q.label)].map(esc).join(",")];
+    responses.forEach(r=>rows.push([new Date(r.created_at).toLocaleString("ru-RU"),r.respondent_name||r.answers?.__name||"",r.respondent_email||r.answers?.__email||"",r.respondent_phone||r.answers?.__phone||"",...qs.map(q=>answerFor(r,q))].map(esc).join(",")));
+    const blob=new Blob(["\ufeff"+rows.join("\n")],{type:"text/csv;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`${selectedForm.slug}-responses.csv`;a.click();URL.revokeObjectURL(a.href);
+  };
+  const deleteResponse=async(id:string)=>{const{error}=await supabase.from("form_responses").delete().eq("id",id);if(error)setErr(error.message);else setResponses(p=>p.filter(r=>r.id!==id));};
+
+  const openStoredFile=async(value:any,responseId:string)=>{
+    if(!value?.path)return;const{data:{session}}=await supabase.auth.getSession();if(!session?.access_token){setErr("Сессия истекла. Войдите заново.");return;}
+    const res=await fetch(`/api/forms/file?path=${encodeURIComponent(value.path)}&response_id=${encodeURIComponent(responseId)}`,{headers:{Authorization:`Bearer ${session.access_token}`}});
+    const data=await res.json();if(!res.ok||!data?.url){setErr(data?.error||"Не удалось открыть файл");return;}window.open(data.url,"_blank","noopener,noreferrer");
   };
 
+  const vfZoneOffset=(date:Date,tz:string)=>{const p=new Intl.DateTimeFormat("en-CA",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).formatToParts(date);const o:Record<string,string>={};p.forEach(x=>{if(x.type!=="literal")o[x.type]=x.value;});return Date.UTC(+o.year,+o.month-1,+o.day,+o.hour,+o.minute,+o.second)-date.getTime();};
+  const vfZonedToUtc=(date:string,time:string,tz:string)=>{const[y,m,d]=date.split("-").map(Number),[h,mi]=time.split(":").map(Number);let g=new Date(Date.UTC(y,m-1,d,h,mi));for(let i=0;i<3;i++)g=new Date(Date.UTC(y,m-1,d,h,mi)-vfZoneOffset(g,tz));return g;};
+  const cancelBooking=async(id:string)=>{const{error}=await supabase.from("calls").update({status:"cancelled",cancelled_at:new Date().toISOString()}).eq("id",id);if(error)setErr(error.message);else setBookings(p=>p.map(b=>b.id===id?{...b,status:"cancelled"}:b));};
+  const saveReschedule=async()=>{
+    if(!reschedule||!selectedForm)return;const start=vfZonedToUtc(reschedule.date,reschedule.time,selectedForm.booking?.tz||"Europe/Moscow");
+    const{data,error}=await supabase.rpc("reschedule_vizzy_booking",{p_call_id:reschedule.id,p_start_at:start.toISOString()});
+    if(error){const m=String(error.message);setErr(m.includes("slot_taken")?"Этот слот занят. Выберите другое время.":"Не удалось перенести запись: "+m);return;}
+    setBookings(p=>p.map(b=>b.id===reschedule.id?{...b,date:data.owner_date,time_start:data.owner_time,start_datetime:data.start_at,status:"scheduled"}:b));setReschedule(null);showToast("Запись перенесена");
+  };
+
+  const qStats=useMemo(()=>{
+    if(!selectedForm)return[];return(selectedForm.questions||[]).filter(q=>!q.hidden).map(q=>{
+      const map:Record<string,number>={};responses.forEach(r=>{const v=answerFor(r,q);(Array.isArray(v)?v:[v]).filter(x=>String(x??"").trim()).forEach(x=>{const k=String(x);map[k]=(map[k]||0)+1;});});
+      return{q,items:Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,6)};
+    });
+  },[responses,selectedForm]);
+
+  const tone={
+    panel:dark?"#151515":"#FFFFFF",soft:dark?"#111111":"#F7F8FA",border:dark?"rgba(255,255,255,0.08)":"#E4E6EA",
+    muted:dark?"#8C8C8C":"#757B86",shadow:dark?"0 8px 28px rgba(0,0,0,.28)":"0 8px 28px rgba(15,23,42,.05)",
+  };
+  const panel=(extra?:React.CSSProperties):React.CSSProperties=>({background:tone.panel,border:`1px solid ${tone.border}`,borderRadius:10,boxShadow:tone.shadow,...extra});
+  const inp:React.CSSProperties={width:"100%",height:42,padding:"0 12px",border:`1px solid ${tone.border}`,borderRadius:8,background:dark?"#1B1B1B":"#FFF",color:C.t1,fontSize:13.5,fontWeight:400,outline:"none",fontFamily:"'Inter',sans-serif"};
+  const label:React.CSSProperties={display:"block",fontSize:11.5,fontWeight:500,color:tone.muted,marginBottom:7};
+  const Btn=({children,onClick,primary=false,disabled=false,danger=false}:{children:React.ReactNode,onClick?:()=>void,primary?:boolean,disabled?:boolean,danger?:boolean})=><button onClick={onClick} disabled={disabled} style={{height:38,padding:"0 14px",borderRadius:8,border:primary?"none":`1px solid ${danger?"rgba(220,38,38,.22)":tone.border}`,background:primary?"#2F6BFF":"transparent",color:primary?"#fff":danger?"#DC2626":C.t1,fontSize:12.5,fontWeight:550,cursor:disabled?"not-allowed":"pointer",opacity:disabled?0.48:1,whiteSpace:"nowrap"}}>{children}</button>;
+
+  if(loading)return<div style={{height:"60vh",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,color:tone.muted}}>Загрузка Vizzy Form…</div>;
+
+  const totalResponses=Object.values(counts).reduce((s,x)=>s+x.responses,0),totalBookings=Object.values(counts).reduce((s,x)=>s+x.bookings,0),totalViews=Object.values(counts).reduce((s,x)=>s+x.views,0);
+  const conversion=totalViews?Math.round(totalResponses/totalViews*100):0;
+  const baseUrl=typeof window!=="undefined"?window.location.origin:"";
   const QTYPES=[
-    {id:"text",label:"Короткий текст",ic:"✏️"},
-    {id:"textarea",label:"Длинный текст",ic:"📝"},
-    {id:"radio",label:"Один вариант",ic:"🔘"},
-    {id:"checkbox",label:"Несколько вариантов",ic:"☑️"},
-    {id:"scale",label:"Шкала 1–10",ic:"📊"},
-    {id:"email",label:"Email",ic:"📧"},
-    {id:"phone",label:"Телефон",ic:"📞"},
+    ["text","Короткий текст"],["textarea","Длинный текст"],["email","Email"],["phone","Телефон"],["number","Число"],
+    ["select","Выпадающий список"],["file","Файл"],["radio","Один вариант"],["checkbox","Чекбоксы"],["multi_select","Множественный выбор"],["date","Дата"],["scale","Шкала 1–10"],
   ];
 
-  // ── Design tokens ──
-  const gl={
-    card:dark?"rgba(255,255,255,0.04)":"rgba(255,255,255,0.82)",
-    cardBorder:dark?"rgba(255,255,255,0.07)":"rgba(0,0,0,0.06)",
-    input:dark?"rgba(255,255,255,0.05)":"rgba(255,255,255,0.9)",
-    inputBorder:dark?"rgba(255,255,255,0.10)":"rgba(0,0,0,0.10)",
-    sh:"0 1px 3px rgba(0,0,0,0.04),0 8px 24px rgba(0,0,0,0.06)",
-    pill:(active:boolean)=>active
-      ?(dark?"rgba(255,255,255,0.10)":"rgba(0,0,0,0.06)")
-      :"transparent",
-    blur:"blur(20px) saturate(160%)",
-  };
-  const gInput:React.CSSProperties={width:"100%",padding:"10px 13px",borderRadius:8,border:`1px solid ${gl.inputBorder}`,background:gl.input,backdropFilter:gl.blur,color:C.t1,fontSize:14,outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box",transition:"border-color 0.15s"};
-
-  const Chip=({children,color}:{children:React.ReactNode,color?:string})=>(
-    <span style={{fontSize:11,fontWeight:600,color:color||C.t2,background:color?`${color}14`:(dark?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.04)"),padding:"3px 9px",borderRadius:10,letterSpacing:0.2}}>{children}</span>
-  );
-
-  const GhostBtn=({children,onClick,icon}:{children?:React.ReactNode,onClick?:()=>void,icon?:React.ReactNode})=>(
-    <button onClick={onClick} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:9,border:`1px solid ${gl.cardBorder}`,background:gl.card,backdropFilter:gl.blur,color:C.t1,fontSize:12,fontWeight:600,cursor:"pointer",transition:"all 0.15s",whiteSpace:"nowrap" as const}}>
-      {icon}{children}
-    </button>
-  );
-
-  const PrimaryBtn=({children,onClick,disabled,small}:{children:React.ReactNode,onClick?:()=>void,disabled?:boolean,small?:boolean})=>(
-    <button onClick={onClick} disabled={disabled}
-      style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,padding:small?"8px 16px":"11px 20px",borderRadius:8,border:"none",background:disabled?(dark?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)"):"#18181B",color:disabled?C.t2:"#fff",fontSize:small?12:14,fontWeight:600,cursor:disabled?"not-allowed":"pointer",transition:"opacity 0.15s",opacity:disabled?0.5:1,whiteSpace:"nowrap" as const}}>
-      {children}
-    </button>
-  );
-
-  const SectionCard=({children,style}:{children:React.ReactNode,style?:React.CSSProperties})=>(
-    <div style={{background:gl.card,backdropFilter:gl.blur,border:`1px solid ${gl.cardBorder}`,borderRadius:10,padding:22,boxShadow:gl.sh,...style}}>
-      {children}
+  return <div style={{maxWidth:1180,margin:"0 auto",padding:isMobile?"10px 0 28px":"8px 0 40px",fontFamily:"'Inter',sans-serif"}}>
+    {toast&&<div className="toast-panel" style={{position:"fixed",right:24,bottom:24,zIndex:500,...panel({padding:"11px 15px",fontSize:12.5,fontWeight:550})}}>{toast}</div>}
+    <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16,marginBottom:24,flexWrap:"wrap"}}>
+      <div><div style={{fontSize:11,fontWeight:600,letterSpacing:".12em",color:"#2F6BFF",textTransform:"uppercase",marginBottom:6}}>Vizzy Form</div><div style={{fontSize:isMobile?22:27,fontWeight:580,letterSpacing:"-.025em",color:C.t1}}>Формы и запись на созвоны</div><div style={{fontSize:13,color:tone.muted,marginTop:5}}>Одно заполнение создаёт ответ, лида и созвон автоматически.</div></div>
+      {tab==="list"&&<Btn primary onClick={()=>openBuilder()}>+ Новая форма</Btn>}
     </div>
-  );
+    {err&&<div style={{padding:"11px 14px",borderRadius:8,border:"1px solid rgba(220,38,38,.22)",background:"rgba(220,38,38,.06)",color:"#DC2626",fontSize:12.5,marginBottom:16}}>{err}<button onClick={()=>setErr("")} style={{float:"right",background:"none",border:0,color:"inherit",cursor:"pointer"}}>×</button></div>}
 
-  const FieldLabel=({children}:{children:React.ReactNode})=>(
-    <div style={{fontSize:11,fontWeight:600,color:C.t2,marginBottom:6,letterSpacing:0.3}}>{children}</div>
-  );
-
-  if(loading)return<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"60vh",color:C.t2,fontSize:14}}>Загрузка...</div>;
-
-  return(
-    <div style={{maxWidth:840,margin:"0 auto",padding:"36px 24px",fontFamily:"'Inter',sans-serif"}}>
-
-      {/* ── Header ── */}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:32}}>
-        <div>
-          <div style={{fontSize:22,fontWeight:800,color:C.t1,letterSpacing:-0.3}}>Forms</div>
-          <div style={{fontSize:13,color:C.t2,marginTop:2}}>Создавай формы и собирай ответы</div>
-        </div>
-        {tab==="list"&&(
-          <PrimaryBtn onClick={()=>openBuilder()}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Новая форма
-          </PrimaryBtn>
-        )}
+    {tab==="list"&&<>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)",gap:10,marginBottom:18}}>
+        {[{l:"Активные формы",v:forms.filter(f=>f.is_active).length},{l:"Ответы",v:totalResponses},{l:"Записи",v:totalBookings},{l:"Конверсия",v:`${conversion}%`}].map(x=><div key={x.l} style={panel({padding:"16px 18px"})}><div style={{fontSize:24,fontWeight:580,letterSpacing:"-.03em",color:C.t1}}>{x.v}</div><div style={{fontSize:11.5,color:tone.muted,marginTop:5}}>{x.l}</div></div>)}
       </div>
+      {forms.length===0?<div style={panel({padding:"42px 24px",textAlign:"center"})}><div style={{fontSize:17,fontWeight:570,color:C.t1}}>Создайте первую форму</div><div style={{fontSize:13,color:tone.muted,margin:"7px auto 18px",maxWidth:430,lineHeight:1.6}}>Выберите шаблон или начните с чистой формы. Расписание, CRM и аналитика уже связаны между собой.</div><div style={{display:"flex",justifyContent:"center",gap:8,flexWrap:"wrap"}}>{VF_TEMPLATES.map(t=><Btn key={t.id} onClick={()=>{openBuilder();setTimeout(()=>applyTemplate(t.id),0);}}>{t.name}</Btn>)}<Btn primary onClick={()=>openBuilder()}>Чистая форма</Btn></div></div>
+      :<div style={{display:"grid",gap:10}}>{forms.map(form=>{const st=counts[form.id]||{responses:0,bookings:0,views:0};const conv=st.views?Math.round(st.responses/st.views*100):0;return<div key={form.id} style={panel({padding:isMobile?16:18})}>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"minmax(240px,1.4fr) repeat(4,minmax(74px,.42fr)) auto",gap:isMobile?12:18,alignItems:"center"}}>
+          <div style={{minWidth:0}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}><span style={{width:7,height:7,borderRadius:"50%",background:form.is_active?"#16A34A":"#A0A4AC"}}/><span style={{fontSize:14.5,fontWeight:570,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{form.title}</span></div><div style={{fontSize:11.5,color:tone.muted,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{form.booking?.enabled?`${form.booking.duration} мин · ${form.booking.days?.length||0} рабочих дней`:"Форма без записи"} · {form.questions?.filter(q=>!q.hidden).length||0} полей</div></div>
+          {[{l:"Просмотры",v:st.views},{l:"Ответы",v:st.responses},{l:"Записи",v:st.bookings},{l:"Конверсия",v:`${conv}%`}].map(x=><div key={x.l} style={{display:isMobile?"inline-flex":"block",alignItems:"baseline",gap:6}}><div style={{fontSize:16,fontWeight:570,color:C.t1}}>{x.v}</div><div style={{fontSize:10.5,color:tone.muted,marginTop:2}}>{x.l}</div></div>)}
+          <div style={{display:"flex",gap:6,justifyContent:isMobile?"flex-start":"flex-end",flexWrap:"wrap"}}><Btn onClick={()=>copyLink(form.slug)}>{copied===form.slug?"Скопировано":"Ссылка"}</Btn><Btn onClick={()=>loadAnalytics(form)}>Ответы</Btn>{form.booking?.enabled&&<Btn onClick={()=>loadBookings(form)}>Записи</Btn>}<Btn onClick={()=>openBuilder(form)}>Изменить</Btn><Btn onClick={()=>duplicateForm(form)}>Копия</Btn><Btn onClick={()=>toggleActive(form)}>{form.is_active?"Выключить":"Включить"}</Btn><Btn danger onClick={()=>deleteForm(form.id)}>Удалить</Btn></div>
+        </div>
+      </div>;})}</div>}
+    </>}
 
-      {/* ── Tabs ── */}
-      <div style={{display:"flex",gap:2,padding:"4px",background:dark?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.04)",backdropFilter:gl.blur,borderRadius:8,marginBottom:28,width:"fit-content",border:`1px solid ${gl.cardBorder}`}}>
-        {([["list","Формы"],["builder","Конструктор"],selectedForm&&["analytics","Аналитика"]] as any[]).filter(Boolean).map(([id,label]:string[])=>(
-          <button key={id} onClick={()=>setTab(id as typeof tab)}
-            style={{padding:"7px 16px",borderRadius:9,border:"none",cursor:"pointer",fontSize:13,fontWeight:tab===id?700:500,background:tab===id?(dark?"rgba(255,255,255,0.09)":"#fff"):"transparent",color:tab===id?C.t1:C.t2,transition:"all 0.15s",boxShadow:tab===id?(dark?"none":"0 1px 3px rgba(0,0,0,0.08)"):"none"}}>
-            {label}
-          </button>
-        ))}
+    {tab==="builder"&&<>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:16,flexWrap:"wrap"}}><button onClick={()=>setTab("list")} style={{background:"none",border:0,color:tone.muted,cursor:"pointer",fontSize:12.5,padding:0}}>← Все формы</button><div style={{fontSize:12,color:tone.muted}}>{editId?"Редактирование формы":"Новая форма"}</div></div>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"210px minmax(0,1fr)",gap:14,alignItems:"start"}}>
+        <aside style={panel({padding:8,position:isMobile?"static":"sticky",top:88,display:"flex",flexDirection:isMobile?"row":"column",overflowX:"auto"})}>{[[1,"Основное"],[2,"Поля"],[3,"Расписание"],[4,"Финал и уведомления"]].map(([n,l])=><button key={n} onClick={()=>setBuilderStep(n as 1|2|3|4)} style={{display:"flex",alignItems:"center",gap:9,minWidth:isMobile?140:"auto",padding:"10px 11px",borderRadius:8,border:0,background:builderStep===n?tone.soft:"transparent",color:builderStep===n?C.t1:tone.muted,cursor:"pointer",fontSize:12.5,fontWeight:builderStep===n?570:450,textAlign:"left"}}><span style={{width:22,height:22,borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",background:builderStep===n?"#2F6BFF":"transparent",color:builderStep===n?"#fff":tone.muted,border:builderStep===n?"none":`1px solid ${tone.border}`,fontSize:11}}>{n}</span>{l}</button>)}</aside>
+        <section style={{display:"grid",gap:12}}>
+          {builderStep===1&&<>
+            <div style={panel({padding:isMobile?16:22})}><div style={{fontSize:15,fontWeight:570,marginBottom:16}}>Основная информация</div><label style={label}>Название *</label><input style={{...inp,marginBottom:14}} value={bTitle} onChange={e=>setBTitle(e.target.value)} placeholder="Например: Заявка на стратегическую сессию"/><label style={label}>Описание для посетителя</label><textarea style={{...inp,height:92,padding:"11px 12px",resize:"vertical",marginBottom:14}} value={bDesc} onChange={e=>setBDesc(e.target.value)} placeholder="Коротко объясните, для чего нужна форма и что произойдёт после записи"/><label style={label}>Акцентный цвет</label><div style={{display:"flex",alignItems:"center",gap:10}}><input type="color" value={bAccent} onChange={e=>setBAccent(e.target.value)} style={{width:42,height:36,padding:2,border:`1px solid ${tone.border}`,borderRadius:8,background:"transparent"}}/><span style={{fontSize:12,color:tone.muted,fontFamily:"monospace"}}>{bAccent}</span></div></div>
+            <div style={panel({padding:isMobile?16:22})}><div style={{fontSize:15,fontWeight:570,marginBottom:5}}>Шаблоны</div><div style={{fontSize:12.5,color:tone.muted,marginBottom:14}}>Шаблон заменит текущий список вопросов.</div><div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(3,1fr)",gap:8}}>{VF_TEMPLATES.map(t=><button key={t.id} onClick={()=>applyTemplate(t.id)} style={{padding:14,borderRadius:9,border:`1px solid ${tone.border}`,background:"transparent",textAlign:"left",cursor:"pointer",color:C.t1}}><div style={{fontSize:13,fontWeight:560,marginBottom:4}}>{t.name}</div><div style={{fontSize:11.5,color:tone.muted,lineHeight:1.45}}>{t.description}</div></button>)}</div></div>
+            <div style={{display:"flex",justifyContent:"flex-end"}}><Btn primary onClick={()=>setBuilderStep(2)}>Далее: поля →</Btn></div>
+          </>}
+
+          {builderStep===2&&<>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}><div><div style={{fontSize:15,fontWeight:570}}>Поля формы</div><div style={{fontSize:12,color:tone.muted,marginTop:3}}>Перетаскивайте карточки, скрывайте или делайте обязательными.</div></div><select onChange={e=>{if(e.target.value){addQuestion(e.target.value);e.target.value="";}}} defaultValue="" style={{...inp,width:190}}><option value="" disabled>+ Добавить поле</option>{QTYPES.map(([id,l])=><option key={id} value={id}>{l}</option>)}</select></div>
+            {bQuestions.length===0&&<div style={panel({padding:"38px 20px",textAlign:"center",fontSize:13,color:tone.muted})}>Добавьте первое поле. Имя, email и телефон уже встроены в форму автоматически.</div>}
+            {bQuestions.map((q,i)=><div key={q.id} draggable onDragStart={()=>setDragQ(q.id)} onDragEnd={()=>{setDragQ(null);setOverQ(null);}} onDragOver={e=>{e.preventDefault();setOverQ(q.id);}} onDrop={()=>dropQ(q.id)} style={panel({padding:isMobile?14:18,borderColor:overQ===q.id?"#2F6BFF":tone.border,opacity:q.hidden?0.68:1})}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,flexWrap:"wrap"}}><span style={{cursor:"grab",color:tone.muted,fontSize:14}}>⠿</span><span style={{fontSize:11,fontWeight:600,color:tone.muted}}>Q{i+1}</span><select value={q.type} onChange={e=>updateQ(q.id,{type:e.target.value,options:["select","radio","checkbox","multi_select"].includes(e.target.value)&&(q.options||[]).length<2?["Вариант 1","Вариант 2"]:q.options})} style={{...inp,width:180,height:34,fontSize:12}}>{QTYPES.map(([id,l])=><option key={id} value={id}>{l}</option>)}</select><label style={{display:"flex",alignItems:"center",gap:6,fontSize:11.5,color:tone.muted,cursor:"pointer",marginLeft:isMobile?0:"auto"}}><input type="checkbox" checked={q.required} onChange={e=>updateQ(q.id,{required:e.target.checked})}/>Обязательное</label><label style={{display:"flex",alignItems:"center",gap:6,fontSize:11.5,color:tone.muted,cursor:"pointer"}}><input type="checkbox" checked={!!q.hidden} onChange={e=>updateQ(q.id,{hidden:e.target.checked})}/>Скрыто</label><button onClick={()=>moveQ(q.id,-1)} disabled={i===0} style={{background:"none",border:0,color:tone.muted,cursor:"pointer",opacity:i===0?0.3:1}}>↑</button><button onClick={()=>moveQ(q.id,1)} disabled={i===bQuestions.length-1} style={{background:"none",border:0,color:tone.muted,cursor:"pointer",opacity:i===bQuestions.length-1?0.3:1}}>↓</button><button onClick={()=>removeQ(q.id)} style={{background:"none",border:0,color:"#DC2626",cursor:"pointer"}}>×</button></div>
+              <label style={label}>Вопрос</label><input style={{...inp,marginBottom:10}} value={q.label} onChange={e=>updateQ(q.id,{label:e.target.value})} placeholder="Введите текст вопроса"/><div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10}}><div><label style={label}>Подсказка внутри поля</label><input style={inp} value={q.placeholder||""} onChange={e=>updateQ(q.id,{placeholder:e.target.value})}/></div><div><label style={label}>Пояснение под вопросом</label><input style={inp} value={q.help_text||""} onChange={e=>updateQ(q.id,{help_text:e.target.value})}/></div></div>
+              {["select","radio","checkbox","multi_select"].includes(q.type)&&<div style={{marginTop:12,paddingTop:12,borderTop:`1px solid ${tone.border}`}}><label style={label}>Варианты ответа</label><div style={{display:"grid",gap:7}}>{(q.options||[]).map((o,oi)=><div key={oi} style={{display:"flex",gap:7}}><input style={inp} value={o} onChange={e=>{const a=[...(q.options||[])];a[oi]=e.target.value;updateQ(q.id,{options:a});}}/><button onClick={()=>updateQ(q.id,{options:(q.options||[]).filter((_,j)=>j!==oi)})} style={{width:38,borderRadius:8,border:`1px solid ${tone.border}`,background:"transparent",color:tone.muted,cursor:"pointer"}}>×</button></div>)}</div><button onClick={()=>updateQ(q.id,{options:[...(q.options||[]),""]})} style={{marginTop:8,background:"none",border:0,color:"#2F6BFF",fontSize:12,cursor:"pointer",padding:0}}>+ Вариант</button></div>}
+            </div>)}
+            <div style={{display:"flex",justifyContent:"space-between",gap:8}}><Btn onClick={()=>setBuilderStep(1)}>← Назад</Btn><Btn primary onClick={()=>setBuilderStep(3)}>Далее: расписание →</Btn></div>
+          </>}
+
+          {builderStep===3&&<>
+            <div style={panel({padding:isMobile?16:22})}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:bBooking.enabled?18:0}}><div><div style={{fontSize:15,fontWeight:570}}>Запись на созвон</div><div style={{fontSize:12,color:tone.muted,marginTop:4}}>Сначала посетитель выбирает время, затем заполняет все поля формы.</div></div><button onClick={()=>setBBooking({...bBooking,enabled:!bBooking.enabled})} style={{width:46,height:26,borderRadius:20,border:0,padding:2,background:bBooking.enabled?"#2F6BFF":tone.border,cursor:"pointer"}}><div style={{width:22,height:22,borderRadius:"50%",background:"#fff",transform:bBooking.enabled?"translateX(20px)":"none",transition:"transform .18s"}}/></button></div>
+              {bBooking.enabled&&<div style={{display:"grid",gap:15}}><div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(3,1fr)",gap:10}}><div><label style={label}>Длительность</label><select style={inp} value={bBooking.duration} onChange={e=>setBBooking({...bBooking,duration:+e.target.value})}>{[15,20,30,45,60,90,120].map(x=><option key={x} value={x}>{x} мин</option>)}</select></div><div><label style={label}>Перерыв</label><select style={inp} value={bBooking.buffer} onChange={e=>setBBooking({...bBooking,buffer:+e.target.value})}>{[0,5,10,15,20,30].map(x=><option key={x} value={x}>{x} мин</option>)}</select></div><div><label style={label}>Максимум в день</label><select style={inp} value={bBooking.max_per_day} onChange={e=>setBBooking({...bBooking,max_per_day:+e.target.value})}><option value={0}>Без лимита</option>{[1,2,3,4,5,6,8,10].map(x=><option key={x} value={x}>{x}</option>)}</select></div></div>
+              <div><label style={label}>Рабочие дни</label><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{[[1,"Пн"],[2,"Вт"],[3,"Ср"],[4,"Чт"],[5,"Пт"],[6,"Сб"],[7,"Вс"]].map(([d,l])=>{const on=bBooking.days.includes(d as number);return<button key={d} onClick={()=>setBBooking({...bBooking,days:on?bBooking.days.filter(x=>x!==d):[...bBooking.days,d as number].sort()})} style={{height:36,minWidth:44,borderRadius:8,border:`1px solid ${on?"#2F6BFF":tone.border}`,background:on?"rgba(47,107,255,.08)":"transparent",color:on?"#2F6BFF":tone.muted,cursor:"pointer",fontSize:12}}>{l}</button>;})}</div></div>
+              <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10}}><div><label style={label}>Начало рабочего дня</label><input type="time" style={inp} value={bBooking.from} onChange={e=>setBBooking({...bBooking,from:e.target.value})}/></div><div><label style={label}>Окончание рабочего дня</label><input type="time" style={inp} value={bBooking.to} onChange={e=>setBBooking({...bBooking,to:e.target.value})}/></div></div>
+              <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(3,1fr)",gap:10}}><div><label style={label}>Закрывать запись за</label><select style={inp} value={bBooking.lead_hours} onChange={e=>setBBooking({...bBooking,lead_hours:+e.target.value})}>{[0,1,2,4,12,24,48].map(x=><option key={x} value={x}>{x?`${x} ч`:"Без ограничения"}</option>)}</select></div><div><label style={label}>Горизонт записи</label><select style={inp} value={bBooking.horizon_days} onChange={e=>setBBooking({...bBooking,horizon_days:+e.target.value})}>{[7,14,30,60,90,180].map(x=><option key={x} value={x}>{x} дней</option>)}</select></div><div><label style={label}>Часовой пояс владельца</label><select style={inp} value={bBooking.tz} onChange={e=>setBBooking({...bBooking,tz:e.target.value})}>{["Europe/Moscow","Europe/Zurich","Europe/London","Asia/Dubai","Asia/Almaty","Asia/Tbilisi","America/New_York","America/Los_Angeles","UTC"].map(x=><option key={x} value={x}>{x}</option>)}</select></div></div>
+              <div><label style={label}>Исключения и выходные даты</label><div style={{display:"flex",gap:8}}><input id="vf-exception" type="date" style={{...inp,flex:1}}/><Btn onClick={()=>{const el=document.getElementById("vf-exception") as HTMLInputElement|null;const v=el?.value;if(v&&!bBooking.exceptions.includes(v)){setBBooking({...bBooking,exceptions:[...bBooking.exceptions,v].sort()});if(el)el.value="";}}}>Добавить</Btn></div>{bBooking.exceptions.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:9}}>{bBooking.exceptions.map(x=><span key={x} style={{display:"inline-flex",alignItems:"center",gap:6,padding:"5px 9px",borderRadius:7,background:tone.soft,fontSize:11.5,color:C.t1}}>{x}<button onClick={()=>setBBooking({...bBooking,exceptions:bBooking.exceptions.filter(d=>d!==x)})} style={{border:0,background:"none",color:tone.muted,cursor:"pointer",padding:0}}>×</button></span>)}</div>}</div></div>}
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",gap:8}}><Btn onClick={()=>setBuilderStep(2)}>← Назад</Btn><Btn primary onClick={()=>setBuilderStep(4)}>Далее: финал →</Btn></div>
+          </>}
+
+          {builderStep===4&&<>
+            <div style={panel({padding:isMobile?16:22})}><div style={{fontSize:15,fontWeight:570,marginBottom:16}}>Страница подтверждения</div><div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12}}><div><label style={label}>Заголовок</label><input style={inp} value={bCompTitle} onChange={e=>setBCompTitle(e.target.value)}/></div><div><label style={label}>Подзаголовок</label><input style={inp} value={bCompSub} onChange={e=>setBCompSub(e.target.value)}/></div><div style={{gridColumn:isMobile?"auto":"1/-1"}}><label style={label}>Дополнительный текст</label><textarea style={{...inp,height:86,padding:"10px 12px",resize:"vertical"}} value={bCompText} onChange={e=>setBCompText(e.target.value)}/></div><div><label style={label}>Текст кнопки</label><input style={inp} value={bCompBtn} onChange={e=>setBCompBtn(e.target.value)}/></div><div><label style={label}>Ссылка кнопки</label><input style={inp} value={bCompUrl} onChange={e=>setBCompUrl(e.target.value)} placeholder="https://..."/></div><div><label style={label}>Ссылка на изображение</label><input style={inp} value={bCompImage} onChange={e=>setBCompImage(e.target.value)} placeholder="https://..."/></div><div><label style={label}>Ссылка на видео / embed</label><input style={inp} value={bCompVideo} onChange={e=>setBCompVideo(e.target.value)} placeholder="https://..."/></div></div></div>
+            <div style={panel({padding:isMobile?16:22})}><div style={{fontSize:15,fontWeight:570,marginBottom:5}}>Уведомления</div><div style={{fontSize:12,color:tone.muted,marginBottom:15}}>Внутренние уведомления ставятся в очередь сразу. Email, Telegram и SMS требуют подключения провайдера.</div><div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)",gap:8,marginBottom:14}}>{[["internal","Внутри Vizzy"],["email","Email"],["telegram","Telegram"],["sms","SMS"]].map(([k,l])=>{const on=(bNotifications as any)[k];return<button key={k} onClick={()=>setBNotifications({...bNotifications,[k]:!on})} style={{height:40,borderRadius:8,border:`1px solid ${on?"#2F6BFF":tone.border}`,background:on?"rgba(47,107,255,.08)":"transparent",color:on?"#2F6BFF":tone.muted,cursor:"pointer",fontSize:12.5}}>{l}</button>;})}</div><label style={label}>Тема уведомления</label><input style={{...inp,marginBottom:10}} value={bNotifications.subject} onChange={e=>setBNotifications({...bNotifications,subject:e.target.value})}/><label style={label}>Шаблон сообщения</label><textarea style={{...inp,height:82,padding:"10px 12px",resize:"vertical"}} value={bNotifications.message} onChange={e=>setBNotifications({...bNotifications,message:e.target.value})}/><div style={{fontSize:11,color:tone.muted,marginTop:7}}>Переменные: {"{{name}}"}, {"{{date}}"}, {"{{time}}"}</div></div>
+            <div style={panel({padding:22,textAlign:"center"})}><div style={{fontSize:10.5,textTransform:"uppercase",letterSpacing:".12em",color:tone.muted,marginBottom:14}}>Превью</div><div style={{width:42,height:42,borderRadius:"50%",background:`${bAccent}18`,color:bAccent,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 13px",fontSize:19}}>✓</div><div style={{fontSize:19,fontWeight:570,color:C.t1}}>{bCompTitle||"Запись подтверждена"}</div>{bCompSub&&<div style={{fontSize:12.5,color:tone.muted,marginTop:6}}>{bCompSub}</div>}{bCompBtn&&<div style={{display:"inline-flex",height:38,alignItems:"center",padding:"0 18px",borderRadius:8,background:bAccent,color:"#fff",fontSize:12.5,fontWeight:560,marginTop:16}}>{bCompBtn}</div>}</div>
+            <div style={{display:"flex",justifyContent:"space-between",gap:8}}><Btn onClick={()=>setBuilderStep(3)}>← Назад</Btn><Btn primary disabled={saving} onClick={saveForm}>{saving?"Сохраняем…":editId?"Сохранить изменения":"Создать форму"}</Btn></div>
+          </>}
+        </section>
       </div>
+    </>}
 
-      {/* ══ LIST ══ */}
-      {tab==="list"&&(
-        forms.length===0
-          ?<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16,padding:"80px 24px",textAlign:"center"}}>
-            <div style={{width:56,height:56,borderRadius:10,background:dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.04)",border:`1px solid ${gl.cardBorder}`,display:"flex",alignItems:"center",justifyContent:"center"}}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-            </div>
-            <div>
-              <div style={{fontSize:17,fontWeight:700,color:C.t1,marginBottom:6}}>Форм пока нет</div>
-              <div style={{fontSize:14,color:C.t2,maxWidth:320}}>Создай первую форму и получи ссылку для рассылки</div>
-            </div>
-            <PrimaryBtn onClick={()=>openBuilder()}>Создать форму</PrimaryBtn>
-          </div>
-          :<SectionCard style={{padding:0,overflow:"hidden"}}>
-            {/* Table header */}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 80px 100px 80px 160px",padding:"10px 18px",borderBottom:`1px solid ${gl.cardBorder}`}}>
-              {["Название","Вопросы","Ответы","Статус",""].map(h=>(
-                <div key={h} style={{fontSize:11,fontWeight:600,color:C.t2,letterSpacing:0.4}}>{h}</div>
-              ))}
-            </div>
-            {forms.map((form,i)=>(
-              <div key={form.id} style={{display:"grid",gridTemplateColumns:"1fr 80px 100px 80px 160px",padding:"13px 18px",borderBottom:i<forms.length-1?`1px solid ${gl.cardBorder}`:"none",alignItems:"center",transition:"background 0.12s"}}
-                onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background=dark?"rgba(255,255,255,0.02)":"rgba(0,0,0,0.01)"}
-                onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background="transparent"}>
-                <div>
-                  <div style={{fontSize:14,fontWeight:600,color:C.t1,marginBottom:2}}>{form.title}</div>
-                  {form.description&&<div style={{fontSize:12,color:C.t2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const,maxWidth:260}}>{form.description}</div>}
-                </div>
-                <div style={{fontSize:13,color:C.t2}}>{form.questions?.length||0}</div>
-                <div style={{fontSize:13,color:C.t2}}>—</div>
-                <div>
-                  <Chip color={form.is_active?"#6F6F6F":undefined}>{form.is_active?"Активна":"Откл."}</Chip>
-                </div>
-                <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
-                  <GhostBtn onClick={()=>copyLink(form.slug)} icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>}>
-                    {copied===form.slug?"Скопировано":"Ссылка"}
-                  </GhostBtn>
-                  <GhostBtn onClick={()=>loadAnalytics(form)} icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>}>Ответы</GhostBtn>
-                  {form.booking?.enabled&&<GhostBtn onClick={()=>loadBookings(form)} icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>}>Записи</GhostBtn>}
-                  <GhostBtn onClick={()=>openBuilder(form)} icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>}/>
-                  <button onClick={()=>toggleActive(form)} style={{padding:"7px 8px",borderRadius:9,border:`1px solid ${gl.cardBorder}`,background:gl.card,cursor:"pointer",color:C.t2,fontSize:11,fontWeight:600}}>{form.is_active?"Откл.":"Вкл."}</button>
-                  <button onClick={()=>deleteForm(form.id)} style={{padding:"7px 8px",borderRadius:9,border:"1px solid rgba(119,119,119,0.15)",background:"transparent",cursor:"pointer",color:"#777777",fontSize:12}}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </SectionCard>
-      )}
+    {tab==="analytics"&&selectedForm&&<>
+      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,marginBottom:16,flexWrap:"wrap"}}><div><button onClick={()=>setTab("list")} style={{background:"none",border:0,color:tone.muted,cursor:"pointer",fontSize:12,padding:0,marginBottom:7}}>← Все формы</button><div style={{fontSize:20,fontWeight:580,color:C.t1}}>{selectedForm.title}</div><div style={{fontSize:11.5,color:tone.muted,marginTop:4}}>{baseUrl}/f/{selectedForm.slug}</div></div><div style={{display:"flex",gap:7}}><Btn onClick={()=>copyLink(selectedForm.slug)}>Скопировать ссылку</Btn><Btn onClick={exportCSV}>Экспорт CSV</Btn></div></div>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)",gap:10,marginBottom:14}}>{[{l:"Просмотры",v:views},{l:"Начали",v:clicks},{l:"Ответы",v:responses.length},{l:"Конверсия",v:views?`${Math.round(responses.length/views*100)}%`:"0%"}].map(x=><div key={x.l} style={panel({padding:"16px 18px"})}><div style={{fontSize:23,fontWeight:580}}>{x.v}</div><div style={{fontSize:11.5,color:tone.muted,marginTop:5}}>{x.l}</div></div>)}</div>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1.15fr .85fr",gap:12,alignItems:"start"}}><div style={panel({overflow:"hidden"})}><div style={{padding:"14px 16px",borderBottom:`1px solid ${tone.border}`,fontSize:14,fontWeight:560}}>Ответы</div>{responses.length===0?<div style={{padding:34,textAlign:"center",fontSize:13,color:tone.muted}}>Ответов пока нет</div>:responses.map((r,i)=>{const open=openResponse===r.id;return<div key={r.id} style={{borderBottom:i<responses.length-1?`1px solid ${tone.border}`:"none"}}><button onClick={()=>setOpenResponse(open?null:r.id)} style={{width:"100%",display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 170px 24px",gap:10,alignItems:"center",padding:"13px 16px",border:0,background:"transparent",color:C.t1,textAlign:"left",cursor:"pointer"}}><div><div style={{fontSize:13.5,fontWeight:550}}>{r.respondent_name||r.answers?.__name||"Без имени"}</div><div style={{fontSize:11.5,color:tone.muted,marginTop:3}}>{r.respondent_email||r.answers?.__email||"—"}</div></div>{!isMobile&&<div style={{fontSize:11.5,color:tone.muted}}>{new Date(r.created_at).toLocaleString("ru-RU")}</div>}<span style={{color:tone.muted}}>{open?"−":"+"}</span></button>{open&&<div style={{padding:"0 16px 15px"}}><div style={{background:tone.soft,borderRadius:8,padding:13,display:"grid",gap:10}}>{(selectedForm.questions||[]).filter(q=>!q.hidden).map(q=><div key={q.id}><div style={{fontSize:10.5,color:tone.muted,marginBottom:3}}>{q.label}</div><div style={{fontSize:12.5,color:C.t1,whiteSpace:"pre-wrap"}}>{(()=>{const value=answerFor(r,q);return value?.path?<button onClick={()=>openStoredFile(value,r.id)} style={{height:32,padding:"0 10px",borderRadius:7,border:`1px solid ${tone.border}`,background:"transparent",color:"#2F6BFF",fontSize:11.5,cursor:"pointer"}}>Скачать: {value.name||"файл"}</button>:(displayAnswer(value)||"—");})()}</div></div>)}</div><div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}><Btn danger onClick={()=>deleteResponse(r.id)}>Удалить ответ</Btn></div></div>}</div>;})}</div>
+      <div style={{display:"grid",gap:10}}>{qStats.map(({q,items})=><div key={q.id} style={panel({padding:16})}><div style={{fontSize:12.5,fontWeight:550,color:C.t1,marginBottom:10}}>{q.label}</div>{items.length===0?<div style={{fontSize:11.5,color:tone.muted}}>Пока нет данных</div>:items.map(([value,count])=>{const pct=responses.length?Math.round(count/responses.length*100):0;return<div key={value} style={{marginBottom:9}}><div style={{display:"flex",justifyContent:"space-between",gap:8,fontSize:11.5,marginBottom:4}}><span style={{color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{value}</span><span style={{color:tone.muted}}>{count} · {pct}%</span></div><div style={{height:4,borderRadius:4,background:tone.soft,overflow:"hidden"}}><div style={{height:"100%",width:`${pct}%`,background:"#2F6BFF",borderRadius:4}}/></div></div>;})}</div>)}</div></div>
+    </>}
 
-      {/* ══ BUILDER ══ */}
-      {tab==="builder"&&(
-        <div style={{display:"flex",flexDirection:"column",gap:20}}>
-
-          {/* Steps */}
-          <div style={{display:"flex",alignItems:"center",gap:0,marginBottom:4}}>
-            {([{n:1,label:"Настройки"},{n:2,label:"Вопросы"},{n:3,label:"Финал"}] as const).map(({n,label},i)=>(
-              <React.Fragment key={n}>
-                <button onClick={()=>setBuilderStep(n)} style={{display:"flex",alignItems:"center",gap:8,background:"none",border:"none",cursor:"pointer",padding:"6px 12px",borderRadius:8,transition:"background 0.12s"}}
-                  onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background=dark?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.03)"}
-                  onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background="transparent"}>
-                  <div style={{width:26,height:26,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,background:builderStep===n?"#18181B":(builderStep>n?(dark?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.06)"):(dark?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.04)")),color:builderStep===n?"#fff":(builderStep>n?C.t1:C.t2),border:builderStep>n&&builderStep!==n?`1px solid ${gl.cardBorder}`:"none",transition:"all 0.2s"}}>
-                    {builderStep>n?<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>:n}
-                  </div>
-                  <span style={{fontSize:13,fontWeight:builderStep===n?700:500,color:builderStep===n?C.t1:C.t2}}>{label}</span>
-                </button>
-                {i<2&&<div style={{flex:1,height:1,background:gl.cardBorder,maxWidth:40}}/>}
-              </React.Fragment>
-            ))}
-          </div>
-
-          {/* Step 1 */}
-          {builderStep===1&&(
-            <SectionCard>
-              <FieldLabel>Название формы *</FieldLabel>
-              <input value={bTitle} onChange={e=>setBTitle(e.target.value)} placeholder="Например: Анкета квалификации клиента" style={{...gInput,marginBottom:14,fontSize:16,fontWeight:600}}/>
-              <FieldLabel>Описание (видит пользователь)</FieldLabel>
-              <textarea value={bDesc} onChange={e=>setBDesc(e.target.value)} placeholder="Расскажи зачем нужна эта форма..." rows={3} style={{...gInput,resize:"vertical" as const,minHeight:80,marginBottom:16}}/>
-              <FieldLabel>Акцентный цвет</FieldLabel>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <input type="color" value={bAccent} onChange={e=>setBAccent(e.target.value)} style={{width:36,height:36,borderRadius:8,border:`1px solid ${gl.cardBorder}`,cursor:"pointer",padding:2,background:"transparent"}}/>
-                <span style={{fontSize:12,color:C.t2,fontFamily:"monospace"}}>{bAccent}</span>
-              </div>
-              <div style={{marginTop:20}}>
-                <PrimaryBtn onClick={()=>setBuilderStep(2)} disabled={!bTitle.trim()}>Далее — Вопросы →</PrimaryBtn>
-              </div>
-            </SectionCard>
-          )}
-
-          {/* Step 2 */}
-          {builderStep===2&&(
-            <div style={{display:"flex",flexDirection:"column",gap:10}}>
-              {bQuestions.length===0&&(
-                <div style={{padding:"48px 24px",border:`1px dashed ${gl.cardBorder}`,borderRadius:10,textAlign:"center",color:C.t2}}>
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{margin:"0 auto 10px",display:"block"}}><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                  <div style={{fontSize:14,fontWeight:600,marginBottom:4}}>Вопросов пока нет</div>
-                  <div style={{fontSize:12}}>Добавь первый вопрос ниже</div>
-                </div>
-              )}
-              {bQuestions.map((q,i)=>(
-                <SectionCard key={q.id} style={{padding:18}}>
-                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
-                    <span style={{fontSize:12,fontWeight:700,color:C.t2,minWidth:24}}>Q{i+1}</span>
-                    <select value={q.type} onChange={e=>updateQ(q.id,{type:e.target.value})}
-                      style={{...gInput,width:"auto",flex:"none",padding:"6px 10px",fontSize:12,cursor:"pointer"}}>
-                      {QTYPES.map(t=><option key={t.id} value={t.id}>{t.ic} {t.label}</option>)}
-                    </select>
-                    <label style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:C.t2,cursor:"pointer",marginLeft:"auto",whiteSpace:"nowrap" as const}}>
-                      <input type="checkbox" checked={q.required} onChange={e=>updateQ(q.id,{required:e.target.checked})} style={{accentColor:"#18181B"}}/>
-                      Обязательный
-                    </label>
-                    <div style={{display:"flex",gap:2}}>
-                      <button onClick={()=>moveQ(i,-1)} disabled={i===0} style={{width:26,height:26,borderRadius:6,border:`1px solid ${gl.cardBorder}`,background:"transparent",cursor:"pointer",color:C.t2,fontSize:12,opacity:i===0?0.3:1,display:"flex",alignItems:"center",justifyContent:"center"}}>↑</button>
-                      <button onClick={()=>moveQ(i,1)} disabled={i===bQuestions.length-1} style={{width:26,height:26,borderRadius:6,border:`1px solid ${gl.cardBorder}`,background:"transparent",cursor:"pointer",color:C.t2,fontSize:12,opacity:i===bQuestions.length-1?0.3:1,display:"flex",alignItems:"center",justifyContent:"center"}}>↓</button>
-                      <button onClick={()=>removeQ(q.id)} style={{width:26,height:26,borderRadius:6,border:"1px solid rgba(119,119,119,0.15)",background:"transparent",cursor:"pointer",color:"#777777",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
-                    </div>
-                  </div>
-                  <input value={q.label} onChange={e=>updateQ(q.id,{label:e.target.value})} placeholder={`Текст вопроса ${i+1}...`} style={gInput}/>
-                  {(q.type==="radio"||q.type==="checkbox")&&(
-                    <div style={{marginTop:12,paddingTop:12,borderTop:`1px solid ${gl.cardBorder}`}}>
-                      <FieldLabel>Варианты</FieldLabel>
-                      {q.options.map((opt,oi)=>(
-                        <div key={oi} style={{display:"flex",gap:8,marginBottom:6,alignItems:"center"}}>
-                          <span style={{fontSize:12,color:C.t2,width:16,textAlign:"center" as const,flexShrink:0}}>{oi+1}</span>
-                          <input value={opt} onChange={e=>{const o=[...q.options];o[oi]=e.target.value;updateQ(q.id,{options:o});}} placeholder={`Вариант ${oi+1}`} style={{...gInput,padding:"7px 10px"}}/>
-                          {q.options.length>2&&<button onClick={()=>{const o=q.options.filter((_,j)=>j!==oi);updateQ(q.id,{options:o});}} style={{background:"none",border:"none",cursor:"pointer",color:C.t2,fontSize:16,padding:"0 4px"}}>×</button>}
-                        </div>
-                      ))}
-                      {q.options.length<8&&<button onClick={()=>updateQ(q.id,{options:[...q.options,""]})} style={{fontSize:12,color:C.t2,background:"none",border:"none",cursor:"pointer",padding:0,marginTop:2}}>+ Добавить вариант</button>}
-                    </div>
-                  )}
-                </SectionCard>
-              ))}
-              <button onClick={addQuestion}
-                style={{padding:"12px",borderRadius:8,border:`1px dashed ${gl.cardBorder}`,background:"transparent",color:C.t2,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,transition:"all 0.15s"}}
-                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=dark?"rgba(255,255,255,0.03)":"rgba(0,0,0,0.02)";}}
-                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";}}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Добавить вопрос
-              </button>
-              <div style={{display:"flex",gap:10}}>
-                <GhostBtn onClick={()=>setBuilderStep(1)}>← Назад</GhostBtn>
-                <div style={{flex:1}}/>
-                <PrimaryBtn onClick={()=>setBuilderStep(3)} disabled={bQuestions.length===0}>Далее — Финал →</PrimaryBtn>
-              </div>
-            </div>
-          )}
-
-          {/* Step 3 */}
-          {builderStep===3&&(
-            <div style={{display:"flex",flexDirection:"column",gap:14}}>
-              <SectionCard>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:bBooking.enabled?16:0}}>
-                  <div>
-                    <div style={{fontSize:14,fontWeight:600,color:C.t1}}>Запись на созвон</div>
-                    <div style={{fontSize:12,color:C.t2,marginTop:3,lineHeight:1.5}}>Перед формой человек выберет удобное время. Созвон и лид создадутся автоматически.</div>
-                  </div>
-                  <button onClick={()=>setBBooking({...bBooking,enabled:!bBooking.enabled})}
-                    style={{flexShrink:0,width:46,height:26,borderRadius:14,border:"none",cursor:"pointer",padding:2,
-                      background:bBooking.enabled?"#2F6BFF":C.bd,transition:"background 0.2s"}}>
-                    <div style={{width:22,height:22,borderRadius:"50%",background:"#fff",transform:bBooking.enabled?"translateX(20px)":"translateX(0)",transition:"transform 0.2s"}}/>
-                  </button>
-                </div>
-
-                {bBooking.enabled&&<div style={{display:"flex",flexDirection:"column",gap:14}}>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
-                    <div>
-                      <FieldLabel>Длительность, мин</FieldLabel>
-                      <select value={bBooking.duration} onChange={e=>setBBooking({...bBooking,duration:+e.target.value})} style={gInput}>
-                        {[15,20,30,45,60,90,120].map(m=><option key={m} value={m}>{m} мин</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <FieldLabel>Перерыв между, мин</FieldLabel>
-                      <select value={bBooking.buffer} onChange={e=>setBBooking({...bBooking,buffer:+e.target.value})} style={gInput}>
-                        {[0,5,10,15,30].map(m=><option key={m} value={m}>{m} мин</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <FieldLabel>Максимум в день</FieldLabel>
-                      <select value={bBooking.max_per_day} onChange={e=>setBBooking({...bBooking,max_per_day:+e.target.value})} style={gInput}>
-                        <option value={0}>Без лимита</option>
-                        {[1,2,3,4,5,6,8,10].map(m=><option key={m} value={m}>{m}</option>)}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <FieldLabel>Рабочие дни</FieldLabel>
-                    <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                      {[[1,"Пн"],[2,"Вт"],[3,"Ср"],[4,"Чт"],[5,"Пт"],[6,"Сб"],[7,"Вс"]].map(([d,l])=>{
-                        const on=bBooking.days.includes(d as number);
-                        return<button key={d as number} onClick={()=>setBBooking({...bBooking,days:on?bBooking.days.filter(x=>x!==d):[...bBooking.days,d as number].sort()})}
-                          style={{padding:"7px 14px",borderRadius:9,cursor:"pointer",fontSize:12.5,fontWeight:500,
-                            border:on?"1px solid #2F6BFF":"1px solid "+C.bd,
-                            background:on?"#2F6BFF14":"transparent",color:on?"#2F6BFF":C.t2}}>{l as string}</button>;
-                      })}
-                    </div>
-                  </div>
-
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                    <div>
-                      <FieldLabel>Начало дня</FieldLabel>
-                      <input type="time" value={bBooking.from} onChange={e=>setBBooking({...bBooking,from:e.target.value})} style={gInput}/>
-                    </div>
-                    <div>
-                      <FieldLabel>Конец дня</FieldLabel>
-                      <input type="time" value={bBooking.to} onChange={e=>setBBooking({...bBooking,to:e.target.value})} style={gInput}/>
-                    </div>
-                  </div>
-
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                    <div>
-                      <FieldLabel>Записывать не позднее чем за</FieldLabel>
-                      <select value={bBooking.lead_hours} onChange={e=>setBBooking({...bBooking,lead_hours:+e.target.value})} style={gInput}>
-                        {[0,1,2,4,12,24,48].map(h=><option key={h} value={h}>{h===0?"без ограничения":h+" ч"}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <FieldLabel>Открыть запись на</FieldLabel>
-                      <select value={bBooking.horizon_days} onChange={e=>setBBooking({...bBooking,horizon_days:+e.target.value})} style={gInput}>
-                        {[7,14,30,60,90].map(d=><option key={d} value={d}>{d} дней вперёд</option>)}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <FieldLabel>Выходные и исключения</FieldLabel>
-                    <div style={{display:"flex",gap:8,marginBottom:8}}>
-                      <input type="date" id="vf-exc" style={{...gInput,flex:1}}/>
-                      <button onClick={()=>{
-                        const el=document.getElementById("vf-exc") as HTMLInputElement|null;
-                        const v=el?.value;
-                        if(v&&!bBooking.exceptions.includes(v)){setBBooking({...bBooking,exceptions:[...bBooking.exceptions,v].sort()});if(el)el.value="";}
-                      }} style={{padding:"0 16px",borderRadius:9,border:"1px solid "+C.bd,background:"transparent",color:C.t1,fontSize:12.5,fontWeight:500,cursor:"pointer"}}>Добавить</button>
-                    </div>
-                    {bBooking.exceptions.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                      {bBooking.exceptions.map(d=>(
-                        <span key={d} style={{display:"flex",alignItems:"center",gap:6,padding:"4px 10px",borderRadius:8,background:C.ib,fontSize:11.5,color:C.t1}}>
-                          {d}
-                          <button onClick={()=>setBBooking({...bBooking,exceptions:bBooking.exceptions.filter(x=>x!==d)})}
-                            style={{background:"none",border:"none",color:C.t2,cursor:"pointer",padding:0,fontSize:13,lineHeight:1}}>×</button>
-                        </span>
-                      ))}
-                    </div>}
-                  </div>
-
-                  <div style={{fontSize:11.5,color:C.t2,lineHeight:1.5,paddingTop:4,borderTop:"1px solid "+C.bd}}>
-                    Часовой пояс: <b style={{color:C.t1}}>{bBooking.tz}</b>. Посетителю время показывается в его собственном поясе.
-                  </div>
-                </div>}
-              </SectionCard>
-
-              <SectionCard>
-                <FieldLabel>Заголовок финального экрана</FieldLabel>
-                <input value={bCompTitle} onChange={e=>setBCompTitle(e.target.value)} placeholder="Спасибо за ответы!" style={{...gInput,marginBottom:12}}/>
-                <FieldLabel>Подзаголовок</FieldLabel>
-                <input value={bCompSub} onChange={e=>setBCompSub(e.target.value)} placeholder="Мы свяжемся с тобой в течение 24 часов" style={{...gInput,marginBottom:12}}/>
-                <FieldLabel>Ссылка для кнопки</FieldLabel>
-                <input value={bCompUrl} onChange={e=>setBCompUrl(e.target.value)} placeholder="https://t.me/username" style={{...gInput,marginBottom:12}}/>
-                <FieldLabel>Текст кнопки</FieldLabel>
-                <input value={bCompBtn} onChange={e=>setBCompBtn(e.target.value)} placeholder="Перейти в Telegram" style={gInput}/>
-              </SectionCard>
-
-              {/* Preview */}
-              <SectionCard style={{padding:32,textAlign:"center"}}>
-                <div style={{fontSize:11,fontWeight:600,color:C.t2,letterSpacing:1,textTransform:"uppercase" as const,marginBottom:20}}>Превью финала</div>
-                <div style={{width:40,height:40,borderRadius:8,background:`${bAccent}14`,border:`1px solid ${bAccent}30`,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={bAccent} strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                </div>
-                <div style={{fontSize:19,fontWeight:800,color:C.t1,marginBottom:6}}>{bCompTitle||"Спасибо!"}</div>
-                {bCompSub&&<div style={{fontSize:13,color:C.t2,marginBottom:16}}>{bCompSub}</div>}
-                {bCompUrl&&<div style={{display:"inline-block",padding:"10px 22px",borderRadius:9,background:"#18181B",color:"#fff",fontSize:13,fontWeight:600}}>{bCompBtn||"Перейти"}</div>}
-              </SectionCard>
-
-              <div style={{display:"flex",gap:10}}>
-                <GhostBtn onClick={()=>setBuilderStep(2)}>← Назад</GhostBtn>
-                <div style={{flex:1}}/>
-                <PrimaryBtn onClick={saveForm} disabled={saving||!bTitle.trim()}>
-                  {saving?"Сохраняем...":(editId?"Сохранить изменения":"Сохранить и получить ссылку")}
-                </PrimaryBtn>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ══ ANALYTICS ══ */}
-      {tab==="bookings"&&selectedForm&&(
-        <div>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:18,flexWrap:"wrap" as const}}>
-            <div>
-              <button onClick={()=>setTab("list")} style={{background:"none",border:"none",color:C.t2,fontSize:13,cursor:"pointer",padding:0,marginBottom:6}}>← Все формы</button>
-              <div style={{fontSize:18,fontWeight:600,color:C.t1}}>Записи · {selectedForm.title}</div>
-            </div>
-            <div style={{display:"flex",gap:14,flexWrap:"wrap" as const}}>
-              {[
-                {l:"Всего",v:bookings.length},
-                {l:"Запланировано",v:bookings.filter(b=>b.status!=="cancelled"&&b.date>=today()).length},
-                {l:"Отменено",v:bookings.filter(b=>b.status==="cancelled").length},
-              ].map(x=>(
-                <div key={x.l} style={{textAlign:"right" as const}}>
-                  <div style={{fontSize:20,fontWeight:600,color:C.t1,lineHeight:1}}>{x.v}</div>
-                  <div style={{fontSize:11,color:C.t2,marginTop:3}}>{x.l}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {bookings.length===0
-            ?<div style={{padding:"48px 20px",textAlign:"center" as const,color:C.t2,fontSize:14,border:"1px solid "+C.bd,borderRadius:12}}>
-              Записей пока нет. Поделись ссылкой на форму — записи появятся здесь автоматически.
-            </div>
-            :<div style={{border:"1px solid "+C.bd,borderRadius:12,overflow:"hidden"}}>
-              <table style={{width:"100%",borderCollapse:"collapse" as const,fontSize:13}}>
-                <thead><tr style={{borderBottom:"1px solid "+C.bd}}>
-                  {["Дата","Время","Клиент","Контакт","Статус",""].map((h,i)=>(
-                    <th key={i} style={{padding:"12px 14px",textAlign:"left" as const,fontSize:11,fontWeight:600,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,whiteSpace:"nowrap" as const}}>{h}</th>
-                  ))}
-                </tr></thead>
-                <tbody>
-                  {bookings.map(b=>{
-                    const cancelled=b.status==="cancelled";
-                    const past=b.date<today();
-                    return<tr key={b.id} style={{borderBottom:"1px solid "+C.bd,opacity:cancelled?0.5:1}}>
-                      <td style={{padding:"12px 14px",color:C.t1,whiteSpace:"nowrap" as const}}>{b.date}</td>
-                      <td style={{padding:"12px 14px",color:C.t1,whiteSpace:"nowrap" as const}}>{b.time_start}{b.time_end?`–${b.time_end}`:""}</td>
-                      <td style={{padding:"12px 14px",color:C.t1}}>{b.responsible_name||b.title||"—"}</td>
-                      <td style={{padding:"12px 14px",color:C.t2,fontSize:12}}>{b.description||"—"}</td>
-                      <td style={{padding:"12px 14px"}}>
-                        <span style={{fontSize:11,fontWeight:600,padding:"3px 9px",borderRadius:6,
-                          color:cancelled?"#DC2626":past?C.t2:"#16A34A",
-                          background:(cancelled?"#DC2626":past?C.t2:"#16A34A")+"18"}}>
-                          {cancelled?"Отменён":past?"Прошёл":"Запланирован"}
-                        </span>
-                      </td>
-                      <td style={{padding:"12px 8px",whiteSpace:"nowrap" as const}}>
-                        {!cancelled&&<button onClick={()=>cancelBooking(b.id)}
-                          style={{padding:"5px 11px",borderRadius:7,border:"1px solid "+C.bd,background:"transparent",color:C.t2,fontSize:11.5,cursor:"pointer"}}>Отменить</button>}
-                      </td>
-                    </tr>;
-                  })}
-                </tbody>
-              </table>
-            </div>}
-        </div>
-      )}
-
-      {tab==="analytics"&&selectedForm&&(
-        <div style={{display:"flex",flexDirection:"column",gap:16}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <div>
-              <div style={{fontSize:17,fontWeight:700,color:C.t1}}>{selectedForm.title}</div>
-              <div style={{fontSize:12,color:C.t2,marginTop:2,fontFamily:"monospace"}}>{`${window.location.origin}/f/${selectedForm.slug}`}</div>
-            </div>
-            <div style={{display:"flex",gap:8}}>
-              <GhostBtn onClick={()=>copyLink(selectedForm.slug)} icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>}>
-                {copied===selectedForm.slug?"Скопировано":"Ссылка"}
-              </GhostBtn>
-              {responses.length>0&&<GhostBtn onClick={exportCSV} icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>}>CSV</GhostBtn>}
-              {responses.length>0&&<button onClick={deleteAllResponses} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:9,border:"1px solid rgba(119,119,119,0.2)",background:"transparent",color:"#777777",fontSize:12,fontWeight:600,cursor:"pointer"}}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
-                Удалить все
-              </button>}
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
-            {[
-              {label:"Всего ответов",value:responses.length},
-              {label:"За 7 дней",value:responses.filter(r=>new Date(r.created_at)>new Date(Date.now()-7*864e5)).length},
-              {label:"За 30 дней",value:responses.filter(r=>new Date(r.created_at)>new Date(Date.now()-30*864e5)).length},
-            ].map(({label,value})=>(
-              <SectionCard key={label} style={{padding:16}}>
-                <div style={{fontSize:11,color:C.t2,fontWeight:600,marginBottom:6}}>{label}</div>
-                <div style={{fontSize:24,fontWeight:800,color:C.t1}}>{value}</div>
-              </SectionCard>
-            ))}
-            {/* Conversion card with sub-metrics */}
-            <SectionCard style={{padding:16}}>
-              <div style={{fontSize:11,color:C.t2,fontWeight:600,marginBottom:6}}>Конверсия</div>
-              <div style={{fontSize:24,fontWeight:800,color:C.t1,marginBottom:10}}>
-                {clicks&&views?`${Math.round(clicks/views*100)}%`:"—"}
-              </div>
-              <div style={{display:"flex",flexDirection:"column" as const,gap:5}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 8px",borderRadius:7,background:dark?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.03)"}}>
-                  <span style={{fontSize:10,color:C.t2,fontWeight:500}}>👁 Просмотров</span>
-                  <span style={{fontSize:12,fontWeight:700,color:C.t1}}>{views}</span>
-                </div>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 8px",borderRadius:7,background:dark?"rgba(255,255,255,0.04)":"rgba(0,0,0,0.03)"}}>
-                  <span style={{fontSize:10,color:C.t2,fontWeight:500}}>🎯 Нажали кнопку</span>
-                  <span style={{fontSize:12,fontWeight:700,color:C.t1}}>{clicks}</span>
-                </div>
-              </div>
-            </SectionCard>
-          </div>
-
-          {/* Charts */}
-          {selectedForm.questions.filter((q:Question)=>q.type==="radio"||q.type==="checkbox").map((q:Question)=>{
-            const counts:Record<string,number>={};
-            q.options.filter(Boolean).forEach(o=>{counts[o]=0;});
-            responses.forEach(r=>{
-              const ans=r.answers?.find((a:any)=>a.question_id===q.id);
-              if(!ans)return;
-              const vals=Array.isArray(ans.answer)?ans.answer:[ans.answer];
-              vals.forEach((v:string)=>{counts[v]=(counts[v]||0)+1;});
-            });
-            const max=Math.max(...Object.values(counts),1);
-            return(
-              <SectionCard key={q.id}>
-                <div style={{fontSize:13,fontWeight:700,color:C.t1,marginBottom:16}}>{q.label}</div>
-                {Object.entries(counts).map(([opt,cnt])=>(
-                  <div key={opt} style={{marginBottom:10}}>
-                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
-                      <span style={{fontSize:13,color:C.t1}}>{opt}</span>
-                      <span style={{fontSize:12,color:C.t2,fontWeight:600}}>{cnt} · {responses.length?Math.round(cnt/responses.length*100):0}%</span>
-                    </div>
-                    <div style={{height:5,background:dark?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.06)",borderRadius:3,overflow:"hidden"}}>
-                      <div style={{height:"100%",width:`${(cnt/max)*100}%`,background:C.t1,borderRadius:3,transition:"width 0.5s ease",opacity:0.7}}/>
-                    </div>
-                  </div>
-                ))}
-              </SectionCard>
-            );
-          })}
-
-          {/* Table */}
-          {responses.length===0
-            ?<SectionCard style={{padding:48,textAlign:"center"}}>
-              <div style={{color:C.t2,fontSize:13}}>Ответов пока нет</div>
-            </SectionCard>
-            :<SectionCard style={{padding:0,overflow:"hidden"}}>
-              <div style={{overflowX:"auto" as const}}>
-                <table style={{width:"100%",borderCollapse:"collapse" as const,fontSize:13}}>
-                  <thead>
-                    <tr style={{borderBottom:`1px solid ${gl.cardBorder}`}}>
-                      <th style={{padding:"11px 16px",textAlign:"left" as const,fontSize:11,fontWeight:600,color:C.t2,whiteSpace:"nowrap" as const}}>Дата</th>
-                      {selectedForm.questions.map((q:Question)=>(
-                        <th key={q.id} style={{padding:"11px 16px",textAlign:"left" as const,fontSize:11,fontWeight:600,color:C.t2,maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{q.label.slice(0,28)}{q.label.length>28?"…":""}</th>
-                      ))}
-                      <th style={{padding:"11px 16px",width:40}}/>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {responses.map((r,ri)=>(
-                      <tr key={r.id} style={{borderBottom:ri<responses.length-1?`1px solid ${gl.cardBorder}`:"none"}}
-                        onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background=dark?"rgba(255,255,255,0.02)":"rgba(0,0,0,0.01)"}
-                        onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background="transparent"}>
-                        <td style={{padding:"11px 16px",color:C.t2,whiteSpace:"nowrap" as const,fontSize:12}}>{new Date(r.created_at).toLocaleDateString("ru-RU")}</td>
-                        {selectedForm.questions.map((q:Question)=>{
-                          const ans=r.answers?.find((a:any)=>a.question_id===q.id);
-                          const val=Array.isArray(ans?.answer)?ans.answer.join(", "):(ans?.answer||"—");
-                          return<td key={q.id} style={{padding:"11px 16px",color:C.t1,maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>{val}</td>;
-                        })}
-                        <td style={{padding:"11px 16px"}}>
-                          <button onClick={()=>deleteResponse(r.id)} title="Удалить ответ"
-                            style={{width:26,height:26,borderRadius:7,border:"1px solid rgba(119,119,119,0.15)",background:"transparent",cursor:"pointer",color:"#777777",display:"flex",alignItems:"center",justifyContent:"center",opacity:0.6,transition:"opacity 0.15s"}}
-                            onMouseEnter={e=>(e.currentTarget as HTMLElement).style.opacity="1"}
-                            onMouseLeave={e=>(e.currentTarget as HTMLElement).style.opacity="0.6"}>
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </SectionCard>
-          }
-        </div>
-      )}
-    </div>
-  );
+    {tab==="bookings"&&selectedForm&&<>
+      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,marginBottom:16}}><div><button onClick={()=>setTab("list")} style={{background:"none",border:0,color:tone.muted,cursor:"pointer",fontSize:12,padding:0,marginBottom:7}}>← Все формы</button><div style={{fontSize:20,fontWeight:580}}>Записи · {selectedForm.title}</div></div><div style={{fontSize:12,color:tone.muted}}>{selectedForm.booking?.tz}</div></div>
+      <div style={panel({overflow:"hidden"})}>{bookings.length===0?<div style={{padding:38,textAlign:"center",fontSize:13,color:tone.muted}}>Записей пока нет</div>:bookings.map((b,i)=>{const cancelled=b.status==="cancelled";return<div key={b.id} style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"130px 90px 1fr 120px auto",gap:12,alignItems:"center",padding:"13px 16px",borderBottom:i<bookings.length-1?`1px solid ${tone.border}`:"none",opacity:cancelled?0.55:1}}><div style={{fontSize:12.5,color:C.t1}}>{b.date}</div><div style={{fontSize:13,fontWeight:560}}>{b.time_start}</div><div><div style={{fontSize:13.5,fontWeight:550}}>{b.responsible_name||b.title||"Клиент"}</div><div style={{fontSize:11.5,color:tone.muted,marginTop:3}}>{b.description||"—"}</div></div><div style={{fontSize:11.5,color:cancelled?"#DC2626":"#16A34A"}}>{cancelled?"Отменён":"Запланирован"}</div><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{!cancelled&&<><Btn onClick={()=>setReschedule({id:b.id,date:b.date,time:b.time_start})}>Перенести</Btn><Btn danger onClick={()=>cancelBooking(b.id)}>Отменить</Btn></>}</div></div>;})}</div>
+      {reschedule&&<div style={{position:"fixed",inset:0,zIndex:600,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",padding:18}} onClick={e=>{if(e.target===e.currentTarget)setReschedule(null);}}><div data-modal style={panel({width:"min(420px,100%)",padding:20})}><div style={{fontSize:16,fontWeight:580,marginBottom:15}}>Перенести запись</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}><div><label style={label}>Дата</label><input type="date" style={inp} value={reschedule.date} onChange={e=>setReschedule({...reschedule,date:e.target.value})}/></div><div><label style={label}>Время владельца</label><input type="time" style={inp} value={reschedule.time} onChange={e=>setReschedule({...reschedule,time:e.target.value})}/></div></div><div style={{display:"flex",justifyContent:"flex-end",gap:7}}><Btn onClick={()=>setReschedule(null)}>Отмена</Btn><Btn primary onClick={saveReschedule}>Сохранить</Btn></div></div></div>}
+    </>}
+  </div>;
 }
+
 
 /* ============ COPY AI PAGE ============ */
 const COPY_TOOLS=[
