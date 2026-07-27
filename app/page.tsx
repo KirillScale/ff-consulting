@@ -1,5 +1,5 @@
 "use client";
-// v2.3 — offer page
+// v2.5 — rebuilt Vizzy Slides Pro
 import React, { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } from "react";
 import { supabase } from "@/lib/supabase";
 
@@ -890,7 +890,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v2.4"; // Vizzy brand assets + animated loading logo
+  const APP_VERSION="v2.5"; // rebuilt Vizzy Slides workflow and Pro editor
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
 
   // Clear stale localStorage on version change
@@ -6299,8 +6299,503 @@ function SlideStudio({userId,kind}:{userId:string,kind:"post"|"slide"}){
   </>;
 }
 
+
+type ProTextBlock={
+  id:string;
+  text:string;
+  x:number;
+  y:number;
+  w:number;
+  size:number;
+  weight:300|400|500|600|700;
+  align:"left"|"center"|"right";
+  color:string;
+};
+
+type ProBg={
+  type:"color"|"gradient"|"grid"|"sketch";
+  color:string;
+  color2:string;
+  angle:number;
+};
+
+type ProSlide={
+  id:string;
+  title:string;
+  notes:string;
+  imageUrl:string;
+  imageOpacity:number;
+  imagePosition:"cover"|"contain";
+  bg:ProBg;
+  blocks:ProTextBlock[];
+};
+
+type ProPresentation={
+  id?:string;
+  user_id?:string;
+  title:string;
+  format:"16:9"|"1:1";
+  theme:string;
+  goal:string;
+  message:string;
+  slide_count:number;
+  slides:ProSlide[];
+  created_at?:string;
+  expires_at?:string;
+};
+
+const PRES_RED="#FF1744";
+const PRES_FMTS={
+  "16:9":{w:1600,h:900,label:"Прямоугольник",desc:"Презентация 16:9"},
+  "1:1":{w:1080,h:1080,label:"Квадрат",desc:"Пост или карусель 1:1"},
+} as const;
+
+const proId=()=>Math.random().toString(36).slice(2,10);
+
+function defaultProBg():ProBg{
+  return {type:"color",color:"#111111",color2:"#5B2EFF",angle:135};
+}
+
+function defaultProSlide(title:string,body:string):ProSlide{
+  return {
+    id:proId(),
+    title,
+    notes:"",
+    imageUrl:"",
+    imageOpacity:1,
+    imagePosition:"cover",
+    bg:defaultProBg(),
+    blocks:[
+      {id:proId(),text:title,x:7,y:10,w:86,size:54,weight:500,align:"left",color:"#FFFFFF"},
+      {id:proId(),text:body,x:7,y:38,w:72,size:26,weight:300,align:"left",color:"#E6E6E6"},
+    ],
+  };
+}
+
+function proBgCss(bg:ProBg):React.CSSProperties{
+  if(bg.type==="gradient") return {background:`linear-gradient(${bg.angle}deg,${bg.color},${bg.color2})`};
+  if(bg.type==="grid") return {
+    backgroundColor:"#FFFFFF",
+    backgroundImage:"linear-gradient(rgba(17,17,17,.08) 1px, transparent 1px),linear-gradient(90deg, rgba(17,17,17,.08) 1px, transparent 1px)",
+    backgroundSize:"28px 28px",
+  };
+  if(bg.type==="sketch") return {
+    backgroundColor:"#FCFCFA",
+    backgroundImage:"repeating-linear-gradient(0deg,rgba(35,35,35,.035) 0,rgba(35,35,35,.035) 1px,transparent 1px,transparent 5px),radial-gradient(circle at 20% 30%,rgba(0,0,0,.025),transparent 35%),radial-gradient(circle at 80% 70%,rgba(0,0,0,.02),transparent 35%)",
+  };
+  return {background:bg.color};
+}
+
+function ProSlidePreview({
+  slide,format,active=false,onClick,mini=false
+}:{
+  slide:ProSlide;format:"16:9"|"1:1";active?:boolean;onClick?:()=>void;mini?:boolean
+}){
+  const ratio=format==="16:9"?"16 / 9":"1 / 1";
+  return <button onClick={onClick} style={{
+    width:"100%",padding:0,border:active?`1px solid ${PRES_RED}`:`1px solid ${C.bd}`,
+    borderRadius:10,overflow:"hidden",background:"transparent",cursor:onClick?"pointer":"default",
+    boxShadow:active?"0 0 0 2px rgba(255,23,68,.14)":"none",
+  }}>
+    <div style={{position:"relative",aspectRatio:ratio,overflow:"hidden",...proBgCss(slide.bg)}}>
+      {slide.imageUrl&&<img src={slide.imageUrl} alt="" style={{
+        position:"absolute",inset:0,width:"100%",height:"100%",objectFit:slide.imagePosition,
+        opacity:slide.imageOpacity,display:"block",
+      }}/>}
+      {slide.blocks.map(b=><div key={b.id} style={{
+        position:"absolute",left:`${b.x}%`,top:`${b.y}%`,width:`${b.w}%`,
+        color:b.color,fontSize:mini?Math.max(7,b.size*.12):`${b.size}px`,
+        lineHeight:1.12,fontWeight:b.weight,textAlign:b.align,whiteSpace:"pre-wrap",
+        overflowWrap:"anywhere",fontFamily:"Inter,Arial,sans-serif",letterSpacing:"-0.025em",
+      }}>{b.text}</div>)}
+    </div>
+  </button>;
+}
+
+async function generatePresentationOutline(form:{theme:string;goal:string;message:string;count:number}){
+  const system="Ты — сильный редактор деловых презентаций. Создаёшь ясную структуру, без воды. Возвращаешь только валидный JSON без markdown.";
+  const user=`Создай структуру презентации.
+
+Тема: ${form.theme}
+Цель: ${form.goal}
+Главный посыл: ${form.message}
+Количество слайдов: ${form.count}
+
+Правила:
+- первый слайд — сильный титульный;
+- каждый слайд должен иметь заголовок до 7 слов;
+- пояснение до 24 слов;
+- логика должна развиваться последовательно;
+- последний слайд — вывод или призыв к действию;
+- ровно ${form.count} слайдов.
+
+Верни:
+{"slides":[{"title":"...","body":"..."}]}`;
+  const data=paParseJSON(await paChat(system,user,3600,0.65));
+  const arr=(data.slides||[]).slice(0,form.count);
+  return arr.map((s:any,i:number)=>({
+    title:stripMd(String(s.title||`Слайд ${i+1}`)),
+    body:stripMd(String(s.body||s.text||"")),
+  }));
+}
+
+function VizzySlidesPro({userId}:{userId:string}){
+  const{dark}=useTheme();
+  const isMobile=useIsMobile();
+  const{images,onUpload,uploading}=useMediaLib(userId);
+
+  const[stage,setStage]=useState<"setup"|"outline"|"editor"|"library">("setup");
+  const[format,setFormat]=useState<"16:9"|"1:1">("16:9");
+  const[theme,setTheme]=useState("");
+  const[goal,setGoal]=useState("");
+  const[message,setMessage]=useState("");
+  const[count,setCount]=useState(10);
+  const[slides,setSlides]=useState<ProSlide[]>([]);
+  const[selected,setSelected]=useState(0);
+  const[generating,setGenerating]=useState(false);
+  const[saving,setSaving]=useState(false);
+  const[exporting,setExporting]=useState<""|"pdf"|"pptx">("");
+  const[projectId,setProjectId]=useState<string|undefined>();
+  const[projects,setProjects]=useState<ProPresentation[]>([]);
+  const[err,setErr]=useState("");
+  const[picker,setPicker]=useState(false);
+
+  const card=dark?"rgba(255,255,255,.025)":"#FFFFFF";
+  const input=dark?"#151515":"#F8FAFC";
+  const border=C.bd;
+  const cur=slides[selected];
+
+  const loadProjects=useCallback(async()=>{
+    // Projects live for no longer than 14 days. Cleanup is safe and scoped by expiry.
+    await supabase.rpc("cleanup_expired_presentation_projects");
+    const{data}=await supabase.from("presentation_projects")
+      .select("*").eq("user_id",userId)
+      .gt("expires_at",new Date().toISOString())
+      .order("created_at",{ascending:false});
+    setProjects((data||[]) as any);
+  },[userId]);
+
+  useEffect(()=>{loadProjects();},[loadProjects]);
+
+  const startGenerate=async()=>{
+    if(!theme.trim()||!goal.trim()||!message.trim())return;
+    setGenerating(true);setErr("");
+    try{
+      const outline=await generatePresentationOutline({theme,goal,message,count});
+      setSlides(outline.map(x=>defaultProSlide(x.title,x.body)));
+      setSelected(0);
+      setStage("outline");
+    }catch(e:any){
+      console.error(e);
+      setErr("Не удалось создать структуру. Попробуйте ещё раз.");
+    }finally{setGenerating(false);}
+  };
+
+  const patchSlide=(i:number,p:Partial<ProSlide>)=>setSlides(prev=>prev.map((s,k)=>k===i?{...s,...p}:s));
+  const patchBlock=(slideI:number,blockId:string,p:Partial<ProTextBlock>)=>setSlides(prev=>prev.map((s,k)=>k!==slideI?s:{...s,blocks:s.blocks.map(b=>b.id===blockId?{...b,...p}:b)}));
+  const addBlock=()=>cur&&patchSlide(selected,{blocks:[...cur.blocks,{id:proId(),text:"Новый текст",x:8,y:70,w:70,size:24,weight:300,align:"left",color:"#FFFFFF"}]});
+  const removeBlock=(id:string)=>cur&&patchSlide(selected,{blocks:cur.blocks.filter(b=>b.id!==id)});
+  const addSlide=()=>setSlides(prev=>[...prev,defaultProSlide("Новый слайд","Добавьте текст и визуал")]);
+  const removeSlide=()=>{
+    if(slides.length<=1)return;
+    setSlides(prev=>prev.filter((_,i)=>i!==selected));
+    setSelected(s=>Math.max(0,Math.min(s,slides.length-2)));
+  };
+  const moveSlide=(dir:-1|1)=>{
+    const j=selected+dir;if(j<0||j>=slides.length)return;
+    setSlides(prev=>{const a=[...prev];[a[selected],a[j]]=[a[j],a[selected]];return a;});
+    setSelected(j);
+  };
+
+  const saveProject=async()=>{
+    if(!slides.length)return;
+    setSaving(true);setErr("");
+    const payload={
+      user_id:userId,
+      title:theme||"Без названия",
+      format,
+      theme,goal,message,
+      slide_count:slides.length,
+      slides,
+      updated_at:new Date().toISOString(),
+      expires_at:new Date(Date.now()+14*24*60*60*1000).toISOString(),
+    };
+    const q=projectId
+      ?supabase.from("presentation_projects").update(payload).eq("id",projectId).select().single()
+      :supabase.from("presentation_projects").insert(payload).select().single();
+    const{data,error}=await q;
+    if(error)setErr("Не удалось сохранить презентацию.");
+    else{setProjectId(data.id);await loadProjects();}
+    setSaving(false);
+  };
+
+  const openProject=(p:ProPresentation)=>{
+    setProjectId(p.id);setTheme(p.theme||p.title||"");setGoal(p.goal||"");setMessage(p.message||"");
+    setFormat(p.format||"16:9");setCount(p.slide_count||p.slides?.length||10);setSlides(p.slides||[]);
+    setSelected(0);setStage("editor");
+  };
+
+  const renderSlideToCanvas=async(slide:ProSlide)=>{
+    const f=PRES_FMTS[format];
+    const canvas=document.createElement("canvas");canvas.width=f.w;canvas.height=f.h;
+    const ctx=canvas.getContext("2d")!;
+    if(slide.bg.type==="gradient"){
+      const rad=(slide.bg.angle-90)*Math.PI/180;
+      const x=Math.cos(rad),y=Math.sin(rad);
+      const g=ctx.createLinearGradient(f.w*(.5-x/2),f.h*(.5-y/2),f.w*(.5+x/2),f.h*(.5+y/2));
+      g.addColorStop(0,slide.bg.color);g.addColorStop(1,slide.bg.color2);ctx.fillStyle=g;ctx.fillRect(0,0,f.w,f.h);
+    }else if(slide.bg.type==="grid"){
+      ctx.fillStyle="#fff";ctx.fillRect(0,0,f.w,f.h);ctx.strokeStyle="rgba(17,17,17,.10)";ctx.lineWidth=1;
+      for(let x=0;x<f.w;x+=32){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,f.h);ctx.stroke();}
+      for(let y=0;y<f.h;y+=32){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(f.w,y);ctx.stroke();}
+    }else if(slide.bg.type==="sketch"){
+      ctx.fillStyle="#FCFCFA";ctx.fillRect(0,0,f.w,f.h);ctx.strokeStyle="rgba(17,17,17,.035)";
+      for(let y=0;y<f.h;y+=5){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(f.w,y);ctx.stroke();}
+    }else{ctx.fillStyle=slide.bg.color;ctx.fillRect(0,0,f.w,f.h);}
+    if(slide.imageUrl){
+      await new Promise<void>(res=>{const im=new Image();im.crossOrigin="anonymous";im.onload=()=>{
+        ctx.save();ctx.globalAlpha=slide.imageOpacity;
+        const ir=im.width/im.height,cr=f.w/f.h;let dw,dh,dx,dy;
+        if(slide.imagePosition==="contain"){if(ir>cr){dw=f.w;dh=f.w/ir;dx=0;dy=(f.h-dh)/2;}else{dh=f.h;dw=f.h*ir;dy=0;dx=(f.w-dw)/2;}}
+        else{if(ir>cr){dh=f.h;dw=f.h*ir;dx=(f.w-dw)/2;dy=0;}else{dw=f.w;dh=f.w/ir;dx=0;dy=(f.h-dh)/2;}}
+        ctx.drawImage(im,dx,dy,dw,dh);ctx.restore();res();
+      };im.onerror=()=>res();im.src=slide.imageUrl;});
+    }
+    for(const b of slide.blocks){
+      ctx.save();
+      ctx.fillStyle=b.color;ctx.font=`${b.weight} ${b.size}px Inter, Arial`;
+      ctx.textAlign=b.align;ctx.textBaseline="top";
+      const x=f.w*b.x/100,y=f.h*b.y/100,maxW=f.w*b.w/100;
+      const tx=b.align==="center"?x+maxW/2:b.align==="right"?x+maxW:x;
+      const words=b.text.split(/\s+/);let line="",yy=y;
+      for(const word of words){
+        const test=line?line+" "+word:word;
+        if(ctx.measureText(test).width>maxW&&line){ctx.fillText(line,tx,yy);yy+=b.size*1.18;line=word;}else line=test;
+      }
+      if(line)ctx.fillText(line,tx,yy);
+      ctx.restore();
+    }
+    return canvas;
+  };
+
+  const exportPdf=async()=>{
+    setExporting("pdf");setErr("");
+    try{
+      const mod:any=await import("jspdf");
+      const jsPDF=mod.jsPDF||mod.default;
+      const f=PRES_FMTS[format],orientation=format==="16:9"?"landscape":"portrait";
+      const pdf=new jsPDF({orientation,unit:"px",format:[f.w,f.h],hotfixes:["px_scaling"]});
+      for(let i=0;i<slides.length;i++){
+        if(i>0)pdf.addPage([f.w,f.h],orientation);
+        const c=await renderSlideToCanvas(slides[i]);
+        pdf.addImage(c.toDataURL("image/jpeg",.92),"JPEG",0,0,f.w,f.h);
+      }
+      pdf.save(`${(theme||"vizzy-presentation").replace(/[^\wа-яё-]+/gi,"-")}.pdf`);
+    }catch(e){console.error(e);setErr("Не удалось скачать PDF.");}
+    setExporting("");
+  };
+
+  const exportPptx=async()=>{
+    setExporting("pptx");setErr("");
+    try{
+      const mod:any=await import("pptxgenjs");
+      const PptxGenJS=mod.default||mod;
+      const pptx=new PptxGenJS();
+      pptx.layout=format==="16:9"?"LAYOUT_WIDE":"LAYOUT_SQUARE";
+      for(const s of slides){
+        const c=await renderSlideToCanvas(s);
+        const sl=pptx.addSlide();
+        sl.addImage({data:c.toDataURL("image/png"),x:0,y:0,w:format==="16:9"?13.333:10,h:format==="16:9"?7.5:10});
+      }
+      await pptx.writeFile({fileName:`${(theme||"vizzy-presentation").replace(/[^\wа-яё-]+/gi,"-")}.pptx`});
+    }catch(e){console.error(e);setErr("Не удалось скачать PPTX.");}
+    setExporting("");
+  };
+
+  const setupCard=(active:boolean)=>({
+    border:`1px solid ${active?PRES_RED:border}`,background:active?"rgba(255,23,68,.06)":card,
+    borderRadius:14,padding:20,cursor:"pointer",textAlign:"left" as const,
+    boxShadow:"none",transition:"border-color .18s ease,background .18s ease",
+  });
+
+  if(stage==="library")return <div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,marginBottom:18}}>
+      <div><div style={{fontSize:24,fontWeight:500,color:C.t1}}>Сохранённые презентации</div><div style={{fontSize:13,color:C.t2,marginTop:4}}>Хранятся 14 дней</div></div>
+      <button onClick={()=>setStage("setup")} style={{padding:"10px 16px",borderRadius:9,border:`1px solid ${border}`,background:card,color:C.t1,cursor:"pointer"}}>Новая презентация</button>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(260px,1fr))",gap:12}}>
+      {projects.map(p=><button key={p.id} onClick={()=>openProject(p)} style={{padding:16,borderRadius:12,border:`1px solid ${border}`,background:card,textAlign:"left",cursor:"pointer"}}>
+        <div style={{fontSize:16,fontWeight:500,color:C.t1}}>{p.title}</div>
+        <div style={{fontSize:12,color:C.t2,marginTop:7}}>{p.slide_count} слайдов · {p.format}</div>
+        <div style={{fontSize:11,color:C.t2,marginTop:12}}>До {p.expires_at?new Date(p.expires_at).toLocaleDateString("ru-RU"):"—"}</div>
+      </button>)}
+      {!projects.length&&<div style={{padding:24,border:`1px dashed ${border}`,borderRadius:12,color:C.t2}}>Сохранённых презентаций пока нет.</div>}
+    </div>
+  </div>;
+
+  if(stage==="setup")return <div style={{maxWidth:1060,margin:"0 auto"}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:16,marginBottom:24}}>
+      <div>
+        <div style={{fontSize:26,fontWeight:500,letterSpacing:"-.03em",color:C.t1}}>Новая презентация</div>
+        <div style={{fontSize:13,color:C.t2,marginTop:6}}>Сначала выберите формат и задайте смысл презентации.</div>
+      </div>
+      <button onClick={()=>setStage("library")} style={{padding:"9px 13px",borderRadius:8,border:`1px solid ${border}`,background:"transparent",color:C.t2,cursor:"pointer"}}>Сохранённые</button>
+    </div>
+
+    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:14,marginBottom:20}}>
+      {(["16:9","1:1"] as const).map(id=>{
+        const f=PRES_FMTS[id],active=format===id;
+        return <button key={id} onClick={()=>setFormat(id)} style={setupCard(active)}>
+          <div style={{height:190,borderRadius:10,border:`1px solid ${active?PRES_RED:border}`,background:dark?"#111":"#F5F7FA",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:15}}>
+            <div style={{width:id==="16:9"?"76%":"48%",aspectRatio:id==="16:9"?"16 / 9":"1 / 1",borderRadius:7,background:active?PRES_RED:(dark?"#252525":"#DDE1E7")}}/>
+          </div>
+          <div style={{fontSize:17,fontWeight:500,color:C.t1}}>{f.label}</div>
+          <div style={{fontSize:12,color:C.t2,marginTop:4}}>{f.desc}</div>
+        </button>;
+      })}
+    </div>
+
+    <div style={{padding:20,border:`1px solid ${border}`,background:card,borderRadius:14}}>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:14}}>
+        <label style={{display:"flex",flexDirection:"column",gap:7,fontSize:12,color:C.t2}}>Тема
+          <input value={theme} onChange={e=>setTheme(e.target.value)} placeholder="Например: стратегия роста на 2027 год" style={{padding:"12px 13px",borderRadius:9,border:`1px solid ${border}`,background:input,color:C.t1,outline:"none",fontSize:14}}/>
+        </label>
+        <label style={{display:"flex",flexDirection:"column",gap:7,fontSize:12,color:C.t2}}>Цель
+          <input value={goal} onChange={e=>setGoal(e.target.value)} placeholder="Продать, объяснить, защитить идею" style={{padding:"12px 13px",borderRadius:9,border:`1px solid ${border}`,background:input,color:C.t1,outline:"none",fontSize:14}}/>
+        </label>
+      </div>
+      <label style={{display:"flex",flexDirection:"column",gap:7,fontSize:12,color:C.t2,marginTop:14}}>Главный посыл
+        <textarea value={message} onChange={e=>setMessage(e.target.value)} placeholder="Что человек должен понять после презентации" rows={4} style={{padding:"12px 13px",borderRadius:9,border:`1px solid ${border}`,background:input,color:C.t1,outline:"none",fontSize:14,resize:"vertical"}}/>
+      </label>
+      <label style={{display:"flex",flexDirection:"column",gap:7,fontSize:12,color:C.t2,marginTop:14,maxWidth:220}}>Количество слайдов
+        <input type="number" min={3} max={40} value={count} onChange={e=>setCount(Math.max(3,Math.min(40,Number(e.target.value)||3)))} style={{padding:"12px 13px",borderRadius:9,border:`1px solid ${border}`,background:input,color:C.t1,outline:"none",fontSize:14}}/>
+      </label>
+      {err&&<div style={{color:"#FF6B78",fontSize:12,marginTop:12}}>{err}</div>}
+      <button onClick={startGenerate} disabled={generating||!theme.trim()||!goal.trim()||!message.trim()} style={{
+        width:"100%",marginTop:18,padding:"14px 18px",borderRadius:9,border:"none",
+        background:generating||!theme.trim()||!goal.trim()||!message.trim()?"#5B1A29":PRES_RED,
+        color:"#fff",fontWeight:500,fontSize:14,cursor:generating?"default":"pointer",boxShadow:"none",
+      }}>{generating?"Генерирую структуру…":"Сгенерировать"}</button>
+    </div>
+  </div>;
+
+  if(stage==="outline")return <div style={{maxWidth:980,margin:"0 auto"}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:16,marginBottom:18}}>
+      <div><div style={{fontSize:24,fontWeight:500,color:C.t1}}>Структура презентации</div><div style={{fontSize:13,color:C.t2,marginTop:5}}>Отредактируйте тексты, затем откройте Pro-редактор.</div></div>
+      <button onClick={()=>setStage("setup")} style={{padding:"9px 13px",borderRadius:8,border:`1px solid ${border}`,background:"transparent",color:C.t2,cursor:"pointer"}}>Назад</button>
+    </div>
+    <div style={{display:"flex",flexDirection:"column",gap:10}}>
+      {slides.map((s,i)=><div key={s.id} style={{padding:15,border:`1px solid ${border}`,borderRadius:11,background:card}}>
+        <div style={{fontSize:11,color:C.t2,marginBottom:8}}>Слайд {i+1}</div>
+        <input value={s.blocks[0]?.text||""} onChange={e=>patchBlock(i,s.blocks[0].id,{text:e.target.value})} style={{width:"100%",boxSizing:"border-box",border:"none",background:"transparent",color:C.t1,fontSize:17,fontWeight:500,outline:"none",marginBottom:8}}/>
+        <textarea value={s.blocks[1]?.text||""} onChange={e=>patchBlock(i,s.blocks[1].id,{text:e.target.value})} rows={2} style={{width:"100%",boxSizing:"border-box",border:"none",background:"transparent",color:C.t2,fontSize:13,fontWeight:300,outline:"none",resize:"vertical"}}/>
+      </div>)}
+    </div>
+    <button onClick={()=>setStage("editor")} style={{width:"100%",marginTop:16,padding:"14px 18px",borderRadius:9,border:"none",background:PRES_RED,color:"#fff",fontWeight:500,fontSize:14,cursor:"pointer",boxShadow:"none"}}>Превратить в презентацию</button>
+  </div>;
+
+  return <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"210px minmax(0,1fr) 300px",gap:12,minHeight:isMobile?"auto":"calc(100vh - 132px)"}}>
+    <aside style={{border:`1px solid ${border}`,borderRadius:12,background:card,padding:10,overflowY:"auto"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 4px 10px"}}>
+        <div style={{fontSize:12,color:C.t2}}>Слайды</div>
+        <button onClick={addSlide} style={{border:"none",background:"transparent",color:PRES_RED,fontSize:18,cursor:"pointer"}}>＋</button>
+      </div>
+      <div style={{display:isMobile?"grid":"flex",gridTemplateColumns:isMobile?"repeat(2,minmax(0,1fr))":undefined,flexDirection:"column",gap:8}}>
+        {slides.map((s,i)=><div key={s.id} style={{display:"flex",gap:7,alignItems:"flex-start"}}>
+          <div style={{fontSize:10,color:C.t2,width:18,paddingTop:4}}>{i+1}</div>
+          <div style={{flex:1,minWidth:0}}><ProSlidePreview slide={s} format={format} active={selected===i} onClick={()=>setSelected(i)} mini/></div>
+        </div>)}
+      </div>
+    </aside>
+
+    <main style={{border:`1px solid ${border}`,borderRadius:12,background:card,padding:isMobile?10:18,minWidth:0,display:"flex",flexDirection:"column"}}>
+      <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center",flexWrap:"wrap",marginBottom:12}}>
+        <div style={{display:"flex",gap:7}}>
+          <button onClick={()=>moveSlide(-1)} style={{padding:"8px 10px",border:`1px solid ${border}`,borderRadius:8,background:"transparent",color:C.t2,cursor:"pointer"}}>←</button>
+          <button onClick={()=>moveSlide(1)} style={{padding:"8px 10px",border:`1px solid ${border}`,borderRadius:8,background:"transparent",color:C.t2,cursor:"pointer"}}>→</button>
+          <button onClick={removeSlide} style={{padding:"8px 10px",border:`1px solid ${border}`,borderRadius:8,background:"transparent",color:"#FF6877",cursor:"pointer"}}>Удалить</button>
+        </div>
+        <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
+          <button onClick={saveProject} style={{padding:"8px 11px",border:`1px solid ${border}`,borderRadius:8,background:"transparent",color:C.t1,cursor:"pointer"}}>{saving?"Сохраняю…":"Сохранить"}</button>
+          <button onClick={exportPdf} style={{padding:"8px 11px",border:`1px solid ${border}`,borderRadius:8,background:"transparent",color:C.t1,cursor:"pointer"}}>{exporting==="pdf"?"PDF…":"PDF"}</button>
+          <button onClick={exportPptx} style={{padding:"8px 11px",border:"none",borderRadius:8,background:PRES_RED,color:"#fff",cursor:"pointer",boxShadow:"none"}}>{exporting==="pptx"?"PPTX…":"PPTX"}</button>
+        </div>
+      </div>
+      <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",minHeight:360,overflow:"auto"}}>
+        {cur&&<div style={{width:"100%",maxWidth:format==="16:9"?980:720}}>
+          <ProSlidePreview slide={cur} format={format}/>
+        </div>}
+      </div>
+      {err&&<div style={{color:"#FF6B78",fontSize:12,marginTop:10}}>{err}</div>}
+    </main>
+
+    <aside style={{border:`1px solid ${border}`,borderRadius:12,background:card,padding:14,overflowY:"auto"}}>
+      {cur&&<>
+        <div style={{fontSize:13,fontWeight:500,color:C.t1,marginBottom:12}}>Фон</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+          {([
+            ["color","Цвет"],["gradient","Градиент"],["grid","Клетка"],["sketch","Скетч"]
+          ] as const).map(([id,label])=><button key={id} onClick={()=>patchSlide(selected,{bg:{...cur.bg,type:id}})} style={{
+            padding:"9px 8px",borderRadius:8,border:`1px solid ${cur.bg.type===id?PRES_RED:border}`,
+            background:cur.bg.type===id?"rgba(255,23,68,.06)":"transparent",color:C.t1,cursor:"pointer",fontSize:12,
+          }}>{label}</button>)}
+        </div>
+        {(cur.bg.type==="color"||cur.bg.type==="gradient")&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:10}}>
+          <label style={{fontSize:11,color:C.t2}}>Цвет 1<input type="color" value={cur.bg.color} onChange={e=>patchSlide(selected,{bg:{...cur.bg,color:e.target.value}})} style={{width:"100%",height:36,border:"none",background:"transparent"}}/></label>
+          {cur.bg.type==="gradient"&&<label style={{fontSize:11,color:C.t2}}>Цвет 2<input type="color" value={cur.bg.color2} onChange={e=>patchSlide(selected,{bg:{...cur.bg,color2:e.target.value}})} style={{width:"100%",height:36,border:"none",background:"transparent"}}/></label>}
+        </div>}
+        {cur.bg.type==="gradient"&&<label style={{display:"block",fontSize:11,color:C.t2,marginTop:8}}>Угол
+          <input type="number" value={cur.bg.angle} onChange={e=>patchSlide(selected,{bg:{...cur.bg,angle:Number(e.target.value)||0}})} style={{width:"100%",boxSizing:"border-box",marginTop:5,padding:"8px 9px",borderRadius:7,border:`1px solid ${border}`,background:input,color:C.t1}}/>
+        </label>}
+
+        <div style={{height:1,background:border,margin:"16px 0"}}/>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+          <div style={{fontSize:13,fontWeight:500,color:C.t1}}>Текст</div>
+          <button onClick={addBlock} style={{border:"none",background:"transparent",color:PRES_RED,cursor:"pointer"}}>＋ Добавить</button>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:9}}>
+          {cur.blocks.map(b=><div key={b.id} style={{padding:10,border:`1px solid ${border}`,borderRadius:9}}>
+            <textarea value={b.text} onChange={e=>patchBlock(selected,b.id,{text:e.target.value})} rows={2} style={{width:"100%",boxSizing:"border-box",border:"none",background:"transparent",color:C.t1,outline:"none",resize:"vertical",fontSize:12}}/>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginTop:7}}>
+              <input type="number" value={b.size} onChange={e=>patchBlock(selected,b.id,{size:Number(e.target.value)||20})} style={{padding:"7px 8px",borderRadius:7,border:`1px solid ${border}`,background:input,color:C.t1}}/>
+              <input type="color" value={b.color} onChange={e=>patchBlock(selected,b.id,{color:e.target.value})} style={{width:"100%",height:34,border:"none",background:"transparent"}}/>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:5,marginTop:7}}>
+              {(["left","center","right"] as const).map(a=><button key={a} onClick={()=>patchBlock(selected,b.id,{align:a})} style={{padding:6,borderRadius:6,border:`1px solid ${b.align===a?PRES_RED:border}`,background:"transparent",color:C.t2,cursor:"pointer"}}>{a==="left"?"←":a==="center"?"↔":"→"}</button>)}
+            </div>
+            <button onClick={()=>removeBlock(b.id)} style={{marginTop:7,border:"none",background:"transparent",color:"#FF6877",fontSize:11,cursor:"pointer"}}>Удалить текст</button>
+          </div>)}
+        </div>
+
+        <div style={{height:1,background:border,margin:"16px 0"}}/>
+        <div style={{fontSize:13,fontWeight:500,color:C.t1,marginBottom:9}}>Фотография</div>
+        <button onClick={()=>setPicker(true)} style={{width:"100%",padding:"10px",borderRadius:8,border:`1px solid ${border}`,background:"transparent",color:C.t1,cursor:"pointer"}}>{cur.imageUrl?"Заменить из медиатеки":"Выбрать из медиатеки"}</button>
+        {cur.imageUrl&&<button onClick={()=>patchSlide(selected,{imageUrl:""})} style={{width:"100%",marginTop:7,padding:"8px",borderRadius:8,border:"none",background:"transparent",color:"#FF6877",cursor:"pointer"}}>Убрать фото</button>}
+      </>}
+    </aside>
+
+    {picker&&<div onClick={()=>setPicker(false)} style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,.72)",display:"flex",alignItems:"center",justifyContent:"center",padding:18}}>
+      <div onClick={e=>e.stopPropagation()} style={{width:"min(900px,96vw)",maxHeight:"86vh",overflow:"auto",background:C.w,border:`1px solid ${border}`,borderRadius:14,padding:16}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+          <div style={{fontSize:18,fontWeight:500,color:C.t1}}>Медиатека</div>
+          <button onClick={()=>setPicker(false)} style={{border:"none",background:"transparent",color:C.t2,cursor:"pointer"}}>Закрыть</button>
+        </div>
+        <label style={{display:"block",padding:"11px",border:`1px dashed ${border}`,borderRadius:9,textAlign:"center",color:C.t2,cursor:"pointer",marginBottom:12}}>
+          {uploading?"Загрузка…":"Загрузить изображения"}
+          <input type="file" accept="image/*" multiple style={{display:"none"}} onChange={e=>{onUpload(e.target.files);e.currentTarget.value="";}}/>
+        </label>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"repeat(2,1fr)":"repeat(auto-fill,minmax(130px,1fr))",gap:9}}>
+          {images.map(im=><button key={im.id} onClick={()=>{patchSlide(selected,{imageUrl:im.url});setPicker(false);}} style={{padding:0,border:"none",borderRadius:9,overflow:"hidden",background:input,cursor:"pointer",aspectRatio:"1 / 1"}}>
+            <img src={im.url} alt="" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+          </button>)}
+        </div>
+      </div>
+    </div>}
+  </div>;
+}
+
 function PostsAIPage({userId}:{userId:string}){return <SlideStudio userId={userId} kind="post"/>;}
-function SlidesAIPage({userId}:{userId:string}){return <SlideStudio userId={userId} kind="slide"/>;}
+function SlidesAIPage({userId}:{userId:string}){return <VizzySlidesPro userId={userId}/>;}
 
 /* ============ LINK TRACKER ============ */
 const LT_MAX_LINKS=50;
