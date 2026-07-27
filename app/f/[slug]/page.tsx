@@ -34,6 +34,13 @@ type BusySlot = {start_at:string; end_at:string};
 const WD_SHORT=["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
 const MONTHS=["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
 const MONTHS_GEN=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+const TIME_ZONES=[
+  "Europe/Moscow","Europe/Kaliningrad","Europe/London","Europe/Paris","Europe/Berlin",
+  "Asia/Dubai","Asia/Tbilisi","Asia/Yerevan","Asia/Almaty","Asia/Tashkent",
+  "Asia/Bangkok","Asia/Singapore","Asia/Tokyo","Asia/Shanghai",
+  "America/New_York","America/Chicago","America/Denver","America/Los_Angeles",
+  "Australia/Sydney","Pacific/Auckland"
+];
 const pad=(n:number)=>String(n).padStart(2,"0");
 const toMin=(t:string)=>{const[h,m]=String(t||"00:00").split(":").map(Number);return(h||0)*60+(m||0);};
 const toHHMM=(m:number)=>`${pad(Math.floor(m/60)%24)}:${pad(m%60)}`;
@@ -56,6 +63,14 @@ function zonedLocalToUtc(dateStr:string,timeStr:string,timeZone:string){
   let guess=new Date(Date.UTC(y,m-1,d,hh,mm,0));
   for(let i=0;i<3;i++)guess=new Date(Date.UTC(y,m-1,d,hh,mm,0)-zoneOffsetMs(guess,timeZone));
   return guess;
+}
+function zoneLabel(timeZone:string){
+  try{
+    const now=new Date();
+    const parts=new Intl.DateTimeFormat("ru-RU",{timeZone,timeZoneName:"shortOffset",hour:"2-digit",minute:"2-digit"}).formatToParts(now);
+    const offset=parts.find(p=>p.type==="timeZoneName")?.value?.replace("GMT","GMT")||"";
+    return `${timeZone.replace(/_/g," ")}${offset?` (${offset})`:""}`;
+  }catch{return timeZone.replace(/_/g," ");}
 }
 function getSessionId(){
   try{
@@ -86,8 +101,19 @@ export default function PublicFormPage({params}:{params:Promise<{slug:string}>})
   const[err,setErr]=useState("");
   const trackedView=useRef(false);
 
-  const visitorTz=useMemo(()=>{try{return Intl.DateTimeFormat().resolvedOptions().timeZone||"UTC";}catch{return"UTC";}},[]);
+  const detectedTz=useMemo(()=>{try{return Intl.DateTimeFormat().resolvedOptions().timeZone||"Europe/Moscow";}catch{return"Europe/Moscow";}},[]);
+  const[selectedTz,setSelectedTz]=useState(()=>{try{return localStorage.getItem("vizzy_form_tz")||"Europe/Moscow";}catch{return"Europe/Moscow";}});
+  const timeZoneOptions=useMemo(()=>Array.from(new Set(["Europe/Moscow",detectedTz,...TIME_ZONES])),[detectedTz]);
+  const visitorTz=selectedTz;
   useEffect(()=>{params.then(p=>setSlug(p.slug));setSessionId(getSessionId());},[params]);
+  useEffect(()=>{try{localStorage.setItem("vizzy_form_tz",selectedTz);}catch{}},[selectedTz]);
+  const changeTimeZone=(tz:string)=>{
+    setSelectedTz(tz);
+    setPickedDate("");
+    setPickedSlot(null);
+    const parts=zonedParts(new Date(),tz);
+    setMonth(new Date(Number(parts.year),Number(parts.month)-1,1));
+  };
 
   useEffect(()=>{
     if(!slug)return;
@@ -205,7 +231,8 @@ export default function PublicFormPage({params}:{params:Promise<{slug:string}>})
 
   return <div className="vf-page" style={{"--vf-accent":accent} as React.CSSProperties}>
     <style>{`
-      :root{color-scheme:light dark}.vf-page{--vf-bg:#f5f6f8;--vf-panel:#fff;--vf-panel-soft:#fafafa;--vf-input:#fff;--vf-text:#172033;--vf-muted:#7c8492;--vf-muted-strong:#4f5968;--vf-border:#e2e5ea;min-height:100vh;background:var(--vf-bg);color:var(--vf-text);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:28px;display:flex;align-items:flex-start;justify-content:center;box-sizing:border-box}.vf-shell{width:min(1180px,100%);background:var(--vf-panel);border:1px solid var(--vf-border);border-radius:12px;box-shadow:0 10px 32px rgba(16,24,40,.06);overflow:hidden;display:grid;grid-template-columns:300px minmax(0,1fr)}.vf-info{padding:32px 28px;border-right:1px solid var(--vf-border);background:var(--vf-panel-soft);min-width:0}.vf-main{padding:32px;min-width:0}.vf-time-grid{display:grid;grid-template-columns:minmax(330px,1fr) 230px;gap:30px;align-items:start}.vf-calendar{min-width:0}.vf-slots{min-width:0}.vf-day{aspect-ratio:1;border:0;border-radius:50%;background:transparent;color:var(--vf-muted);font-size:13px;cursor:default}.vf-day.available{cursor:pointer;color:var(--vf-accent);background:color-mix(in srgb,var(--vf-accent) 8%,transparent);font-weight:550}.vf-day.selected{background:var(--vf-accent);color:#fff}.vf-slot{width:100%;height:48px;border:1px solid color-mix(in srgb,var(--vf-accent) 68%,var(--vf-border));border-radius:8px;background:transparent;color:var(--vf-accent);font-size:14px;font-weight:600;cursor:pointer}.vf-slot:hover{background:color-mix(in srgb,var(--vf-accent) 7%,transparent)}.vf-fields{display:grid;grid-template-columns:1fr 1fr;gap:16px}.vf-field.full{grid-column:1/-1}.vf-error{font-size:12px;color:#d14343;margin-top:6px}.vf-primary{height:46px;border:0;border-radius:8px;background:var(--vf-accent);color:#fff;font-size:14px;font-weight:600;padding:0 20px;cursor:pointer}.vf-primary:disabled{opacity:.45;cursor:not-allowed}.vf-secondary{height:38px;border:1px solid var(--vf-border);border-radius:8px;background:transparent;color:var(--vf-muted-strong);font-size:13px;padding:0 12px;cursor:pointer}.vf-loader,.vf-unavailable{margin:auto;color:var(--vf-muted);font-size:14px}.vf-unavailable{text-align:center;padding:36px}.vf-unavailable-title{font-size:19px;color:var(--vf-text);font-weight:600;margin-bottom:8px}.vf-radio{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--vf-muted-strong);cursor:pointer;padding:7px 0}.vf-check-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px 14px}.vf-scale{display:grid;grid-template-columns:repeat(10,1fr);gap:6px}.vf-scale button{height:36px;border-radius:7px;border:1px solid var(--vf-border);background:transparent;color:var(--vf-muted-strong);cursor:pointer}.vf-scale button.on{background:var(--vf-accent);border-color:var(--vf-accent);color:#fff}.vf-media{width:100%;max-height:310px;object-fit:cover;border-radius:10px;border:1px solid var(--vf-border);margin-top:18px}.vf-video{width:100%;aspect-ratio:16/9;border:0;border-radius:10px;margin-top:18px;background:#000}.vf-footer{margin-top:28px;padding-top:18px;border-top:1px solid var(--vf-border);font-size:11px;color:var(--vf-muted);display:flex;align-items:center;justify-content:space-between;gap:12px}.vf-brand{font-weight:600;letter-spacing:.08em;color:var(--vf-muted-strong)}
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;350;400;450;500;600&display=swap");
+      :root{color-scheme:light dark}.vf-page{--vf-bg:#f5f6f8;--vf-panel:#fff;--vf-panel-soft:#fafafa;--vf-input:#fff;--vf-text:#172033;--vf-muted:#7c8492;--vf-muted-strong:#4f5968;--vf-border:#e2e5ea;min-height:100vh;background:var(--vf-bg);color:var(--vf-text);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-weight:350;letter-spacing:-.008em;padding:28px;display:flex;align-items:flex-start;justify-content:center;box-sizing:border-box}.vf-shell{width:min(1180px,100%);background:var(--vf-panel);border:1px solid var(--vf-border);border-radius:10px;box-shadow:0 10px 32px rgba(16,24,40,.06);overflow:hidden;display:grid;grid-template-columns:300px minmax(0,1fr)}.vf-info{padding:34px 30px;border-right:1px solid var(--vf-border);background:var(--vf-panel-soft);min-width:0}.vf-main{padding:34px 36px;min-width:0}.vf-time-grid{display:grid;grid-template-columns:minmax(360px,1fr) 220px;gap:34px;align-items:start}.vf-calendar{min-width:0}.vf-slots{min-width:0}.vf-day{aspect-ratio:1;border:0;border-radius:50%;background:transparent;color:var(--vf-muted);font-size:13px;font-weight:350;cursor:default}.vf-day.available{cursor:pointer;color:var(--vf-accent);background:color-mix(in srgb,var(--vf-accent) 8%,transparent);font-weight:450}.vf-day.selected{background:var(--vf-accent);color:#fff}.vf-slot{width:100%;height:46px;border:1px solid color-mix(in srgb,var(--vf-accent) 68%,var(--vf-border));border-radius:8px;background:transparent;color:var(--vf-accent);font-size:14px;font-weight:500;cursor:pointer}.vf-slot:hover{background:color-mix(in srgb,var(--vf-accent) 7%,transparent)}.vf-fields{display:grid;grid-template-columns:1fr 1fr;gap:16px}.vf-field.full{grid-column:1/-1}.vf-error{font-size:12px;color:#d14343;margin-top:6px}.vf-primary{height:46px;border:0;border-radius:8px;background:var(--vf-accent);color:#fff;font-size:14px;font-weight:500;padding:0 20px;cursor:pointer}.vf-primary:disabled{opacity:.45;cursor:not-allowed}.vf-secondary{height:38px;border:1px solid var(--vf-border);border-radius:8px;background:transparent;color:var(--vf-muted-strong);font-size:13px;padding:0 12px;cursor:pointer}.vf-loader,.vf-unavailable{margin:auto;color:var(--vf-muted);font-size:14px}.vf-unavailable{text-align:center;padding:36px}.vf-unavailable-title{font-size:19px;color:var(--vf-text);font-weight:500;margin-bottom:8px}.vf-radio{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--vf-muted-strong);cursor:pointer;padding:7px 0}.vf-check-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px 14px}.vf-scale{display:grid;grid-template-columns:repeat(10,1fr);gap:6px}.vf-scale button{height:36px;border-radius:7px;border:1px solid var(--vf-border);background:transparent;color:var(--vf-muted-strong);cursor:pointer}.vf-scale button.on{background:var(--vf-accent);border-color:var(--vf-accent);color:#fff}.vf-media{width:100%;max-height:310px;object-fit:cover;border-radius:10px;border:1px solid var(--vf-border);margin-top:18px}.vf-video{width:100%;aspect-ratio:16/9;border:0;border-radius:10px;margin-top:18px;background:#000}.vf-footer{margin-top:28px;padding-top:18px;border-top:1px solid var(--vf-border);font-size:11px;color:var(--vf-muted);display:flex;align-items:center;justify-content:space-between;gap:12px}.vf-brand{font-weight:500;letter-spacing:.08em;color:var(--vf-muted-strong)}.vf-tz-wrap{margin-top:22px;padding-top:18px;border-top:1px solid var(--vf-border)}.vf-tz-label{font-size:11px;color:var(--vf-muted);margin-bottom:8px}.vf-tz-select{width:100%;height:42px;border:1px solid var(--vf-border);border-radius:8px;background:var(--vf-input);color:var(--vf-text);padding:0 12px;font:350 12.5px Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;outline:none}.vf-tz-note{font-size:11.5px;color:var(--vf-muted);line-height:1.55;margin-top:9px}
       @media(prefers-color-scheme:dark){.vf-page{--vf-bg:#0b0b0c;--vf-panel:#151516;--vf-panel-soft:#111112;--vf-input:#1b1b1d;--vf-text:#ececef;--vf-muted:#8a8a92;--vf-muted-strong:#b7b7bd;--vf-border:rgba(255,255,255,.09)}.vf-shell{box-shadow:0 18px 48px rgba(0,0,0,.35)}}
       @media(max-width:900px){.vf-page{padding:14px}.vf-shell{grid-template-columns:1fr}.vf-info{border-right:0;border-bottom:1px solid var(--vf-border);padding:24px}.vf-main{padding:24px}.vf-time-grid{grid-template-columns:1fr}.vf-slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.vf-slots .vf-slot{margin:0!important}}
       @media(max-width:620px){.vf-page{padding:0;background:var(--vf-panel)}.vf-shell{border-radius:0;border-left:0;border-right:0;box-shadow:none}.vf-info,.vf-main{padding:20px}.vf-fields{grid-template-columns:1fr}.vf-field.full{grid-column:auto}.vf-slots{grid-template-columns:repeat(2,1fr)}.vf-check-grid{grid-template-columns:1fr}.vf-scale{grid-template-columns:repeat(5,1fr)}}
@@ -216,9 +243,9 @@ export default function PublicFormPage({params}:{params:Promise<{slug:string}>})
         <div style={{fontSize:11,fontWeight:600,letterSpacing:".12em",textTransform:"uppercase",color:"var(--vf-accent)",marginBottom:10}}>Vizzy Form</div>
         <h1 style={{fontSize:26,lineHeight:1.18,fontWeight:590,letterSpacing:"-.025em",margin:"0 0 18px"}}>{form.title}</h1>
         {cfg?.enabled&&<div style={{display:"flex",flexDirection:"column",gap:11,marginBottom:20}}>
-          <div style={{display:"flex",alignItems:"center",gap:9,fontSize:13,color:"var(--vf-muted-strong)"}}><span style={{width:18}}>◷</span>{cfg.duration} минут</div>
-          <div style={{display:"flex",alignItems:"center",gap:9,fontSize:13,color:"var(--vf-muted-strong)"}}><span style={{width:18}}>◎</span>{visitorTz}</div>
-          {pickedSlot&&<div style={{display:"flex",alignItems:"center",gap:9,fontSize:13,color:"var(--vf-muted-strong)"}}><span style={{width:18}}>□</span>{selectedDateLabel}</div>}
+          <div style={{display:"flex",alignItems:"center",gap:9,fontSize:13,color:"var(--vf-muted-strong)"}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>{cfg.duration} минут</div>
+          <div style={{display:"flex",alignItems:"center",gap:9,fontSize:13,color:"var(--vf-muted-strong)"}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg>{zoneLabel(visitorTz)}</div>
+          {pickedSlot&&<div style={{display:"flex",alignItems:"center",gap:9,fontSize:13,color:"var(--vf-muted-strong)"}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>{selectedDateLabel}</div>}
         </div>}
         {form.description&&<div style={{fontSize:13.5,lineHeight:1.65,color:"var(--vf-muted-strong)",whiteSpace:"pre-wrap"}}>{form.description}</div>}
         <div className="vf-footer"><span>Защищённая запись</span><span className="vf-brand">VIZZY</span></div>
@@ -239,7 +266,7 @@ export default function PublicFormPage({params}:{params:Promise<{slug:string}>})
                 if(!date)return<div key={`e-${i}`}/>;const available=(slotMap[date]||[]).length>0;const selected=pickedDate===date;
                 return<button key={date} disabled={!available} className={`vf-day ${available?"available":""} ${selected?"selected":""}`} onClick={()=>setPickedDate(date)}>{Number(date.slice(8,10))}</button>;
               })}</div>
-              <div style={{fontSize:12,color:"var(--vf-muted)",marginTop:18,lineHeight:1.5}}>Время автоматически показано в часовом поясе <b style={{color:"var(--vf-muted-strong)",fontWeight:500}}>{visitorTz}</b>.</div>
+              <div className="vf-tz-wrap"><div className="vf-tz-label">Часовой пояс</div><select className="vf-tz-select" value={selectedTz} onChange={e=>changeTimeZone(e.target.value)}>{timeZoneOptions.map(tz=><option key={tz} value={tz}>{zoneLabel(tz)}</option>)}</select><div className="vf-tz-note">Свободное время пересчитывается под выбранный пояс. В системе владельца запись сохраняется в часовом поясе Europe/Moscow.</div></div>
             </section>
             <section className="vf-slots">
               <div style={{fontSize:13,fontWeight:550,marginBottom:12,minHeight:20}}>{pickedDate?`${Number(pickedDate.slice(8,10))} ${MONTHS_GEN[Number(pickedDate.slice(5,7))-1]}`:"Выберите доступный день"}</div>
