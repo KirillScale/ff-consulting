@@ -92,9 +92,6 @@ export default function PublicFormPage({params}:{params:Promise<{slug:string}>})
   const[pickedDate,setPickedDate]=useState("");
   const[pickedSlot,setPickedSlot]=useState<Slot|null>(null);
   const[answers,setAnswers]=useState<Record<string,any>>({});
-  const[name,setName]=useState("");
-  const[email,setEmail]=useState("");
-  const[phone,setPhone]=useState("");
   const[touched,setTouched]=useState(false);
   const[submitting,setSubmitting]=useState(false);
   const[uploading,setUploading]=useState<Record<string,boolean>>({});
@@ -177,10 +174,27 @@ export default function PublicFormPage({params}:{params:Promise<{slug:string}>})
   },[month]);
 
   const requiredOk=()=>{
-    if(name.trim().length<2)return false;
-    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim()))return false;
     for(const q of visibleQuestions){if(!q.required)continue;const v=answers[q.id];if(Array.isArray(v)){if(!v.length)return false;}else if(v===null||v===undefined||String(v).trim()==="")return false;}
     return true;
+  };
+  const answerText=(q?:Question)=>{
+    if(!q)return "";
+    const value=answers[q.id];
+    if(Array.isArray(value))return value.join(", ");
+    return value===null||value===undefined?"":String(value).trim();
+  };
+  const contactName=()=>{
+    const q=visibleQuestions.find(q=>/имя|name/i.test(q.label))||visibleQuestions.find(q=>q.type==="text");
+    return answerText(q)||"Новый лид";
+  };
+  const contactEmail=()=>{
+    const q=visibleQuestions.find(q=>q.type==="email"||/e-?mail|почт/i.test(q.label));
+    const value=answerText(q);
+    return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)?value:`${sessionId.replace(/[^a-zA-Z0-9]/g,"")}@form.vizzy.local`;
+  };
+  const contactPhone=()=>{
+    const q=visibleQuestions.find(q=>q.type==="phone"||/телефон|phone/i.test(q.label));
+    return answerText(q);
   };
   const fieldError=(q:Question)=>{if(!touched||!q.required)return"";const v=answers[q.id];return(Array.isArray(v)?v.length===0:v===null||v===undefined||String(v).trim()==="")?"Заполните обязательное поле":"";};
 
@@ -206,7 +220,7 @@ export default function PublicFormPage({params}:{params:Promise<{slug:string}>})
     if(cfg?.enabled&&!pickedSlot){setErr("Сначала выберите дату и время.");setStep("time");return;}
     setSubmitting(true);
     const{data,error}=await supabase.rpc("submit_vizzy_form_booking",{
-      p_slug:form.slug,p_session_id:sessionId,p_name:name.trim(),p_email:email.trim(),p_phone:phone.trim(),
+      p_slug:form.slug,p_session_id:sessionId,p_name:contactName(),p_email:contactEmail(),p_phone:contactPhone(),
       p_answers:answers,p_start_at:pickedSlot?.startIso||null,
       p_source:document.referrer||"direct",p_page_url:location.href,p_visitor_tz:visitorTz,
     });
@@ -232,15 +246,15 @@ export default function PublicFormPage({params}:{params:Promise<{slug:string}>})
   return <div className="vf-page" style={{"--vf-accent":accent} as React.CSSProperties}>
     <style>{`
       @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;350;400;450;500;600&display=swap");
-      :root{color-scheme:light dark}.vf-page{--vf-bg:#f5f6f8;--vf-panel:#fff;--vf-panel-soft:#fafafa;--vf-input:#fff;--vf-text:#172033;--vf-muted:#7c8492;--vf-muted-strong:#4f5968;--vf-border:#e2e5ea;min-height:100vh;background:var(--vf-bg);color:var(--vf-text);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-weight:350;letter-spacing:-.008em;padding:28px;display:flex;align-items:flex-start;justify-content:center;box-sizing:border-box}.vf-shell{width:min(1180px,100%);background:var(--vf-panel);border:1px solid var(--vf-border);border-radius:10px;box-shadow:0 10px 32px rgba(16,24,40,.06);overflow:hidden;display:grid;grid-template-columns:300px minmax(0,1fr)}.vf-info{padding:34px 30px;border-right:1px solid var(--vf-border);background:var(--vf-panel-soft);min-width:0}.vf-main{padding:34px 36px;min-width:0}.vf-time-grid{display:grid;grid-template-columns:minmax(360px,1fr) 220px;gap:34px;align-items:start}.vf-calendar{min-width:0}.vf-slots{min-width:0}.vf-day{aspect-ratio:1;border:0;border-radius:50%;background:transparent;color:var(--vf-muted);font-size:13px;font-weight:350;cursor:default}.vf-day.available{cursor:pointer;color:var(--vf-accent);background:color-mix(in srgb,var(--vf-accent) 8%,transparent);font-weight:450}.vf-day.selected{background:var(--vf-accent);color:#fff}.vf-slot{width:100%;height:46px;border:1px solid color-mix(in srgb,var(--vf-accent) 68%,var(--vf-border));border-radius:8px;background:transparent;color:var(--vf-accent);font-size:14px;font-weight:500;cursor:pointer}.vf-slot:hover{background:color-mix(in srgb,var(--vf-accent) 7%,transparent)}.vf-fields{display:grid;grid-template-columns:1fr 1fr;gap:16px}.vf-field.full{grid-column:1/-1}.vf-error{font-size:12px;color:#d14343;margin-top:6px}.vf-primary{height:46px;border:0;border-radius:8px;background:var(--vf-accent);color:#fff;font-size:14px;font-weight:500;padding:0 20px;cursor:pointer}.vf-primary:disabled{opacity:.45;cursor:not-allowed}.vf-secondary{height:38px;border:1px solid var(--vf-border);border-radius:8px;background:transparent;color:var(--vf-muted-strong);font-size:13px;padding:0 12px;cursor:pointer}.vf-loader,.vf-unavailable{margin:auto;color:var(--vf-muted);font-size:14px}.vf-unavailable{text-align:center;padding:36px}.vf-unavailable-title{font-size:19px;color:var(--vf-text);font-weight:500;margin-bottom:8px}.vf-radio{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--vf-muted-strong);cursor:pointer;padding:7px 0}.vf-check-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px 14px}.vf-scale{display:grid;grid-template-columns:repeat(10,1fr);gap:6px}.vf-scale button{height:36px;border-radius:7px;border:1px solid var(--vf-border);background:transparent;color:var(--vf-muted-strong);cursor:pointer}.vf-scale button.on{background:var(--vf-accent);border-color:var(--vf-accent);color:#fff}.vf-media{width:100%;max-height:310px;object-fit:cover;border-radius:10px;border:1px solid var(--vf-border);margin-top:18px}.vf-video{width:100%;aspect-ratio:16/9;border:0;border-radius:10px;margin-top:18px;background:#000}.vf-footer{margin-top:28px;padding-top:18px;border-top:1px solid var(--vf-border);font-size:11px;color:var(--vf-muted);display:flex;align-items:center;justify-content:space-between;gap:12px}.vf-brand{font-weight:500;letter-spacing:.08em;color:var(--vf-muted-strong)}.vf-tz-wrap{margin-top:22px;padding-top:18px;border-top:1px solid var(--vf-border)}.vf-tz-label{font-size:11px;color:var(--vf-muted);margin-bottom:8px}.vf-tz-select{width:100%;height:42px;border:1px solid var(--vf-border);border-radius:8px;background:var(--vf-input);color:var(--vf-text);padding:0 12px;font:350 12.5px Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;outline:none}.vf-tz-note{font-size:11.5px;color:var(--vf-muted);line-height:1.55;margin-top:9px}
+      :root{color-scheme:light dark}.vf-page{--vf-bg:#f5f6f8;--vf-panel:#fff;--vf-panel-soft:#fafafa;--vf-input:#fff;--vf-text:#172033;--vf-muted:#7c8492;--vf-muted-strong:#4f5968;--vf-border:#e2e5ea;min-height:100vh;background:var(--vf-bg);color:var(--vf-text);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-weight:300;letter-spacing:-.006em;padding:28px;display:flex;box-sizing:border-box;overflow-x:hidden}.vf-page *{box-sizing:border-box;min-width:0}.vf-shell{margin:auto;width:min(1180px,100%);background:var(--vf-panel);border:1px solid var(--vf-border);border-radius:10px;box-shadow:0 10px 32px rgba(16,24,40,.06);overflow:hidden;display:grid;grid-template-columns:300px minmax(0,1fr)}.vf-info{padding:34px 30px;border-right:1px solid var(--vf-border);background:var(--vf-panel-soft);min-width:0}.vf-main{padding:34px 36px;min-width:0}.vf-time-grid{display:grid;grid-template-columns:minmax(360px,1fr) 220px;gap:34px;align-items:start}.vf-calendar{min-width:0}.vf-slots{min-width:0}.vf-day{aspect-ratio:1;border:0;border-radius:50%;background:transparent;color:var(--vf-muted);font-size:13px;font-weight:350;cursor:default}.vf-day.available{cursor:pointer;color:var(--vf-accent);background:color-mix(in srgb,var(--vf-accent) 8%,transparent);font-weight:400}.vf-day.selected{background:var(--vf-accent);color:#fff}.vf-slot{width:100%;height:46px;border:1px solid color-mix(in srgb,var(--vf-accent) 68%,var(--vf-border));border-radius:8px;background:transparent;color:var(--vf-accent);font-size:14px;font-weight:400;cursor:pointer}.vf-slot:hover{background:color-mix(in srgb,var(--vf-accent) 7%,transparent)}.vf-fields{display:grid;grid-template-columns:1fr 1fr;gap:16px}.vf-field.full{grid-column:1/-1;max-width:100%;overflow:hidden}.vf-field input,.vf-field textarea,.vf-field select{max-width:100%}.vf-error{font-size:12px;color:#d14343;margin-top:6px}.vf-primary{max-width:100%;height:46px;border:0;border-radius:8px;background:var(--vf-accent);color:#fff;font-size:14px;font-weight:400;padding:0 20px;cursor:pointer}.vf-primary:disabled{opacity:.45;cursor:not-allowed}.vf-secondary{height:38px;border:1px solid var(--vf-border);border-radius:8px;background:transparent;color:var(--vf-muted-strong);font-size:13px;padding:0 12px;cursor:pointer}.vf-loader,.vf-unavailable{margin:auto;color:var(--vf-muted);font-size:14px}.vf-unavailable{text-align:center;padding:36px}.vf-unavailable-title{font-size:19px;color:var(--vf-text);font-weight:400;margin-bottom:8px}.vf-radio{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--vf-muted-strong);cursor:pointer;padding:7px 0}.vf-check-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px 14px}.vf-scale{display:grid;grid-template-columns:repeat(10,1fr);gap:6px}.vf-scale button{height:36px;border-radius:7px;border:1px solid var(--vf-border);background:transparent;color:var(--vf-muted-strong);cursor:pointer}.vf-scale button.on{background:var(--vf-accent);border-color:var(--vf-accent);color:#fff}.vf-media{width:100%;max-height:310px;object-fit:cover;border-radius:10px;border:1px solid var(--vf-border);margin-top:18px}.vf-video{width:100%;aspect-ratio:16/9;border:0;border-radius:10px;margin-top:18px;background:#000}.vf-logo{display:inline-flex;align-items:center;gap:8px;margin-bottom:20px;color:var(--vf-text)}.vf-logo-mark{width:18px;height:18px;display:block}.vf-logo-text{font-size:12px;font-weight:500;letter-spacing:.16em}.vf-footer{margin-top:28px;padding-top:18px;border-top:1px solid var(--vf-border);font-size:11px;color:var(--vf-muted);display:flex;align-items:center;justify-content:space-between;gap:12px}.vf-brand{font-weight:400;letter-spacing:.08em;color:var(--vf-muted-strong)}.vf-tz-wrap{margin-top:22px;padding-top:18px;border-top:1px solid var(--vf-border)}.vf-tz-label{font-size:11px;color:var(--vf-muted);margin-bottom:8px}.vf-tz-select{width:100%;height:42px;border:1px solid var(--vf-border);border-radius:8px;background:var(--vf-input);color:var(--vf-text);padding:0 12px;font:350 12.5px Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;outline:none}.vf-tz-note{font-size:11.5px;color:var(--vf-muted);line-height:1.55;margin-top:9px}
       @media(prefers-color-scheme:dark){.vf-page{--vf-bg:#0b0b0c;--vf-panel:#151516;--vf-panel-soft:#111112;--vf-input:#1b1b1d;--vf-text:#ececef;--vf-muted:#8a8a92;--vf-muted-strong:#b7b7bd;--vf-border:rgba(255,255,255,.09)}.vf-shell{box-shadow:0 18px 48px rgba(0,0,0,.35)}}
-      @media(max-width:900px){.vf-page{padding:14px}.vf-shell{grid-template-columns:1fr}.vf-info{border-right:0;border-bottom:1px solid var(--vf-border);padding:24px}.vf-main{padding:24px}.vf-time-grid{grid-template-columns:1fr}.vf-slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.vf-slots .vf-slot{margin:0!important}}
-      @media(max-width:620px){.vf-page{padding:0;background:var(--vf-panel)}.vf-shell{border-radius:0;border-left:0;border-right:0;box-shadow:none}.vf-info,.vf-main{padding:20px}.vf-fields{grid-template-columns:1fr}.vf-field.full{grid-column:auto}.vf-slots{grid-template-columns:repeat(2,1fr)}.vf-check-grid{grid-template-columns:1fr}.vf-scale{grid-template-columns:repeat(5,1fr)}}
+      @media(max-width:900px){.vf-page{padding:14px}.vf-shell{margin:auto;width:100%}.vf-shell{grid-template-columns:1fr}.vf-info{border-right:0;border-bottom:1px solid var(--vf-border);padding:24px}.vf-main{padding:24px}.vf-time-grid{grid-template-columns:1fr}.vf-slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.vf-slots .vf-slot{margin:0!important}}
+      @media(max-width:620px){.vf-page{padding:0;background:var(--vf-panel);display:block}.vf-shell{width:100%;margin:0;overflow:hidden}.vf-shell{border-radius:0;border-left:0;border-right:0;box-shadow:none}.vf-info,.vf-main{padding:20px}.vf-fields{grid-template-columns:1fr}.vf-field.full{grid-column:auto}.vf-slots{grid-template-columns:repeat(2,1fr)}.vf-check-grid{grid-template-columns:1fr}.vf-scale{grid-template-columns:repeat(5,minmax(0,1fr))}.vf-main>div{max-width:100%}.vf-secondary{white-space:nowrap}.vf-footer{flex-wrap:wrap}.vf-tz-select{font-size:12px}.vf-time-grid{gap:22px}}@media(max-width:420px){.vf-info,.vf-main{padding:18px 16px}.vf-slots{grid-template-columns:1fr}.vf-scale{grid-template-columns:repeat(5,minmax(0,1fr))}.vf-day{font-size:12px}.vf-primary{width:100%}}
     `}</style>
 
     <div className="vf-shell">
       <aside className="vf-info">
-        <div style={{fontSize:11,fontWeight:600,letterSpacing:".12em",textTransform:"uppercase",color:"var(--vf-accent)",marginBottom:10}}>Vizzy Form</div>
+        <div className="vf-logo" aria-label="Vizzy"><svg className="vf-logo-mark" viewBox="0 0 24 24" fill="none"><path d="M4 5.5 10.2 18 13 12.3 16 18 20 5.5" stroke="var(--vf-accent)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg><span className="vf-logo-text">VIZZY</span></div>
         <h1 style={{fontSize:26,lineHeight:1.18,fontWeight:590,letterSpacing:"-.025em",margin:"0 0 18px"}}>{form.title}</h1>
         {cfg?.enabled&&<div style={{display:"flex",flexDirection:"column",gap:11,marginBottom:20}}>
           <div style={{display:"flex",alignItems:"center",gap:9,fontSize:13,color:"var(--vf-muted-strong)"}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>{cfg.duration} минут</div>
@@ -278,15 +292,12 @@ export default function PublicFormPage({params}:{params:Promise<{slug:string}>})
 
         {step==="form"&&<>
           <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:14,marginBottom:24}}>
-            <div><div style={{fontSize:22,fontWeight:580,letterSpacing:"-.02em"}}>Ваши данные</div><div style={{fontSize:12.5,color:"var(--vf-muted)",marginTop:5}}>Все вопросы находятся на одной странице.</div></div>
+            <div><div style={{fontSize:22,fontWeight:400,letterSpacing:"-.02em"}}>Заполните форму</div></div>
             {cfg?.enabled&&<button className="vf-secondary" onClick={()=>setStep("time")}>Изменить время</button>}
           </div>
           {pickedSlot&&<div style={{padding:"11px 13px",border:"1px solid var(--vf-border)",borderRadius:8,background:"var(--vf-panel-soft)",fontSize:13,color:"var(--vf-muted-strong)",marginBottom:20}}>Выбрано: <b style={{fontWeight:600,color:"var(--vf-text)"}}>{selectedDateLabel}</b></div>}
           <div className="vf-fields">
-            <div className="vf-field"><label style={labelStyle}>Имя *</label><input style={inputStyle} value={name} onChange={e=>setName(e.target.value)} placeholder="Как к вам обращаться"/>{touched&&name.trim().length<2&&<div className="vf-error">Введите имя</div>}</div>
-            <div className="vf-field"><label style={labelStyle}>Email *</label><input style={inputStyle} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com"/>{touched&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())&&<div className="vf-error">Проверьте email</div>}</div>
-            <div className="vf-field full"><label style={labelStyle}>Телефон</label><input style={inputStyle} type="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+7 900 000-00-00"/></div>
-
+            {visibleQuestions.length===0&&<div className="vf-field full" style={{padding:"18px",border:"1px solid var(--vf-border)",borderRadius:8,color:"var(--vf-muted)",fontSize:13}}>В этой форме пока нет вопросов.</div>}
             {visibleQuestions.map(q=>{
               const error=fieldError(q);const opts=(q.options||[]).filter(Boolean);const cls="vf-field full";
               return<div key={q.id} className={cls}>
