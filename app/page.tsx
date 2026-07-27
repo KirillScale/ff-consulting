@@ -6412,7 +6412,7 @@ function ProSlidePreview({
   </button>;
 }
 
-async function generatePresentationOutline(form:{theme:string;goal:string;message:string;count:number}){
+async function generatePresentationOutline(form:{theme:string;goal:string;message:string;count:number}):Promise<Array<{title:string;body:string}>>{
   const system="Ты — сильный редактор деловых презентаций. Создаёшь ясную структуру, без воды. Возвращаешь только валидный JSON без markdown.";
   const user=`Создай структуру презентации.
 
@@ -6482,7 +6482,7 @@ function VizzySlidesPro({userId}:{userId:string}){
     setGenerating(true);setErr("");
     try{
       const outline=await generatePresentationOutline({theme,goal,message,count});
-      setSlides(outline.map(x=>defaultProSlide(x.title,x.body)));
+      setSlides(outline.map((x:{title:string;body:string})=>defaultProSlide(x.title,x.body)));
       setSelected(0);
       setStage("outline");
     }catch(e:any){
