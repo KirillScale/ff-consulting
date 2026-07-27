@@ -152,8 +152,10 @@ export default async function ShortLinkRedirect({
         referrer: h.get("referer") || "",
         device: detectDevice(h.get("user-agent") || ""),
       })
-      .then(() => {})
-      .catch(() => {});
+      .then(
+        () => {},
+        () => {}
+      );
   } catch {
     // намеренно игнорируем — аналитика не должна мешать переходу
   }
