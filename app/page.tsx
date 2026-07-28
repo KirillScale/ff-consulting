@@ -872,7 +872,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v4.5"; // fix CRM list JSX after Content OS integration
+  const APP_VERSION="v4.6"; // reliable Content saves, visible War Room tasks and calendar views
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
 
   // Clear stale localStorage on version change
@@ -9991,12 +9991,12 @@ ${fields}${vocab}
 
 function ContentPage({userId}:{userId:string}){
   const isMobile=useIsMobile();
-  const{data:items,add,update,remove}=useTable("content",userId);
+  const{data:items,add,update,remove,reload:reloadContent}=useTable("content",userId);
   const{data:contentTemplates,add:addTemplate,update:updateTemplate,remove:removeTemplate}=useTable("content_templates",userId);
   const{data:youtubeChannels,add:addYoutubeChannel,remove:removeYoutubeChannel}=useTable("youtube_channels",userId);
   const{data:contentTasks,add:addContentTask,update:updateContentTask,remove:removeContentTask}=useTable("planner_tasks",userId);
   const[show,setShow]=useState(false);
-  const[productionBusy,setProductionBusy]=useState<"tasks"|"audit"|"week"|null>(null);
+  const[productionBusy,setProductionBusy]=useState<"tasks"|"audit"|null>(null);
   const[contentAudit,setContentAudit]=useState("");
   const[showProduction,setShowProduction]=useState(false);
   const[editId,setEditId]=useState<string|null>(null);
@@ -10158,17 +10158,17 @@ ${existingScenario}`;
 
   const ensureCurrentContentSaved=async()=>{
     if(!f.topic?.trim())throw new Error("Сначала укажи тему контента");
-    const payload={
+    const payload:any={
       platform:f.platform||"instagram",
       type:f.content_format||f.type||"Публикация",
       content_format:f.content_format||f.type||"Публикация",
       youtube_channel_id:f.platform==="youtube"?(f.youtube_channel_id||null):null,
       template_id:f.template_id||null,
       icp:f.icp||"",
-      checklist:f.checklist||[],
+      checklist:Array.isArray(f.checklist)?f.checklist:[],
       broadcast_text:f.broadcast_text||"",
       topic:f.topic.trim(),
-      status:f.status||"idea",
+      status:editId?(f.status||"idea"):"idea",
       date:f.publish_date||f.date||null,
       publish_date:f.publish_date||f.date||null,
       scenario:f.scenario||"",
@@ -10177,10 +10177,17 @@ ${existingScenario}`;
       link:f.content_url||f.link||"",
       analytics:f.analytics||null,
     };
-    if(editId){await update(editId,payload);return editId;}
-    const row=await add(payload);
-    if(!row?.id)throw new Error("Не удалось сохранить карточку");
+    if(editId){
+      const{error}=await supabase.from("content").update(payload).eq("id",editId).eq("user_id",userId);
+      if(error)throw error;
+      await reloadContent();
+      return editId;
+    }
+    const{data:row,error}=await supabase.from("content").insert({...payload,user_id:userId}).select("id").single();
+    if(error)throw error;
+    if(!row?.id)throw new Error("Не удалось получить ID карточки");
     setEditId(row.id);
+    await reloadContent();
     return row.id as string;
   };
 
@@ -10226,11 +10233,12 @@ ${existingScenario}`;
         }));
       }
 
-      for(let index=0;index<plan.length;index++){
-        const p=plan[index];
+      const taskRows=plan.map((p:any,index:number)=>{
         const sourceStep=unfinished[index]||unfinished.find((x:any)=>x.title===p.title);
         const due=addDaysToDate(publicationDate,-Math.max(0,Number(p.days_before)||0));
-        await addContentTask({
+        const duration=Math.max(15,Math.round((Number(p.duration_minutes)||60)/15)*15);
+        return{
+          user_id:userId,
           title:String(p.title||sourceStep?.title||`Этап ${index+1}`),
           description:`Контент: ${f.topic}\nПлатформа: ${f.platform}\nФормат: ${f.content_format||f.type}`,
           due_date:due,
@@ -10244,11 +10252,15 @@ ${existingScenario}`;
           subtasks:[],
           content_id:contentId,
           content_checklist_item_id:sourceStep?.id||null,
-          duration_minutes:Math.max(15,Math.round((Number(p.duration_minutes)||60)/15)*15),
-          _duration:Math.max(15,Math.round((Number(p.duration_minutes)||60)/15)*15),
-        });
-      }
-      alert(`План реализации создан: ${plan.length} задач добавлено в War Room.`);
+          duration_minutes:duration,
+          _duration:duration,
+        };
+      });
+      const{data:created,error:createError}=await supabase.from("planner_tasks").insert(taskRows).select("id");
+      if(createError)throw createError;
+      if(!created?.length)throw new Error("Supabase не создал задачи");
+      window.dispatchEvent(new CustomEvent("ks-refresh",{detail:{table:"planner_tasks"}}));
+      alert(`План реализации создан: ${created.length} задач добавлено в War Room.`);
     }catch(e:any){alert(e?.message||"Не удалось создать план реализации");}
     finally{setProductionBusy(null);}
   };
@@ -10286,35 +10298,10 @@ ${existingScenario}`;
         checklist_total:Array.isArray(x.checklist)?x.checklist.length:0,
       }));
       const linked=contentTasks.filter((t:any)=>monthItems.some((x:any)=>x.id===t.content_id));
-      const prompt=`Проведи аудит контент-производства за ${contentMonthLabel}. Данные карточек: ${JSON.stringify(monthData)}. Связанные задачи War Room: ${JSON.stringify(linked.map((t:any)=>({title:t.title,date:t.due_date,done:t.done,status:t.completion_status})))}. Дай строго: 1) состояние, 2) узкие места, 3) перегруженные дни, 4) что перенести, 5) план на ближайшие 7 дней. Без эмодзи.`;
+      const prompt=`Проведи аудит только реально сохранённых и видимых карточек контент-производства за ${contentMonthLabel}. Данные карточек: ${JSON.stringify(monthData)}. Связанные задачи War Room: ${JSON.stringify(linked.map((t:any)=>({title:t.title,date:t.due_date,done:t.done,status:t.completion_status})))}. Дай строго: 1) состояние, 2) узкие места, 3) перегруженные дни, 4) что перенести, 5) план на ближайшие 7 дней. Без эмодзи.`;
       const result=await dsMessages([{role:"system",content:"Ты — операционный директор по контенту. Отвечай конкретно, структурно и без эмодзи."},{role:"user",content:prompt}],1800,0.35);
       setContentAudit(result||"Недостаточно данных для аудита.");
     }catch(e){setContentAudit("Не удалось провести аудит. Попробуй ещё раз.");}
-    finally{setProductionBusy(null);}
-  };
-
-  const generateWeekPlan=async()=>{
-    if(productionBusy)return;
-    setProductionBusy("week");
-    try{
-      const start=new Date();start.setHours(12,0,0,0);
-      const prompt=`Создай недельный контент-план из 7 карточек для бизнеса. Текущий контекст аудитории: ${f.icp||"эксперты и предприниматели"}. Используй только платформы Instagram, YouTube, Telegram и допустимые форматы: Instagram — Reels, Публикация, История; Telegram — Пост, История, Рассылка в боте; YouTube — Видео. Верни только JSON-массив: platform, content_format, topic, day_offset, short_brief. Без markdown и эмодзи.`;
-      const raw=await dsMessages([{role:"system",content:"Ты — стратег контента. Создавай сбалансированный и реалистичный недельный план."},{role:"user",content:prompt}],2000,0.5);
-      const parsed=JSON.parse(String(raw||"").replace(/```json|```/g,"").trim());
-      if(!Array.isArray(parsed))throw new Error();
-      for(const row of parsed.slice(0,14)){
-        const platform=["instagram","youtube","telegram"].includes(row.platform)?row.platform:"instagram";
-        const format=formatOptions(platform).includes(row.content_format)?row.content_format:formatOptions(platform)[0];
-        const date=ds(new Date(start.getFullYear(),start.getMonth(),start.getDate()+Math.max(0,Number(row.day_offset)||0)));
-        await add({
-          platform,type:format,content_format:format,topic:String(row.topic||"Новая публикация"),
-          status:"idea",date,publish_date:date,scenario:String(row.short_brief||""),
-          checklist:normalizeChecklist([],platform,format),icp:f.icp||"",broadcast_text:"",
-          content_url:"",link:"",cover_url:"",analytics:null,
-        });
-      }
-      alert("Недельный контент-план создан.");
-    }catch(e){alert("Не удалось создать недельный план. Проверь подключение ИИ и попробуй ещё раз.");}
     finally{setProductionBusy(null);}
   };
 
@@ -10370,22 +10357,22 @@ ${existingScenario}`;
   };
 
   const sub=async()=>{
-    if(!f.topic.trim())return;
-    const payload={
+    if(!f.topic?.trim()){alert("Укажи тему контента.");return;}
+    const payload:any={
       platform:f.platform||"instagram",
       type:f.content_format||f.type||"Публикация",
       content_format:f.content_format||f.type||"Публикация",
       youtube_channel_id:f.platform==="youtube"?(f.youtube_channel_id||null):null,
       template_id:f.template_id||null,
       icp:f.icp||"",
-      checklist:f.checklist||[],
+      checklist:Array.isArray(f.checklist)?f.checklist:[],
       broadcast_text:f.broadcast_text||"",
       topic:f.topic.trim(),
-      status:f.status||"idea",
-      date:f.publish_date||null,
-      publish_date:f.publish_date||null,
-      link:f.content_url||"",
-      content_url:f.content_url||"",
+      status:editId?(f.status||"idea"):"idea",
+      date:f.publish_date||f.date||null,
+      publish_date:f.publish_date||f.date||null,
+      link:f.content_url||f.link||"",
+      content_url:f.content_url||f.link||"",
       scenario:f.scenario||"",
       cover_url:f.cover_url||"",
       analytics:f.analytics||null,
@@ -10393,9 +10380,22 @@ ${existingScenario}`;
       deadline_dev:null,
       deadline_pub:null,
     };
-    if(editId){await update(editId,payload);setEditId(null);}
-    else{await add(payload);}
-    sF(emptyF());setShow(false);
+    try{
+      if(editId){
+        const{error}=await supabase.from("content").update(payload).eq("id",editId).eq("user_id",userId);
+        if(error)throw error;
+      }else{
+        const{error}=await supabase.from("content").insert({...payload,user_id:userId});
+        if(error)throw error;
+      }
+      await reloadContent();
+      setEditId(null);
+      sF(emptyF());
+      setShow(false);
+    }catch(e:any){
+      console.error("Content save failed",e);
+      alert(`Карточка не сохранена: ${e?.message||"неизвестная ошибка"}`);
+    }
   };
 
   const startEdit=(item:any)=>{
@@ -10424,6 +10424,8 @@ ${existingScenario}`;
     setEditId(item.id);setShow(true);
   };
 
+  const[contentCalView,setContentCalView]=useState<"month"|"week"|"3day">("week");
+  const[contentCalAnchor,setContentCalAnchor]=useState<Date>(()=>new Date());
   const[calDragId,setCalDragId]=useState<string|null>(null);
   const[calDragOver,setCalDragOver]=useState<string|null>(null); // dateStr
 
@@ -10441,6 +10443,7 @@ ${existingScenario}`;
     setCalDragId(null);setCalDragOver(null);
   };
 
+  const CONTENT_MONTHS=["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
   const CONTENT_STAGES=[
     {id:"idea",label:"Идея",color:C.t1,hint:"Концепции и темы ждут своей очереди"},
     {id:"progress",label:"Разработка",color:C.t1,hint:"Съёмка, написание текста, сбор материала"},
@@ -10461,14 +10464,43 @@ ${existingScenario}`;
   };
 
   const calDays=useMemo(()=>{
-    const first=new Date(calMonth.y,calMonth.m,1);
-    const last=new Date(calMonth.y,calMonth.m+1,0);
-    const days:any[]=[];
-    const startDay=first.getDay()===0?6:first.getDay()-1;
-    for(let i=0;i<startDay;i++)days.push(null);
-    for(let i=1;i<=last.getDate();i++)days.push(new Date(calMonth.y,calMonth.m,i));
-    return days;
-  },[calMonth]);
+    if(contentCalView==="month"){
+      const first=new Date(calMonth.y,calMonth.m,1);
+      const last=new Date(calMonth.y,calMonth.m+1,0);
+      const startOffset=(first.getDay()+6)%7;
+      const arr:(Date|null)[]=[];
+      for(let i=0;i<startOffset;i++)arr.push(null);
+      for(let d=1;d<=last.getDate();d++)arr.push(new Date(calMonth.y,calMonth.m,d));
+      while(arr.length%7)arr.push(null);
+      return arr;
+    }
+    const anchor=new Date(contentCalAnchor);
+    anchor.setHours(12,0,0,0);
+    if(contentCalView==="week"){
+      const monday=new Date(anchor);
+      monday.setDate(anchor.getDate()-((anchor.getDay()+6)%7));
+      return Array.from({length:7},(_,i)=>new Date(monday.getFullYear(),monday.getMonth(),monday.getDate()+i));
+    }
+    return Array.from({length:3},(_,i)=>new Date(anchor.getFullYear(),anchor.getMonth(),anchor.getDate()+i));
+  },[calMonth,contentCalView,contentCalAnchor]);
+
+  const moveContentCalendar=(delta:number)=>{
+    if(contentCalView==="month"){moveContentMonth(delta);return;}
+    setContentCalAnchor(prev=>new Date(prev.getFullYear(),prev.getMonth(),prev.getDate()+delta*(contentCalView==="week"?7:3)));
+  };
+  const resetContentCalendar=()=>{
+    const now=new Date();
+    setContentCalAnchor(now);
+    setCalMonth({y:now.getFullYear(),m:now.getMonth()});
+  };
+  const calendarRangeLabel=()=>{
+    if(contentCalView==="month")return contentMonthLabel;
+    const real=calDays.filter(Boolean) as Date[];
+    if(!real.length)return contentMonthLabel;
+    const first=real[0],last=real[real.length-1];
+    const fmt=(d:Date)=>`${d.getDate()} ${CONTENT_MONTHS[d.getMonth()].toLowerCase()}`;
+    return first.getFullYear()===last.getFullYear()?`${fmt(first)} — ${fmt(last)} ${last.getFullYear()}`:`${fmt(first)} ${first.getFullYear()} — ${fmt(last)} ${last.getFullYear()}`;
+  };
 
   const itemsForDay=(d:Date)=>filteredItems.filter((x:any)=>(x.publish_date||x.date)===ds(d));
 
@@ -10497,9 +10529,10 @@ ${existingScenario}`;
     const value=x.publish_date||x.date||"";
     return Boolean(value&&value>=monthStart&&value<=monthEnd);
   }),[items,monthStart,monthEnd]);
-  const contentMonthLabel=`${MS[calMonth.m]} ${calMonth.y}`;
+  const contentMonthLabel=`${CONTENT_MONTHS[calMonth.m]} ${calMonth.y}`;
   const moveContentMonth=(delta:number)=>setCalMonth(prev=>{
     const d=new Date(prev.y,prev.m+delta,1);
+    setContentCalAnchor(d);
     return{y:d.getFullYear(),m:d.getMonth()};
   });
   const resetContentMonth=()=>{const d=new Date();setCalMonth({y:d.getFullYear(),m:d.getMonth()});};
@@ -10558,12 +10591,8 @@ ${existingScenario}`;
           <div style={{fontSize:11.5,color:C.t2,marginTop:4}}>Планирование, задачи War Room и аудит производственного процесса.</div>
         </div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-          <button onClick={generateWeekPlan} disabled={!!productionBusy}
-            style={{height:36,padding:"0 13px",borderRadius:8,border:"1px solid "+C.bd,background:"transparent",color:C.t1,fontSize:12,cursor:productionBusy?"default":"pointer"}}>
-            {productionBusy==="week"?"Создание...":"Заполнить неделю"}
-          </button>
-          <button onClick={runContentAudit} disabled={!!productionBusy}
-            style={{height:36,padding:"0 13px",borderRadius:8,border:"none",background:C.t1,color:C.bg,fontSize:12,fontWeight:500,cursor:productionBusy?"default":"pointer"}}>
+          <button onClick={runContentAudit} disabled={!!productionBusy||monthItems.length===0}
+            style={{height:36,padding:"0 14px",borderRadius:8,border:"none",background:C.t1,color:C.bg,fontSize:12,fontWeight:500,cursor:productionBusy||monthItems.length===0?"default":"pointer",opacity:monthItems.length===0?.45:1}}>
             {productionBusy==="audit"?"Анализ...":"Провести аудит"}
           </button>
         </div>
@@ -10995,29 +11024,31 @@ ${existingScenario}`;
       </div>
 
 
-      <div style={{display:"flex",alignItems:isMobile?"flex-start":"center",justifyContent:"space-between",marginBottom:14,marginTop:30,flexWrap:"wrap",gap:10}}>
+      <div style={{display:"flex",alignItems:isMobile?"flex-start":"center",justifyContent:"space-between",marginBottom:14,marginTop:30,flexWrap:"wrap",gap:12}}>
         <div>
-          <div style={{fontSize:18,fontWeight:500,color:C.t1}}>Календарь публикаций · {contentMonthLabel}</div>
-          <div style={{fontSize:12,color:C.t2,marginTop:4}}>Перетаскивай карточки между днями — дата обновится и в Kanban.</div>
+          <div style={{fontSize:18,fontWeight:500,color:C.t1}}>Календарь публикаций</div>
+          <div style={{fontSize:12,color:C.t2,marginTop:4}}>{calendarRangeLabel()} · перетаскивание меняет дату карточки.</div>
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-          <div style={{height:34,padding:"0 11px",borderRadius:8,border:"1px solid "+C.bd,background:C.ib,color:C.t2,fontSize:11.5,display:"flex",alignItems:"center"}}>
-            Показано: <b style={{color:C.t1,fontWeight:600,marginLeft:5}}>{filteredItems.length}</b>
+          <div style={{display:"flex",padding:3,borderRadius:9,border:"1px solid "+C.bd,background:C.ib}}>
+            {([["month","Месяц"],["week","Неделя"],["3day","3 дня"]] as const).map(([id,label])=><button key={id} onClick={()=>setContentCalView(id)}
+              style={{height:30,padding:"0 11px",border:0,borderRadius:7,background:contentCalView===id?C.w:"transparent",color:contentCalView===id?C.t1:C.t2,fontSize:11.5,cursor:"pointer"}}>{label}</button>)}
           </div>
-          <button onClick={()=>{const d=selectedMonthDefaultDate();const base=emptyF();sF({...base,date:d,publish_date:d,checklist:normalizeChecklist([],base.platform,base.content_format)});setEditId(null);setShow(true);}}
-            style={{height:34,padding:"0 13px",borderRadius:8,border:"none",background:C.t1,color:C.bg,fontSize:12,fontWeight:500,cursor:"pointer"}}>
-            + Публикация
-          </button>
+          <button onClick={()=>moveContentCalendar(-1)} style={{width:34,height:34,borderRadius:8,border:"1px solid "+C.bd,background:C.w,color:C.t1,cursor:"pointer"}}>‹</button>
+          <button onClick={resetContentCalendar} style={{height:34,padding:"0 11px",borderRadius:8,border:"1px solid "+C.bd,background:C.w,color:C.t1,fontSize:11.5,cursor:"pointer"}}>Сегодня</button>
+          <button onClick={()=>moveContentCalendar(1)} style={{width:34,height:34,borderRadius:8,border:"1px solid "+C.bd,background:C.w,color:C.t1,cursor:"pointer"}}>›</button>
+          <button onClick={()=>{const d=contentCalView==="month"?selectedMonthDefaultDate():ds(contentCalAnchor);const base=emptyF();sF({...base,date:d,publish_date:d,checklist:normalizeChecklist([],base.platform,base.content_format)});setEditId(null);setShow(true);}}
+            style={{height:34,padding:"0 13px",borderRadius:8,border:"none",background:C.t1,color:C.bg,fontSize:12,fontWeight:500,cursor:"pointer"}}>+ Публикация</button>
         </div>
       </div>
 
       <Card style={{padding:0,overflowX:"auto",overflowY:"hidden"}}>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(7,minmax(118px,1fr))",borderBottom:"1px solid "+C.bd,background:C.ib,minWidth:isMobile?826:0}}>
-          {["Пн","Вт","Ср","Чт","Пт","Сб","Вс"].map(d=>(
+        <div style={{display:"grid",gridTemplateColumns:`repeat(${contentCalView==="3day"?3:7},minmax(118px,1fr))`,borderBottom:"1px solid "+C.bd,background:C.ib,minWidth:isMobile?(contentCalView==="3day"?420:826):0}}>
+          {(contentCalView==="3day"?(calDays.filter(Boolean) as Date[]).map(d=>["Вс","Пн","Вт","Ср","Чт","Пт","Сб"][d.getDay()]):["Пн","Вт","Ср","Чт","Пт","Сб","Вс"]).map(d=>(
             <div key={d} style={{padding:"10px",textAlign:"center",fontSize:11,fontWeight:700,color:C.t2,letterSpacing:0.5}}>{d}</div>
           ))}
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(7,minmax(118px,1fr))",minWidth:isMobile?826:0}}>
+        <div style={{display:"grid",gridTemplateColumns:`repeat(${contentCalView==="3day"?3:7},minmax(118px,1fr))`,minWidth:isMobile?(contentCalView==="3day"?420:826):0}}>
           {calDays.map((d,i)=>{
             const dateStr=d?ds(d):"";
             const dayItems=d?itemsForDay(d):[];
@@ -11037,7 +11068,7 @@ ${existingScenario}`;
               onClick={()=>{if(d&&!calDragId){sF({...emptyF(),publish_date:dateStr,date:dateStr});setEditId(null);setShow(true);}}}
               style={{
                 minHeight:124,padding:"7px",
-                borderRight:i%7!==6?"1px solid "+C.bd+"66":"none",
+                borderRight:i%(contentCalView==="3day"?3:7)!==(contentCalView==="3day"?2:6)?"1px solid "+C.bd+"66":"none",
                 borderBottom:"1px solid "+C.bd+"66",
                 background:isDragOver?"rgba(96,96,96,0.08)":(isT?"rgba(96,96,96,0.03)":"transparent"),
                 cursor:d?"pointer":"default",
