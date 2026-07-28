@@ -872,7 +872,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v3.4"; // corrected War Room calendar grid layout
+  const APP_VERSION="v3.8"; // fix remaining nullable resize expression
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
 
   // Clear stale localStorage on version change
@@ -2802,6 +2802,8 @@ function TaskPlanner({userId}:{userId:string}){
   const[subInput,setSubInput]=useState("");
   const[subDragId,setSubDragId]=useState<string|null>(null);
   const[subEditId,setSubEditId]=useState<string|null>(null);
+  const[calendarDrag,setCalendarDrag]=useState<{id:string,grabOffset:number}|null>(null);
+  const[calendarResize,setCalendarResize]=useState<{id:string,startY:number,startDuration:number,currentDuration:number}|null>(null);
   const[saving,setSaving]=useState(false);
   const[boardMode,setBoardMode]=useState<"today"|"3day"|"week">("3day");
   const boardModeDays:Record<string,number>={today:1,"3day":3,week:7};
@@ -2918,6 +2920,36 @@ function TaskPlanner({userId}:{userId:string}){
     else if(status==="done")update(t.id,{done:false,completion_status:"failed"});
     else update(t.id,{done:false,completion_status:"pending"});
   };
+  const snap15=(v:number)=>Math.round(v/15)*15;
+  const taskDuration=(t:any)=>Math.max(15,wrParseDuration(t.description)||Number(t._duration)||60);
+  const timeToMin=(v:string)=>{const[h,m]=wrNormTime(v||"09:00").split(":").map(Number);return h*60+m;};
+  const minToTime=(v:number)=>{const n=Math.max(0,Math.min(1439,snap15(v)));return String(Math.floor(n/60)).padStart(2,"0")+":"+String(n%60).padStart(2,"0");};
+  const saveTaskTiming=async(t:any,date:string,startMin:number,duration:number)=>{
+    const clean=wrCleanDescription(t.description||"");
+    await update(t.id,{
+      due_date:date,
+      due_time:minToTime(startMin),
+      description:wrComposeDescription(clean,Math.max(15,snap15(duration))),
+      updated_at:new Date().toISOString(),
+    });
+  };
+
+
+  useEffect(()=>{
+    if(!calendarResize)return;
+    const onMove=(e:MouseEvent)=>{
+      const next=Math.max(15,snap15(calendarResize.startDuration+(e.clientY-calendarResize.startY)));
+      setCalendarResize(s=>s?{...s,currentDuration:next}:s);
+    };
+    const onUp=async()=>{
+      const task=tasks.find((x:any)=>x.id===calendarResize.id);
+      if(task)await saveTaskTiming(task,task.due_date,timeToMin(task.due_time),calendarResize.currentDuration);
+      setCalendarResize(null);
+    };
+    window.addEventListener("mousemove",onMove);
+    window.addEventListener("mouseup",onUp);
+    return()=>{window.removeEventListener("mousemove",onMove);window.removeEventListener("mouseup",onUp);};
+  },[calendarResize,tasks]);
 
   const runWrAi=async(message:string)=>{
     const q=message.trim();
@@ -3078,9 +3110,9 @@ function TaskPlanner({userId}:{userId:string}){
           <div style={{display:"grid",gridTemplateColumns:`52px repeat(${colW},minmax(0,1fr))`,borderBottom:"1px solid "+bd,minHeight:30}}>
             <div style={{fontSize:9,color:C.t2,display:"flex",alignItems:"center",justifyContent:"center",textAlign:"center" as const}}>весь<br/>день</div>
             {dates.map((d,i)=>(
-              <div key={i} style={{borderLeft:"1px solid "+bd,padding:3,display:"flex",flexDirection:"column",gap:3,minWidth:0,overflow:"hidden"}}>
+              <div key={i} onDragOver={e=>e.preventDefault()} onDrop={async e=>{e.preventDefault();if(!calendarDrag)return;const task=tasks.find((x:any)=>x.id===calendarDrag.id);if(task)await update(task.id,{due_date:pd(d),updated_at:new Date().toISOString()});setCalendarDrag(null);}} style={{borderLeft:"1px solid "+bd,padding:3,display:"flex",flexDirection:"column",gap:3,minWidth:0,overflow:"hidden"}}>
                 {forDay(d).filter((t:any)=>!t.due_time).map((t:any)=>(
-                  <div key={t.id} onClick={e=>{e.stopPropagation();openEdit(t);}} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 6px",borderRadius:5,background:(t.color||"#64748B")+"1E",borderLeft:"2px solid "+(t.color||"#64748B"),cursor:"pointer",minWidth:0,width:"100%",maxWidth:"100%",boxSizing:"border-box",overflow:"hidden"}}>
+                  <div key={t.id} draggable onDragStart={e=>{setCalendarDrag({id:t.id,grabOffset:0});e.dataTransfer.effectAllowed="move";}} onDragEnd={()=>setCalendarDrag(null)} onClick={e=>{e.stopPropagation();openEdit(t);}} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 6px",borderRadius:5,background:(t.color||"#64748B")+"1E",borderLeft:"2px solid "+(t.color||"#64748B"),cursor:"pointer",minWidth:0,width:"100%",maxWidth:"100%",boxSizing:"border-box",overflow:"hidden"}}>
                     <span onClick={e=>cycleTaskStatus(t,e)} style={{width:11,height:11,borderRadius:3,border:"1.5px solid "+(t.completion_status==="failed"?"#DC2626":t.done?"#22C55E":(t.color||"#64748B")),background:t.completion_status==="failed"?"#DC2626":t.done?"#22C55E":"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>{t.completion_status==="failed"?<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><path d="M6 6l12 12M18 6L6 18"/></svg>:t.done&&<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}</span>
                     <span style={{fontSize:11,color:t.completion_status==="failed"?"#DC2626":C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.5:1}}>{t.title}</span>
                   </div>
@@ -3101,7 +3133,21 @@ function TaskPlanner({userId}:{userId:string}){
             const dateStr=pd(d);const isToday=dateStr===todayStr;
             const timed=packDay(forDay(d).filter((t:any)=>t.due_time));
             return(
-              <div key={ci} onClick={e=>{const box=(e.currentTarget as HTMLElement).getBoundingClientRect();const y=(e as any).clientY-box.top;let mn=HOUR_START*60+Math.round((y/HH*60)/15)*15;mn=Math.max(HOUR_START*60,Math.min(HOUR_END*60-15,mn));openNew(dateStr,String(Math.floor(mn/60)).padStart(2,"0")+":"+String(mn%60).padStart(2,"0"));}}
+              <div key={ci}
+                onClick={e=>{const box=(e.currentTarget as HTMLElement).getBoundingClientRect();const y=(e as any).clientY-box.top;let mn=HOUR_START*60+Math.round((y/HH*60)/15)*15;mn=Math.max(HOUR_START*60,Math.min(HOUR_END*60-15,mn));openNew(dateStr,String(Math.floor(mn/60)).padStart(2,"0")+":"+String(mn%60).padStart(2,"0"));}}
+                onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect="move";}}
+                onDrop={async e=>{
+                  e.preventDefault();e.stopPropagation();
+                  if(!calendarDrag)return;
+                  const task=tasks.find((x:any)=>x.id===calendarDrag.id);
+                  if(!task)return;
+                  const box=(e.currentTarget as HTMLElement).getBoundingClientRect();
+                  const y=e.clientY-box.top;
+                  let start=HOUR_START*60+snap15((y/HH)*60-calendarDrag.grabOffset);
+                  start=Math.max(HOUR_START*60,Math.min(HOUR_END*60-15,start));
+                  await saveTaskTiming(task,dateStr,start,taskDuration(task));
+                  setCalendarDrag(null);
+                }}
                 style={{position:"relative" as const,borderLeft:"1px solid "+bd,cursor:"pointer",minWidth:0,overflow:"hidden"}}>
                 {Array.from({length:HOURS},(_,h)=><div key={h} style={{height:HH,borderTop:h===0?"none":"1px solid "+(dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.05)"),boxSizing:"border-box" as const}}/>)}
                 {isToday&&nowMin>=HOUR_START*60&&nowMin<=HOUR_END*60&&(
@@ -3114,14 +3160,27 @@ function TaskPlanner({userId}:{userId:string}){
                   const wPct=100/it.laneCount;const leftPct=it.lane*wPct;
                   const showRange=height>=34;
                   return(
-                    <div key={t.id} onClick={e=>{e.stopPropagation();openEdit(t);}}
-                      style={{position:"absolute" as const,top,left:`calc(${leftPct}% + 2px)`,width:`calc(${wPct}% - 4px)`,height,borderRadius:6,background:(t.color||"#64748B")+(dark?"2B":"1C"),border:"1px solid "+(t.color||"#64748B")+"40",borderLeft:"3px solid "+(t.color||"#64748B"),padding:"3px 6px",overflow:"hidden",cursor:"pointer",boxSizing:"border-box" as const}}>
+                    <div key={t.id} draggable
+                      onDragStart={e=>{
+                        const card=(e.currentTarget as HTMLElement).getBoundingClientRect();
+                        const grabOffset=snap15(((e.clientY-card.top)/HH)*60);
+                        setCalendarDrag({id:t.id,grabOffset});
+                        e.dataTransfer.effectAllowed="move";
+                      }}
+                      onDragEnd={()=>setCalendarDrag(null)}
+                      onClick={e=>{e.stopPropagation();openEdit(t);}}
+                      style={{position:"absolute" as const,top,left:`calc(${leftPct}% + 2px)`,width:`calc(${wPct}% - 4px)`,height:calendarResize?.id===t.id?Math.max(20,((calendarResize?.currentDuration??taskDuration(t))/60)*HH-4):height,borderRadius:6,background:(t.color||"#64748B")+(dark?"2B":"1C"),border:"1px solid "+(t.color||"#64748B")+"40",borderLeft:"3px solid "+(t.color||"#64748B"),padding:"3px 6px 9px",overflow:"hidden",cursor:"grab",boxSizing:"border-box" as const}}>
                       <div style={{display:"flex",alignItems:"center",gap:4}}>
                         <span onClick={e=>cycleTaskStatus(t,e)} style={{width:11,height:11,borderRadius:3,border:"1.5px solid "+(t.completion_status==="failed"?"#DC2626":t.done?"#22C55E":(t.color||"#64748B")),background:t.completion_status==="failed"?"#DC2626":t.done?"#22C55E":"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>{t.completion_status==="failed"?<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><path d="M6 6l12 12M18 6L6 18"/></svg>:t.done&&<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}</span>
                         {prioDot(t.priority)}
                         <span style={{fontSize:11,fontWeight:500,color:t.completion_status==="failed"?"#DC2626":C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.55:1}}>{t.title}</span>
                       </div>
-                      {showRange&&<div style={{fontSize:9.5,color:C.t2,marginTop:1,paddingLeft:15,whiteSpace:"nowrap" as const,overflow:"hidden",textOverflow:"ellipsis"}}>{wrTimeRange(t)}</div>}
+                      {showRange&&<div style={{fontSize:9.5,color:C.t2,marginTop:1,paddingLeft:15,whiteSpace:"nowrap" as const,overflow:"hidden",textOverflow:"ellipsis"}}>{wrNormTime(t.due_time)}–{wrAddMin(wrNormTime(t.due_time),calendarResize?.id===t.id?(calendarResize?.currentDuration??taskDuration(t)):taskDuration(t))}</div>}
+                      <div
+                        onMouseDown={e=>{e.preventDefault();e.stopPropagation();setCalendarResize({id:t.id,startY:e.clientY,startDuration:taskDuration(t),currentDuration:taskDuration(t)});}}
+                        style={{position:"absolute",left:4,right:4,bottom:1,height:7,cursor:"ns-resize",display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+                        <span style={{width:28,height:2,borderRadius:2,background:"rgba(255,255,255,.45)"}}/>
+                      </div>
                     </div>
                   );
                 })}
@@ -3410,11 +3469,16 @@ function TaskPlanner({userId}:{userId:string}){
               <input type="time" value={wrNormTime(edit.due_time)} onChange={e=>setEdit((x:any)=>({...x,due_time:e.target.value}))} style={{width:"100%",padding:"10px 12px",border:"1px solid "+bd,borderRadius:9,fontSize:13,background:inputBg,color:C.t1,outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
             </div>
             {edit.due_time&&<div style={{width:130}}>
-              <label style={{fontSize:11,fontWeight:500,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:6,display:"block"}}>Длительность</label>
-              <select value={edit._duration||60} onChange={e=>setEdit((x:any)=>({...x,_duration:+e.target.value}))}
-                style={{width:"100%",padding:"10px 12px",border:"1px solid "+bd,borderRadius:9,fontSize:13,background:inputBg,color:C.t1,outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}>
-                {[15,30,45,60,90,120,180,240].map(m=><option key={m} value={m}>{m<60?m+" мин":(m%60===0?m/60+" ч":(m/60).toFixed(1)+" ч")}</option>)}
-              </select>
+              <label style={{fontSize:11,fontWeight:500,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:6,display:"block"}}>Конец</label>
+              <input type="time" step={900}
+                value={wrAddMin(wrNormTime(edit.due_time),edit._duration||60)}
+                onChange={e=>{
+                  const start=timeToMin(edit.due_time);
+                  const end=timeToMin(e.target.value);
+                  const dur=Math.max(15,snap15(end>start?end-start:end+1440-start));
+                  setEdit((x:any)=>({...x,_duration:dur}));
+                }}
+                style={{width:"100%",padding:"10px 12px",border:"1px solid "+bd,borderRadius:9,fontSize:13,background:inputBg,color:C.t1,outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
             </div>}
           </div>
           {edit.due_time&&<div style={{fontSize:11.5,color:C.t2,marginTop:-10,marginBottom:16}}>
