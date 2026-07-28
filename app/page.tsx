@@ -872,7 +872,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v2.8"; // simplified year map and task outcomes
+  const APP_VERSION="v3.1"; // fix week-only War Room type checks
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
 
   // Clear stale localStorage on version change
@@ -1941,11 +1941,17 @@ function TaskModal({task,taskType,userId,onClose}:{task:any,taskType:"kanban"|"g
 // Year map (Gantt-style) — full rewrite
 function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goals:any,goalUpdate:any,goalAdd:any,goalTasks:any}){
   const isMobile=useIsMobile();
+  const currentYear=new Date().getFullYear();
+  const years=Array.from({length:5},(_,i)=>currentYear+i);
+  const timelineStart=new Date(currentYear,0,1);
+  const timelineEnd=new Date(currentYear+5,0,1);
+  const totalMs=timelineEnd.getTime()-timelineStart.getTime();
+
   const[showForm,setShowForm]=useState(false);
   const[editGoal,setEditGoal]=useState<any|null>(null);
   const[openGoalId,setOpenGoalId]=useState<string|null>(null);
   const[subtaskText,setSubtaskText]=useState("");
-  const emptyGoal=()=>({name:"",description:"",start_date:"",end_date:""});
+  const emptyGoal=()=>({name:"",description:"",start_date:"",end_date:"",color:"#2F6BFF"});
   const[form,setForm]=useState(emptyGoal());
 
   const visibleGoals=(goals.data||[]).filter((g:any)=>!g.is_system_pinned);
@@ -1959,15 +1965,11 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
       start_date:form.start_date,
       end_date:form.end_date,
       deadline:form.end_date,
-      color:C.a,
-      goal_type:null,
-      target_income:null,
-      avg_check:null,
-      conversion:null,
+      color:form.color||"#2F6BFF",
+      goal_type:null,target_income:null,avg_check:null,conversion:null,
     });
     setForm(emptyGoal());setShowForm(false);
   };
-
   const saveEdit=async()=>{
     if(!editGoal||!canSave(editGoal))return;
     await goalUpdate(editGoal.id,{
@@ -1976,19 +1978,24 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
       start_date:editGoal.start_date,
       end_date:editGoal.end_date,
       deadline:editGoal.end_date,
+      color:editGoal.color||"#2F6BFF",
     });
     setEditGoal(null);
   };
 
-  const dateLabel=(v:string)=>{
-    if(!v)return"";
-    try{return new Date(v+"T12:00:00").toLocaleDateString("ru-RU",{day:"2-digit",month:"short",year:"numeric"});}
-    catch{return v;}
+  const clamp=(n:number,min:number,max:number)=>Math.max(min,Math.min(max,n));
+  const rangeStyle=(g:any)=>{
+    const s=new Date((g.start_date||`${currentYear}-01-01`)+"T12:00:00").getTime();
+    const e=new Date((g.end_date||g.start_date||`${currentYear}-01-02`)+"T12:00:00").getTime()+86400000;
+    const left=clamp((s-timelineStart.getTime())/totalMs*100,0,100);
+    const right=clamp((e-timelineStart.getTime())/totalMs*100,0,100);
+    return{left:`${left}%`,width:`${Math.max(.8,right-left)}%`};
   };
+  const dateLabel=(v:string)=>v?new Date(v+"T12:00:00").toLocaleDateString("ru-RU",{day:"2-digit",month:"short",year:"numeric"}):"";
 
   const renderForm=(value:any,setValue:(v:any)=>void,onSave:()=>void,title:string)=>(
-    <div style={{background:C.w,border:"1px solid "+C.bd,borderRadius:12,padding:isMobile?16:20,marginBottom:16}}>
-      <div style={{fontSize:15,fontWeight:500,color:C.t1,marginBottom:16}}>{title}</div>
+    <div style={{background:C.w,border:"1px solid "+C.bd,borderRadius:12,padding:isMobile?16:20,marginBottom:14}}>
+      <div style={{fontSize:15,fontWeight:500,color:C.t1,marginBottom:15}}>{title}</div>
       <div style={{display:"grid",gap:12}}>
         <div>
           <label style={{fontSize:11.5,color:C.t2,display:"block",marginBottom:6}}>Цель</label>
@@ -1996,120 +2003,118 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
             placeholder="Например: запустить новый продукт" style={{...iS(),fontSize:13,fontWeight:400}}/>
         </div>
         <div>
-          <label style={{fontSize:11.5,color:C.t2,display:"block",marginBottom:6}}>Описание <span style={{opacity:.65}}>необязательно</span></label>
+          <label style={{fontSize:11.5,color:C.t2,display:"block",marginBottom:6}}>Описание <span style={{opacity:.6}}>необязательно</span></label>
           <textarea value={value.description||""} onChange={e=>setValue({...value,description:e.target.value})}
-            placeholder="Коротко опиши результат" rows={3}
-            style={{...iS(),fontSize:13,fontWeight:400,resize:"vertical",minHeight:76,lineHeight:1.5,fontFamily:"'Inter',sans-serif"}}/>
+            rows={3} placeholder="Коротко опиши результат"
+            style={{...iS(),fontSize:13,fontWeight:400,resize:"vertical",minHeight:74,lineHeight:1.5,fontFamily:"'Inter',sans-serif"}}/>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12}}>
-          <div>
-            <label style={{fontSize:11.5,color:C.t2,display:"block",marginBottom:6}}>Начало</label>
-            <input type="date" value={value.start_date||""} onChange={e=>setValue({...value,start_date:e.target.value})} style={{...iS(),fontSize:13}}/>
-          </div>
-          <div>
-            <label style={{fontSize:11.5,color:C.t2,display:"block",marginBottom:6}}>Конец</label>
-            <input type="date" value={value.end_date||""} onChange={e=>setValue({...value,end_date:e.target.value})} style={{...iS(),fontSize:13}}/>
-          </div>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 110px",gap:12}}>
+          <div><label style={{fontSize:11.5,color:C.t2,display:"block",marginBottom:6}}>Начало</label>
+            <input type="date" value={value.start_date||""} onChange={e=>setValue({...value,start_date:e.target.value})} style={{...iS(),fontSize:13}}/></div>
+          <div><label style={{fontSize:11.5,color:C.t2,display:"block",marginBottom:6}}>Конец</label>
+            <input type="date" value={value.end_date||""} onChange={e=>setValue({...value,end_date:e.target.value})} style={{...iS(),fontSize:13}}/></div>
+          <div><label style={{fontSize:11.5,color:C.t2,display:"block",marginBottom:6}}>Цвет</label>
+            <input type="color" value={value.color||"#2F6BFF"} onChange={e=>setValue({...value,color:e.target.value})}
+              style={{width:"100%",height:40,border:"1px solid "+C.bd,borderRadius:8,background:C.ib,padding:4,cursor:"pointer"}}/></div>
         </div>
         <div style={{display:"flex",gap:8}}>
           <button onClick={onSave} disabled={!canSave(value)}
-            style={{padding:"9px 18px",borderRadius:8,border:"none",background:canSave(value)?C.a:C.ib,color:canSave(value)?"#fff":C.t2,fontSize:12.5,fontWeight:500,cursor:canSave(value)?"pointer":"default"}}>
-            Сохранить
-          </button>
+            style={{padding:"9px 17px",borderRadius:8,border:"none",background:canSave(value)?C.a:C.ib,color:canSave(value)?"#fff":C.t2,fontSize:12.5,fontWeight:500,cursor:canSave(value)?"pointer":"default"}}>Сохранить</button>
           <button onClick={()=>{setShowForm(false);setEditGoal(null);}}
-            style={{padding:"9px 16px",borderRadius:8,border:"1px solid "+C.bd,background:C.ib,color:C.t2,fontSize:12.5,cursor:"pointer"}}>
-            Отмена
-          </button>
+            style={{padding:"9px 15px",borderRadius:8,border:"1px solid "+C.bd,background:C.ib,color:C.t2,fontSize:12.5,cursor:"pointer"}}>Отмена</button>
         </div>
       </div>
     </div>
   );
 
+  const minTimelineWidth=isMobile?980:760;
+
   return <div>
-    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:16}}>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:14}}>
       <div>
         <h2 style={{margin:0,fontSize:isMobile?18:20,fontWeight:500,color:C.t1,letterSpacing:"-.02em"}}>Карта года</h2>
-        <div style={{fontSize:12,color:C.t2,marginTop:4}}>Цели, сроки и подзадачи без лишней сложности</div>
+        <div style={{fontSize:12,color:C.t2,marginTop:4}}>Цели на временной шкале ближайших пяти лет</div>
       </div>
       <button onClick={()=>{setShowForm(true);setEditGoal(null);}}
-        style={{padding:"9px 16px",background:C.a,color:"#fff",border:"none",borderRadius:8,fontSize:12.5,fontWeight:500,cursor:"pointer"}}>
-        + Цель
-      </button>
+        style={{padding:"9px 16px",background:C.a,color:"#fff",border:"none",borderRadius:8,fontSize:12.5,fontWeight:500,cursor:"pointer"}}>+ Цель</button>
     </div>
 
     {showForm&&renderForm(form,setForm,saveNew,"Новая цель")}
     {editGoal&&renderForm(editGoal,setEditGoal,saveEdit,"Изменить цель")}
 
-    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(2,minmax(0,1fr))",gap:12}}>
-      {visibleGoals.map((g:any)=>{
-        const open=openGoalId===g.id;
-        const subtasks=(goalTasks.data||[]).filter((t:any)=>t.goal_id===g.id&&t.type!=="delegate");
-        const doneCount=subtasks.filter((t:any)=>t.done||t.status==="done").length;
-        const pct=subtasks.length?Math.round(doneCount/subtasks.length*100):0;
-        return <div key={g.id} style={{background:C.w,border:"1px solid "+C.bd,borderRadius:12,overflow:"hidden"}}>
-          <button onClick={()=>setOpenGoalId(open?null:g.id)}
-            style={{width:"100%",textAlign:"left",padding:isMobile?15:17,background:"transparent",border:"none",cursor:"pointer",color:C.t1}}>
-            <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
-              <div style={{width:8,height:8,borderRadius:"50%",background:C.a,marginTop:6,flexShrink:0}}/>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:14,fontWeight:500,lineHeight:1.35}}>{g.name}</div>
-                {g.description&&<div style={{fontSize:12,color:C.t2,lineHeight:1.5,marginTop:6,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{g.description}</div>}
-                <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginTop:10,fontSize:11.5,color:C.t2}}>
-                  <span>{dateLabel(g.start_date)}</span><span>—</span><span>{dateLabel(g.end_date)}</span>
-                  {subtasks.length>0&&<span style={{marginLeft:"auto"}}>{doneCount}/{subtasks.length}</span>}
+    <div style={{background:C.w,border:"1px solid "+C.bd,borderRadius:12,overflow:"hidden"}}>
+      <div style={{overflowX:"auto"}}>
+        <div style={{minWidth:minTimelineWidth}}>
+          <div style={{display:"grid",gridTemplateColumns:"220px 1fr",borderBottom:"1px solid "+C.bd}}>
+            <div style={{padding:"12px 16px",fontSize:11.5,color:C.t2}}>Цель</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",position:"relative"}}>
+              {years.map(y=><div key={y} style={{padding:"12px 10px",fontSize:11.5,color:C.t2,borderLeft:"1px solid "+C.bd,textAlign:"center"}}>{y}</div>)}
+            </div>
+          </div>
+
+          {visibleGoals.map((g:any)=>{
+            const open=openGoalId===g.id;
+            const subtasks=(goalTasks.data||[]).filter((t:any)=>t.goal_id===g.id&&t.type!=="delegate");
+            const done=subtasks.filter((t:any)=>t.done||t.status==="done").length;
+            const rs=rangeStyle(g);
+            return <div key={g.id} style={{borderBottom:"1px solid "+C.bd}}>
+              <button onClick={()=>setOpenGoalId(open?null:g.id)}
+                style={{width:"100%",display:"grid",gridTemplateColumns:"220px 1fr",background:"transparent",border:"none",padding:0,cursor:"pointer",textAlign:"left"}}>
+                <div style={{padding:"14px 16px",minWidth:0}}>
+                  <div style={{display:"flex",alignItems:"center",gap:9}}>
+                    <span style={{width:8,height:8,borderRadius:"50%",background:g.color||C.a,flexShrink:0}}/>
+                    <span style={{fontSize:13.5,fontWeight:500,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{g.name}</span>
+                  </div>
+                  <div style={{fontSize:11,color:C.t2,marginTop:6,paddingLeft:17}}>{dateLabel(g.start_date)} — {dateLabel(g.end_date)}</div>
                 </div>
-                {subtasks.length>0&&<div style={{height:3,background:C.bd,borderRadius:2,overflow:"hidden",marginTop:9}}>
-                  <div style={{width:pct+"%",height:"100%",background:C.a,borderRadius:2}}/>
-                </div>}
-              </div>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><polyline points={open?"18 15 12 9 6 15":"6 9 12 15 18 9"}/></svg>
-            </div>
-          </button>
-
-          {open&&<div style={{borderTop:"1px solid "+C.bd,padding:isMobile?15:17,background:C.ib}}>
-            <div style={{display:"flex",gap:8,marginBottom:14}}>
-              <button onClick={()=>{setEditGoal({...g});setShowForm(false);}}
-                style={{padding:"7px 13px",borderRadius:7,border:"none",background:"#2F6BFF",color:"#fff",fontSize:12,fontWeight:500,cursor:"pointer"}}>
-                Изменить
+                <div style={{position:"relative",minHeight:66,backgroundImage:`repeating-linear-gradient(to right,transparent 0,transparent calc(20% - 1px),${C.bd} calc(20% - 1px),${C.bd} 20%)`}}>
+                  <div style={{position:"absolute",top:20,height:26,borderRadius:7,background:g.color||C.a,left:rs.left,width:rs.width,minWidth:12,display:"flex",alignItems:"center",padding:"0 9px",boxSizing:"border-box",overflow:"hidden"}}>
+                    <span style={{fontSize:11,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{g.name}</span>
+                  </div>
+                </div>
               </button>
-              <button onClick={()=>{if(confirm("Удалить цель?"))goals.remove(g.id);}}
-                style={{padding:"7px 13px",borderRadius:7,border:"none",background:"#DC2626",color:"#fff",fontSize:12,fontWeight:500,cursor:"pointer"}}>
-                Удалить
-              </button>
-            </div>
 
-            <div style={{fontSize:11.5,fontWeight:500,color:C.t2,marginBottom:8}}>Подзадачи</div>
-            <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:10}}>
-              {subtasks.map((t:any)=>{
-                const done=t.done||t.status==="done";
-                return <div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:C.w,border:"1px solid "+C.bd,borderRadius:8}}>
-                  <button onClick={()=>goalTasks.update(t.id,{done:!done,status:!done?"done":"todo"})}
-                    style={{width:16,height:16,borderRadius:4,border:"1.5px solid "+(done?C.a:C.bd),background:done?C.a:"transparent",padding:0,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                    {done&&<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}
-                  </button>
-                  <span style={{flex:1,fontSize:12.5,color:C.t1,textDecoration:done?"line-through":"none",opacity:done?.55:1}}>{t.text}</span>
-                  <button onClick={()=>goalTasks.remove(t.id)} style={{border:"none",background:"transparent",color:C.t2,cursor:"pointer",padding:2}}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
-                  </button>
-                </div>;
-              })}
-              {subtasks.length===0&&<div style={{fontSize:12,color:C.t2}}>Подзадач пока нет</div>}
-            </div>
-            <div style={{display:"flex",gap:8}}>
-              <input value={openGoalId===g.id?subtaskText:""} onChange={e=>setSubtaskText(e.target.value)}
-                onKeyDown={e=>{if(e.key==="Enter"&&subtaskText.trim()){goalTasks.add({goal_id:g.id,text:subtaskText.trim(),mins:0,type:"",date:null,done:false,status:"todo",sort_order:subtasks.length});setSubtaskText("");}}}
-                placeholder="Добавить подзадачу" style={{...iS(),flex:1,fontSize:12.5}}/>
-              <button onClick={()=>{if(subtaskText.trim()){goalTasks.add({goal_id:g.id,text:subtaskText.trim(),mins:0,type:"",date:null,done:false,status:"todo",sort_order:subtasks.length});setSubtaskText("");}}}
-                style={{padding:"0 14px",borderRadius:8,border:"none",background:C.a,color:"#fff",fontSize:12,fontWeight:500,cursor:"pointer"}}>Добавить</button>
-            </div>
-          </div>}
-        </div>;
-      })}
+              {open&&<div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"220px 1fr",borderTop:"1px solid "+C.bd,background:C.ib}}>
+                <div style={{padding:"14px 16px"}}>
+                  {g.description&&<div style={{fontSize:12,color:C.t2,lineHeight:1.55,marginBottom:12}}>{g.description}</div>}
+                  <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
+                    <button onClick={()=>{setEditGoal({...g});setShowForm(false);}}
+                      style={{padding:"7px 12px",borderRadius:7,border:"none",background:"#2F6BFF",color:"#fff",fontSize:12,fontWeight:500,cursor:"pointer"}}>Изменить</button>
+                    <button onClick={()=>{if(confirm("Удалить цель?"))goals.remove(g.id);}}
+                      style={{padding:"7px 12px",borderRadius:7,border:"none",background:"#DC2626",color:"#fff",fontSize:12,fontWeight:500,cursor:"pointer"}}>Удалить</button>
+                  </div>
+                </div>
+                <div style={{padding:"14px 16px",borderLeft:isMobile?"none":"1px solid "+C.bd}}>
+                  <div style={{fontSize:11.5,fontWeight:500,color:C.t2,marginBottom:8}}>Подзадачи {subtasks.length?`· ${done}/${subtasks.length}`:""}</div>
+                  <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:9}}>
+                    {subtasks.map((t:any)=>{
+                      const checked=t.done||t.status==="done";
+                      return <div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:C.w,border:"1px solid "+C.bd,borderRadius:8}}>
+                        <button onClick={()=>goalTasks.update(t.id,{done:!checked,status:!checked?"done":"todo"})}
+                          style={{width:16,height:16,borderRadius:4,border:"1.5px solid "+(checked?C.a:C.bd),background:checked?C.a:"transparent",padding:0,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                          {checked&&<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}
+                        </button>
+                        <span style={{flex:1,fontSize:12.5,color:C.t1,textDecoration:checked?"line-through":"none",opacity:checked?.55:1}}>{t.text}</span>
+                        <button onClick={()=>goalTasks.remove(t.id)} style={{border:"none",background:"transparent",color:C.t2,cursor:"pointer",padding:2}}>×</button>
+                      </div>;
+                    })}
+                  </div>
+                  <div style={{display:"flex",gap:8}}>
+                    <input value={openGoalId===g.id?subtaskText:""} onChange={e=>setSubtaskText(e.target.value)}
+                      onKeyDown={e=>{if(e.key==="Enter"&&subtaskText.trim()){goalTasks.add({goal_id:g.id,text:subtaskText.trim(),mins:0,type:"",date:null,done:false,status:"todo",sort_order:subtasks.length});setSubtaskText("");}}}
+                      placeholder="Добавить подзадачу" style={{...iS(),flex:1,fontSize:12.5}}/>
+                    <button onClick={()=>{if(subtaskText.trim()){goalTasks.add({goal_id:g.id,text:subtaskText.trim(),mins:0,type:"",date:null,done:false,status:"todo",sort_order:subtasks.length});setSubtaskText("");}}}
+                      style={{padding:"0 13px",borderRadius:8,border:"none",background:C.a,color:"#fff",fontSize:12,fontWeight:500,cursor:"pointer"}}>Добавить</button>
+                  </div>
+                </div>
+              </div>}
+            </div>;
+          })}
+
+          {visibleGoals.length===0&&<div style={{padding:"46px 20px",textAlign:"center",color:C.t2,fontSize:13}}>Целей пока нет</div>}
+        </div>
+      </div>
     </div>
-
-    {visibleGoals.length===0&&<div style={{padding:"50px 20px",textAlign:"center",background:C.w,border:"1px solid "+C.bd,borderRadius:12,color:C.t2,fontSize:13}}>
-      Целей пока нет
-    </div>}
   </div>;
 }
 /* ============ GOALS BLOCK ============ */
@@ -2796,7 +2801,7 @@ function TaskPlanner({userId}:{userId:string}){
   const[edit,setEdit]=useState<any>(null);
   const[subInput,setSubInput]=useState("");
   const[saving,setSaving]=useState(false);
-  const[boardMode,setBoardMode]=useState<"today"|"3day"|"week">("3day");
+  const boardMode:"week"="week";
   const boardModeDays:Record<string,number>={today:1,"3day":3,week:7};
   const todayAnchor=()=>{const d=new Date();d.setHours(0,0,0,0);return d;};
   const[boardStart,setBoardStart]=useState(()=>todayAnchor());
@@ -3047,9 +3052,9 @@ function TaskPlanner({userId}:{userId:string}){
             {dates.map((d,i)=>(
               <div key={i} style={{borderLeft:"1px solid "+bd,padding:3,display:"flex",flexDirection:"column",gap:3}}>
                 {forDay(d).filter((t:any)=>!t.due_time).map((t:any)=>(
-                  <div key={t.id} onClick={e=>{e.stopPropagation();openEdit(t);}} style={{display:"flex",alignItems:"center",gap:4,padding:"2px 6px",borderRadius:5,background:(t.color||"#64748B")+"1E",borderLeft:"2px solid "+(t.color||"#64748B"),cursor:"pointer",minWidth:0}}>
+                  <div key={t.id} onClick={e=>{e.stopPropagation();openEdit(t);}} onDoubleClick={e=>toggleFailed(t,e)} title="Двойной клик — отметить как не сделано" style={{display:"flex",alignItems:"center",gap:4,padding:"2px 6px",borderRadius:5,background:(t.color||"#64748B")+"1E",borderLeft:"2px solid "+(t.color||"#64748B"),cursor:"pointer",minWidth:0}}>
                     <span onClick={e=>toggleDone(t,e)} style={{width:11,height:11,borderRadius:3,border:"1.5px solid "+(t.color||"#64748B"),background:t.done?(t.color||"#64748B"):"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>{t.done&&<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}</span>
-                    <span style={{fontSize:11,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:(t.done||t.completion_status==="failed")?"line-through":"none",opacity:t.done?0.5:t.completion_status==="failed"?0.42:1}}>{t.title}</span>
+                    <span style={{fontSize:11,color:t.completion_status==="failed"?"#DC2626":C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.5:1}}>{t.title}</span>
                   </div>
                 ))}
               </div>
@@ -3081,12 +3086,12 @@ function TaskPlanner({userId}:{userId:string}){
                   const wPct=100/it.laneCount;const leftPct=it.lane*wPct;
                   const showRange=height>=34;
                   return(
-                    <div key={t.id} onClick={e=>{e.stopPropagation();openEdit(t);}}
+                    <div key={t.id} onClick={e=>{e.stopPropagation();openEdit(t);}} onDoubleClick={e=>toggleFailed(t,e)} title="Двойной клик — отметить как не сделано"
                       style={{position:"absolute" as const,top,left:`calc(${leftPct}% + 2px)`,width:`calc(${wPct}% - 4px)`,height,borderRadius:5,background:(t.color||"#64748B")+(dark?"33":"22"),borderLeft:"3px solid "+(t.color||"#64748B"),padding:"2px 5px",overflow:"hidden",cursor:"pointer",boxSizing:"border-box" as const}}>
                       <div style={{display:"flex",alignItems:"center",gap:4}}>
                         <span onClick={e=>toggleDone(t,e)} style={{width:11,height:11,borderRadius:3,border:"1.5px solid "+(t.color||"#64748B"),background:t.done?(t.color||"#64748B"):"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>{t.done&&<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}</span>
                         {prioDot(t.priority)}
-                        <span style={{fontSize:11,fontWeight:500,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.55:1}}>{t.title}</span>
+                        <span style={{fontSize:11,fontWeight:500,color:t.completion_status==="failed"?"#DC2626":C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.55:1}}>{t.title}</span>
                       </div>
                       {showRange&&<div style={{fontSize:9.5,color:C.t2,marginTop:1,paddingLeft:15,whiteSpace:"nowrap" as const,overflow:"hidden",textOverflow:"ellipsis"}}>{wrTimeRange(t)}</div>}
                     </div>
@@ -3106,7 +3111,7 @@ function TaskPlanner({userId}:{userId:string}){
       <div style={{marginBottom:22}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:12,flexWrap:"wrap" as const}}>
           <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap" as const}}>
-            <span style={{fontSize:isMobile?15:18,fontWeight:500,color:C.t1,letterSpacing:"-0.01em"}}>{boardMode==="today"?"Задачи на сегодня":boardMode==="3day"?"Задачи на 3 дня":"Задачи на неделю"}</span>
+            <span style={{fontSize:isMobile?15:18,fontWeight:500,color:C.t1,letterSpacing:"-0.01em"}}>Задачи на неделю</span>
             <button onClick={()=>boardStep(-1)} style={{width:30,height:30,borderRadius:8,border:"1px solid "+bd,background:cardBg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
@@ -3115,14 +3120,8 @@ function TaskPlanner({userId}:{userId:string}){
             </button>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8,marginLeft:"auto",flexWrap:"wrap" as const}}>
-            <div style={{display:"flex",background:C.ib,borderRadius:8,padding:3,border:"1px solid "+bd,gap:2}}>
-              {([["today","Сегодня"],["3day","3 дня"],["week","Неделя"]] as const).map(([mv,lbl])=>(
-                <button key={mv} onClick={()=>{setBoardMode(mv);setBoardStart(mv==="week"?currentWeekStart():todayAnchor());}}
-                  style={{padding:"6px 12px",borderRadius:6,border:"none",background:boardMode===mv?cardBg:"transparent",color:boardMode===mv?C.t1:C.t2,fontSize:12,fontWeight:500,cursor:"pointer",boxShadow:boardMode===mv?"0 1px 3px rgba(0,0,0,0.08)":"none",whiteSpace:"nowrap" as const}}>{lbl}</button>
-              ))}
-            </div>
             {!boardIsCurrent&&<button onClick={boardResetToCurrent}
-              style={{padding:"6px 14px",background:C.w,color:C.t1,border:"1px solid "+bd,borderRadius:8,fontSize:12,fontWeight:500,cursor:"pointer",boxShadow:"0 1px 3px rgba(0,0,0,0.06)",whiteSpace:"nowrap" as const}}>{boardMode==="week"?"Эта неделя":"Сегодня"}</button>}
+              style={{padding:"6px 14px",background:C.w,color:C.t1,border:"1px solid "+bd,borderRadius:8,fontSize:12,fontWeight:500,cursor:"pointer",boxShadow:"0 1px 3px rgba(0,0,0,0.06)",whiteSpace:"nowrap" as const}}>Эта неделя</button>}
           </div>
         </div>
         <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:6,scrollbarWidth:"none" as const}}>
@@ -3139,7 +3138,7 @@ function TaskPlanner({userId}:{userId:string}){
                 </div>
                 <div style={{padding:8,display:"flex",flexDirection:"column",gap:6,flex:1,minHeight:isMobile?110:150}}>
                   {dt.map((t:any)=>(
-                    <div key={t.id} onClick={()=>openEdit(t)}
+                    <div key={t.id} onClick={()=>openEdit(t)} onDoubleClick={e=>toggleFailed(t,e)} title="Двойной клик — отметить как не сделано"
                       style={{display:"flex",alignItems:"center",gap:6,padding:"7px 9px",borderRadius:8,background:cardBg,
                         border:wrHighlight.has(t.id)?"1px solid #16A34A":"1px solid "+bd,
                         borderLeft:"3px solid "+(t.color||"#64748B"),cursor:"pointer",
@@ -3148,10 +3147,8 @@ function TaskPlanner({userId}:{userId:string}){
                       <span onClick={e=>toggleDone(t,e)} style={{width:14,height:14,borderRadius:4,border:"1.5px solid "+(t.color||"#64748B"),background:t.done?(t.color||"#64748B"):"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
                         {t.done&&<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}
                       </span>
-                      <button onClick={e=>toggleFailed(t,e)} title={t.completion_status==="failed"?"Вернуть в ожидание":"Отметить как не сделано"}
-                        style={{width:16,height:16,borderRadius:4,border:"1px solid "+(t.completion_status==="failed"?"#DC2626":bd),background:t.completion_status==="failed"?"#DC2626":"transparent",color:t.completion_status==="failed"?"#fff":C.t2,padding:0,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:11,lineHeight:1}}>×</button>
                       {prioDot(t.priority)}
-                      <span style={{flex:1,minWidth:0,fontSize:12.5,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:(t.done||t.completion_status==="failed")?"line-through":"none",opacity:t.done?0.5:t.completion_status==="failed"?0.42:1}}>{t.due_time?<b style={{fontWeight:500}}>{wrNormTime(t.due_time)} </b>:null}{t.title}</span>
+                      <span style={{flex:1,minWidth:0,fontSize:12.5,color:t.completion_status==="failed"?"#DC2626":C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.5:1}}>{t.due_time?<b style={{fontWeight:500}}>{wrNormTime(t.due_time)} </b>:null}{t.title}</span>
                     </div>
                   ))}
                   <button onClick={()=>openNew(pd(d))} style={{marginTop:dt.length?2:0,padding:"6px",borderRadius:8,border:"1px dashed "+bd,background:"transparent",color:C.t2,fontSize:11.5,fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
@@ -3290,13 +3287,13 @@ function TaskPlanner({userId}:{userId:string}){
                     <span style={{fontSize:12,fontWeight:500,color:isToday?C.bg:(inM?C.t1:C.t2),width:22,height:22,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",background:isToday?C.t1:"transparent"}}>{d.getDate()}</span>
                   </div>
                   {dayTasks.slice(0,isMobile?2:3).map((t:any)=>(
-                    <div key={t.id} onClick={e=>{e.stopPropagation();openEdit(t);}}
+                    <div key={t.id} onClick={e=>{e.stopPropagation();openEdit(t);}} onDoubleClick={e=>toggleFailed(t,e)} title="Двойной клик — отметить как не сделано"
                       style={{display:"flex",alignItems:"center",gap:5,padding:"2px 6px",borderRadius:5,background:(t.color||"#64748B")+"1E",borderLeft:"2px solid "+(t.color||"#64748B"),cursor:"pointer",minWidth:0}}>
                       <span onClick={e=>toggleDone(t,e)} style={{width:11,height:11,borderRadius:3,border:"1.5px solid "+(t.color||"#64748B"),background:t.done?(t.color||"#64748B"):"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
                         {t.done&&<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}
                       </span>
                       {prioDot(t.priority)}
-                      <span style={{fontSize:11,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:(t.done||t.completion_status==="failed")?"line-through":"none",opacity:t.done?0.5:t.completion_status==="failed"?0.42:1}}>{t.due_time?t.due_time+" ":""}{t.title}</span>
+                      <span style={{fontSize:11,color:t.completion_status==="failed"?"#DC2626":C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.5:1}}>{t.due_time?t.due_time+" ":""}{t.title}</span>
                     </div>
                   ))}
                   {dayTasks.length>(isMobile?2:3)&&<span style={{fontSize:10,color:C.t2,paddingLeft:4}}>+{dayTasks.length-(isMobile?2:3)} ещё</span>}
@@ -3321,7 +3318,7 @@ function TaskPlanner({userId}:{userId:string}){
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{display:"flex",alignItems:"center",gap:8}}>
                         <span style={{width:8,height:8,borderRadius:"50%",background:t.color||"#64748B",flexShrink:0}}/>
-                        <span style={{fontSize:14,fontWeight:500,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.55:1}}>{t.title}</span>
+                        <span style={{fontSize:14,fontWeight:500,color:t.completion_status==="failed"?"#DC2626":C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.55:1}}>{t.title}</span>
                       </div>
                       {(t.description||(t.subtasks&&t.subtasks.length>0))&&<div style={{fontSize:12,color:C.t2,marginTop:3,marginLeft:16,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                         {t.subtasks&&t.subtasks.length>0?`Подзадачи: ${t.subtasks.filter((s:any)=>s.done).length}/${t.subtasks.length}`:""}
@@ -19333,11 +19330,6 @@ function FormsPage({userId}:{userId:string}){
     await loadForms();setTab("list");showToast(editId?"Изменения сохранены":"Форма создана");
   };
 
-  const duplicateForm=async(form:FormData)=>{
-    setErr("");const copy:any={...form};delete copy.id;delete copy.created_at;delete copy.updated_at;
-    copy.title=`${form.title} — копия`;copy.slug=`vizzy-${Math.random().toString(36).slice(2,10)}`;copy.is_active=false;copy.user_id=userId;
-    const{error}=await supabase.from("forms").insert(copy);if(error)setErr("Не удалось дублировать: "+error.message);else{await loadForms();showToast("Копия создана");}
-  };
   const toggleActive=async(form:FormData)=>{const{error}=await supabase.from("forms").update({is_active:!form.is_active,updated_at:new Date().toISOString()}).eq("id",form.id);if(error)setErr(error.message);else setForms(p=>p.map(f=>f.id===form.id?{...f,is_active:!f.is_active}:f));};
   const deleteForm=async(id:string)=>{if(!confirm("Удалить форму, ответы и связанную аналитику?"))return;const{error}=await supabase.from("forms").delete().eq("id",id);if(error)setErr("Не удалось удалить: "+error.message);else{setForms(p=>p.filter(f=>f.id!==id));showToast("Форма удалена");}};
   const copyLink=(slug:string)=>{const url=`${location.origin}/f/${slug}`;navigator.clipboard.writeText(url);setCopied(slug);setTimeout(()=>setCopied(null),1800);};
@@ -19384,9 +19376,19 @@ function FormsPage({userId}:{userId:string}){
   };
 
   const qStats=useMemo(()=>{
-    if(!selectedForm)return[];return(selectedForm.questions||[]).filter(q=>!q.hidden).map(q=>{
-      const map:Record<string,number>={};responses.forEach(r=>{const v=answerFor(r,q);(Array.isArray(v)?v:[v]).filter(x=>String(x??"").trim()).forEach(x=>{const k=String(x);map[k]=(map[k]||0)+1;});});
-      return{q,items:Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,6)};
+    if(!selectedForm)return[];
+    const visualTypes=new Set(["select","radio","checkbox","multi_select","scale"]);
+    return(selectedForm.questions||[]).filter(q=>!q.hidden).map(q=>{
+      const map:Record<string,number>={};
+      let answered=0;
+      responses.forEach(r=>{
+        const v=answerFor(r,q);
+        const values=(Array.isArray(v)?v:[v]).filter(x=>String(x??"").trim());
+        if(values.length)answered++;
+        values.forEach(x=>{const k=String(x);map[k]=(map[k]||0)+1;});
+      });
+      const items=Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,8);
+      return{q,items,answered,visual:visualTypes.has(q.type),top:items[0]||null};
     });
   },[responses,selectedForm]);
 
@@ -19398,6 +19400,18 @@ function FormsPage({userId}:{userId:string}){
   const inp:React.CSSProperties={width:"100%",height:42,padding:"0 12px",border:`1px solid ${tone.border}`,borderRadius:8,background:dark?"#1B1B1B":"#FFF",color:C.t1,fontSize:13.5,fontWeight:400,outline:"none",fontFamily:"'Inter',sans-serif"};
   const label:React.CSSProperties={display:"block",fontSize:11.5,fontWeight:500,color:tone.muted,marginBottom:7};
   const Btn=({children,onClick,primary=false,disabled=false,danger=false}:{children:React.ReactNode,onClick?:()=>void,primary?:boolean,disabled?:boolean,danger?:boolean})=><button onClick={onClick} disabled={disabled} style={{height:38,padding:"0 14px",borderRadius:8,border:primary?"none":`1px solid ${danger?"rgba(220,38,38,.22)":tone.border}`,background:primary?"#2F6BFF":"transparent",color:primary?"#fff":danger?"#DC2626":C.t1,fontSize:12.5,fontWeight:550,cursor:disabled?"not-allowed":"pointer",opacity:disabled?0.48:1,whiteSpace:"nowrap"}}>{children}</button>;
+  const IconBtn=({title,onClick,danger=false,children}:{title:string,onClick:()=>void,danger?:boolean,children:React.ReactNode})=><button
+    title={title} aria-label={title} onClick={onClick}
+    style={{width:36,height:36,borderRadius:9,border:`1px solid ${danger?"rgba(220,38,38,.24)":tone.border}`,background:"transparent",color:danger?"#DC2626":tone.muted,cursor:"pointer",display:"inline-flex",alignItems:"center",justifyContent:"center",padding:0,flexShrink:0}}>
+    {children}
+  </button>;
+  const FormSwitch=({form}:{form:FormData})=><button
+    onClick={()=>toggleActive(form)}
+    title={form.is_active?"Форма включена":"Форма выключена"}
+    aria-label={form.is_active?"Выключить форму":"Включить форму"}
+    style={{width:50,height:28,borderRadius:999,border:"none",padding:3,background:form.is_active?"#22C55E":"#EF4444",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:form.is_active?"flex-end":"flex-start",transition:"background .18s ease",flexShrink:0}}>
+    <span style={{width:22,height:22,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 4px rgba(0,0,0,.28)",display:"block",transition:"transform .18s ease"}}/>
+  </button>;
 
   if(loading)return<div style={{height:"60vh",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,color:tone.muted}}>Загрузка Vizzy Form…</div>;
 
@@ -19426,7 +19440,24 @@ function FormsPage({userId}:{userId:string}){
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"minmax(240px,1.4fr) repeat(4,minmax(74px,.42fr)) auto",gap:isMobile?12:18,alignItems:"center"}}>
           <div style={{minWidth:0}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}><span style={{width:7,height:7,borderRadius:"50%",background:form.is_active?"#16A34A":"#A0A4AC"}}/><span style={{fontSize:14.5,fontWeight:570,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{form.title}</span></div><div style={{fontSize:11.5,color:tone.muted,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{form.booking?.enabled?`${form.booking.duration} мин · ${form.booking.days?.length||0} рабочих дней`:"Форма без записи"} · {form.questions?.filter(q=>!q.hidden).length||0} полей</div></div>
           {[{l:"Просмотры",v:st.views},{l:"Ответы",v:st.responses},{l:"Записи",v:st.bookings},{l:"Конверсия",v:`${conv}%`}].map(x=><div key={x.l} style={{display:isMobile?"inline-flex":"block",alignItems:"baseline",gap:6}}><div style={{fontSize:16,fontWeight:570,color:C.t1}}>{x.v}</div><div style={{fontSize:10.5,color:tone.muted,marginTop:2}}>{x.l}</div></div>)}
-          <div style={{display:"flex",gap:6,justifyContent:isMobile?"flex-start":"flex-end",flexWrap:"wrap"}}><Btn onClick={()=>copyLink(form.slug)}>{copied===form.slug?"Скопировано":"Ссылка"}</Btn><Btn onClick={()=>loadAnalytics(form)}>Ответы</Btn>{form.booking?.enabled&&<Btn onClick={()=>loadBookings(form)}>Записи</Btn>}<Btn onClick={()=>openBuilder(form)}>Изменить</Btn><Btn onClick={()=>duplicateForm(form)}>Копия</Btn><Btn onClick={()=>toggleActive(form)}>{form.is_active?"Выключить":"Включить"}</Btn><Btn danger onClick={()=>deleteForm(form.id)}>Удалить</Btn></div>
+          <div style={{display:"flex",flexDirection:"column",alignItems:isMobile?"stretch":"flex-end",gap:8,minWidth:isMobile?"100%":220}}>
+            <button onClick={()=>copyLink(form.slug)}
+              style={{height:40,width:"100%",padding:"0 16px",borderRadius:9,border:"none",background:"#2F6BFF",color:"#fff",fontSize:12.5,fontWeight:550,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,whiteSpace:"nowrap"}}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+              {copied===form.slug?"Ссылка скопирована":"Ссылка на форму"}
+            </button>
+            <div style={{display:"flex",alignItems:"center",justifyContent:isMobile?"space-between":"flex-end",gap:7,width:"100%",flexWrap:"wrap"}}>
+              <Btn onClick={()=>loadAnalytics(form)}>Ответы</Btn>
+              {form.booking?.enabled&&<Btn onClick={()=>loadBookings(form)}>Список</Btn>}
+              <IconBtn title="Изменить форму" onClick={()=>openBuilder(form)}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L8 18l-4 1 1-4z"/></svg>
+              </IconBtn>
+              <FormSwitch form={form}/>
+              <IconBtn title="Удалить форму" danger onClick={()=>deleteForm(form.id)}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg>
+              </IconBtn>
+            </div>
+          </div>
         </div>
       </div>;})}</div>}
     </>}
@@ -19478,11 +19509,25 @@ function FormsPage({userId}:{userId:string}){
       <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,marginBottom:16,flexWrap:"wrap"}}><div><button onClick={()=>setTab("list")} style={{background:"none",border:0,color:tone.muted,cursor:"pointer",fontSize:12,padding:0,marginBottom:7}}>← Все формы</button><div style={{fontSize:20,fontWeight:580,color:C.t1}}>{selectedForm.title}</div><div style={{fontSize:11.5,color:tone.muted,marginTop:4}}>{baseUrl}/f/{selectedForm.slug}</div></div><div style={{display:"flex",gap:7}}><Btn onClick={()=>copyLink(selectedForm.slug)}>Скопировать ссылку</Btn><Btn onClick={exportCSV}>Экспорт CSV</Btn></div></div>
       <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)",gap:10,marginBottom:14}}>{[{l:"Просмотры",v:views},{l:"Начали",v:clicks},{l:"Ответы",v:responses.length},{l:"Конверсия",v:views?`${Math.round(responses.length/views*100)}%`:"0%"}].map(x=><div key={x.l} style={panel({padding:"16px 18px"})}><div style={{fontSize:23,fontWeight:580}}>{x.v}</div><div style={{fontSize:11.5,color:tone.muted,marginTop:5}}>{x.l}</div></div>)}</div>
       <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1.15fr .85fr",gap:12,alignItems:"start"}}><div style={panel({overflow:"hidden"})}><div style={{padding:"14px 16px",borderBottom:`1px solid ${tone.border}`,fontSize:14,fontWeight:560}}>Ответы</div>{responses.length===0?<div style={{padding:34,textAlign:"center",fontSize:13,color:tone.muted}}>Ответов пока нет</div>:responses.map((r,i)=>{const open=openResponse===r.id;return<div key={r.id} style={{borderBottom:i<responses.length-1?`1px solid ${tone.border}`:"none"}}><button onClick={()=>setOpenResponse(open?null:r.id)} style={{width:"100%",display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 170px 24px",gap:10,alignItems:"center",padding:"13px 16px",border:0,background:"transparent",color:C.t1,textAlign:"left",cursor:"pointer"}}><div><div style={{fontSize:13.5,fontWeight:550}}>{r.respondent_name||r.answers?.__name||"Без имени"}</div><div style={{fontSize:11.5,color:tone.muted,marginTop:3}}>{r.respondent_email||r.answers?.__email||"—"}</div></div>{!isMobile&&<div style={{fontSize:11.5,color:tone.muted}}>{new Date(r.created_at).toLocaleString("ru-RU")}</div>}<span style={{color:tone.muted}}>{open?"−":"+"}</span></button>{open&&<div style={{padding:"0 16px 15px"}}><div style={{background:tone.soft,borderRadius:8,padding:13,display:"grid",gap:10}}>{(selectedForm.questions||[]).filter(q=>!q.hidden).map(q=><div key={q.id}><div style={{fontSize:10.5,color:tone.muted,marginBottom:3}}>{q.label}</div><div style={{fontSize:12.5,color:C.t1,whiteSpace:"pre-wrap"}}>{(()=>{const value=answerFor(r,q);return value?.path?<button onClick={()=>openStoredFile(value,r.id)} style={{height:32,padding:"0 10px",borderRadius:7,border:`1px solid ${tone.border}`,background:"transparent",color:"#2F6BFF",fontSize:11.5,cursor:"pointer"}}>Скачать: {value.name||"файл"}</button>:(displayAnswer(value)||"—");})()}</div></div>)}</div><div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}><Btn danger onClick={()=>deleteResponse(r.id)}>Удалить ответ</Btn></div></div>}</div>;})}</div>
-      <div style={{display:"grid",gap:10}}>{qStats.map(({q,items})=><div key={q.id} style={panel({padding:16})}><div style={{fontSize:12.5,fontWeight:550,color:C.t1,marginBottom:10}}>{q.label}</div>{items.length===0?<div style={{fontSize:11.5,color:tone.muted}}>Пока нет данных</div>:items.map(([value,count])=>{const pct=responses.length?Math.round(count/responses.length*100):0;return<div key={value} style={{marginBottom:9}}><div style={{display:"flex",justifyContent:"space-between",gap:8,fontSize:11.5,marginBottom:4}}><span style={{color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{value}</span><span style={{color:tone.muted}}>{count} · {pct}%</span></div><div style={{height:4,borderRadius:4,background:tone.soft,overflow:"hidden"}}><div style={{height:"100%",width:`${pct}%`,background:"#2F6BFF",borderRadius:4}}/></div></div>;})}</div>)}</div></div>
+      <div style={{display:"grid",gap:10}}>{qStats.map(({q,items,answered,visual,top})=><div key={q.id} style={panel({padding:16})}>
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:10,marginBottom:visual&&items.length?13:9}}>
+          <div><div style={{fontSize:12.5,fontWeight:550,color:C.t1}}>{q.label}</div><div style={{fontSize:10.5,color:tone.muted,marginTop:4}}>{answered} ответов</div></div>
+          {visual&&top&&<div style={{textAlign:"right",minWidth:72}}><div style={{fontSize:10,color:tone.muted}}>Лидер</div><div style={{fontSize:12,fontWeight:560,color:"#2F6BFF",marginTop:3,maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{top[0]}</div></div>}
+        </div>
+        {items.length===0?<div style={{fontSize:11.5,color:tone.muted}}>Пока нет данных</div>
+        :visual?items.map(([value,count])=>{const total=Math.max(1,items.reduce((s,x)=>s+x[1],0));const pct=Math.round(count/total*100);return<div key={value} style={{marginBottom:10}}>
+          <div style={{display:"flex",justifyContent:"space-between",gap:8,fontSize:11.5,marginBottom:5}}><span style={{color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{value}</span><span style={{color:tone.muted,flexShrink:0}}>{count} · {pct}%</span></div>
+          <div style={{height:7,borderRadius:7,background:tone.soft,overflow:"hidden"}}><div style={{height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,#2F6BFF,#6E96FF)",borderRadius:7}}/></div>
+        </div>;})
+        :<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+          <div style={{background:tone.soft,borderRadius:8,padding:11}}><div style={{fontSize:18,fontWeight:570,color:C.t1}}>{answered}</div><div style={{fontSize:10.5,color:tone.muted,marginTop:3}}>Заполнено</div></div>
+          <div style={{background:tone.soft,borderRadius:8,padding:11}}><div style={{fontSize:18,fontWeight:570,color:C.t1}}>{responses.length?Math.round(answered/responses.length*100):0}%</div><div style={{fontSize:10.5,color:tone.muted,marginTop:3}}>Доля ответов</div></div>
+        </div>}
+      </div>)}</div></div>
     </>}
 
     {tab==="bookings"&&selectedForm&&<>
-      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,marginBottom:16}}><div><button onClick={()=>setTab("list")} style={{background:"none",border:0,color:tone.muted,cursor:"pointer",fontSize:12,padding:0,marginBottom:7}}>← Все формы</button><div style={{fontSize:20,fontWeight:580}}>Записи · {selectedForm.title}</div></div><div style={{fontSize:12,color:tone.muted}}>{selectedForm.booking?.tz}</div></div>
+      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,marginBottom:16}}><div><button onClick={()=>setTab("list")} style={{background:"none",border:0,color:tone.muted,cursor:"pointer",fontSize:12,padding:0,marginBottom:7}}>← Все формы</button><div style={{fontSize:20,fontWeight:580}}>Список · {selectedForm.title}</div></div><div style={{fontSize:12,color:tone.muted}}>{selectedForm.booking?.tz}</div></div>
       <div style={panel({overflow:"hidden"})}>{bookings.length===0?<div style={{padding:38,textAlign:"center",fontSize:13,color:tone.muted}}>Записей пока нет</div>:bookings.map((b,i)=>{const cancelled=b.status==="cancelled";return<div key={b.id} style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"130px 90px 1fr 120px auto",gap:12,alignItems:"center",padding:"13px 16px",borderBottom:i<bookings.length-1?`1px solid ${tone.border}`:"none",opacity:cancelled?0.55:1}}><div style={{fontSize:12.5,color:C.t1}}>{b.date}</div><div style={{fontSize:13,fontWeight:560}}>{b.time_start}</div><div><div style={{fontSize:13.5,fontWeight:550}}>{b.responsible_name||b.title||"Клиент"}</div><div style={{fontSize:11.5,color:tone.muted,marginTop:3}}>{b.description||"—"}</div></div><div style={{fontSize:11.5,color:cancelled?"#DC2626":"#16A34A"}}>{cancelled?"Отменён":"Запланирован"}</div><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{!cancelled&&<><Btn onClick={()=>setReschedule({id:b.id,date:b.date,time:b.time_start})}>Перенести</Btn><Btn danger onClick={()=>cancelBooking(b.id)}>Отменить</Btn></>}</div></div>;})}</div>
       {reschedule&&<div style={{position:"fixed",inset:0,zIndex:600,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",padding:18}} onClick={e=>{if(e.target===e.currentTarget)setReschedule(null);}}><div data-modal style={panel({width:"min(420px,100%)",padding:20})}><div style={{fontSize:16,fontWeight:580,marginBottom:15}}>Перенести запись</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}><div><label style={label}>Дата</label><input type="date" style={inp} value={reschedule.date} onChange={e=>setReschedule({...reschedule,date:e.target.value})}/></div><div><label style={label}>Время владельца</label><input type="time" style={inp} value={reschedule.time} onChange={e=>setReschedule({...reschedule,time:e.target.value})}/></div></div><div style={{display:"flex",justifyContent:"flex-end",gap:7}}><Btn onClick={()=>setReschedule(null)}>Отмена</Btn><Btn primary onClick={saveReschedule}>Сохранить</Btn></div></div></div>}
     </>}
