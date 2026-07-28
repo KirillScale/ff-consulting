@@ -872,7 +872,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v3.9"; // hosted completion video upload up to 350 MB
+  const APP_VERSION="v4.0"; // monthly Content kanban and refined analytics
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
 
   // Clear stale localStorage on version change
@@ -9943,7 +9943,7 @@ ${fields}${vocab}
   return(
     <div style={{border:`1px solid ${C.bd}`,borderRadius:10,padding:16,background:C.bg}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:4,flexWrap:"wrap" as const}}>
-        <div style={{fontSize:13,fontWeight:700,color:C.t1}}>Аналитика</div>
+        <div style={{fontSize:13,fontWeight:500,color:C.t1}}>Аналитика</div>
         <span style={{fontSize:11,color:C.t2}}>{type}{a.updated_at?` · обновлено ${a.updated_at}`:""}</span>
       </div>
       <div style={{fontSize:11.5,color:C.t2,lineHeight:1.5,marginBottom:12}}>Загрузи скриншоты статистики — AI считает цифры и заполнит поля. Сами скриншоты не сохраняются, остаются только числа.</div>
@@ -10099,10 +10099,10 @@ function ContentPage({userId}:{userId:string}){
   };
 
   const CONTENT_STAGES=[
-    {id:"idea",label:"Идея",color:"#A9D2FF",hint:"Концепции и темы ждут своей очереди"},
-    {id:"progress",label:"Разработка",color:"#5B9BFF",hint:"Съёмка, написание текста, сбор материала"},
-    {id:"ready",label:"Реализация",color:"#2563EB",hint:"Монтаж, дизайн, финальная правка"},
-    {id:"published",label:"Опубликовано",color:"#15307A",hint:"Вышло в свет — собирает реакции"},
+    {id:"idea",label:"Идея",color:C.t1,hint:"Концепции и темы ждут своей очереди"},
+    {id:"progress",label:"Разработка",color:C.t1,hint:"Съёмка, написание текста, сбор материала"},
+    {id:"ready",label:"Реализация",color:C.t1,hint:"Монтаж, дизайн, финальная правка"},
+    {id:"published",label:"Опубликовано",color:C.t1,hint:"Вышло в свет — собирает реакции"},
   ];
   const[kanbanDrag,setKanbanDrag]=useState<string|null>(null);
   const[kanbanOver,setKanbanOver]=useState<string|null>(null);
@@ -10147,6 +10147,24 @@ function ContentPage({userId}:{userId:string}){
     return`${MS[parseInt(m)-1]} ${y}`;
   };
 
+  const monthKey=`${calMonth.y}-${String(calMonth.m+1).padStart(2,"0")}`;
+  const monthStart=`${monthKey}-01`;
+  const monthEnd=ds(new Date(calMonth.y,calMonth.m+1,0));
+  const monthItems=useMemo(()=>items.filter((x:any)=>{
+    const value=x.publish_date||x.date||"";
+    return Boolean(value&&value>=monthStart&&value<=monthEnd);
+  }),[items,monthStart,monthEnd]);
+  const contentMonthLabel=`${MS[calMonth.m]} ${calMonth.y}`;
+  const moveContentMonth=(delta:number)=>setCalMonth(prev=>{
+    const d=new Date(prev.y,prev.m+delta,1);
+    return{y:d.getFullYear(),m:d.getMonth()};
+  });
+  const resetContentMonth=()=>{const d=new Date();setCalMonth({y:d.getFullYear(),m:d.getMonth()});};
+  const selectedMonthDefaultDate=()=>{
+    const now=new Date();
+    return now.getFullYear()===calMonth.y&&now.getMonth()===calMonth.m?ds(now):`${monthKey}-01`;
+  };
+
   const[platformFilter,setPlatformFilter]=useState<string>("all");
   const[groupMode,setGroupMode]=useState<"platform"|"type">("platform");
 
@@ -10162,17 +10180,35 @@ function ContentPage({userId}:{userId:string}){
   const activeFilters=groupMode==="type"?TYPE_FILTERS:PLATFORM_FILTERS;
 
   const filteredItems=useMemo(()=>{
-    if(platformFilter==="all")return items;
-    if(groupMode==="type")return items.filter((x:any)=>(x.type||"Другое")===platformFilter);
+    if(platformFilter==="all")return monthItems;
+    if(groupMode==="type")return monthItems.filter((x:any)=>(x.type||"Другое")===platformFilter);
     if(platformFilter==="other"){
       const known=["youtube","instagram","telegram","tiktok"];
-      return items.filter((x:any)=>!known.includes((x.platform||"").toLowerCase()));
+      return monthItems.filter((x:any)=>!known.includes((x.platform||"").toLowerCase()));
     }
-    return items.filter((x:any)=>(x.platform||"").toLowerCase()===platformFilter);
-  },[items,platformFilter,groupMode]);
+    return monthItems.filter((x:any)=>(x.platform||"").toLowerCase()===platformFilter);
+  },[monthItems,platformFilter,groupMode]);
 
 
   return <>
+    <div style={{display:"flex",alignItems:isMobile?"stretch":"center",justifyContent:"space-between",gap:12,marginBottom:18,flexDirection:isMobile?"column":"row"}}>
+      <div>
+        <div style={{fontSize:isMobile?18:20,fontWeight:500,color:C.t1,letterSpacing:"-.02em"}}>Контент</div>
+        <div style={{fontSize:12,color:C.t2,marginTop:4}}>Kanban по месяцам — без перегруженной доски</div>
+      </div>
+      <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+        <button onClick={()=>moveContentMonth(-1)} style={{width:36,height:36,borderRadius:9,border:"1px solid "+C.bd,background:C.w,color:C.t1,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div style={{minWidth:isMobile?150:180,height:36,padding:"0 14px",borderRadius:9,border:"1px solid "+C.bd,background:C.w,color:C.t1,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:500}}>{contentMonthLabel}</div>
+        <button onClick={()=>moveContentMonth(1)} style={{width:36,height:36,borderRadius:9,border:"1px solid "+C.bd,background:C.w,color:C.t1,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+        <button onClick={resetContentMonth} style={{height:36,padding:"0 13px",borderRadius:9,border:"1px solid "+C.bd,background:C.ib,color:C.t2,fontSize:12,cursor:"pointer"}}>Текущий месяц</button>
+        <div style={{height:36,padding:"0 13px",borderRadius:9,border:"1px solid "+C.bd,background:C.ib,color:C.t2,fontSize:11.5,display:"flex",alignItems:"center"}}>Всего: <b style={{color:C.t1,fontWeight:600,marginLeft:5}}>{monthItems.length}</b></div>
+      </div>
+    </div>
+
     {/* ── Group mode switcher ── */}
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
       <span style={{fontSize:12,color:C.t2,fontWeight:600}}>Группировать по:</span>
@@ -10187,10 +10223,10 @@ function ContentPage({userId}:{userId:string}){
     {/* ── Filter bar ── */}
     <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
       {activeFilters.map(pf=>{
-        const cnt=pf.id==="all"?items.length
-          :groupMode==="type"?items.filter((x:any)=>(x.type||"Другое")===pf.id).length
-          :pf.id==="other"?items.filter((x:any)=>!["youtube","instagram","telegram","tiktok"].includes((x.platform||"").toLowerCase())).length
-          :items.filter((x:any)=>(x.platform||"").toLowerCase()===pf.id).length;
+        const cnt=pf.id==="all"?monthItems.length
+          :groupMode==="type"?monthItems.filter((x:any)=>(x.type||"Другое")===pf.id).length
+          :pf.id==="other"?monthItems.filter((x:any)=>!["youtube","instagram","telegram","tiktok"].includes((x.platform||"").toLowerCase())).length
+          :monthItems.filter((x:any)=>(x.platform||"").toLowerCase()===pf.id).length;
         const isActive=platformFilter===pf.id;
         return<button key={pf.id} onClick={()=>setPlatformFilter(pf.id)}
           style={{
@@ -10233,9 +10269,9 @@ function ContentPage({userId}:{userId:string}){
             <span style={{fontSize:13,color:C.t2,fontWeight:500}}>{stage.label}</span>
             {isMax&&cnt>0&&<span style={{fontSize:10,background:C.bd,color:C.t2,borderRadius:6,padding:"2px 7px",fontWeight:600}}>больше всего</span>}
           </div>
-          <div style={{fontSize:26,fontWeight:800,color:C.t1,marginBottom:6}}>{cnt}</div>
+          <div style={{fontSize:26,fontWeight:500,color:C.t1,marginBottom:6}}>{cnt}</div>
           <div style={{height:4,borderRadius:4,background:C.bd,overflow:"hidden"}}>
-            <div style={{height:"100%",width:pct+"%",background:stage.color,borderRadius:4,transition:"width 0.4s"}}/>
+            <div style={{height:"100%",width:pct+"%",background:C.t1,borderRadius:4,transition:"width 0.4s"}}/>
           </div>
           <div style={{fontSize:10,color:C.t2,marginTop:4}}>{pct}% от всех</div>
         </div>;
@@ -10252,10 +10288,10 @@ function ContentPage({userId}:{userId:string}){
       {/* Header */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
         <div>
-          <div style={{fontSize:18,fontWeight:700,color:C.t1}}>Контент-план</div>
-          <div style={{fontSize:12,color:C.t2,marginTop:2}}>Перетаскивай карточки между этапами</div>
+          <div style={{fontSize:18,fontWeight:500,color:C.t1}}>Контент-план · {contentMonthLabel}</div>
+          <div style={{fontSize:12,color:C.t2,marginTop:3}}>Перетаскивай карточки между этапами. На доске только выбранный месяц.</div>
         </div>
-        <button onClick={()=>{setShow(!show);setEditId(null);sF(emptyF());}}
+        <button onClick={()=>{setShow(!show);setEditId(null);const d=selectedMonthDefaultDate();sF({...emptyF(),date:d,publish_date:d});}}
           style={{padding:"9px 18px",background:C.t1,color:C.bg,border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,boxShadow:"none"}}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Контент
@@ -10329,8 +10365,14 @@ function ContentPage({userId}:{userId:string}){
         </div>
       </Card>}
 
+      {monthItems.length===0&&<div style={{padding:"34px 20px",marginBottom:14,border:"1px solid "+C.bd,borderRadius:11,background:C.w,textAlign:"center"}}>
+        <div style={{fontSize:14,fontWeight:500,color:C.t1}}>На {contentMonthLabel.toLowerCase()} пока ничего не запланировано</div>
+        <div style={{fontSize:12,color:C.t2,marginTop:6}}>Создай первую карточку — она автоматически попадёт в выбранный месяц.</div>
+        <button onClick={()=>{setShow(true);setEditId(null);const d=selectedMonthDefaultDate();sF({...emptyF(),date:d,publish_date:d});}} style={{marginTop:14,padding:"9px 15px",borderRadius:8,border:"none",background:C.t1,color:C.bg,fontSize:12.5,fontWeight:500,cursor:"pointer"}}>+ Создать первую карточку</button>
+      </div>}
+
       {/* KANBAN BOARD */}
-      <div style={{display:"flex",gap:14,alignItems:"stretch",paddingBottom:16,width:"100%",overflowX:"auto"}}>
+      <div style={{display:"flex",gap:14,alignItems:"stretch",paddingBottom:16,width:"100%",overflowX:"auto",scrollSnapType:isMobile?"x mandatory":"none"}}>
         {CONTENT_STAGES.map(stage=>{
           const stageItems=filteredItems.filter((x:any)=>x.status===stage.id);
           const isOver=kanbanOver===stage.id;
@@ -10339,7 +10381,7 @@ function ContentPage({userId}:{userId:string}){
             onDrop={()=>onKanbanDrop(stage.id)}
             onDragLeave={()=>setKanbanOver(null)}
             style={{
-              flex:1,minWidth:200,
+              flex:isMobile?"0 0 86vw":1,minWidth:isMobile?260:220,scrollSnapAlign:isMobile?"start":"none",
               background:isOver?(C.t1+"08"):C.ib,
               borderRadius:10,
               border:"1px solid "+(isOver?C.t1+"40":C.bd),
@@ -10367,7 +10409,7 @@ function ContentPage({userId}:{userId:string}){
                   <div style={{width:34,height:34,borderRadius:9,border:"1px dashed "+C.bd,display:"flex",alignItems:"center",justifyContent:"center"}}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.6" style={{opacity:0.6}}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                   </div>
-                  <div style={{fontSize:11.5,color:C.t2,lineHeight:1.5,maxWidth:150,opacity:0.7}}>Перетащите сюда карточку или добавьте новую</div>
+                  <div style={{fontSize:11.5,color:C.t2,lineHeight:1.5,maxWidth:150,opacity:0.7}}>В этом месяце здесь пока нет карточек</div>
                 </div>
               )}
               {stageItems.map((x:any)=>(
@@ -10383,10 +10425,10 @@ function ContentPage({userId}:{userId:string}){
                     opacity:kanbanDrag===x.id?0.4:1,
                     transition:"all 0.15s",
                     boxShadow:"0 1px 4px rgba(0,0,0,0.06)",
-                    animation:"leadPulse 5s ease-in-out infinite",
+                    
                   }}
-                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 4px 14px rgba(0,0,0,0.10)";(e.currentTarget as HTMLElement).style.borderColor=C.t1+"40";(e.currentTarget as HTMLElement).style.borderLeftColor=ctypeColor(x.type);(e.currentTarget as HTMLElement).style.animationPlayState="paused";}}
-                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 1px 4px rgba(0,0,0,0.06)";(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.borderLeftColor=ctypeColor(x.type);(e.currentTarget as HTMLElement).style.animationPlayState="running";}}>
+                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 4px 14px rgba(0,0,0,0.10)";(e.currentTarget as HTMLElement).style.borderColor=C.t1+"40";(e.currentTarget as HTMLElement).style.borderLeftColor=ctypeColor(x.type);}}
+                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 1px 4px rgba(0,0,0,0.06)";(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.borderLeftColor=ctypeColor(x.type);}}>
 
                   {/* Card top: platform + type */}
                   <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:7}}>
@@ -10395,7 +10437,7 @@ function ContentPage({userId}:{userId:string}){
                       :<div style={{width:28,height:28,borderRadius:6,background:C.ib,border:"1px solid "+C.bd,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><PlatformIcon pid={x.platform} size={14}/></div>
                     }
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:12,fontWeight:700,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{x.topic}</div>
+                      <div style={{fontSize:12,fontWeight:500,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{x.topic}</div>
                       <div style={{display:"flex",alignItems:"center",gap:5,marginTop:2}}>
                         <span style={{fontSize:9.5,fontWeight:700,color:ctypeColor(x.type),background:ctypeColor(x.type)+"1E",padding:"1px 6px",borderRadius:5,whiteSpace:"nowrap"}}>{x.type}</span>
                         <span style={{fontSize:10,color:C.t2}}>{pLbl(x.platform)}</span>
