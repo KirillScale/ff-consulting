@@ -872,7 +872,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v3.8"; // fix remaining nullable resize expression
+  const APP_VERSION="v3.9"; // hosted completion video upload up to 350 MB
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
 
   // Clear stale localStorage on version change
@@ -19382,6 +19382,10 @@ function FormsPage({userId}:{userId:string}){
   const[bCompBtn,setBCompBtn]=useState("Перейти");
   const[bCompImage,setBCompImage]=useState("");
   const[bCompVideo,setBCompVideo]=useState("");
+  const[bCompVideoName,setBCompVideoName]=useState("");
+  const[bCompVideoProgress,setBCompVideoProgress]=useState(0);
+  const[bCompVideoUploading,setBCompVideoUploading]=useState(false);
+  const[bCompVideoError,setBCompVideoError]=useState("");
   const[bNotifications,setBNotifications]=useState<FormNotifications>({...FORM_NOTIFICATION_DEFAULT});
 
   const showToast=(text:string)=>{setToast(text);setTimeout(()=>setToast(""),2600);};
@@ -19408,7 +19412,7 @@ function FormsPage({userId}:{userId:string}){
   const resetBuilder=()=>{
     setEditId(null);setBTitle("");setBDesc("");setBAccent("#2F6BFF");setBQuestions([]);
     setBBooking({...BOOKING_DEFAULT});setBCompTitle("Запись подтверждена");setBCompSub("");setBCompText("");
-    setBCompUrl("");setBCompBtn("Перейти");setBCompImage("");setBCompVideo("");setBNotifications({...FORM_NOTIFICATION_DEFAULT});
+    setBCompUrl("");setBCompBtn("Перейти");setBCompImage("");setBCompVideo("");setBCompVideoName("");setBCompVideoProgress(0);setBCompVideoError("");setBNotifications({...FORM_NOTIFICATION_DEFAULT});
   };
   const openBuilder=(form?:FormData)=>{
     setErr("");
@@ -19417,7 +19421,7 @@ function FormsPage({userId}:{userId:string}){
       setBQuestions((form.questions||[]).map(q=>({...q,hidden:!!q.hidden,options:q.options||[]})));
       setBBooking({...BOOKING_DEFAULT,...(form.booking||{})});setBCompTitle(form.completion_title||"Запись подтверждена");
       setBCompSub(form.completion_subtitle||"");setBCompText(form.completion_text||"");setBCompUrl(form.completion_url||"");
-      setBCompBtn(form.completion_btn_label||"Перейти");setBCompImage(form.completion_image_url||"");setBCompVideo(form.completion_video_url||"");
+      setBCompBtn(form.completion_btn_label||"Перейти");setBCompImage(form.completion_image_url||"");setBCompVideo(form.completion_video_url||"");setBCompVideoName(form.completion_video_url?"Загруженное видео":"");setBCompVideoProgress(0);setBCompVideoError("");
       setBNotifications({...FORM_NOTIFICATION_DEFAULT,...(form.notification_settings||{})});
     }else resetBuilder();
     setBuilderStep(1);setTab("builder");
@@ -19428,6 +19432,48 @@ function FormsPage({userId}:{userId:string}){
     setBTitle(p=>p||t.name);setBDesc(p=>p||t.description);
     setBQuestions(t.questions.map((q,i)=>({...q,id:`${q.id}-${Date.now()}-${i}`})));
     showToast("Шаблон применён");
+  };
+
+  const uploadCompletionVideo=async(file:File)=>{
+    const MAX_VIDEO_BYTES=350*1024*1024;
+    const allowed=["video/mp4","video/webm","video/quicktime","video/x-m4v"];
+    setBCompVideoError("");
+    if(file.size<=0||file.size>MAX_VIDEO_BYTES){setBCompVideoError("Видео должно быть не больше 350 МБ");return;}
+    if(!allowed.includes(file.type)){setBCompVideoError("Поддерживаются MP4, WebM, MOV и M4V");return;}
+    setBCompVideoUploading(true);setBCompVideoProgress(0);setBCompVideoName(file.name);
+    try{
+      const{data:{session}}=await supabase.auth.getSession();
+      if(!session?.access_token)throw new Error("Не удалось подтвердить пользователя");
+      const projectUrl=process.env.NEXT_PUBLIC_SUPABASE_URL;
+      if(!projectUrl)throw new Error("Supabase URL не настроен");
+      const safe=file.name.normalize("NFKD").replace(/[^a-zA-Z0-9._-]+/g,"-").replace(/-+/g,"-").slice(-120)||"video.mp4";
+      const objectName=`${userId}/completion-videos/${crypto.randomUUID()}-${safe}`;
+      const tusMod:any=await import("tus-js-client");
+      await new Promise<void>((resolve,reject)=>{
+        const upload=new tusMod.Upload(file,{
+          endpoint:`${projectUrl}/storage/v1/upload/resumable`,
+          retryDelays:[0,1000,3000,5000,10000],
+          headers:{authorization:`Bearer ${session.access_token}`},
+          uploadDataDuringCreation:true,
+          removeFingerprintOnSuccess:true,
+          metadata:{bucketName:"form-completion-videos",objectName,contentType:file.type,cacheControl:"3600"},
+          chunkSize:6*1024*1024,
+          onError:(error:any)=>reject(error),
+          onProgress:(sent:number,total:number)=>setBCompVideoProgress(total?Math.round(sent/total*100):0),
+          onSuccess:()=>resolve(),
+        });
+        upload.findPreviousUploads().then((previous:any[])=>{
+          if(previous?.length)upload.resumeFromPreviousUpload(previous[0]);
+          upload.start();
+        }).catch(()=>upload.start());
+      });
+      const{data}=supabase.storage.from("form-completion-videos").getPublicUrl(objectName);
+      if(!data?.publicUrl)throw new Error("Не удалось получить ссылку на видео");
+      setBCompVideo(data.publicUrl);setBCompVideoProgress(100);showToast("Видео загружено");
+    }catch(e:any){
+      setBCompVideoError(e?.message||"Не удалось загрузить видео");
+      setBCompVideoName("");
+    }finally{setBCompVideoUploading(false);}
   };
 
   const updateQ=(id:string,patch:Partial<Question>)=>setBQuestions(p=>p.map(q=>q.id===id?{...q,...patch}:q));
@@ -19630,7 +19676,17 @@ function FormsPage({userId}:{userId:string}){
           </>}
 
           {builderStep===4&&<>
-            <div style={panel({padding:isMobile?16:22})}><div style={{fontSize:15,fontWeight:570,marginBottom:16}}>Страница подтверждения</div><div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12}}><div><label style={label}>Заголовок</label><input style={inp} value={bCompTitle} onChange={e=>setBCompTitle(e.target.value)}/></div><div><label style={label}>Подзаголовок</label><input style={inp} value={bCompSub} onChange={e=>setBCompSub(e.target.value)}/></div><div style={{gridColumn:isMobile?"auto":"1/-1"}}><label style={label}>Дополнительный текст</label><textarea style={{...inp,height:86,padding:"10px 12px",resize:"vertical"}} value={bCompText} onChange={e=>setBCompText(e.target.value)}/></div><div><label style={label}>Текст кнопки</label><input style={inp} value={bCompBtn} onChange={e=>setBCompBtn(e.target.value)}/></div><div><label style={label}>Ссылка кнопки</label><input style={inp} value={bCompUrl} onChange={e=>setBCompUrl(e.target.value)} placeholder="https://..."/></div><div><label style={label}>Ссылка на изображение</label><input style={inp} value={bCompImage} onChange={e=>setBCompImage(e.target.value)} placeholder="https://..."/></div><div><label style={label}>Ссылка на видео / embed</label><input style={inp} value={bCompVideo} onChange={e=>setBCompVideo(e.target.value)} placeholder="https://..."/></div></div></div>
+            <div style={panel({padding:isMobile?16:22})}><div style={{fontSize:15,fontWeight:570,marginBottom:16}}>Страница подтверждения</div><div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12}}><div><label style={label}>Заголовок</label><input style={inp} value={bCompTitle} onChange={e=>setBCompTitle(e.target.value)}/></div><div><label style={label}>Подзаголовок</label><input style={inp} value={bCompSub} onChange={e=>setBCompSub(e.target.value)}/></div><div style={{gridColumn:isMobile?"auto":"1/-1"}}><label style={label}>Дополнительный текст</label><textarea style={{...inp,height:86,padding:"10px 12px",resize:"vertical"}} value={bCompText} onChange={e=>setBCompText(e.target.value)}/></div><div><label style={label}>Текст кнопки</label><input style={inp} value={bCompBtn} onChange={e=>setBCompBtn(e.target.value)}/></div><div><label style={label}>Ссылка кнопки</label><input style={inp} value={bCompUrl} onChange={e=>setBCompUrl(e.target.value)} placeholder="https://..."/></div><div><label style={label}>Ссылка на изображение</label><input style={inp} value={bCompImage} onChange={e=>setBCompImage(e.target.value)} placeholder="https://..."/></div><div>
+  <label style={label}>Видео после формы</label>
+  <label style={{height:42,border:`1px dashed ${tone.border}`,borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center",gap:8,cursor:bCompVideoUploading?"default":"pointer",background:tone.soft,color:C.t1,fontSize:12.5,padding:"0 12px",overflow:"hidden"}}>
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 20h14"/></svg>
+    <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{bCompVideoUploading?`Загрузка ${bCompVideoProgress}%`:bCompVideoName||"Загрузить видео до 350 МБ"}</span>
+    <input type="file" accept="video/mp4,video/webm,video/quicktime,video/x-m4v" disabled={bCompVideoUploading} style={{display:"none"}} onChange={e=>{const f=e.target.files?.[0];if(f)uploadCompletionVideo(f);e.currentTarget.value="";}}/>
+  </label>
+  {bCompVideoUploading&&<div style={{height:5,background:tone.soft,borderRadius:5,overflow:"hidden",marginTop:8}}><div style={{height:"100%",width:`${bCompVideoProgress}%`,background:"#2F6BFF",transition:"width .2s ease"}}/></div>}
+  {bCompVideo&&<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginTop:8,fontSize:11.5,color:tone.muted}}><span>Видео сохранено на Vizzy</span><button type="button" onClick={()=>{setBCompVideo("");setBCompVideoName("");setBCompVideoProgress(0);}} style={{border:0,background:"transparent",color:"#DC2626",fontSize:11.5,cursor:"pointer",padding:0}}>Удалить</button></div>}
+  {bCompVideoError&&<div style={{fontSize:11.5,color:"#DC2626",marginTop:7}}>{bCompVideoError}</div>}
+</div></div></div>
             <div style={panel({padding:isMobile?16:22})}><div style={{fontSize:15,fontWeight:570,marginBottom:5}}>Уведомления</div><div style={{fontSize:12,color:tone.muted,marginBottom:15}}>Внутренние уведомления ставятся в очередь сразу. Email, Telegram и SMS требуют подключения провайдера.</div><div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)",gap:8,marginBottom:14}}>{[["internal","Внутри Vizzy"],["email","Email"],["telegram","Telegram"],["sms","SMS"]].map(([k,l])=>{const on=(bNotifications as any)[k];return<button key={k} onClick={()=>setBNotifications({...bNotifications,[k]:!on})} style={{height:40,borderRadius:8,border:`1px solid ${on?"#2F6BFF":tone.border}`,background:on?"rgba(47,107,255,.08)":"transparent",color:on?"#2F6BFF":tone.muted,cursor:"pointer",fontSize:12.5}}>{l}</button>;})}</div><label style={label}>Тема уведомления</label><input style={{...inp,marginBottom:10}} value={bNotifications.subject} onChange={e=>setBNotifications({...bNotifications,subject:e.target.value})}/><label style={label}>Шаблон сообщения</label><textarea style={{...inp,height:82,padding:"10px 12px",resize:"vertical"}} value={bNotifications.message} onChange={e=>setBNotifications({...bNotifications,message:e.target.value})}/><div style={{fontSize:11,color:tone.muted,marginTop:7}}>Переменные: {"{{name}}"}, {"{{date}}"}, {"{{time}}"}</div></div>
             <div style={panel({padding:22,textAlign:"center"})}><div style={{fontSize:10.5,textTransform:"uppercase",letterSpacing:".12em",color:tone.muted,marginBottom:14}}>Превью</div><div style={{width:42,height:42,borderRadius:"50%",background:`${bAccent}18`,color:bAccent,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 13px",fontSize:19}}>✓</div><div style={{fontSize:19,fontWeight:570,color:C.t1}}>{bCompTitle||"Запись подтверждена"}</div>{bCompSub&&<div style={{fontSize:12.5,color:tone.muted,marginTop:6}}>{bCompSub}</div>}{bCompBtn&&<div style={{display:"inline-flex",height:38,alignItems:"center",padding:"0 18px",borderRadius:8,background:bAccent,color:"#fff",fontSize:12.5,fontWeight:560,marginTop:16}}>{bCompBtn}</div>}</div>
             <div style={{display:"flex",justifyContent:"space-between",gap:8}}><Btn onClick={()=>setBuilderStep(3)}>← Назад</Btn><Btn primary disabled={saving} onClick={saveForm}>{saving?"Сохраняем…":editId?"Сохранить изменения":"Создать форму"}</Btn></div>
