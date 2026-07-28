@@ -872,7 +872,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v4.0"; // monthly Content kanban and refined analytics
+  const APP_VERSION="v4.5"; // fix CRM list JSX after Content OS integration
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
 
   // Clear stale localStorage on version change
@@ -9992,14 +9992,331 @@ ${fields}${vocab}
 function ContentPage({userId}:{userId:string}){
   const isMobile=useIsMobile();
   const{data:items,add,update,remove}=useTable("content",userId);
-  const[tab,setTab]=useState<"list"|"calendar"|"scripts">("list");
-  const[scriptToOpen,setScriptToOpen]=useState<string|null>(null);
+  const{data:contentTemplates,add:addTemplate,update:updateTemplate,remove:removeTemplate}=useTable("content_templates",userId);
+  const{data:youtubeChannels,add:addYoutubeChannel,remove:removeYoutubeChannel}=useTable("youtube_channels",userId);
+  const{data:contentTasks,add:addContentTask,update:updateContentTask,remove:removeContentTask}=useTable("planner_tasks",userId);
   const[show,setShow]=useState(false);
+  const[productionBusy,setProductionBusy]=useState<"tasks"|"audit"|"week"|null>(null);
+  const[contentAudit,setContentAudit]=useState("");
+  const[showProduction,setShowProduction]=useState(false);
   const[editId,setEditId]=useState<string|null>(null);
   const[coverUploading,setCoverUploading]=useState(false);
-  const emptyF=()=>({platform:"instagram",type:"Text Post",topic:"",status:"idea",date:"",link:"",scenario:"",cover_url:"",content_url:"",publish_date:"",analytics:null as any});
+  const[aiBusy,setAiBusy]=useState<"fill"|"script"|"improve"|null>(null);
+  const[templatePanel,setTemplatePanel]=useState(false);
+  const[newChannelName,setNewChannelName]=useState("");
+  const[newTemplateName,setNewTemplateName]=useState("");
+  const emptyF=()=>({
+    platform:"instagram",
+    type:"Reels",
+    content_format:"Reels",
+    topic:"",
+    status:"idea",
+    date:"",
+    link:"",
+    scenario:"",
+    broadcast_text:"",
+    icp:"",
+    cover_url:"",
+    content_url:"",
+    publish_date:"",
+    youtube_channel_id:"",
+    template_id:"",
+    checklist:[] as any[],
+    analytics:null as any
+  });
   const[f,sF]=useState<any>(emptyF());
   const[calMonth,setCalMonth]=useState(()=>{const d=new Date();return{y:d.getFullYear(),m:d.getMonth()};});
+
+  const PLATFORM_FORMATS:Record<string,string[]>={
+    instagram:["Reels","Публикация","История"],
+    telegram:["Пост","История","Рассылка в боте"],
+    youtube:["Видео"],
+  };
+  const formatOptions=(platform:string)=>PLATFORM_FORMATS[platform]||["Публикация"];
+  const checklistDefaults=(platform:string,format:string)=>{
+    if(platform==="youtube")return["Исследование","Структура","Сценарий","Съёмка","Монтаж","Обложка","Проверка","Опубликовано"];
+    if(platform==="instagram"&&format==="Reels")return["Идея","Сценарий","Съёмка","Монтаж","Обложка","Проверка","Опубликовано"];
+    if(platform==="telegram"&&format==="Рассылка в боте")return["Тема","Текст рассылки","Проверка ссылок","Тестовая отправка","Отправлено"];
+    return["Идея","Текст","Визуал","Проверка","Опубликовано"];
+  };
+  const normalizeChecklist=(value:any,platform:string,format:string)=>{
+    if(Array.isArray(value)&&value.length)return value.map((x:any,i:number)=>typeof x==="string"?{id:`c-${i}-${Date.now()}`,text:x,done:false}:x);
+    return checklistDefaults(platform,format).map((text,i)=>({id:`c-${i}-${Date.now()}`,text,done:false}));
+  };
+  const applyTemplateToForm=(template:any)=>{
+    if(!template)return;
+    sF((prev:any)=>({
+      ...prev,
+      platform:template.platform||prev.platform,
+      type:template.content_format||prev.type,
+      content_format:template.content_format||prev.content_format,
+      youtube_channel_id:template.youtube_channel_id||prev.youtube_channel_id,
+      icp:template.icp||prev.icp,
+      scenario:prev.scenario||template.scenario_template||"",
+      broadcast_text:prev.broadcast_text||template.broadcast_template||"",
+      checklist:normalizeChecklist(template.checklist,template.platform||prev.platform,template.content_format||prev.content_format),
+      template_id:template.id,
+    }));
+  };
+  const changePlatform=(platform:string)=>{
+    const nextFormat=formatOptions(platform)[0];
+    const matching=contentTemplates.find((t:any)=>t.platform===platform&&t.is_default);
+    sF((prev:any)=>({
+      ...prev,
+      platform,
+      type:nextFormat,
+      content_format:nextFormat,
+      youtube_channel_id:platform==="youtube"?(matching?.youtube_channel_id||youtubeChannels[0]?.id||""):"",
+      checklist:normalizeChecklist(matching?.checklist,platform,nextFormat),
+      template_id:matching?.id||"",
+      icp:matching?.icp||prev.icp||"",
+      scenario:matching?.scenario_template||"",
+      broadcast_text:matching?.broadcast_template||"",
+    }));
+  };
+  const changeFormat=(format:string)=>{
+    const matching=contentTemplates.find((t:any)=>t.platform===f.platform&&t.content_format===format&&t.is_default);
+    sF((prev:any)=>({
+      ...prev,
+      type:format,
+      content_format:format,
+      checklist:normalizeChecklist(matching?.checklist,prev.platform,format),
+      template_id:matching?.id||"",
+      scenario:matching?.scenario_template||prev.scenario||"",
+      broadcast_text:matching?.broadcast_template||prev.broadcast_text||"",
+      icp:matching?.icp||prev.icp||"",
+    }));
+  };
+  const runContentAi=async(mode:"fill"|"script"|"improve")=>{
+    if(aiBusy)return;
+    if(!f.topic?.trim()){alert("Сначала укажи тему контента.");return;}
+    setAiBusy(mode);
+    try{
+      const format=f.content_format||f.type;
+      const existingScenario=f.scenario||"";
+      const existingBroadcast=f.broadcast_text||"";
+      const system=`Ты — редактор контента для бизнеса. Пиши строго, конкретно, без эмодзи и без воды. Платформа: ${f.platform}. Формат: ${format}. Сохраняй уже заполненный пользователем смысл и не переписывай его без необходимости.`;
+      let instruction="";
+      if(mode==="script"){
+        instruction=f.platform==="telegram"&&format==="Рассылка в боте"
+          ?`Создай готовый текст рассылки в боте по теме "${f.topic}". Учитывай аудиторию: ${f.icp||"не указана"}. Добавь ясный заголовок, основной текст и один призыв к действию.`
+          :`Создай полный сценарий или текст контента по теме "${f.topic}". Учитывай аудиторию: ${f.icp||"не указана"}. Формат: ${format}. Структура должна соответствовать платформе.`;
+      }else if(mode==="improve"){
+        instruction=f.platform==="telegram"&&format==="Рассылка в боте"
+          ?`Улучши этот текст рассылки, сохранив смысл. Сделай его яснее и убедительнее:
+${existingBroadcast}`
+          :`Улучши этот сценарий или текст, сохранив смысл и факты:
+${existingScenario}`;
+      }else{
+        instruction=`Дозаполни карточку контента. Тема: "${f.topic}". Платформа: ${f.platform}. Формат: ${format}. Аудитория: ${f.icp||"не указана"}. Уже есть сценарий: ${existingScenario||"нет"}. Уже есть текст рассылки: ${existingBroadcast||"нет"}. Верни только готовый текст для поля ${f.platform==="telegram"&&format==="Рассылка в боте"?"рассылки":"сценария"}, не добавляй пояснений.`;
+      }
+      const result=await dsMessages([{role:"system",content:system},{role:"user",content:instruction}],1800,0.7);
+      if(result){
+        if(f.platform==="telegram"&&format==="Рассылка в боте")sF((prev:any)=>({...prev,broadcast_text:result}));
+        else sF((prev:any)=>({...prev,scenario:result}));
+      }
+    }catch(e){console.error(e);alert("Не удалось выполнить запрос к ИИ. Попробуй ещё раз.");}
+    finally{setAiBusy(null);}
+  };
+  const addChecklistItem=()=>{
+    const textValue=prompt("Название пункта");
+    if(!textValue?.trim())return;
+    sF((prev:any)=>({...prev,checklist:[...(prev.checklist||[]),{id:`c-${crypto.randomUUID()}`,text:textValue.trim(),done:false}]}));
+  };
+  const saveCurrentTemplate=async()=>{
+    if(!newTemplateName.trim()){alert("Укажи название шаблона.");return;}
+    const payload={
+      name:newTemplateName.trim(),
+      platform:f.platform,
+      content_format:f.content_format||f.type,
+      youtube_channel_id:f.youtube_channel_id||null,
+      icp:f.icp||"",
+      scenario_template:f.scenario||"",
+      broadcast_template:f.broadcast_text||"",
+      checklist:f.checklist||[],
+      is_default:false,
+    };
+    const row=await addTemplate(payload);
+    if(row){setNewTemplateName("");sF((prev:any)=>({...prev,template_id:row.id}));}
+  };
+  const setDefaultTemplate=async(template:any)=>{
+    for(const row of contentTemplates.filter((t:any)=>t.platform===template.platform&&t.content_format===template.content_format&&t.is_default)){
+      await updateTemplate(row.id,{is_default:false});
+    }
+    await updateTemplate(template.id,{is_default:true});
+  };
+
+  const linkedTasksFor=(contentId:string)=>contentTasks
+    .filter((t:any)=>t.content_id===contentId)
+    .sort((a:any,b:any)=>`${a.due_date||""} ${a.due_time||""}`.localeCompare(`${b.due_date||""} ${b.due_time||""}`));
+
+  const addDaysToDate=(dateValue:string,delta:number)=>{
+    const d=new Date(`${dateValue}T12:00:00`);
+    d.setDate(d.getDate()+delta);
+    return ds(d);
+  };
+
+  const ensureCurrentContentSaved=async()=>{
+    if(!f.topic?.trim())throw new Error("Сначала укажи тему контента");
+    const payload={
+      platform:f.platform||"instagram",
+      type:f.content_format||f.type||"Публикация",
+      content_format:f.content_format||f.type||"Публикация",
+      youtube_channel_id:f.platform==="youtube"?(f.youtube_channel_id||null):null,
+      template_id:f.template_id||null,
+      icp:f.icp||"",
+      checklist:f.checklist||[],
+      broadcast_text:f.broadcast_text||"",
+      topic:f.topic.trim(),
+      status:f.status||"idea",
+      date:f.publish_date||f.date||null,
+      publish_date:f.publish_date||f.date||null,
+      scenario:f.scenario||"",
+      cover_url:f.cover_url||"",
+      content_url:f.content_url||f.link||"",
+      link:f.content_url||f.link||"",
+      analytics:f.analytics||null,
+    };
+    if(editId){await update(editId,payload);return editId;}
+    const row=await add(payload);
+    if(!row?.id)throw new Error("Не удалось сохранить карточку");
+    setEditId(row.id);
+    return row.id as string;
+  };
+
+  const defaultProductionSteps=(platform:string,format:string)=>{
+    const source=(f.checklist||[]).filter((x:any)=>x?.text?.trim());
+    if(source.length)return source.map((x:any)=>({id:x.id||crypto.randomUUID(),title:x.text,done:Boolean(x.done)}));
+    return checklistDefaults(platform,format).map((title:string)=>({id:crypto.randomUUID(),title,done:false}));
+  };
+
+  const createImplementationPlan=async()=>{
+    if(productionBusy)return;
+    setProductionBusy("tasks");
+    try{
+      const contentId=await ensureCurrentContentSaved();
+      const publicationDate=f.publish_date||f.date;
+      if(!publicationDate)throw new Error("Укажи дату публикации");
+      const existing=linkedTasksFor(contentId);
+      if(existing.length){
+        const replace=confirm("Для этой карточки уже создан план реализации. Пересоздать его?");
+        if(!replace)return;
+        for(const task of existing)await removeContentTask(task.id);
+      }
+
+      const steps=defaultProductionSteps(f.platform,f.content_format||f.type);
+      const unfinished=steps.filter((x:any)=>!x.done);
+      const system="Ты — операционный продюсер контента. Распредели этапы производства до даты публикации. Возвращай только JSON-массив без markdown. Каждый объект: title, days_before, duration_minutes, priority. days_before — целое число от 0 и выше. Не используй эмодзи.";
+      const prompt=`Платформа: ${f.platform}. Формат: ${f.content_format||f.type}. Тема: ${f.topic}. Дата публикации: ${publicationDate}. Этапы: ${unfinished.map((x:any)=>x.title).join(", ")}. Распредели этапы назад от даты публикации, не ставь больше двух крупных задач на один день. Публикация должна быть в день 0.`;
+      let plan:any[]=[];
+      try{
+        const raw=await dsMessages([{role:"system",content:system},{role:"user",content:prompt}],1400,0.25);
+        const cleaned=String(raw||"").replace(/```json|```/g,"").trim();
+        const parsed=JSON.parse(cleaned);
+        if(Array.isArray(parsed))plan=parsed;
+      }catch(e){console.warn("AI production plan fallback",e);}
+
+      if(!plan.length){
+        const count=Math.max(1,unfinished.length);
+        plan=unfinished.map((step:any,index:number)=>({
+          title:step.title,
+          days_before:Math.max(0,count-1-index),
+          duration_minutes:step.title.toLowerCase().includes("монтаж")?180:step.title.toLowerCase().includes("съ")?120:60,
+          priority:index<2?"high":"medium",
+        }));
+      }
+
+      for(let index=0;index<plan.length;index++){
+        const p=plan[index];
+        const sourceStep=unfinished[index]||unfinished.find((x:any)=>x.title===p.title);
+        const due=addDaysToDate(publicationDate,-Math.max(0,Number(p.days_before)||0));
+        await addContentTask({
+          title:String(p.title||sourceStep?.title||`Этап ${index+1}`),
+          description:`Контент: ${f.topic}\nПлатформа: ${f.platform}\nФормат: ${f.content_format||f.type}`,
+          due_date:due,
+          date:due,
+          due_time:index%2===0?"10:00":"15:00",
+          priority:["low","medium","high"].includes(p.priority)?p.priority:"medium",
+          color:"#2F6BFF",
+          done:false,
+          completion_status:"pending",
+          status:"todo",
+          subtasks:[],
+          content_id:contentId,
+          content_checklist_item_id:sourceStep?.id||null,
+          duration_minutes:Math.max(15,Math.round((Number(p.duration_minutes)||60)/15)*15),
+          _duration:Math.max(15,Math.round((Number(p.duration_minutes)||60)/15)*15),
+        });
+      }
+      alert(`План реализации создан: ${plan.length} задач добавлено в War Room.`);
+    }catch(e:any){alert(e?.message||"Не удалось создать план реализации");}
+    finally{setProductionBusy(null);}
+  };
+
+  const syncContentChecklistFromTasks=async(contentId:string)=>{
+    const card=items.find((x:any)=>x.id===contentId);
+    if(!card)return;
+    const linked=linkedTasksFor(contentId);
+    if(!linked.length)return;
+    const current=normalizeChecklist(card.checklist,card.platform||"instagram",card.content_format||card.type||"Публикация");
+    let changed=false;
+    const next=current.map((item:any)=>{
+      const task=linked.find((t:any)=>t.content_checklist_item_id===item.id);
+      if(!task)return item;
+      const done=Boolean(task.done||task.completion_status==="done");
+      if(done!==Boolean(item.done))changed=true;
+      return{...item,done};
+    });
+    if(changed)await update(contentId,{checklist:next});
+  };
+
+  useEffect(()=>{
+    const ids=Array.from(new Set(contentTasks.map((t:any)=>t.content_id).filter(Boolean))) as string[];
+    ids.forEach(id=>syncContentChecklistFromTasks(id));
+  },[contentTasks]);
+
+  const runContentAudit=async()=>{
+    if(productionBusy)return;
+    setProductionBusy("audit");setShowProduction(true);
+    try{
+      const monthData=monthItems.map((x:any)=>({
+        topic:x.topic,platform:x.platform,format:x.content_format||x.type,status:x.status,
+        publish_date:x.publish_date||x.date,
+        checklist_done:Array.isArray(x.checklist)?x.checklist.filter((c:any)=>c.done).length:0,
+        checklist_total:Array.isArray(x.checklist)?x.checklist.length:0,
+      }));
+      const linked=contentTasks.filter((t:any)=>monthItems.some((x:any)=>x.id===t.content_id));
+      const prompt=`Проведи аудит контент-производства за ${contentMonthLabel}. Данные карточек: ${JSON.stringify(monthData)}. Связанные задачи War Room: ${JSON.stringify(linked.map((t:any)=>({title:t.title,date:t.due_date,done:t.done,status:t.completion_status})))}. Дай строго: 1) состояние, 2) узкие места, 3) перегруженные дни, 4) что перенести, 5) план на ближайшие 7 дней. Без эмодзи.`;
+      const result=await dsMessages([{role:"system",content:"Ты — операционный директор по контенту. Отвечай конкретно, структурно и без эмодзи."},{role:"user",content:prompt}],1800,0.35);
+      setContentAudit(result||"Недостаточно данных для аудита.");
+    }catch(e){setContentAudit("Не удалось провести аудит. Попробуй ещё раз.");}
+    finally{setProductionBusy(null);}
+  };
+
+  const generateWeekPlan=async()=>{
+    if(productionBusy)return;
+    setProductionBusy("week");
+    try{
+      const start=new Date();start.setHours(12,0,0,0);
+      const prompt=`Создай недельный контент-план из 7 карточек для бизнеса. Текущий контекст аудитории: ${f.icp||"эксперты и предприниматели"}. Используй только платформы Instagram, YouTube, Telegram и допустимые форматы: Instagram — Reels, Публикация, История; Telegram — Пост, История, Рассылка в боте; YouTube — Видео. Верни только JSON-массив: platform, content_format, topic, day_offset, short_brief. Без markdown и эмодзи.`;
+      const raw=await dsMessages([{role:"system",content:"Ты — стратег контента. Создавай сбалансированный и реалистичный недельный план."},{role:"user",content:prompt}],2000,0.5);
+      const parsed=JSON.parse(String(raw||"").replace(/```json|```/g,"").trim());
+      if(!Array.isArray(parsed))throw new Error();
+      for(const row of parsed.slice(0,14)){
+        const platform=["instagram","youtube","telegram"].includes(row.platform)?row.platform:"instagram";
+        const format=formatOptions(platform).includes(row.content_format)?row.content_format:formatOptions(platform)[0];
+        const date=ds(new Date(start.getFullYear(),start.getMonth(),start.getDate()+Math.max(0,Number(row.day_offset)||0)));
+        await add({
+          platform,type:format,content_format:format,topic:String(row.topic||"Новая публикация"),
+          status:"idea",date,publish_date:date,scenario:String(row.short_brief||""),
+          checklist:normalizeChecklist([],platform,format),icp:f.icp||"",broadcast_text:"",
+          content_url:"",link:"",cover_url:"",analytics:null,
+        });
+      }
+      alert("Недельный контент-план создан.");
+    }catch(e){alert("Не удалось создать недельный план. Проверь подключение ИИ и попробуй ещё раз.");}
+    finally{setProductionBusy(null);}
+  };
 
   const uploadCover=async(file:File)=>{
     setCoverUploading(true);
@@ -10044,7 +10361,7 @@ function ContentPage({userId}:{userId:string}){
       +"</style></head><body>"
       +(item.cover_url?"<img src='"+item.cover_url+"'/>":"")
       +"<h1>"+item.topic+"</h1>"
-      +"<div class='meta'><span class='badge'>"+item.platform+"</span><span class='badge'>"+item.type+"</span>"+(item.date?" &nbsp;📅 "+item.date:"")+"</div>"
+      +"<div class='meta'><span class='badge'>"+item.platform+"</span><span class='badge'>"+item.type+"</span>"+(item.date?" · "+item.date:"")+"</div>"
       +(item.scenario?"<div style='font-size:11px;font-weight:700;color:#888;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px'>ТЕКСТ / СЦЕНАРИЙ</div><div class='content'>"+escapedScenario+"</div>":"")
       +(item.content_url?"<p style='margin-top:16px'><a href='"+item.content_url+"'>"+item.content_url+"</a></p>":"")
       +"<script>window.onload=function(){window.print();}<\/script>"
@@ -10056,7 +10373,13 @@ function ContentPage({userId}:{userId:string}){
     if(!f.topic.trim())return;
     const payload={
       platform:f.platform||"instagram",
-      type:f.type||"Text Post",
+      type:f.content_format||f.type||"Публикация",
+      content_format:f.content_format||f.type||"Публикация",
+      youtube_channel_id:f.platform==="youtube"?(f.youtube_channel_id||null):null,
+      template_id:f.template_id||null,
+      icp:f.icp||"",
+      checklist:f.checklist||[],
+      broadcast_text:f.broadcast_text||"",
       topic:f.topic.trim(),
       status:f.status||"idea",
       date:f.publish_date||null,
@@ -10077,7 +10400,27 @@ function ContentPage({userId}:{userId:string}){
 
   const startEdit=(item:any)=>{
     const publishDate=item.publish_date||item.date||"";
-    sF({platform:item.platform||"instagram",type:CTYPES.includes(item.type)?item.type:"Другое",topic:item.topic||"",status:item.status||"idea",date:publishDate,link:item.content_url||item.link||"",scenario:item.scenario||"",cover_url:item.cover_url||"",content_url:item.content_url||item.link||"",publish_date:publishDate,analytics:item.analytics||null});
+    const platform=item.platform||"instagram";
+    const format=item.content_format||item.type||formatOptions(platform)[0];
+    sF({
+      platform,
+      type:format,
+      content_format:format,
+      topic:item.topic||"",
+      status:item.status||"idea",
+      date:publishDate,
+      link:item.content_url||item.link||"",
+      scenario:item.scenario||"",
+      broadcast_text:item.broadcast_text||"",
+      icp:item.icp||"",
+      checklist:normalizeChecklist(item.checklist,platform,format),
+      cover_url:item.cover_url||"",
+      content_url:item.content_url||item.link||"",
+      publish_date:publishDate,
+      youtube_channel_id:item.youtube_channel_id||"",
+      template_id:item.template_id||"",
+      analytics:item.analytics||null
+    });
     setEditId(item.id);setShow(true);
   };
 
@@ -10127,7 +10470,7 @@ function ContentPage({userId}:{userId:string}){
     return days;
   },[calMonth]);
 
-  const itemsForDay=(d:Date)=>items.filter((x:any)=>x.date===ds(d));
+  const itemsForDay=(d:Date)=>filteredItems.filter((x:any)=>(x.publish_date||x.date)===ds(d));
 
   // Group by month for list view
   const groupedByMonth=useMemo(()=>{
@@ -10169,12 +10512,11 @@ function ContentPage({userId}:{userId:string}){
   const[groupMode,setGroupMode]=useState<"platform"|"type">("platform");
 
   const PLATFORM_FILTERS=[
-    {id:"all",label:"Все",icon:"🌐"},
-    {id:"youtube",label:"YouTube",icon:"▶️"},
-    {id:"instagram",label:"Instagram",icon:"📸"},
-    {id:"telegram",label:"Telegram",icon:"✈️"},
-    {id:"tiktok",label:"TikTok",icon:"🎵"},
-    {id:"other",label:"Другое",icon:"📦"},
+    {id:"all",label:"Все"},
+    {id:"youtube",label:"YouTube"},
+    {id:"instagram",label:"Instagram"},
+    {id:"telegram",label:"Telegram"},
+    {id:"other",label:"Другое"},
   ];
   const TYPE_FILTERS=[{id:"all",label:"Все"},...CTYPES.map(t=>({id:t,label:t}))];
   const activeFilters=groupMode==="type"?TYPE_FILTERS:PLATFORM_FILTERS;
@@ -10194,7 +10536,7 @@ function ContentPage({userId}:{userId:string}){
     <div style={{display:"flex",alignItems:isMobile?"stretch":"center",justifyContent:"space-between",gap:12,marginBottom:18,flexDirection:isMobile?"column":"row"}}>
       <div>
         <div style={{fontSize:isMobile?18:20,fontWeight:500,color:C.t1,letterSpacing:"-.02em"}}>Контент</div>
-        <div style={{fontSize:12,color:C.t2,marginTop:4}}>Kanban по месяцам — без перегруженной доски</div>
+        <div style={{fontSize:12,color:C.t2,marginTop:4}}>Kanban и календарь работают как единый контент-план</div>
       </div>
       <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
         <button onClick={()=>moveContentMonth(-1)} style={{width:36,height:36,borderRadius:9,border:"1px solid "+C.bd,background:C.w,color:C.t1,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -10207,6 +10549,32 @@ function ContentPage({userId}:{userId:string}){
         <button onClick={resetContentMonth} style={{height:36,padding:"0 13px",borderRadius:9,border:"1px solid "+C.bd,background:C.ib,color:C.t2,fontSize:12,cursor:"pointer"}}>Текущий месяц</button>
         <div style={{height:36,padding:"0 13px",borderRadius:9,border:"1px solid "+C.bd,background:C.ib,color:C.t2,fontSize:11.5,display:"flex",alignItems:"center"}}>Всего: <b style={{color:C.t1,fontWeight:600,marginLeft:5}}>{monthItems.length}</b></div>
       </div>
+    </div>
+
+    <div style={{background:C.w,border:"1px solid "+C.bd,borderRadius:12,padding:isMobile?14:16,marginBottom:16}}>
+      <div style={{display:"flex",alignItems:isMobile?"flex-start":"center",justifyContent:"space-between",gap:12,flexDirection:isMobile?"column":"row"}}>
+        <div>
+          <div style={{fontSize:14,fontWeight:500,color:C.t1}}>Центр производства контента</div>
+          <div style={{fontSize:11.5,color:C.t2,marginTop:4}}>Планирование, задачи War Room и аудит производственного процесса.</div>
+        </div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          <button onClick={generateWeekPlan} disabled={!!productionBusy}
+            style={{height:36,padding:"0 13px",borderRadius:8,border:"1px solid "+C.bd,background:"transparent",color:C.t1,fontSize:12,cursor:productionBusy?"default":"pointer"}}>
+            {productionBusy==="week"?"Создание...":"Заполнить неделю"}
+          </button>
+          <button onClick={runContentAudit} disabled={!!productionBusy}
+            style={{height:36,padding:"0 13px",borderRadius:8,border:"none",background:C.t1,color:C.bg,fontSize:12,fontWeight:500,cursor:productionBusy?"default":"pointer"}}>
+            {productionBusy==="audit"?"Анализ...":"Провести аудит"}
+          </button>
+        </div>
+      </div>
+      {showProduction&&<div style={{marginTop:14,padding:14,borderRadius:9,background:C.ib,border:"1px solid "+C.bd}}>
+        <div style={{display:"flex",justifyContent:"space-between",gap:10,marginBottom:8}}>
+          <div style={{fontSize:12,fontWeight:500,color:C.t1}}>Результат аудита</div>
+          <button onClick={()=>setShowProduction(false)} style={{border:0,background:"transparent",color:C.t2,cursor:"pointer"}}>×</button>
+        </div>
+        <div style={{fontSize:12.5,color:C.t1,lineHeight:1.65,whiteSpace:"pre-wrap"}}>{contentAudit||"Запусти аудит, чтобы увидеть узкие места и план действий."}</div>
+      </div>}
     </div>
 
     {/* ── Group mode switcher ── */}
@@ -10278,97 +10646,211 @@ function ContentPage({userId}:{userId:string}){
       })}
     </div>
 
-    {/* ── Tabs ── */}
-    <div style={{display:"flex",gap:4,marginBottom:20,borderBottom:"1px solid "+C.bd}}>
-      {[{id:"list",label:"Контент-план"},{id:"calendar",label:"Календарь"},{id:"scripts",label:"Сценарии"}].map(t=><button key={t.id} onClick={()=>setTab(t.id as any)} style={{padding:"10px 18px",background:"none",border:"none",borderBottom:tab===t.id?"2px solid "+C.t1:"2px solid transparent",color:tab===t.id?C.t1:C.t2,fontSize:14,fontWeight:tab===t.id?600:500,cursor:"pointer",marginBottom:-2,letterSpacing:"-0.01em"}}>{t.label}</button>)}
-    </div>
 
     {/* ── KANBAN TAB ── */}
-    {tab==="list"&&<>
+    <>
       {/* Header */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
         <div>
           <div style={{fontSize:18,fontWeight:500,color:C.t1}}>Контент-план · {contentMonthLabel}</div>
           <div style={{fontSize:12,color:C.t2,marginTop:3}}>Перетаскивай карточки между этапами. На доске только выбранный месяц.</div>
         </div>
-        <button onClick={()=>{setShow(!show);setEditId(null);const d=selectedMonthDefaultDate();sF({...emptyF(),date:d,publish_date:d});}}
+        <button onClick={()=>{setShow(!show);setEditId(null);const d=selectedMonthDefaultDate();const base=emptyF();sF({...base,date:d,publish_date:d,checklist:normalizeChecklist([],base.platform,base.content_format)});}}
           style={{padding:"9px 18px",background:C.t1,color:C.bg,border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,boxShadow:"none"}}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Контент
         </button>
       </div>
 
-      {/* Form */}
-      {show&&<Card style={{marginBottom:20}}>
-        <div style={{fontSize:15,fontWeight:700,marginBottom:18}}>{editId?"Редактировать":"Добавить контент"}</div>
-        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:14}}>
-          {/* Cover upload — preserves aspect ratio */}
-          <div style={{gridRow:"span 2",display:"flex",flexDirection:"column",gap:8}}>
-            <label style={{fontSize:12,color:C.t2,fontWeight:600}}>Обложка</label>
-            <label style={{cursor:"pointer",flex:1}}>
-              <div style={{width:"100%",minHeight:120,background:C.ib,borderRadius:8,border:"2px dashed "+C.bd,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
-                {coverUploading
-                  ? <div style={{width:24,height:24,border:"3px solid "+C.bd,borderTopColor:C.a,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
-                  : f.cover_url
-                  ? <img src={f.cover_url} style={{width:"100%",height:"100%",objectFit:"contain",display:"block"}} alt="cover"/>
-                  : <div style={{textAlign:"center",padding:16}}>
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.5" style={{marginBottom:6}}><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                      <div style={{fontSize:11,color:C.t2}}>Загрузить фото</div>
-                      <div style={{fontSize:10,color:C.t2,opacity:0.6,marginTop:2}}>Сохраняется в оригинальных пропорциях</div>
-                    </div>
-                }
+      {/* Full content card editor */}
+      {show&&<div onClick={()=>{setShow(false);setEditId(null);sF(emptyF());setTemplatePanel(false);}}
+        style={{position:"fixed",inset:0,zIndex:520,background:"rgba(0,0,0,.68)",backdropFilter:"blur(5px)",display:"flex",alignItems:"stretch",justifyContent:"center",padding:isMobile?0:18}}>
+        <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:1240,height:isMobile?"100%":"calc(100vh - 36px)",background:C.bg,border:isMobile?"none":"1px solid "+C.bd,borderRadius:isMobile?0:14,display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 24px 80px rgba(0,0,0,.36)"}}>
+          <div style={{height:68,padding:isMobile?"0 16px":"0 24px",borderBottom:"1px solid "+C.bd,display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,flexShrink:0}}>
+            <div style={{minWidth:0}}>
+              <div style={{fontSize:16,fontWeight:500,color:C.t1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{editId?"Редактирование карточки":"Новая карточка контента"}</div>
+              <div style={{fontSize:11.5,color:C.t2,marginTop:4}}>Планирование, текст, сценарий и шаблон в одном окне</div>
+            </div>
+            <div style={{display:"flex",gap:8,alignItems:"center"}}>
+              <button onClick={()=>setTemplatePanel(v=>!v)} style={{height:36,padding:"0 13px",borderRadius:8,border:"1px solid "+C.bd,background:templatePanel?C.ib:"transparent",color:C.t1,fontSize:12,cursor:"pointer"}}>Шаблоны</button>
+              <button onClick={sub} disabled={!f.topic?.trim()} style={{height:36,padding:"0 16px",borderRadius:8,border:"none",background:C.t1,color:C.bg,fontSize:12.5,fontWeight:500,cursor:f.topic?.trim()?"pointer":"default",opacity:f.topic?.trim()?1:.45}}>Сохранить</button>
+              <button onClick={()=>{setShow(false);setEditId(null);sF(emptyF());setTemplatePanel(false);}} style={{width:36,height:36,borderRadius:8,border:"1px solid "+C.bd,background:"transparent",color:C.t2,cursor:"pointer",fontSize:18}}>×</button>
+            </div>
+          </div>
+
+          <div style={{flex:1,overflowY:"auto",padding:isMobile?16:24}}>
+            {templatePanel&&<div style={{border:"1px solid "+C.bd,borderRadius:11,background:C.w,padding:16,marginBottom:18}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,marginBottom:14}}>
+                <div>
+                  <div style={{fontSize:14,fontWeight:500,color:C.t1}}>Настройка шаблонов</div>
+                  <div style={{fontSize:11.5,color:C.t2,marginTop:4}}>Сохраняй чек-лист, аудиторию, структуру текста и канал YouTube.</div>
+                </div>
               </div>
-              <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0])uploadCover(e.target.files[0]);}}/>
-            </label>
-            {f.cover_url&&<button onClick={()=>sF({...f,cover_url:""})} style={{fontSize:11,color:C.r,background:"transparent",border:"none",cursor:"pointer",textAlign:"left",padding:0}}>✕ Удалить обложку</button>}
-          </div>
+              <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12}}>
+                <div>
+                  <label style={{fontSize:11.5,color:C.t2,display:"block",marginBottom:6}}>Сохранить текущую карточку как шаблон</label>
+                  <div style={{display:"flex",gap:8}}>
+                    <input value={newTemplateName} onChange={e=>setNewTemplateName(e.target.value)} placeholder="Название шаблона" style={{...iS(),flex:1}}/>
+                    <button onClick={saveCurrentTemplate} style={{padding:"0 14px",borderRadius:8,border:"none",background:C.t1,color:C.bg,fontSize:12,cursor:"pointer"}}>Сохранить</button>
+                  </div>
+                </div>
+                <div>
+                  <label style={{fontSize:11.5,color:C.t2,display:"block",marginBottom:6}}>Применить шаблон</label>
+                  <select value={f.template_id||""} onChange={e=>{const row=contentTemplates.find((t:any)=>t.id===e.target.value);if(row)applyTemplateToForm(row);else sF((p:any)=>({...p,template_id:""}));}} style={iS()}>
+                    <option value="">Без шаблона</option>
+                    {contentTemplates.map((t:any)=><option key={t.id} value={t.id}>{t.name} · {t.platform} · {t.content_format}</option>)}
+                  </select>
+                </div>
+              </div>
+              {contentTemplates.length>0&&<div style={{display:"grid",gap:7,marginTop:14}}>
+                {contentTemplates.map((t:any)=><div key={t.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"9px 11px",border:"1px solid "+C.bd,borderRadius:8}}>
+                  <div style={{minWidth:0}}>
+                    <div style={{fontSize:12.5,color:C.t1,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.name}</div>
+                    <div style={{fontSize:10.5,color:C.t2,marginTop:3}}>{t.platform} · {t.content_format}{t.is_default?" · по умолчанию":""}</div>
+                  </div>
+                  <div style={{display:"flex",gap:6}}>
+                    {!t.is_default&&<button onClick={()=>setDefaultTemplate(t)} style={{height:30,padding:"0 10px",borderRadius:7,border:"1px solid "+C.bd,background:"transparent",color:C.t1,fontSize:11,cursor:"pointer"}}>По умолчанию</button>}
+                    <button onClick={()=>applyTemplateToForm(t)} style={{height:30,padding:"0 10px",borderRadius:7,border:"1px solid "+C.bd,background:"transparent",color:C.t1,fontSize:11,cursor:"pointer"}}>Применить</button>
+                    <button onClick={()=>removeTemplate(t.id)} style={{width:30,height:30,borderRadius:7,border:"1px solid rgba(220,38,38,.2)",background:"transparent",color:"#DC2626",cursor:"pointer"}}>×</button>
+                  </div>
+                </div>)}
+              </div>}
+            </div>}
 
-          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Тема *</label><input value={f.topic} onChange={e=>sF({...f,topic:e.target.value})} style={iS()}/></div>
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"minmax(0,1.2fr) minmax(300px,.8fr)",gap:18,alignItems:"start"}}>
+              <div style={{display:"grid",gap:16}}>
+                <section style={{background:C.w,border:"1px solid "+C.bd,borderRadius:11,padding:16}}>
+                  <div style={{fontSize:13,fontWeight:500,color:C.t1,marginBottom:14}}>Основная информация</div>
+                  <div style={{display:"grid",gap:12}}>
+                    <div><label style={{fontSize:11.5,color:C.t2,display:"block",marginBottom:6}}>Тема</label><input value={f.topic||""} onChange={e=>sF({...f,topic:e.target.value})} placeholder="Название или тема контента" style={iS()}/></div>
+                    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12}}>
+                      <div><label style={{fontSize:11.5,color:C.t2,display:"block",marginBottom:6}}>Платформа</label>
+                        <div style={{display:"flex",alignItems:"center",gap:8,height:40,padding:"0 10px",border:"1px solid "+C.bd,borderRadius:8,background:C.ib}}>
+                          <PlatformIcon pid={f.platform} size={18}/>
+                          <select value={f.platform} onChange={e=>changePlatform(e.target.value)} style={{flex:1,border:0,background:"transparent",color:C.t1,fontSize:13,outline:"none"}}>
+                            {["instagram","youtube","telegram"].map(pid=><option key={pid} value={pid}>{pid==="instagram"?"Instagram":pid==="youtube"?"YouTube":"Telegram"}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      {f.platform!=="youtube"&&<div><label style={{fontSize:11.5,color:C.t2,display:"block",marginBottom:6}}>Формат</label>
+                        <select value={f.content_format||f.type} onChange={e=>changeFormat(e.target.value)} style={iS()}>{formatOptions(f.platform).map(x=><option key={x}>{x}</option>)}</select>
+                      </div>}
+                      {f.platform==="youtube"&&<div><label style={{fontSize:11.5,color:C.t2,display:"block",marginBottom:6}}>Канал YouTube</label>
+                        <select value={f.youtube_channel_id||""} onChange={e=>sF({...f,youtube_channel_id:e.target.value})} style={iS()}>
+                          <option value="">Выбрать канал</option>
+                          {youtubeChannels.map((c:any)=><option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                      </div>}
+                    </div>
+                    {f.platform==="youtube"&&<div style={{padding:12,border:"1px solid "+C.bd,borderRadius:9,background:C.ib}}>
+                      <label style={{fontSize:11.5,color:C.t2,display:"block",marginBottom:7}}>Добавить канал один раз</label>
+                      <div style={{display:"flex",gap:8}}>
+                        <input value={newChannelName} onChange={e=>setNewChannelName(e.target.value)} placeholder="Название канала" style={{...iS(),flex:1}}/>
+                        <button onClick={async()=>{if(!newChannelName.trim())return;const row=await addYoutubeChannel({name:newChannelName.trim(),url:"",is_active:true});if(row){setNewChannelName("");sF((p:any)=>({...p,youtube_channel_id:row.id}));}}} style={{padding:"0 13px",borderRadius:8,border:"none",background:C.t1,color:C.bg,fontSize:12,cursor:"pointer"}}>Добавить</button>
+                      </div>
+                      {youtubeChannels.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:9}}>{youtubeChannels.map((c:any)=><span key={c.id} style={{display:"inline-flex",alignItems:"center",gap:6,padding:"5px 8px",border:"1px solid "+C.bd,borderRadius:7,fontSize:10.5,color:C.t2}}>{c.name}<button onClick={()=>removeYoutubeChannel(c.id)} style={{border:0,background:"transparent",color:C.t2,cursor:"pointer",padding:0}}>×</button></span>)}</div>}
+                    </div>}
+                    <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:12}}>
+                      <div><label style={{fontSize:11.5,color:C.t2,display:"block",marginBottom:6}}>Статус</label><select value={f.status} onChange={e=>sF({...f,status:e.target.value})} style={iS()}>{CSTATS.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
+                      <div><label style={{fontSize:11.5,color:C.t2,display:"block",marginBottom:6}}>Дата публикации</label><input type="date" value={f.publish_date||""} onChange={e=>sF({...f,publish_date:e.target.value,date:e.target.value})} style={iS()}/></div>
+                      <div><label style={{fontSize:11.5,color:C.t2,display:"block",marginBottom:6}}>Ссылка</label><input value={f.content_url||""} onChange={e=>sF({...f,content_url:e.target.value})} placeholder="https://..." style={iS()}/></div>
+                    </div>
+                  </div>
+                </section>
 
-          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Платформа</label>
-            <div style={{display:"flex",alignItems:"center",gap:8,padding:"0 10px",border:"1px solid "+C.bd,borderRadius:8,background:C.ib,height:38}}>
-              <PlatformIcon pid={f.platform} size={18}/>
-              <select value={f.platform} onChange={e=>sF({...f,platform:e.target.value})} style={{flex:1,border:"none",background:"transparent",fontSize:13,outline:"none",fontFamily:"'Inter',sans-serif",cursor:"pointer",color:C.t1}}>
-                {PLATS.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}
-              </select>
+                <section style={{background:C.w,border:"1px solid "+C.bd,borderRadius:11,padding:16}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginBottom:10}}>
+                    <div><div style={{fontSize:13,fontWeight:500,color:C.t1}}>Аудитория и контекст</div><div style={{fontSize:10.5,color:C.t2,marginTop:3}}>ИИ использует это при генерации.</div></div>
+                    <button onClick={()=>runContentAi("fill")} disabled={!!aiBusy} style={{height:34,padding:"0 12px",borderRadius:8,border:"1px solid "+C.bd,background:"transparent",color:C.t1,fontSize:11.5,cursor:aiBusy?"default":"pointer"}}>{aiBusy==="fill"?"Заполнение...":"Дозаполнить с ИИ"}</button>
+                  </div>
+                  <textarea value={f.icp||""} onChange={e=>sF({...f,icp:e.target.value})} rows={4} placeholder="Для кого создаётся контент: сегмент, уровень знаний, задачи, боли, желаемый результат." style={{...iS(),resize:"vertical",lineHeight:1.55,fontFamily:"'Inter',sans-serif"}}/>
+                </section>
+
+                <section style={{background:C.w,border:"1px solid "+C.bd,borderRadius:11,padding:16}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginBottom:10}}>
+                    <div><div style={{fontSize:13,fontWeight:500,color:C.t1}}>{f.platform==="telegram"&&f.content_format==="Рассылка в боте"?"Текст рассылки":"Сценарий или текст"}</div><div style={{fontSize:10.5,color:C.t2,marginTop:3}}>Отдельный раздел сценариев больше не нужен.</div></div>
+                    <div style={{display:"flex",gap:7}}>
+                      <button onClick={()=>runContentAi("script")} disabled={!!aiBusy} style={{height:34,padding:"0 11px",borderRadius:8,border:"none",background:C.t1,color:C.bg,fontSize:11.5,cursor:aiBusy?"default":"pointer"}}>{aiBusy==="script"?"Создание...":"Создать с ИИ"}</button>
+                      <button onClick={()=>runContentAi("improve")} disabled={!!aiBusy||!(f.scenario||f.broadcast_text)} style={{height:34,padding:"0 11px",borderRadius:8,border:"1px solid "+C.bd,background:"transparent",color:C.t1,fontSize:11.5,cursor:aiBusy?"default":"pointer",opacity:(f.scenario||f.broadcast_text)?1:.45}}>{aiBusy==="improve"?"Доработка...":"Доработать с ИИ"}</button>
+                    </div>
+                  </div>
+                  {f.platform==="telegram"&&f.content_format==="Рассылка в боте"
+                    ?<textarea value={f.broadcast_text||""} onChange={e=>sF({...f,broadcast_text:e.target.value})} rows={13} placeholder="Заголовок, основной текст и призыв к действию." style={{...iS(),resize:"vertical",lineHeight:1.65,fontFamily:"'Inter',sans-serif"}}/>
+                    :<textarea value={f.scenario||""} onChange={e=>sF({...f,scenario:e.target.value})} rows={13} placeholder="Структура, хук, основная часть, вывод и призыв к действию." style={{...iS(),resize:"vertical",lineHeight:1.65,fontFamily:"'Inter',sans-serif"}}/>}
+                </section>
+              </div>
+
+              <div style={{display:"grid",gap:16}}>
+                <section style={{background:C.w,border:"1px solid "+C.bd,borderRadius:11,padding:16}}>
+                  <div style={{fontSize:13,fontWeight:500,color:C.t1,marginBottom:12}}>Обложка</div>
+                  <label style={{cursor:"pointer"}}>
+                    <div style={{width:"100%",aspectRatio:"16/9",background:C.ib,borderRadius:9,border:"1px dashed "+C.bd,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      {coverUploading?<div style={{fontSize:12,color:C.t2}}>Загрузка...</div>:f.cover_url?<img src={f.cover_url} alt="" style={{width:"100%",height:"100%",objectFit:"contain"}}/>:<div style={{fontSize:12,color:C.t2}}>Загрузить изображение</div>}
+                    </div>
+                    <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0])uploadCover(e.target.files[0]);}}/>
+                  </label>
+                  {f.cover_url&&<button onClick={()=>sF({...f,cover_url:""})} style={{marginTop:8,border:0,background:"transparent",color:"#DC2626",fontSize:11.5,cursor:"pointer",padding:0}}>Удалить изображение</button>}
+                </section>
+
+                <section style={{background:C.w,border:"1px solid "+C.bd,borderRadius:11,padding:16}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginBottom:12}}>
+                    <div>
+                      <div style={{fontSize:13,fontWeight:500,color:C.t1}}>Чек-лист производства</div>
+                      <div style={{fontSize:10.5,color:C.t2,marginTop:3}}>{(f.checklist||[]).filter((x:any)=>x.done).length}/{(f.checklist||[]).length} выполнено</div>
+                    </div>
+                    <button onClick={addChecklistItem} style={{height:32,padding:"0 10px",borderRadius:7,border:"1px solid "+C.bd,background:"transparent",color:C.t1,fontSize:11,cursor:"pointer"}}>Добавить пункт</button>
+                  </div>
+                  {(f.checklist||[]).length>0&&<div style={{height:5,borderRadius:5,background:C.ib,overflow:"hidden",marginBottom:12}}><div style={{height:"100%",width:`${Math.round((f.checklist||[]).filter((x:any)=>x.done).length/Math.max(1,(f.checklist||[]).length)*100)}%`,background:"#2F6BFF"}}/></div>}
+                  <div style={{display:"grid",gap:7}}>
+                    {(f.checklist||[]).map((item:any,index:number)=><div key={item.id||index} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 9px",border:"1px solid "+C.bd,borderRadius:8}}>
+                      <button onClick={()=>sF((p:any)=>({...p,checklist:p.checklist.map((x:any,i:number)=>i===index?{...x,done:!x.done}:x)}))} style={{width:17,height:17,borderRadius:4,border:"1.5px solid "+(item.done?"#22C55E":C.bd),background:item.done?"#22C55E":"transparent",padding:0,cursor:"pointer",flexShrink:0}}/>
+                      <input value={item.text} onChange={e=>sF((p:any)=>({...p,checklist:p.checklist.map((x:any,i:number)=>i===index?{...x,text:e.target.value}:x)}))} style={{flex:1,minWidth:0,border:0,background:"transparent",color:C.t1,fontSize:12.5,outline:"none"}}/>
+                      <button onClick={()=>sF((p:any)=>({...p,checklist:p.checklist.filter((_:any,i:number)=>i!==index)}))} style={{border:0,background:"transparent",color:C.t2,cursor:"pointer"}}>×</button>
+                    </div>)}
+                  </div>
+                </section>
+
+                <section style={{background:C.w,border:"1px solid "+C.bd,borderRadius:11,padding:16}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:12}}>
+                    <div>
+                      <div style={{fontSize:13,fontWeight:500,color:C.t1}}>План реализации</div>
+                      <div style={{fontSize:10.5,color:C.t2,marginTop:3}}>Задачи автоматически создаются в War Room и синхронизируются с чек-листом.</div>
+                    </div>
+                    <button onClick={createImplementationPlan} disabled={!!productionBusy}
+                      style={{height:34,padding:"0 11px",borderRadius:8,border:"none",background:"#2F6BFF",color:"#fff",fontSize:11.5,fontWeight:500,cursor:productionBusy?"default":"pointer"}}>
+                      {productionBusy==="tasks"?"Создание...":"Создать задачи"}
+                    </button>
+                  </div>
+                  {editId&&linkedTasksFor(editId).length>0?<>
+                    <div style={{height:5,borderRadius:5,background:C.ib,overflow:"hidden",marginBottom:11}}>
+                      <div style={{height:"100%",width:`${Math.round(linkedTasksFor(editId).filter((t:any)=>t.done||t.completion_status==="done").length/Math.max(1,linkedTasksFor(editId).length)*100)}%`,background:"#2F6BFF"}}/>
+                    </div>
+                    <div style={{display:"grid",gap:7}}>
+                      {linkedTasksFor(editId).map((task:any)=><div key={task.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 9px",border:"1px solid "+C.bd,borderRadius:8}}>
+                        <button onClick={()=>updateContentTask(task.id,{done:!(task.done||task.completion_status==="done"),completion_status:(task.done||task.completion_status==="done")?"pending":"done"})}
+                          style={{width:16,height:16,borderRadius:4,border:"1.5px solid "+((task.done||task.completion_status==="done")?"#22C55E":C.bd),background:(task.done||task.completion_status==="done")?"#22C55E":"transparent",padding:0,cursor:"pointer"}}/>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:11.5,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:(task.done||task.completion_status==="done")?"line-through":"none"}}>{task.title}</div>
+                          <div style={{fontSize:9.5,color:C.t2,marginTop:3}}>{task.due_date||"Без даты"}{task.due_time?` · ${task.due_time}`:""}</div>
+                        </div>
+                      </div>)}
+                    </div>
+                  </>:<div style={{fontSize:11.5,color:C.t2,lineHeight:1.5}}>Сохрани карточку и нажми «Создать задачи». ИИ распределит этапы назад от даты публикации.</div>}
+                </section>
+
+                <section style={{background:C.w,border:"1px solid "+C.bd,borderRadius:11,padding:16}}>
+                  <ContentAnalytics type={f.content_format||f.type||"Публикация"} value={f.analytics} onChange={(v:any)=>sF({...f,analytics:v})}/>
+                </section>
+              </div>
             </div>
           </div>
-
-          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Тип</label><select value={f.type} onChange={e=>sF({...f,type:e.target.value})} style={iS()}>{CTYPES.map(t=><option key={t}>{t}</option>)}</select></div>
-          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Статус</label><select value={f.status} onChange={e=>sF({...f,status:e.target.value})} style={iS()}>{CSTATS.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
-          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Дата публикации</label><input type="date" value={f.publish_date||""} onChange={e=>sF({...f,publish_date:e.target.value,date:e.target.value})} style={iS()}/></div>
-          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Ссылка на контент</label><input value={f.content_url} onChange={e=>sF({...f,content_url:e.target.value})} placeholder="https://..." style={iS()}/></div>
-
-          {/* Scenario / content text — full width, large */}
-          <div style={{gridColumn:isMobile?"1 / -1":"span 3"}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
-              <label style={{fontSize:12,color:C.t2,fontWeight:600}}>Сценарий / Текст контента</label>
-              <span style={{fontSize:10,color:C.t2,opacity:0.6}}>{f.scenario?.length||0} символов</span>
-            </div>
-            <textarea value={f.scenario} onChange={e=>sF({...f,scenario:e.target.value})}
-              rows={8} placeholder={"Напиши сценарий, текст поста, хэштеги, описание видео...\n\nМожно структурировать:\n• Крючок: ...\n• Основная мысль: ...\n• Призыв к действию: ..."}
-              style={{...iS(),resize:"vertical",lineHeight:"1.6",fontFamily:"'Inter',sans-serif"}}/>
-          </div>
-
-          {/* Аналитика по опубликованному контенту */}
-          <div style={{gridColumn:isMobile?"1 / -1":"span 3"}}>
-            <ContentAnalytics type={f.type||"Text Post"} value={f.analytics} onChange={(v:any)=>sF({...f,analytics:v})}/>
-          </div>
         </div>
-        <div style={{display:"flex",gap:10,marginTop:16,flexWrap:"wrap"}}>
-          <Btn onClick={sub}>{editId?"Сохранить":"Добавить"}</Btn>
-          {editId&&f.scenario&&<button onClick={()=>downloadPDF({...f,id:editId})}
-            style={{padding:"9px 16px",background:"linear-gradient(135deg,#6F6F6F,#585858)",color:"#fff",border:"none",borderRadius:9,fontSize:12,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,boxShadow:"0 0 12px rgba(111,111,111,0.3)"}}>
-            📄 Скачать PDF
-          </button>}
-          <Btn primary={false} onClick={()=>{setShow(false);setEditId(null);}}>Отмена</Btn>
-        </div>
-      </Card>}
+      </div>}
 
       {monthItems.length===0&&<div style={{padding:"34px 20px",marginBottom:14,border:"1px solid "+C.bd,borderRadius:11,background:C.w,textAlign:"center"}}>
         <div style={{fontSize:14,fontWeight:500,color:C.t1}}>На {contentMonthLabel.toLowerCase()} пока ничего не запланировано</div>
         <div style={{fontSize:12,color:C.t2,marginTop:6}}>Создай первую карточку — она автоматически попадёт в выбранный месяц.</div>
-        <button onClick={()=>{setShow(true);setEditId(null);const d=selectedMonthDefaultDate();sF({...emptyF(),date:d,publish_date:d});}} style={{marginTop:14,padding:"9px 15px",borderRadius:8,border:"none",background:C.t1,color:C.bg,fontSize:12.5,fontWeight:500,cursor:"pointer"}}>+ Создать первую карточку</button>
+        <button onClick={()=>{setShow(true);setEditId(null);const d=selectedMonthDefaultDate();const base=emptyF();sF({...base,date:d,publish_date:d,checklist:normalizeChecklist([],base.platform,base.content_format)});}} style={{marginTop:14,padding:"9px 15px",borderRadius:8,border:"none",background:C.t1,color:C.bg,fontSize:12.5,fontWeight:500,cursor:"pointer"}}>+ Создать первую карточку</button>
       </div>}
 
       {/* KANBAN BOARD */}
@@ -10443,10 +10925,7 @@ function ContentPage({userId}:{userId:string}){
                         <span style={{fontSize:10,color:C.t2}}>{pLbl(x.platform)}</span>
                       </div>
                     </div>
-                    {x.script_id&&<button onClick={e=>{e.stopPropagation();setTab("scripts");setScriptToOpen(x.script_id);}} title="Открыть связанный сценарий" style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:6,border:"1px solid "+C.bd,background:"transparent",color:C.t2,fontSize:10,fontWeight:600,cursor:"pointer",flexShrink:0,fontFamily:"'Inter',sans-serif"}}>
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                      Сценарий
-                    </button>}
+
                   </div>
 
                   {/* Scenario preview */}
@@ -10454,7 +10933,7 @@ function ContentPage({userId}:{userId:string}){
 
                   {/* Date + actions */}
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:6}}>
-                    {x.date?<span style={{fontSize:10,color:C.t2}}>📅 {x.date}</span>:<span/>}
+                    {x.date?<span style={{fontSize:10,color:C.t2}}>{x.date}</span>:<span/>}
                     <div style={{display:"flex",gap:4}}>
                       {x.content_url&&<a href={x.content_url} target="_blank" rel="noreferrer"
                         style={{width:24,height:24,borderRadius:6,background:C.a+"12",display:"flex",alignItems:"center",justifyContent:"center",textDecoration:"none"}}
@@ -10514,35 +10993,31 @@ function ContentPage({userId}:{userId:string}){
           </div>;
         })}
       </div>
-    </>}
 
-    {/* CALENDAR TAB */}
-    {tab==="calendar"&&<>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20,flexWrap:"wrap",gap:10}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <button onClick={()=>setCalMonth(m=>m.m===0?{y:m.y-1,m:11}:{y:m.y,m:m.m-1})} style={{width:34,height:34,border:"1px solid "+C.bd,borderRadius:9,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
-          <span style={{fontSize:16,fontWeight:700,color:C.t1,minWidth:160,textAlign:"center"}}>{MS[calMonth.m]} {calMonth.y}</span>
-          <button onClick={()=>setCalMonth(m=>m.m===11?{y:m.y+1,m:0}:{y:m.y,m:m.m+1})} style={{width:34,height:34,border:"1px solid "+C.bd,borderRadius:9,background:C.w,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
-          <button onClick={()=>setCalMonth({y:new Date().getFullYear(),m:new Date().getMonth()})} style={{padding:"6px 12px",background:C.a+"14",color:C.a,border:"1px solid "+C.a+"30",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer"}}>Сегодня</button>
+
+      <div style={{display:"flex",alignItems:isMobile?"flex-start":"center",justifyContent:"space-between",marginBottom:14,marginTop:30,flexWrap:"wrap",gap:10}}>
+        <div>
+          <div style={{fontSize:18,fontWeight:500,color:C.t1}}>Календарь публикаций · {contentMonthLabel}</div>
+          <div style={{fontSize:12,color:C.t2,marginTop:4}}>Перетаскивай карточки между днями — дата обновится и в Kanban.</div>
         </div>
-        <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
-          <span style={{fontSize:11,color:C.t2,opacity:0.6}}>Перетащи карточку на нужный день</span>
-          {CONTENT_STAGES.map(s=>(
-            <div key={s.id} style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:C.t2}}>
-              <div style={{width:8,height:8,borderRadius:"50%",background:s.color}}/>
-              {s.label.replace(/[^\s]+\s/,"")}
-            </div>
-          ))}
+        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+          <div style={{height:34,padding:"0 11px",borderRadius:8,border:"1px solid "+C.bd,background:C.ib,color:C.t2,fontSize:11.5,display:"flex",alignItems:"center"}}>
+            Показано: <b style={{color:C.t1,fontWeight:600,marginLeft:5}}>{filteredItems.length}</b>
+          </div>
+          <button onClick={()=>{const d=selectedMonthDefaultDate();const base=emptyF();sF({...base,date:d,publish_date:d,checklist:normalizeChecklist([],base.platform,base.content_format)});setEditId(null);setShow(true);}}
+            style={{height:34,padding:"0 13px",borderRadius:8,border:"none",background:C.t1,color:C.bg,fontSize:12,fontWeight:500,cursor:"pointer"}}>
+            + Публикация
+          </button>
         </div>
       </div>
 
-      <Card style={{padding:0,overflow:"hidden"}}>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",borderBottom:"2px solid "+C.bd,background:C.ib}}>
+      <Card style={{padding:0,overflowX:"auto",overflowY:"hidden"}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(7,minmax(118px,1fr))",borderBottom:"1px solid "+C.bd,background:C.ib,minWidth:isMobile?826:0}}>
           {["Пн","Вт","Ср","Чт","Пт","Сб","Вс"].map(d=>(
             <div key={d} style={{padding:"10px",textAlign:"center",fontSize:11,fontWeight:700,color:C.t2,letterSpacing:0.5}}>{d}</div>
           ))}
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)"}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(7,minmax(118px,1fr))",minWidth:isMobile?826:0}}>
           {calDays.map((d,i)=>{
             const dateStr=d?ds(d):"";
             const dayItems=d?itemsForDay(d):[];
@@ -10559,9 +11034,9 @@ function ContentPage({userId}:{userId:string}){
                   setCalDragOver(null);
                 }
               }}
-              onClick={()=>{if(d&&!calDragId){sF({...emptyF(),publish_date:dateStr,date:dateStr});setShow(true);setTab("list");}}}
+              onClick={()=>{if(d&&!calDragId){sF({...emptyF(),publish_date:dateStr,date:dateStr});setEditId(null);setShow(true);}}}
               style={{
-                minHeight:110,padding:"6px",
+                minHeight:124,padding:"7px",
                 borderRight:i%7!==6?"1px solid "+C.bd+"66":"none",
                 borderBottom:"1px solid "+C.bd+"66",
                 background:isDragOver?"rgba(96,96,96,0.08)":(isT?"rgba(96,96,96,0.03)":"transparent"),
@@ -10576,7 +11051,7 @@ function ContentPage({userId}:{userId:string}){
 
               {/* Drop indicator */}
               {isDragOver&&<div style={{position:"absolute",inset:2,borderRadius:6,border:"2px dashed "+C.a,background:C.a+"06",pointerEvents:"none",zIndex:10,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                <span style={{fontSize:10,color:C.a,fontWeight:600}}>📅 Перенести сюда</span>
+                <span style={{fontSize:10,color:C.a,fontWeight:600}}>Перенести сюда</span>
               </div>}
 
               {d&&<>
@@ -10585,7 +11060,7 @@ function ContentPage({userId}:{userId:string}){
                     <span style={{fontSize:12,fontWeight:isT?700:400,color:isT?"#fff":C.t1}}>{d.getDate()}</span>
                   </div>
                 </div>
-                {dayItems.slice(0,3).map((x:any)=>{
+                {dayItems.slice(0,4).map((x:any)=>{
                   const stage=CONTENT_STAGES.find(s=>s.id===x.status);
                   const col=stage?.color||C.a;
                   const isDragging=calDragId===x.id;
@@ -10614,10 +11089,10 @@ function ContentPage({userId}:{userId:string}){
                     </div>
                   </div>;
                 })}
-                {dayItems.length>3&&(
+                {dayItems.length>4&&(
                   <div style={{fontSize:9,color:C.t2,textAlign:"center",cursor:"pointer",padding:"2px 0"}}
                     onClick={e=>e.stopPropagation()}>
-                    +{dayItems.length-3} ещё
+                    +{dayItems.length-4} ещё
                   </div>
                 )}
               </>}
@@ -10625,9 +11100,9 @@ function ContentPage({userId}:{userId:string}){
           })}
         </div>
       </Card>
-    </>}
+    
+    </>
 
-    {tab==="scripts"&&<ScriptsTab userId={userId} contentAdd={add} contentUpdate={update} goKanban={()=>setTab("list")} openId={scriptToOpen} onOpened={()=>setScriptToOpen(null)}/>}
   </>;
 }
 
