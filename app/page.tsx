@@ -872,7 +872,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v3.2"; // restore War Room modes and three-state task checkbox
+  const APP_VERSION="v3.3"; // draggable editable subtasks and task progress bars
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
 
   // Clear stale localStorage on version change
@@ -2800,6 +2800,8 @@ function TaskPlanner({userId}:{userId:string}){
   const[cur,setCur]=useState(()=>new Date());
   const[edit,setEdit]=useState<any>(null);
   const[subInput,setSubInput]=useState("");
+  const[subDragId,setSubDragId]=useState<string|null>(null);
+  const[subEditId,setSubEditId]=useState<string|null>(null);
   const[saving,setSaving]=useState(false);
   const[boardMode,setBoardMode]=useState<"today"|"3day"|"week">("3day");
   const boardModeDays:Record<string,number>={today:1,"3day":3,week:7};
@@ -2955,8 +2957,27 @@ function TaskPlanner({userId}:{userId:string}){
   };
 
   const addSub=()=>{if(!subInput.trim())return;setEdit((x:any)=>({...x,subtasks:[...(x.subtasks||[]),{id:uidp("s"),text:subInput.trim(),done:false}]}));setSubInput("");};
-  const toggleSub=(id:string)=>setEdit((x:any)=>({...x,subtasks:x.subtasks.map((s:any)=>s.id===id?{...s,done:!s.done}:s)}));
-  const rmSub=(id:string)=>setEdit((x:any)=>({...x,subtasks:x.subtasks.filter((s:any)=>s.id!==id)}));
+  const toggleSub=(id:string)=>setEdit((x:any)=>({...x,subtasks:(x.subtasks||[]).map((s:any)=>s.id===id?{...s,done:!s.done}:s)}));
+  const rmSub=(id:string)=>setEdit((x:any)=>({...x,subtasks:(x.subtasks||[]).filter((s:any)=>s.id!==id)}));
+  const renameSub=(id:string,textValue:string)=>setEdit((x:any)=>({...x,subtasks:(x.subtasks||[]).map((s:any)=>s.id===id?{...s,text:textValue}:s)}));
+  const moveSub=(fromId:string,toId:string)=>{
+    if(!fromId||!toId||fromId===toId)return;
+    setEdit((x:any)=>{
+      const arr=[...(x.subtasks||[])];
+      const from=arr.findIndex((s:any)=>s.id===fromId);
+      const to=arr.findIndex((s:any)=>s.id===toId);
+      if(from<0||to<0)return x;
+      const[moved]=arr.splice(from,1);
+      arr.splice(to,0,moved);
+      return{...x,subtasks:arr};
+    });
+  };
+  const subProgress=(t:any)=>{
+    const subs=Array.isArray(t?.subtasks)?t.subtasks:[];
+    if(!subs.length)return null;
+    const done=subs.filter((s:any)=>s.done).length;
+    return{done,total:subs.length,pct:Math.round(done/subs.length*100)};
+  };
 
   const navMonth=(n:number)=>setCur(new Date(y,m+n,1));
 
@@ -3150,16 +3171,22 @@ function TaskPlanner({userId}:{userId:string}){
                 <div style={{padding:8,display:"flex",flexDirection:"column",gap:6,flex:1,minHeight:isMobile?110:150}}>
                   {dt.map((t:any)=>(
                     <div key={t.id} onClick={()=>openEdit(t)}
-                      style={{display:"flex",alignItems:"center",gap:6,padding:"7px 9px",borderRadius:8,background:cardBg,
+                      style={{padding:"7px 9px 8px",borderRadius:8,background:cardBg,
                         border:wrHighlight.has(t.id)?"1px solid #16A34A":"1px solid "+bd,
                         borderLeft:"3px solid "+(t.color||"#64748B"),cursor:"pointer",
                         boxShadow:wrHighlight.has(t.id)?"0 0 0 3px rgba(22,163,74,0.14)":"none",
                         animation:wrHighlight.has(t.id)?"plannerAiFlash 1.8s ease-out 2":"none"}}>
-                      <span onClick={e=>cycleTaskStatus(t,e)} style={{width:14,height:14,borderRadius:4,border:"1.5px solid "+(t.completion_status==="failed"?"#DC2626":t.done?"#22C55E":(t.color||"#64748B")),background:t.completion_status==="failed"?"#DC2626":t.done?"#22C55E":"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                        {t.completion_status==="failed"?<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><path d="M6 6l12 12M18 6L6 18"/></svg>:t.done&&<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}
-                      </span>
-                      {prioDot(t.priority)}
-                      <span style={{flex:1,minWidth:0,fontSize:12.5,color:t.completion_status==="failed"?"#DC2626":C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.5:1}}>{t.due_time?<b style={{fontWeight:500}}>{wrNormTime(t.due_time)} </b>:null}{t.title}</span>
+                      <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0}}>
+                        <span onClick={e=>cycleTaskStatus(t,e)} style={{width:14,height:14,borderRadius:4,border:"1.5px solid "+(t.completion_status==="failed"?"#DC2626":t.done?"#22C55E":(t.color||"#64748B")),background:t.completion_status==="failed"?"#DC2626":t.done?"#22C55E":"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                          {t.completion_status==="failed"?<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><path d="M6 6l12 12M18 6L6 18"/></svg>:t.done&&<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}
+                        </span>
+                        {prioDot(t.priority)}
+                        <span style={{flex:1,minWidth:0,fontSize:12.5,color:t.completion_status==="failed"?"#DC2626":C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.5:1}}>{t.due_time?<b style={{fontWeight:500}}>{wrNormTime(t.due_time)} </b>:null}{t.title}</span>
+                        {subProgress(t)&&<span style={{fontSize:10,color:C.t2,flexShrink:0}}>{subProgress(t)!.done}/{subProgress(t)!.total}</span>}
+                      </div>
+                      {subProgress(t)&&<div style={{height:3,background:C.bd,borderRadius:3,overflow:"hidden",marginTop:7}}>
+                        <div style={{height:"100%",width:`${subProgress(t)!.pct}%`,background:"#2F6BFF",borderRadius:3,transition:"width .2s ease"}}/>
+                      </div>}
                     </div>
                   ))}
                   <button onClick={()=>openNew(pd(d))} style={{marginTop:dt.length?2:0,padding:"6px",borderRadius:8,border:"1px dashed "+bd,background:"transparent",color:C.t2,fontSize:11.5,fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
@@ -3305,6 +3332,9 @@ function TaskPlanner({userId}:{userId:string}){
                       </span>
                       {prioDot(t.priority)}
                       <span style={{fontSize:11,color:t.completion_status==="failed"?"#DC2626":C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.5:1}}>{t.due_time?t.due_time+" ":""}{t.title}</span>
+                      {subProgress(t)&&<span style={{width:22,height:3,background:C.bd,borderRadius:3,overflow:"hidden",flexShrink:0}}>
+                        <span style={{display:"block",height:"100%",width:`${subProgress(t)!.pct}%`,background:"#2F6BFF"}}/>
+                      </span>}
                     </div>
                   ))}
                   {dayTasks.length>(isMobile?2:3)&&<span style={{fontSize:10,color:C.t2,paddingLeft:4}}>+{dayTasks.length-(isMobile?2:3)} ещё</span>}
@@ -3335,6 +3365,11 @@ function TaskPlanner({userId}:{userId:string}){
                         {t.subtasks&&t.subtasks.length>0?`Подзадачи: ${t.subtasks.filter((s:any)=>s.done).length}/${t.subtasks.length}`:""}
                         {t.subtasks&&t.subtasks.length>0&&t.description?" · ":""}
                         {t.description?t.description.replace(/\n/g," "):""}
+                      </div>}
+                      {subProgress(t)&&<div style={{marginTop:8,marginLeft:16}}>
+                        <div style={{height:4,background:C.bd,borderRadius:4,overflow:"hidden"}}>
+                          <div style={{height:"100%",width:`${subProgress(t)!.pct}%`,background:"#2F6BFF",borderRadius:4,transition:"width .2s ease"}}/>
+                        </div>
                       </div>}
                     </div>
                     {t.priority&&t.priority!=="none"&&<span style={{fontSize:11,fontWeight:500,color:PRIO[t.priority].color,background:PRIO[t.priority].color+"1E",padding:"3px 9px",borderRadius:20,flexShrink:0}}>{PRIO[t.priority].label}</span>}
@@ -3403,12 +3438,33 @@ function TaskPlanner({userId}:{userId:string}){
             <label style={{fontSize:11,fontWeight:500,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8,display:"block"}}>Подзадачи{edit.subtasks?.length>0?` · ${edit.subtasks.filter((s:any)=>s.done).length}/${edit.subtasks.length}`:""}</label>
             <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:8}}>
               {(edit.subtasks||[]).map((s:any)=>(
-                <div key={s.id} style={{display:"flex",alignItems:"center",gap:9,padding:"8px 10px",background:inputBg,borderRadius:8}}>
+                <div key={s.id}
+                  draggable
+                  onDragStart={e=>{setSubDragId(s.id);e.dataTransfer.effectAllowed="move";}}
+                  onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect="move";}}
+                  onDrop={e=>{e.preventDefault();if(subDragId)moveSub(subDragId,s.id);setSubDragId(null);}}
+                  onDragEnd={()=>setSubDragId(null)}
+                  style={{display:"flex",alignItems:"center",gap:9,padding:"8px 10px",background:inputBg,borderRadius:8,border:"1px solid "+(subDragId===s.id?C.a:"transparent"),opacity:subDragId===s.id?.55:1,cursor:"grab"}}>
+                  <span title="Перетащить" style={{color:C.t2,display:"flex",alignItems:"center",cursor:"grab",flexShrink:0}}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="8" cy="6" r="1.2"/><circle cx="16" cy="6" r="1.2"/><circle cx="8" cy="12" r="1.2"/><circle cx="16" cy="12" r="1.2"/><circle cx="8" cy="18" r="1.2"/><circle cx="16" cy="18" r="1.2"/></svg>
+                  </span>
                   <span onClick={()=>toggleSub(s.id)} style={{width:17,height:17,borderRadius:5,border:"2px solid "+C.t2,background:s.done?C.t1:"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
                     {s.done&&<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={C.bg} strokeWidth="3.5"><polyline points="20 6 9 17 4 12"/></svg>}
                   </span>
-                  <span style={{flex:1,fontSize:13,color:C.t1,textDecoration:s.done?"line-through":"none",opacity:s.done?0.55:1}}>{s.text}</span>
-                  <button onClick={()=>rmSub(s.id)} style={{border:"none",background:"transparent",color:C.t2,cursor:"pointer",fontSize:15,padding:0,flexShrink:0}}>✕</button>
+                  {subEditId===s.id?(
+                    <input value={s.text}
+                      onChange={e=>renameSub(s.id,e.target.value)}
+                      onBlur={()=>setSubEditId(null)}
+                      onKeyDown={e=>{if(e.key==="Enter"||e.key==="Escape"){e.preventDefault();setSubEditId(null);}}}
+                      autoFocus
+                      style={{flex:1,minWidth:0,padding:"5px 7px",border:"1px solid "+C.a,borderRadius:6,background:cardBg,color:C.t1,fontSize:13,outline:"none",fontFamily:"'Inter',sans-serif"}}/>
+                  ):(
+                    <span onDoubleClick={()=>setSubEditId(s.id)} style={{flex:1,fontSize:13,color:C.t1,textDecoration:s.done?"line-through":"none",opacity:s.done?0.55:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.text}</span>
+                  )}
+                  <button onClick={()=>setSubEditId(s.id)} title="Редактировать" style={{width:26,height:26,border:"none",background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,flexShrink:0}}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L8 18l-4 1 1-4z"/></svg>
+                  </button>
+                  <button onClick={()=>rmSub(s.id)} title="Удалить" style={{width:26,height:26,border:"none",background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,flexShrink:0}}>✕</button>
                 </div>
               ))}
             </div>
