@@ -872,7 +872,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v3.1"; // fix week-only War Room type checks
+  const APP_VERSION="v3.2"; // restore War Room modes and three-state task checkbox
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
 
   // Clear stale localStorage on version change
@@ -2796,12 +2796,12 @@ function TaskPlanner({userId}:{userId:string}){
   const{dark}=useTheme();
   const isMobile=useIsMobile();
   const{data:tasks,add,update,remove,loading}=useTable("planner_tasks",userId);
-  const[view,setView]=useState<"month"|"week"|"3day"|"day"|"list">("month");
+  const[view,setView]=useState<"month"|"week"|"3day"|"day"|"list">("week");
   const[cur,setCur]=useState(()=>new Date());
   const[edit,setEdit]=useState<any>(null);
   const[subInput,setSubInput]=useState("");
   const[saving,setSaving]=useState(false);
-  const boardMode:"week"="week";
+  const[boardMode,setBoardMode]=useState<"today"|"3day"|"week">("3day");
   const boardModeDays:Record<string,number>={today:1,"3day":3,week:7};
   const todayAnchor=()=>{const d=new Date();d.setHours(0,0,0,0);return d;};
   const[boardStart,setBoardStart]=useState(()=>todayAnchor());
@@ -2909,8 +2909,13 @@ function TaskPlanner({userId}:{userId:string}){
     setSaving(false);setEdit(null);
   };
   const del=async()=>{if(edit?.id&&confirm("Удалить задачу?")){await remove(edit.id);setEdit(null);}};
-  const toggleDone=(t:any,e?:any)=>{e&&e.stopPropagation();const next=!t.done;update(t.id,{done:next,completion_status:next?"done":"pending"});};
-  const toggleFailed=(t:any,e?:any)=>{e&&e.stopPropagation();const failed=t.completion_status==="failed";update(t.id,{done:false,completion_status:failed?"pending":"failed"});};
+  const cycleTaskStatus=(t:any,e?:any)=>{
+    e&&e.stopPropagation();
+    const status=t.done||t.completion_status==="done"?"done":t.completion_status==="failed"?"failed":"pending";
+    if(status==="pending")update(t.id,{done:true,completion_status:"done"});
+    else if(status==="done")update(t.id,{done:false,completion_status:"failed"});
+    else update(t.id,{done:false,completion_status:"pending"});
+  };
 
   const runWrAi=async(message:string)=>{
     const q=message.trim();
@@ -3052,8 +3057,8 @@ function TaskPlanner({userId}:{userId:string}){
             {dates.map((d,i)=>(
               <div key={i} style={{borderLeft:"1px solid "+bd,padding:3,display:"flex",flexDirection:"column",gap:3}}>
                 {forDay(d).filter((t:any)=>!t.due_time).map((t:any)=>(
-                  <div key={t.id} onClick={e=>{e.stopPropagation();openEdit(t);}} onDoubleClick={e=>toggleFailed(t,e)} title="Двойной клик — отметить как не сделано" style={{display:"flex",alignItems:"center",gap:4,padding:"2px 6px",borderRadius:5,background:(t.color||"#64748B")+"1E",borderLeft:"2px solid "+(t.color||"#64748B"),cursor:"pointer",minWidth:0}}>
-                    <span onClick={e=>toggleDone(t,e)} style={{width:11,height:11,borderRadius:3,border:"1.5px solid "+(t.color||"#64748B"),background:t.done?(t.color||"#64748B"):"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>{t.done&&<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}</span>
+                  <div key={t.id} onClick={e=>{e.stopPropagation();openEdit(t);}} style={{display:"flex",alignItems:"center",gap:4,padding:"2px 6px",borderRadius:5,background:(t.color||"#64748B")+"1E",borderLeft:"2px solid "+(t.color||"#64748B"),cursor:"pointer",minWidth:0}}>
+                    <span onClick={e=>cycleTaskStatus(t,e)} style={{width:11,height:11,borderRadius:3,border:"1.5px solid "+(t.completion_status==="failed"?"#DC2626":t.done?"#22C55E":(t.color||"#64748B")),background:t.completion_status==="failed"?"#DC2626":t.done?"#22C55E":"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>{t.completion_status==="failed"?<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><path d="M6 6l12 12M18 6L6 18"/></svg>:t.done&&<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}</span>
                     <span style={{fontSize:11,color:t.completion_status==="failed"?"#DC2626":C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.5:1}}>{t.title}</span>
                   </div>
                 ))}
@@ -3086,10 +3091,10 @@ function TaskPlanner({userId}:{userId:string}){
                   const wPct=100/it.laneCount;const leftPct=it.lane*wPct;
                   const showRange=height>=34;
                   return(
-                    <div key={t.id} onClick={e=>{e.stopPropagation();openEdit(t);}} onDoubleClick={e=>toggleFailed(t,e)} title="Двойной клик — отметить как не сделано"
+                    <div key={t.id} onClick={e=>{e.stopPropagation();openEdit(t);}}
                       style={{position:"absolute" as const,top,left:`calc(${leftPct}% + 2px)`,width:`calc(${wPct}% - 4px)`,height,borderRadius:5,background:(t.color||"#64748B")+(dark?"33":"22"),borderLeft:"3px solid "+(t.color||"#64748B"),padding:"2px 5px",overflow:"hidden",cursor:"pointer",boxSizing:"border-box" as const}}>
                       <div style={{display:"flex",alignItems:"center",gap:4}}>
-                        <span onClick={e=>toggleDone(t,e)} style={{width:11,height:11,borderRadius:3,border:"1.5px solid "+(t.color||"#64748B"),background:t.done?(t.color||"#64748B"):"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>{t.done&&<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}</span>
+                        <span onClick={e=>cycleTaskStatus(t,e)} style={{width:11,height:11,borderRadius:3,border:"1.5px solid "+(t.completion_status==="failed"?"#DC2626":t.done?"#22C55E":(t.color||"#64748B")),background:t.completion_status==="failed"?"#DC2626":t.done?"#22C55E":"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>{t.completion_status==="failed"?<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><path d="M6 6l12 12M18 6L6 18"/></svg>:t.done&&<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}</span>
                         {prioDot(t.priority)}
                         <span style={{fontSize:11,fontWeight:500,color:t.completion_status==="failed"?"#DC2626":C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.55:1}}>{t.title}</span>
                       </div>
@@ -3111,7 +3116,7 @@ function TaskPlanner({userId}:{userId:string}){
       <div style={{marginBottom:22}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:12,flexWrap:"wrap" as const}}>
           <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap" as const}}>
-            <span style={{fontSize:isMobile?15:18,fontWeight:500,color:C.t1,letterSpacing:"-0.01em"}}>Задачи на неделю</span>
+            <span style={{fontSize:isMobile?15:18,fontWeight:500,color:C.t1,letterSpacing:"-0.01em"}}>{boardMode==="today"?"Задачи на сегодня":boardMode==="3day"?"Задачи на 3 дня":"Задачи на неделю"}</span>
             <button onClick={()=>boardStep(-1)} style={{width:30,height:30,borderRadius:8,border:"1px solid "+bd,background:cardBg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
@@ -3120,8 +3125,14 @@ function TaskPlanner({userId}:{userId:string}){
             </button>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8,marginLeft:"auto",flexWrap:"wrap" as const}}>
+            <div style={{display:"flex",background:C.ib,borderRadius:8,padding:3,border:"1px solid "+bd,gap:2}}>
+              {([["today","Сегодня"],["3day","3 дня"],["week","Неделя"]] as const).map(([mv,lbl])=>(
+                <button key={mv} onClick={()=>{setBoardMode(mv);setBoardStart(mv==="week"?currentWeekStart():todayAnchor());}}
+                  style={{padding:"6px 12px",borderRadius:6,border:"none",background:boardMode===mv?cardBg:"transparent",color:boardMode===mv?C.t1:C.t2,fontSize:12,fontWeight:500,cursor:"pointer",boxShadow:boardMode===mv?"0 1px 3px rgba(0,0,0,0.08)":"none",whiteSpace:"nowrap" as const}}>{lbl}</button>
+              ))}
+            </div>
             {!boardIsCurrent&&<button onClick={boardResetToCurrent}
-              style={{padding:"6px 14px",background:C.w,color:C.t1,border:"1px solid "+bd,borderRadius:8,fontSize:12,fontWeight:500,cursor:"pointer",boxShadow:"0 1px 3px rgba(0,0,0,0.06)",whiteSpace:"nowrap" as const}}>Эта неделя</button>}
+              style={{padding:"6px 14px",background:C.w,color:C.t1,border:"1px solid "+bd,borderRadius:8,fontSize:12,fontWeight:500,cursor:"pointer",boxShadow:"0 1px 3px rgba(0,0,0,0.06)",whiteSpace:"nowrap" as const}}>{boardMode==="week"?"Эта неделя":"Сегодня"}</button>}
           </div>
         </div>
         <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:6,scrollbarWidth:"none" as const}}>
@@ -3138,14 +3149,14 @@ function TaskPlanner({userId}:{userId:string}){
                 </div>
                 <div style={{padding:8,display:"flex",flexDirection:"column",gap:6,flex:1,minHeight:isMobile?110:150}}>
                   {dt.map((t:any)=>(
-                    <div key={t.id} onClick={()=>openEdit(t)} onDoubleClick={e=>toggleFailed(t,e)} title="Двойной клик — отметить как не сделано"
+                    <div key={t.id} onClick={()=>openEdit(t)}
                       style={{display:"flex",alignItems:"center",gap:6,padding:"7px 9px",borderRadius:8,background:cardBg,
                         border:wrHighlight.has(t.id)?"1px solid #16A34A":"1px solid "+bd,
                         borderLeft:"3px solid "+(t.color||"#64748B"),cursor:"pointer",
                         boxShadow:wrHighlight.has(t.id)?"0 0 0 3px rgba(22,163,74,0.14)":"none",
                         animation:wrHighlight.has(t.id)?"plannerAiFlash 1.8s ease-out 2":"none"}}>
-                      <span onClick={e=>toggleDone(t,e)} style={{width:14,height:14,borderRadius:4,border:"1.5px solid "+(t.color||"#64748B"),background:t.done?(t.color||"#64748B"):"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                        {t.done&&<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}
+                      <span onClick={e=>cycleTaskStatus(t,e)} style={{width:14,height:14,borderRadius:4,border:"1.5px solid "+(t.completion_status==="failed"?"#DC2626":t.done?"#22C55E":(t.color||"#64748B")),background:t.completion_status==="failed"?"#DC2626":t.done?"#22C55E":"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        {t.completion_status==="failed"?<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><path d="M6 6l12 12M18 6L6 18"/></svg>:t.done&&<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}
                       </span>
                       {prioDot(t.priority)}
                       <span style={{flex:1,minWidth:0,fontSize:12.5,color:t.completion_status==="failed"?"#DC2626":C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.5:1}}>{t.due_time?<b style={{fontWeight:500}}>{wrNormTime(t.due_time)} </b>:null}{t.title}</span>
@@ -3287,10 +3298,10 @@ function TaskPlanner({userId}:{userId:string}){
                     <span style={{fontSize:12,fontWeight:500,color:isToday?C.bg:(inM?C.t1:C.t2),width:22,height:22,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",background:isToday?C.t1:"transparent"}}>{d.getDate()}</span>
                   </div>
                   {dayTasks.slice(0,isMobile?2:3).map((t:any)=>(
-                    <div key={t.id} onClick={e=>{e.stopPropagation();openEdit(t);}} onDoubleClick={e=>toggleFailed(t,e)} title="Двойной клик — отметить как не сделано"
+                    <div key={t.id} onClick={e=>{e.stopPropagation();openEdit(t);}}
                       style={{display:"flex",alignItems:"center",gap:5,padding:"2px 6px",borderRadius:5,background:(t.color||"#64748B")+"1E",borderLeft:"2px solid "+(t.color||"#64748B"),cursor:"pointer",minWidth:0}}>
-                      <span onClick={e=>toggleDone(t,e)} style={{width:11,height:11,borderRadius:3,border:"1.5px solid "+(t.color||"#64748B"),background:t.done?(t.color||"#64748B"):"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                        {t.done&&<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}
+                      <span onClick={e=>cycleTaskStatus(t,e)} style={{width:11,height:11,borderRadius:3,border:"1.5px solid "+(t.completion_status==="failed"?"#DC2626":t.done?"#22C55E":(t.color||"#64748B")),background:t.completion_status==="failed"?"#DC2626":t.done?"#22C55E":"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        {t.completion_status==="failed"?<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><path d="M6 6l12 12M18 6L6 18"/></svg>:t.done&&<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}
                       </span>
                       {prioDot(t.priority)}
                       <span style={{fontSize:11,color:t.completion_status==="failed"?"#DC2626":C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.5:1}}>{t.due_time?t.due_time+" ":""}{t.title}</span>
@@ -3312,7 +3323,7 @@ function TaskPlanner({userId}:{userId:string}){
               <div style={{display:"flex",flexDirection:"column",gap:8}}>
                 {g.items.map((t:any)=>(
                   <div key={t.id} onClick={()=>openEdit(t)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:cardBg,border:"1px solid "+bd,borderRadius:10,cursor:"pointer"}}>
-                    <span onClick={e=>toggleDone(t,e)} style={{width:20,height:20,borderRadius:6,border:"2px solid "+(t.color||"#64748B"),background:t.done?(t.color||"#64748B"):"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+                    <span onClick={e=>cycleTaskStatus(t,e)} style={{width:20,height:20,borderRadius:6,border:"2px solid "+(t.completion_status==="failed"?"#DC2626":t.done?"#22C55E":(t.color||"#64748B")),background:t.completion_status==="failed"?"#DC2626":t.done?"#22C55E":"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
                       {t.done&&<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5"><polyline points="20 6 9 17 4 12"/></svg>}
                     </span>
                     <div style={{flex:1,minWidth:0}}>
