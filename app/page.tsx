@@ -872,7 +872,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v3.3"; // draggable editable subtasks and task progress bars
+  const APP_VERSION="v3.4"; // corrected War Room calendar grid layout
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
 
   // Clear stale localStorage on version change
@@ -3059,26 +3059,28 @@ function TaskPlanner({userId}:{userId:string}){
   const TimeGridView=({dates}:{dates:Date[]})=>{
     const nowMin=new Date().getHours()*60+new Date().getMinutes();
     const colW=dates.length===1?1:dates.length;
+    const gridMinWidth=dates.length===7?1040:dates.length===3?720:420;
     return(
-      <div style={{border:"1px solid "+bd,borderRadius:12,overflow:"hidden",background:cardBg}}>
+      <div style={{overflowX:"auto",borderRadius:12}}>
+      <div style={{border:"1px solid "+bd,borderRadius:12,overflow:"hidden",background:cardBg,minWidth:gridMinWidth}}>
         {/* day headers */}
-        <div style={{display:"grid",gridTemplateColumns:`52px repeat(${colW},1fr)`,borderBottom:"1px solid "+bd}}>
+        <div style={{display:"grid",gridTemplateColumns:`52px repeat(${colW},minmax(0,1fr))`,borderBottom:"1px solid "+bd}}>
           <div/>
           {dates.map((d,i)=>{const isToday=pd(d)===todayStr;return(
             <div key={i} style={{padding:"8px 4px",textAlign:"center" as const,borderLeft:"1px solid "+bd}}>
               <div style={{fontSize:10,fontWeight:500,color:C.t2,textTransform:"uppercase" as const}}>{PL_WD[(d.getDay()+6)%7]}</div>
-              <div style={{margin:"2px auto 0",width:26,height:26,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:500,color:isToday?C.bg:C.t1,background:isToday?C.t1:"transparent"}}>{d.getDate()}</div>
+              <div style={{margin:"2px auto 0",width:26,height:26,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:500,color:isToday?"#111":C.t1,background:isToday?"#F2F2F2":"transparent"}}>{d.getDate()}</div>
             </div>
           );})}
         </div>
         {/* untimed strip */}
         {dates.some(d=>forDay(d).some((t:any)=>!t.due_time))&&(
-          <div style={{display:"grid",gridTemplateColumns:`52px repeat(${colW},1fr)`,borderBottom:"1px solid "+bd,minHeight:30}}>
+          <div style={{display:"grid",gridTemplateColumns:`52px repeat(${colW},minmax(0,1fr))`,borderBottom:"1px solid "+bd,minHeight:30}}>
             <div style={{fontSize:9,color:C.t2,display:"flex",alignItems:"center",justifyContent:"center",textAlign:"center" as const}}>весь<br/>день</div>
             {dates.map((d,i)=>(
-              <div key={i} style={{borderLeft:"1px solid "+bd,padding:3,display:"flex",flexDirection:"column",gap:3}}>
+              <div key={i} style={{borderLeft:"1px solid "+bd,padding:3,display:"flex",flexDirection:"column",gap:3,minWidth:0,overflow:"hidden"}}>
                 {forDay(d).filter((t:any)=>!t.due_time).map((t:any)=>(
-                  <div key={t.id} onClick={e=>{e.stopPropagation();openEdit(t);}} style={{display:"flex",alignItems:"center",gap:4,padding:"2px 6px",borderRadius:5,background:(t.color||"#64748B")+"1E",borderLeft:"2px solid "+(t.color||"#64748B"),cursor:"pointer",minWidth:0}}>
+                  <div key={t.id} onClick={e=>{e.stopPropagation();openEdit(t);}} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 6px",borderRadius:5,background:(t.color||"#64748B")+"1E",borderLeft:"2px solid "+(t.color||"#64748B"),cursor:"pointer",minWidth:0,width:"100%",maxWidth:"100%",boxSizing:"border-box",overflow:"hidden"}}>
                     <span onClick={e=>cycleTaskStatus(t,e)} style={{width:11,height:11,borderRadius:3,border:"1.5px solid "+(t.completion_status==="failed"?"#DC2626":t.done?"#22C55E":(t.color||"#64748B")),background:t.completion_status==="failed"?"#DC2626":t.done?"#22C55E":"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>{t.completion_status==="failed"?<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><path d="M6 6l12 12M18 6L6 18"/></svg>:t.done&&<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}</span>
                     <span style={{fontSize:11,color:t.completion_status==="failed"?"#DC2626":C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.5:1}}>{t.title}</span>
                   </div>
@@ -3088,7 +3090,7 @@ function TaskPlanner({userId}:{userId:string}){
           </div>
         )}
         {/* hour grid */}
-        <div ref={gridRef} style={{display:"grid",gridTemplateColumns:`52px repeat(${colW},1fr)`,maxHeight:isMobile?"58vh":"64vh",overflowY:"auto" as const,position:"relative" as const}}>
+        <div ref={gridRef} style={{display:"grid",gridTemplateColumns:`52px repeat(${colW},minmax(0,1fr))`,maxHeight:isMobile?"58vh":"64vh",overflowY:"auto" as const,position:"relative" as const}}>
           {/* hour labels */}
           <div style={{position:"relative" as const}}>
             {Array.from({length:HOURS},(_,h)=>(
@@ -3100,7 +3102,7 @@ function TaskPlanner({userId}:{userId:string}){
             const timed=packDay(forDay(d).filter((t:any)=>t.due_time));
             return(
               <div key={ci} onClick={e=>{const box=(e.currentTarget as HTMLElement).getBoundingClientRect();const y=(e as any).clientY-box.top;let mn=HOUR_START*60+Math.round((y/HH*60)/15)*15;mn=Math.max(HOUR_START*60,Math.min(HOUR_END*60-15,mn));openNew(dateStr,String(Math.floor(mn/60)).padStart(2,"0")+":"+String(mn%60).padStart(2,"0"));}}
-                style={{position:"relative" as const,borderLeft:"1px solid "+bd,cursor:"pointer"}}>
+                style={{position:"relative" as const,borderLeft:"1px solid "+bd,cursor:"pointer",minWidth:0,overflow:"hidden"}}>
                 {Array.from({length:HOURS},(_,h)=><div key={h} style={{height:HH,borderTop:h===0?"none":"1px solid "+(dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.05)"),boxSizing:"border-box" as const}}/>)}
                 {isToday&&nowMin>=HOUR_START*60&&nowMin<=HOUR_END*60&&(
                   <div style={{position:"absolute" as const,left:0,right:0,top:((nowMin-HOUR_START*60)/60)*HH,height:1.5,background:"#EF4444",zIndex:5}}><div style={{position:"absolute",left:0,top:-3,width:7,height:7,borderRadius:"50%",background:"#EF4444"}}/></div>
@@ -3113,7 +3115,7 @@ function TaskPlanner({userId}:{userId:string}){
                   const showRange=height>=34;
                   return(
                     <div key={t.id} onClick={e=>{e.stopPropagation();openEdit(t);}}
-                      style={{position:"absolute" as const,top,left:`calc(${leftPct}% + 2px)`,width:`calc(${wPct}% - 4px)`,height,borderRadius:5,background:(t.color||"#64748B")+(dark?"33":"22"),borderLeft:"3px solid "+(t.color||"#64748B"),padding:"2px 5px",overflow:"hidden",cursor:"pointer",boxSizing:"border-box" as const}}>
+                      style={{position:"absolute" as const,top,left:`calc(${leftPct}% + 2px)`,width:`calc(${wPct}% - 4px)`,height,borderRadius:6,background:(t.color||"#64748B")+(dark?"2B":"1C"),border:"1px solid "+(t.color||"#64748B")+"40",borderLeft:"3px solid "+(t.color||"#64748B"),padding:"3px 6px",overflow:"hidden",cursor:"pointer",boxSizing:"border-box" as const}}>
                       <div style={{display:"flex",alignItems:"center",gap:4}}>
                         <span onClick={e=>cycleTaskStatus(t,e)} style={{width:11,height:11,borderRadius:3,border:"1.5px solid "+(t.completion_status==="failed"?"#DC2626":t.done?"#22C55E":(t.color||"#64748B")),background:t.completion_status==="failed"?"#DC2626":t.done?"#22C55E":"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>{t.completion_status==="failed"?<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><path d="M6 6l12 12M18 6L6 18"/></svg>:t.done&&<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}</span>
                         {prioDot(t.priority)}
@@ -3127,6 +3129,7 @@ function TaskPlanner({userId}:{userId:string}){
             );
           })}
         </div>
+      </div>
       </div>
     );
   };
