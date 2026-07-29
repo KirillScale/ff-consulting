@@ -872,7 +872,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v5.4"; // v104 Link Tracker accuracy and reliability audit
+  const APP_VERSION="v5.5"; // v105 branded Link Tracker redirect message
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
 
   // Clear stale localStorage on version change
@@ -6537,6 +6537,7 @@ const LT_ALPHABET="abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 type LtLink={
   id:string,user_id?:string,name:string,target_url:string,company:string,code:string,
   description?:string,utm_source?:string,utm_medium?:string,utm_campaign?:string,
+  transition_message?:string,
   tags?:string[],expires_at?:string|null,active?:boolean,created_at?:string,
 };
 type LtClick={id?:string,link_id:string,created_at:string,referrer?:string,device?:string};
@@ -6747,6 +6748,7 @@ function LinkTrackerPage({userId}:{userId:string}){
       code:l.code.trim(),
       description:l.description||"",
       utm_source:l.utm_source||"",utm_medium:l.utm_medium||"",utm_campaign:l.utm_campaign||"",
+      transition_message:(l.transition_message||"").trim().slice(0,200),
       tags:l.tags||[],
       expires_at:l.expires_at||null,
       active:l.active!==false,
@@ -7148,7 +7150,7 @@ function LtLinkModal({modal,links,origin,dark,isMobile,onClose,onSave,onCopy,cop
   onCopy:(t:string,k:string)=>void,copied:string|null,flash:(t:string)=>void}){
   const isNew=modal==="new";
   const base:LtLink=isNew
-    ?{id:"",name:"",target_url:"",company:ltSlugify(links[0]?.company||"")||"",code:ltCode(6),description:"",utm_source:"",utm_medium:"",utm_campaign:"",tags:[],expires_at:null,active:true}
+    ?{id:"",name:"",target_url:"",company:ltSlugify(links[0]?.company||"")||"",code:ltCode(6),description:"",utm_source:"",utm_medium:"",utm_campaign:"",transition_message:"",tags:[],expires_at:null,active:true}
     :{...(modal as LtLink)};
   const[f,setF]=useState<LtLink>(base);
   const[tagInput,setTagInput]=useState("");
@@ -7234,6 +7236,19 @@ function LtLinkModal({modal,links,origin,dark,isMobile,onClose,onSave,onCopy,cop
           <input value={f.utm_source||""} onChange={e=>setF({...f,utm_source:e.target.value})} placeholder="source" style={iS()}/>
           <input value={f.utm_medium||""} onChange={e=>setF({...f,utm_medium:e.target.value})} placeholder="medium" style={iS()}/>
           <input value={f.utm_campaign||""} onChange={e=>setF({...f,utm_campaign:e.target.value})} placeholder="campaign" style={iS()}/>
+        </div>
+
+        <label style={lbl}>Сообщение при переходе</label>
+        <textarea
+          value={f.transition_message||""}
+          onChange={e=>setF({...f,transition_message:e.target.value.slice(0,200)})}
+          rows={3}
+          placeholder="Необязательно. Например: Спасибо за интерес — сейчас откроется страница."
+          style={{...iS(),marginBottom:5,resize:"vertical" as const,minHeight:76,fontFamily:"'Inter',sans-serif",lineHeight:1.5}}
+        />
+        <div style={{display:"flex",justifyContent:"space-between",gap:10,marginBottom:14,fontSize:10.5,color:C.t2}}>
+          <span>Показывается на экране загрузки.</span>
+          <span>{(f.transition_message||"").length}/200</span>
         </div>
 
         <label style={lbl}>Теги</label>
