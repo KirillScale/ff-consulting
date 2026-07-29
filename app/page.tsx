@@ -44,7 +44,7 @@ const CTYPES=["LF Video","SF Video","Text Post","Stories","Другое"];
 // Цвет типа контента: LF Video — красный, SF Video — розовый, Text Post — голубой, Stories — фиолетовый, Другое — серый
 const CTYPE_COLORS:Record<string,string>={"LF Video":"#E62117","SF Video":"#EC4899","Text Post":"#38BDF8","Stories":"#A855F7","Другое":"#9CA3AF"};
 const ctypeColor=(t:string)=>CTYPE_COLORS[t]||CTYPE_COLORS["Другое"];
-const CSTATS=[{id:"idea",label:"Идея",color:C.t2},{id:"progress",label:"В работе",color:C.y},{id:"ready",label:"Готово",color:C.a},{id:"published",label:"Опубликовано",color:C.g}];
+const CSTATS=[{id:"idea",label:"Идея",color:C.t2},{id:"progress",label:"Разработка",color:C.y},{id:"ready",label:"Реализация",color:C.a},{id:"published",label:"Опубликовано",color:C.g}];
 const STAGES_DEFAULT=[{id:"new",label:"Новый",color:C.a},{id:"contact",label:"Взаимодействовали",color:"#7C7C7C"},{id:"call",label:"Созвон",color:C.y},{id:"closed",label:"Закрыт",color:C.g},{id:"rejected",label:"Отказ",color:C.r}];
 const SRCS=["Instagram","Telegram","YouTube","Сайт","Рекомендация","Реклама","Другое"];
 const TASK_STATUS=[{id:"todo",label:"Не начата",color:C.t2},{id:"inprogress",label:"В процессе",color:C.y},{id:"done",label:"Выполнена",color:C.g}];
@@ -61,6 +61,7 @@ const NAV_GROUPS=[
       {id:"cashflow",label:"Cash Flow",accent:"#16A34A",ic:"M12 1v22 M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"},
       {id:"content",label:"Content",accent:"#808080",ic:"M7 4v16M17 4v16M3 8h4m10 0h4M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"},
       {id:"calls",label:"Calls",accent:"#9C9C9C",ic:"M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"},
+      {id:"defects",label:"Контроль замечаний",accent:"#C0392B",ic:"M9 12l2 2 4-4M7.5 4h9l4 4v12a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z"},
       {id:"tracker",label:"Link Tracker",accent:"#2F6BFF",ic:"M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71 M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"},
       {id:"forms",label:"Vizzy Form",accent:"#2F6BFF",ic:"M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"},
       {id:"offer",label:"ETS",accent:"#A7A7A7",ic:"M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"},
@@ -872,8 +873,8 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v5.7"; // v107 fix Content persistence and inline checklist editor
-  const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
+  const APP_VERSION="v6.1"; // v111 fix typed React hooks in Defect Control module
+  const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker","defects"];
 
   // Clear stale localStorage on version change
   useEffect(()=>{
@@ -1016,6 +1017,7 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
     {page==="cashflow"&&<SafePage name="Cash Flow"><CashFlowPage userId={user.id}/></SafePage>}
     {page==="offer"&&<SafePage name="ETS"><ETSPage userId={user.id}/></SafePage>}
     {page==="calls"&&<SafePage name="Созвоны"><CallsPage userId={user.id}/></SafePage>}
+    {page==="defects"&&<SafePage name="Контроль замечаний"><DefectsControlPage userId={user.id}/></SafePage>}
     {page==="mailings"&&<SafePage name="Рассылки"><MailingsPage userId={user.id}/></SafePage>}
     {page==="content"&&<SafePage name="Контент"><ContentPage userId={user.id}/></SafePage>}
     {page==="pnl"&&<SafePage name="P&L"><PnlPage userId={user.id}/></SafePage>}
@@ -10126,6 +10128,33 @@ function ContentPage({userId}:{userId:string}){
     telegram:["Пост","История","Рассылка в боте"],
     youtube:["Видео"],
   };
+
+  const CONTENT_PLATFORM_COLORS:Record<string,string>={
+    instagram:"#EC4899",
+    youtube:"#EF4444",
+    telegram:"#2F6BFF",
+    other:"#F3F4F6",
+  };
+  const contentPlatformKey=(platform:string)=>{
+    const key=String(platform||"").toLowerCase();
+    return["instagram","youtube","telegram"].includes(key)?key:"other";
+  };
+  const contentPlatformSurface=(platform:string)=>{
+    const key=contentPlatformKey(platform);
+    if(key==="other")return{
+      accent:"#F3F4F6",
+      bg:DARK?"rgba(255,255,255,0.035)":"#FFFFFF",
+      border:DARK?"rgba(255,255,255,0.16)":"#D1D5DB",
+      text:C.t1,
+    };
+    const accent=CONTENT_PLATFORM_COLORS[key];
+    return{
+      accent,
+      bg:accent+"12",
+      border:accent+"45",
+      text:accent,
+    };
+  };
   const formatOptions=(platform:string)=>PLATFORM_FORMATS[platform]||["Публикация"];
   const checklistDefaults=(platform:string,format:string)=>{
     if(platform==="youtube")return["Исследование","Структура","Сценарий","Съёмка","Монтаж","Обложка","Проверка","Опубликовано"];
@@ -11147,28 +11176,37 @@ ${existingScenario}`;
                   onDragStart={()=>onKanbanDragStart(x.id)}
                   onDragEnd={onKanbanDragEnd}
                   style={{
-                    background:C.w,borderRadius:8,padding:"12px 12px",
-                    border:"1px solid "+C.bd,
-                    borderLeft:"3px solid "+ctypeColor(x.type),
+                    background:contentPlatformSurface(x.platform).bg,
+                    borderRadius:8,
+                    padding:"12px 12px",
+                    border:"1px solid "+contentPlatformSurface(x.platform).border,
+                    borderLeft:"4px solid "+contentPlatformSurface(x.platform).accent,
                     cursor:"grab",
                     opacity:kanbanDrag===x.id?0.4:1,
                     transition:"all 0.15s",
                     boxShadow:"0 1px 4px rgba(0,0,0,0.06)",
-                    
                   }}
-                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 4px 14px rgba(0,0,0,0.10)";(e.currentTarget as HTMLElement).style.borderColor=C.t1+"40";(e.currentTarget as HTMLElement).style.borderLeftColor=ctypeColor(x.type);}}
-                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="0 1px 4px rgba(0,0,0,0.06)";(e.currentTarget as HTMLElement).style.borderColor=C.bd;(e.currentTarget as HTMLElement).style.borderLeftColor=ctypeColor(x.type);}}>
+                  onMouseEnter={e=>{
+                    (e.currentTarget as HTMLElement).style.boxShadow="0 4px 14px rgba(0,0,0,0.10)";
+                    (e.currentTarget as HTMLElement).style.borderColor=contentPlatformSurface(x.platform).accent+"75";
+                    (e.currentTarget as HTMLElement).style.borderLeftColor=contentPlatformSurface(x.platform).accent;
+                  }}
+                  onMouseLeave={e=>{
+                    (e.currentTarget as HTMLElement).style.boxShadow="0 1px 4px rgba(0,0,0,0.06)";
+                    (e.currentTarget as HTMLElement).style.borderColor=contentPlatformSurface(x.platform).border;
+                    (e.currentTarget as HTMLElement).style.borderLeftColor=contentPlatformSurface(x.platform).accent;
+                  }}>
 
                   {/* Card top: platform + type */}
                   <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:7}}>
                     {x.cover_url
                       ?<img src={x.cover_url} style={{width:28,height:28,borderRadius:6,objectFit:"cover",flexShrink:0}} alt=""/>
-                      :<div style={{width:28,height:28,borderRadius:6,background:C.ib,border:"1px solid "+C.bd,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><PlatformIcon pid={x.platform} size={14}/></div>
+                      :<div style={{width:28,height:28,borderRadius:6,background:contentPlatformSurface(x.platform).accent+"16",border:"1px solid "+contentPlatformSurface(x.platform).border,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><PlatformIcon pid={x.platform} size={14}/></div>
                     }
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:12,fontWeight:500,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{x.topic}</div>
                       <div style={{display:"flex",alignItems:"center",gap:5,marginTop:2}}>
-                        <span style={{fontSize:9.5,fontWeight:700,color:ctypeColor(x.type),background:ctypeColor(x.type)+"1E",padding:"1px 6px",borderRadius:5,whiteSpace:"nowrap"}}>{x.type}</span>
+                        <span style={{fontSize:9.5,fontWeight:700,color:contentPlatformSurface(x.platform).text,background:contentPlatformSurface(x.platform).accent+"18",padding:"1px 6px",borderRadius:5,whiteSpace:"nowrap"}}>{x.content_format||x.type||"Публикация"}</span>
                         <span style={{fontSize:10,color:C.t2}}>{pLbl(x.platform)}</span>
                       </div>
                     </div>
@@ -11206,7 +11244,7 @@ ${existingScenario}`;
                   {/* Сводка аналитики */}
                   {x.analytics&&Object.keys(x.analytics).filter((k:string)=>k!=="updated_at").length>0&&(
                     <div style={{display:"flex",gap:8,flexWrap:"wrap" as const,marginTop:8,paddingTop:8,borderTop:"1px solid "+C.bd}}>
-                      {metricsForType(x.type).slice(0,4).filter(m=>Number(x.analytics[m.key])>0).map(m=>(
+                      {metricsForType(x.content_format||x.type||"Публикация").slice(0,4).filter(m=>Number(x.analytics[m.key])>0).map(m=>(
                         <span key={m.key} style={{fontSize:10,color:C.t2,display:"flex",alignItems:"center",gap:3}}>
                           {m.label}: <b style={{color:C.t1,fontWeight:700,fontVariantNumeric:"tabular-nums" as const}}>{fmtNum(x.analytics[m.key])}{m.unit==="%"?"%":""}</b>
                         </span>
@@ -11310,8 +11348,7 @@ ${existingScenario}`;
                   </div>
                 </div>
                 {dayItems.slice(0,4).map((x:any)=>{
-                  const stage=CONTENT_STAGES.find(s=>s.id===x.status);
-                  const col=stage?.color||C.a;
+                  const col=contentPlatformSurface(x.platform).accent;
                   const isDragging=calDragId===x.id;
                   return<div key={x.id}
                     draggable
@@ -11320,8 +11357,8 @@ ${existingScenario}`;
                     onClick={e=>{e.stopPropagation();if(!calDragId)startEdit(x);}}
                     style={{
                       marginBottom:3,borderRadius:5,overflow:"hidden",
-                      border:"1px solid "+col+"30",
-                      background:isDragging?"rgba(0,0,0,0.05)":col+"10",
+                      border:"1px solid "+contentPlatformSurface(x.platform).border,
+                      background:isDragging?"rgba(0,0,0,0.05)":contentPlatformSurface(x.platform).bg,
                       borderLeft:"2px solid "+col,
                       cursor:"grab",padding:"2px 5px",
                       opacity:isDragging?0.35:1,
@@ -22111,4 +22148,1126 @@ function KirillAIPage({userId}:{userId:string}){
       )}
     </div>
   );
+}
+
+/* ============================================================================
+   VIZZY v109 — КОНТРОЛЬ ЗАМЕЧАНИЙ
+   Интегрированный beta-модуль аналитики и контроля замечаний.
+============================================================================ */
+/* ============================================================================
+   VIZZY — «Контроль замечаний» (Defect Control) — beta
+   ----------------------------------------------------------------------------
+   Раздел аналитики устранения замечаний по проектам.
+   Спроектирован под вставку в единый page.tsx Vizzy.
+
+   ЗАВИСИМОСТИ (уже есть в твоём page.tsx, отдельно импортировать НЕ нужно):
+     • глобальный объект тем  C
+     • хук  useTheme()   → { dark }
+     • хук  useIsMobile()
+     • React, useState/useEffect/useMemo/useRef  (из верхнего import)
+     • fmt$  (форматирование чисел ru-RU) — опционально, есть локальный fallback
+
+   ИНТЕГРАЦИЯ (3 шага):
+   1) NAV_GROUPS → в группу "MY BUSINESS" добавить пункт:
+      {id:"defects",label:"Контроль замечаний",accent:"#C0392B",
+       ic:"M9 12l2 2 4-4M7.5 4h9l4 4v12a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z"},
+   2) В блок рендера страниц добавить строку:
+      {page==="defects"&&<SafePage name="Контроль замечаний"><DefectsControlPage userId={user.id}/></SafePage>}
+   3) Вставить всё содержимое этого файла (без "use client"/import) в page.tsx.
+
+   Beta-логика: данные демонстрационные, детерминированно генерируются под
+   структуру предоставленной ведомости. Загрузка Excel запускает анимацию
+   пересчёта и подменяет набор данных (полноценная обработка — следующий этап).
+   SQL-схему под будущую реальную загрузку см. в defect_control_schema.sql.
+============================================================================ */
+
+/* ------- локальный fallback форматирования, если fmt$ не в области видимости ------- */
+const dzNum = (n: number) => Math.round(n).toLocaleString("ru-RU");
+const dzDec = (n: number) => n.toLocaleString("ru-RU", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+/* ============ ТИПЫ ============ */
+type DZStatus = "open" | "progress" | "approval" | "review" | "done";
+type DZCrit = "critical" | "medium" | "low";
+
+interface DZIssue {
+  id: string;
+  num: number;
+  text: string;
+  place: string;
+  date: string;          // дата регистрации (ISO yyyy-mm-dd)
+  section: string;
+  crit: DZCrit;
+  respProject: string;   // ответственный от проекта
+  respSti: string;       // ответственный СТИ
+  note: string;
+  status: DZStatus;
+  stiStatus: string;     // подробный статус СТИ
+  due: string | null;    // срок устранения
+  resolvedDate: string | null;
+  comment: string;
+  project: string;
+}
+
+/* ============ СПРАВОЧНИКИ (на основе ведомости ЦОД Дубна) ============ */
+const DZ_STATUS_META: Record<DZStatus, { label: string; key: string }> = {
+  open:     { label: "Не решено",       key: "open" },
+  progress: { label: "В работе",        key: "progress" },
+  approval: { label: "На согласовании", key: "approval" },
+  review:   { label: "На проверке",     key: "review" },
+  done:     { label: "Решено",          key: "done" },
+};
+const DZ_CRIT_META: Record<DZCrit, { label: string }> = {
+  critical: { label: "Критичное" },
+  medium:   { label: "Среднее" },
+  low:      { label: "Низкое" },
+};
+
+const DZ_SECTIONS = ["АР", "ОВ", "ХС", "ХМ", "ЭМ", "Этажные решения", "АК", "ВК"];
+const DZ_PLACES = [
+  "Фасад", "ГТК", "Венткамера", "Чиллерная", "Узел подпитки", "АБК",
+  "Насосная Г.2.40", "Хол.стена Г.1.13", "Ограждения", "Г.2.50", "Г.2.38",
+  "Г.2.57", "ТМ1-ТМ2", "Кровля", "Помещение №3.14", "Этаж 2 ОК-3",
+];
+const DZ_RESP_STI = ["Вышинский Р.", "Поляков Г.", "Горбачёв К.", "Нескромный П.", "Григорьев С.", "Кирюткин М."];
+const DZ_RESP_PROJ = ["Цвигун Р.", "Черемнов Р.", "Бурдов А.", "Сафонов Д."];
+const DZ_TEXTS = [
+  "Отсутствует упор при открывании двери",
+  "Отсутствует цветовая маркировка кабельных линий",
+  "Дренаж и аварийный слив не проверялись",
+  "Отсутствие козырьков над ШУ чиллеров",
+  "Испарители и часть внутренней гидравлической разводки не окожушены",
+  "Виброопоры не закреплены",
+  "Датчик температуры наружного воздуха установлен близко к установке",
+  "Отсутствует крышка-решётка на приёмке",
+  "Требуется замена окна в зоне ОП",
+  "Декоративные фасадные панели имеют несоосность",
+  "Алюминиевые двери запасного входа просели и неплотно закрываются",
+  "Отсутствует герметизация в местах выходов воздуховодов на кровле",
+  "Пожарные лестницы имеют повреждения и следы коррозии",
+  "Расширительные баки незакреплены",
+  "Повреждён сайдинг возле входных дверей",
+  "Датчики температуры фанкойлов висят в воздухе, не закреплены",
+  "Смесительный узел не имеет опоры",
+  "Кабеленесущая система не позволяет обслуживать секцию фильтров",
+  "Сильное загрязнение секций холодных стен",
+  "Металлоконструкции кровли имеют следы коррозии",
+];
+const DZ_STI_COMMENTS = [
+  "снять у Р.Вышинского. Не подтверждено!",
+  "Ждём оплаты подрядчику по предыдущим работам",
+  "В работе, до 06.07.26",
+  "Выставлен счёт от подрядчика, не оплачен",
+  "заказан песок-грунт, не оплачен",
+  "будет смонтирован после клининга",
+  "надо внести изм. в проект",
+  "Исправлено, приёмка до завершения всех работ",
+  "автоматизация",
+  "Нет узла в проекте",
+];
+
+const DZ_PROJECTS = [
+  { id: "codubna", label: "ЦОД Дубна", size: 1248, seed: 771 },
+  { id: "p2",      label: "Проект №2", size: 432,  seed: 203 },
+  { id: "p3",      label: "Проект №3", size: 611,  seed: 519 },
+];
+
+/* ============ ДЕТЕРМИНИРОВАННЫЙ RNG ============ */
+function dzMulberry(seed: number) {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0; a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const dzPick = <T,>(r: () => number, arr: T[]): T => arr[Math.floor(r() * arr.length)];
+
+/* ============ ДАТЫ ============ */
+const dzIso = (d: Date) => d.toISOString().slice(0, 10);
+const dzToday = () => dzIso(new Date());
+const dzAdd = (iso: string, days: number) => { const d = new Date(iso); d.setDate(d.getDate() + days); return dzIso(d); };
+const dzDiff = (a: string, b: string) => Math.round((+new Date(b) - +new Date(a)) / 86400000);
+const dzFmtRu = (iso: string | null) => {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`;
+};
+
+/* ============ ГЕНЕРАЦИЯ ДЕМО-ДАННЫХ ============ */
+function dzGenerate(projId: string, projLabel: string, size: number, seed: number): DZIssue[] {
+  const r = dzMulberry(seed);
+  const out: DZIssue[] = [];
+  const now = new Date();
+  const start = new Date(now); start.setMonth(now.getMonth() - 6);
+  const spanDays = dzDiff(dzIso(start), dzIso(now));
+
+  for (let i = 0; i < size; i++) {
+    // критичность: ~4.5% крит / ~34% средн / ~61.5% низк
+    const cr = r();
+    const crit: DZCrit = cr < 0.045 ? "critical" : cr < 0.385 ? "medium" : "low";
+
+    // статус: смещение к «Решено» ~61%, «В работе» ~15%, «Не решено» ~18%, согл/пров ~6%
+    const sr = r();
+    let status: DZStatus;
+    if (sr < 0.61) status = "done";
+    else if (sr < 0.76) status = "progress";
+    else if (sr < 0.94) status = "open";
+    else if (sr < 0.975) status = "approval";
+    else status = "review";
+
+    const created = dzAdd(dzIso(start), Math.floor(r() * spanDays));
+    // срок устранения: у большинства есть, у части нет
+    const hasDue = r() > 0.08;
+    const due = hasDue ? dzAdd(created, 20 + Math.floor(r() * 90)) : null;
+
+    // факт устранения только у решённых
+    let resolvedDate: string | null = null;
+    if (status === "done") {
+      const dur = 3 + Math.floor(r() * 28);
+      resolvedDate = dzAdd(created, dur);
+      if (+new Date(resolvedDate) > +now) resolvedDate = dzToday();
+    }
+
+    const hasResp = r() > 0.06;
+    out.push({
+      id: `${projId}-${i + 1}`,
+      num: i + 1,
+      text: dzPick(r, DZ_TEXTS),
+      place: dzPick(r, DZ_PLACES),
+      date: created,
+      section: dzPick(r, DZ_SECTIONS),
+      crit,
+      respProject: dzPick(r, DZ_RESP_PROJ),
+      respSti: hasResp ? dzPick(r, DZ_RESP_STI) : "",
+      note: r() > 0.7 ? "будет передана вместе с ИД" : "",
+      status,
+      stiStatus: dzPick(r, DZ_STI_COMMENTS),
+      due,
+      resolvedDate,
+      comment: r() > 0.75 ? "выполнено по РД, надо перенести в проект" : "",
+      project: projLabel,
+    });
+  }
+  return out;
+}
+
+/* ============ СЕМАНТИЧЕСКИЕ ЦВЕТА (тема-зависимые, приглушённые) ============ */
+function dzSem(dark: boolean) {
+  return {
+    green:  dark ? "#3FA36B" : "#2E7D53",
+    amber:  dark ? "#D0A03A" : "#B8860B",
+    red:    dark ? "#D25757" : "#C0392B",
+    blue:   dark ? "#5A86C4" : "#3B6FB0",
+    gray:   dark ? "#8A8A8A" : "#8A8A8A",
+    greenBg:dark ? "rgba(63,163,107,0.14)" : "rgba(46,125,83,0.10)",
+    amberBg:dark ? "rgba(208,160,58,0.14)" : "rgba(184,134,11,0.10)",
+    redBg:  dark ? "rgba(210,87,87,0.14)"  : "rgba(192,57,43,0.10)",
+    blueBg: dark ? "rgba(90,134,196,0.14)" : "rgba(59,111,176,0.10)",
+  };
+}
+const dzStatusColor = (s: DZStatus, S: ReturnType<typeof dzSem>) =>
+  s === "done" ? S.green : s === "progress" ? S.amber : s === "open" ? S.red : S.blue;
+const dzCritColor = (c: DZCrit, S: ReturnType<typeof dzSem>) =>
+  c === "critical" ? S.red : c === "medium" ? S.amber : S.gray;
+
+/* ============ COUNT-UP (плавное изменение чисел) ============ */
+function useDzCount(target: number, trigger: any, decimals = 0) {
+  const [v, setV] = (React as any).useState(0);
+  useEffect(() => {
+    let raf = 0; const t0 = performance.now(); const dur = 650;
+    const step = (t: number) => {
+      const p = Math.min(1, (t - t0) / dur);
+      const e = 1 - Math.pow(1 - p, 3);
+      setV(target * e);
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target, trigger]);
+  return decimals ? Number(v.toFixed(decimals)) : Math.round(v);
+}
+
+/* ============ МЕЛКИЕ UI-ЭЛЕМЕНТЫ ============ */
+function DzCard({ children, pad, style }: any) {
+  const isMobile = useIsMobile();
+  return <div style={{ background: C.w, border: "1px solid " + C.bd, borderRadius: 14, padding: pad ?? (isMobile ? 15 : 20), ...style }}>{children}</div>;
+}
+function DzTitle({ children, hint }: { children: any; hint?: string }) {
+  return <div style={{ marginBottom: 14 }}>
+    <div style={{ fontSize: 13, fontWeight: 700, color: C.t1, letterSpacing: 0.2 }}>{children}</div>
+    {hint && <div style={{ fontSize: 11, color: C.t2, marginTop: 2 }}>{hint}</div>}
+  </div>;
+}
+function DzTag({ label, onClose, color }: { label: string; onClose?: () => void; color?: string }) {
+  return <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 9px", borderRadius: 7, background: C.ib, border: "1px solid " + C.bd, fontSize: 11.5, color: color || C.t1, fontWeight: 500 }}>
+    {label}
+    {onClose && <span onClick={onClose} style={{ cursor: "pointer", color: C.t2, fontWeight: 700, lineHeight: 1 }}>×</span>}
+  </span>;
+}
+function DzDot({ c }: { c: string }) {
+  return <span style={{ width: 8, height: 8, borderRadius: 3, background: c, display: "inline-block" }} />;
+}
+
+/* ============ KPI-КАРТОЧКА ============ */
+function DzKpi({ label, value, decimals, sub, accent, bar, trigger, highlight }:
+  { label: string; value: number; decimals?: number; sub?: any; accent?: string; bar?: number; trigger: any; highlight: boolean }) {
+  const isMobile = useIsMobile();
+  const shown = useDzCount(value, trigger, decimals || 0);
+  return <div className={highlight ? "dz-pulse" : ""} style={{
+    background: C.w, border: "1px solid " + C.bd, borderRadius: 14,
+    padding: isMobile ? 14 : 16, position: "relative", overflow: "hidden",
+    animation: "dzFade .3s ease-out both",
+  }}>
+    <div style={{ fontSize: 11.5, color: C.t2, fontWeight: 500, marginBottom: 8, lineHeight: 1.2 }}>{label}</div>
+    <div style={{ fontSize: isMobile ? 24 : 28, fontWeight: 800, color: accent || C.t1, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
+      {decimals ? dzDec(shown) : dzNum(shown)}
+    </div>
+    {sub && <div style={{ fontSize: 11, color: C.t2, marginTop: 7 }}>{sub}</div>}
+    {typeof bar === "number" && <div style={{ marginTop: 10, height: 4, borderRadius: 3, background: C.bd, overflow: "hidden" }}>
+      <div style={{ height: "100%", width: `${Math.min(100, bar)}%`, background: accent || C.a, borderRadius: 3, transition: "width .7s ease" }} />
+    </div>}
+  </div>;
+}
+
+/* ============ ГРАФИК: ДИНАМИКА (линии) ============ */
+function DzLineChart({ series, S }: { series: { name: string; color: string; data: { x: string; y: number }[] }[]; S: any }) {
+  const [hover, setHover] = useState<number | null>(null);
+  const W = 640, H = 220, padL = 40, padB = 26, padT = 12, padR = 12;
+  const n = series[0]?.data.length || 0;
+  if (!n) return <div style={{ color: C.t2, fontSize: 12 }}>Нет данных</div>;
+  const maxY = Math.max(1, ...series.flatMap(s => s.data.map(d => d.y)));
+  const xAt = (i: number) => padL + (i / Math.max(1, n - 1)) * (W - padL - padR);
+  const yAt = (v: number) => padT + (1 - v / maxY) * (H - padT - padB);
+  const grid = [0, .25, .5, .75, 1];
+  return <div style={{ width: "100%", overflowX: "auto" }}>
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", minWidth: 480, display: "block" }}
+      onMouseLeave={() => setHover(null)}>
+      {grid.map((g, i) => <g key={i}>
+        <line x1={padL} x2={W - padR} y1={padT + g * (H - padT - padB)} y2={padT + g * (H - padT - padB)} stroke={C.bd} strokeWidth={1} />
+        <text x={4} y={padT + g * (H - padT - padB) + 3} fontSize={9} fill={C.t2}>{dzNum(maxY * (1 - g))}</text>
+      </g>)}
+      {series.map((s, si) => {
+        const path = s.data.map((d, i) => `${i === 0 ? "M" : "L"}${xAt(i)},${yAt(d.y)}`).join(" ");
+        return <g key={si}>
+          <path d={path} fill="none" stroke={s.color} strokeWidth={2} strokeLinejoin="round" style={{ transition: "all .4s" }} />
+          {hover !== null && <circle cx={xAt(hover)} cy={yAt(s.data[hover].y)} r={3.5} fill={s.color} />}
+        </g>;
+      })}
+      {series[0].data.map((d, i) => (
+        <rect key={i} x={xAt(i) - (W / n) / 2} y={0} width={W / n} height={H} fill="transparent"
+          onMouseEnter={() => setHover(i)} />
+      ))}
+      {series[0].data.map((d, i) => (i % Math.ceil(n / 6) === 0 || i === n - 1) &&
+        <text key={"x" + i} x={xAt(i)} y={H - 8} fontSize={9} fill={C.t2} textAnchor="middle">{d.x}</text>)}
+      {hover !== null && <line x1={xAt(hover)} x2={xAt(hover)} y1={padT} y2={H - padB} stroke={C.t2} strokeWidth={1} strokeDasharray="3 3" />}
+    </svg>
+    {hover !== null && <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 6, fontSize: 11.5 }}>
+      <span style={{ color: C.t2 }}>{series[0].data[hover].x}:</span>
+      {series.map((s, i) => <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 5, color: C.t1 }}>
+        <DzDot c={s.color} />{s.name} <b>{dzNum(s.data[hover].y)}</b></span>)}
+    </div>}
+    <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 8 }}>
+      {series.map((s, i) => <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11.5, color: C.t2 }}>
+        <DzDot c={s.color} />{s.name}</span>)}
+    </div>
+  </div>;
+}
+
+/* ============ ГРАФИК: КОЛЬЦО (статусы) ============ */
+function DzDonut({ parts, total, S }: { parts: { label: string; value: number; color: string }[]; total: number; S: any }) {
+  const size = 168, r = 62, cx = size / 2, cy = size / 2, sw = 20;
+  const circ = 2 * Math.PI * r;
+  const [hi, setHi] = useState<number | null>(null);
+  let acc = 0;
+  const sum = parts.reduce((a, b) => a + b.value, 0) || 1;
+  return <div style={{ display: "flex", gap: 20, alignItems: "center", flexWrap: "wrap" }}>
+    <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
+      <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke={C.bd} strokeWidth={sw} />
+        {parts.map((p, i) => {
+          const frac = p.value / sum;
+          const off = circ * (1 - frac);
+          const dash = `${circ * frac} ${circ * (1 - frac)}`;
+          const rot = (acc / sum) * 360; acc += p.value;
+          return <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={p.color}
+            strokeWidth={hi === i ? sw + 3 : sw} strokeDasharray={dash} strokeDashoffset={0}
+            transform={`rotate(${rot} ${cx} ${cy})`} strokeLinecap="butt"
+            style={{ transition: "stroke-width .15s", cursor: "pointer" }}
+            onMouseEnter={() => setHi(i)} onMouseLeave={() => setHi(null)} />;
+        })}
+      </svg>
+      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+        {hi !== null
+          ? <><div style={{ fontSize: 22, fontWeight: 800, color: parts[hi].color }}>{dzNum(parts[hi].value)}</div>
+              <div style={{ fontSize: 10.5, color: C.t2 }}>{parts[hi].label}</div></>
+          : <><div style={{ fontSize: 26, fontWeight: 800, color: C.t1 }}>{dzNum(total)}</div>
+              <div style={{ fontSize: 10.5, color: C.t2 }}>всего</div></>}
+      </div>
+    </div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 150 }}>
+      {parts.map((p, i) => <div key={i} onMouseEnter={() => setHi(i)} onMouseLeave={() => setHi(null)}
+        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, cursor: "pointer" }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 12, color: C.t1 }}><DzDot c={p.color} />{p.label}</span>
+        <span style={{ fontSize: 12, color: C.t2, fontVariantNumeric: "tabular-nums" }}>{dzNum(p.value)} · {Math.round(p.value / sum * 100)}%</span>
+      </div>)}
+    </div>
+  </div>;
+}
+
+/* ============ ГРАФИК: КРИТИЧНОСТЬ (гориз. столбцы с подметриками) ============ */
+function DzCritBars({ rows, S }: { rows: { label: string; color: string; total: number; done: number; left: number; overdue: number }[]; S: any }) {
+  const max = Math.max(1, ...rows.map(r => r.total));
+  return <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    {rows.map((r, i) => <div key={i}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+        <span style={{ fontSize: 12.5, fontWeight: 600, color: C.t1, display: "inline-flex", gap: 7, alignItems: "center" }}><DzDot c={r.color} />{r.label}</span>
+        <span style={{ fontSize: 12, color: C.t2 }}>{dzNum(r.total)}</span>
+      </div>
+      <div style={{ height: 10, borderRadius: 5, background: C.ib, overflow: "hidden", display: "flex" }}>
+        <div style={{ width: `${r.done / max * 100}%`, background: S.green, transition: "width .6s" }} />
+        <div style={{ width: `${(r.left - r.overdue) / max * 100}%`, background: r.color, opacity: .55, transition: "width .6s" }} />
+        <div style={{ width: `${r.overdue / max * 100}%`, background: S.red, transition: "width .6s" }} />
+      </div>
+      <div style={{ display: "flex", gap: 14, marginTop: 6, fontSize: 11, color: C.t2, flexWrap: "wrap" }}>
+        <span>Устранено <b style={{ color: S.green }}>{dzNum(r.done)}</b></span>
+        <span>Осталось <b style={{ color: C.t1 }}>{dzNum(r.left)}</b></span>
+        <span>Просрочено <b style={{ color: S.red }}>{dzNum(r.overdue)}</b></span>
+      </div>
+    </div>)}
+  </div>;
+}
+
+/* ============ ГРАФИК: РАЗДЕЛЫ (стек по статусам) ============ */
+function DzStackBars({ data, S, onPick }: { data: { label: string; done: number; active: number; overdue: number }[]; S: any; onPick?: (l: string) => void }) {
+  const max = Math.max(1, ...data.map(d => d.done + d.active + d.overdue));
+  return <div style={{ display: "flex", alignItems: "flex-end", gap: 10, height: 200, overflowX: "auto", paddingBottom: 4 }}>
+    {data.map((d, i) => {
+      const tot = d.done + d.active + d.overdue;
+      const h = (v: number) => `${v / max * 160}px`;
+      return <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 44, cursor: onPick ? "pointer" : "default" }}
+        onClick={() => onPick && onPick(d.label)} title={`${d.label}: ${tot}`}>
+        <div style={{ fontSize: 10, color: C.t2 }}>{tot}</div>
+        <div style={{ width: 26, display: "flex", flexDirection: "column", justifyContent: "flex-end", height: 160, borderRadius: 5, overflow: "hidden", background: C.ib }}>
+          <div style={{ height: h(d.overdue), background: S.red, transition: "height .5s" }} />
+          <div style={{ height: h(d.active), background: S.amber, transition: "height .5s" }} />
+          <div style={{ height: h(d.done), background: S.green, transition: "height .5s" }} />
+        </div>
+        <div style={{ fontSize: 10.5, color: C.t1, fontWeight: 600, whiteSpace: "nowrap", maxWidth: 60, overflow: "hidden", textOverflow: "ellipsis" }}>{d.label}</div>
+      </div>;
+    })}
+  </div>;
+}
+
+/* ============ КАЛЕНДАРНАЯ ТЕПЛОВАЯ КАРТА ============ */
+function DzHeat({ counts, S, onPick }: { counts: Record<string, { n: number; overdue: boolean }>; S: any; onPick?: (iso: string) => void }) {
+  const today = new Date();
+  const start = new Date(today.getFullYear(), today.getMonth(), 1);
+  const first = (start.getDay() + 6) % 7; // пн=0
+  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  const max = Math.max(1, ...Object.values(counts).map(c => c.n));
+  const cells: (null | string)[] = [];
+  for (let i = 0; i < first; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(dzIso(new Date(today.getFullYear(), today.getMonth(), d)));
+  const week = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+  return <div>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4, marginBottom: 6 }}>
+      {week.map(w => <div key={w} style={{ fontSize: 10, color: C.t2, textAlign: "center" }}>{w}</div>)}
+    </div>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4 }}>
+      {cells.map((iso, i) => {
+        if (!iso) return <div key={i} />;
+        const c = counts[iso];
+        const day = new Date(iso).getDate();
+        const bg = !c ? C.ib : c.overdue ? S.red : `rgba(59,111,176,${0.15 + 0.6 * (c.n / max)})`;
+        return <div key={i} onClick={() => c && onPick && onPick(iso)}
+          title={c ? `${dzFmtRu(iso)} — ${c.n} срок(ов)${c.overdue ? " · просрочено" : ""}` : dzFmtRu(iso)}
+          style={{ aspectRatio: "1", borderRadius: 6, background: bg, border: "1px solid " + C.bd, display: "flex", alignItems: "flex-start", justifyContent: "flex-end", padding: 3, cursor: c ? "pointer" : "default", position: "relative" }}>
+          <span style={{ fontSize: 9, color: c && (c.overdue || c.n / max > .5) ? "#fff" : C.t2 }}>{day}</span>
+          {c && <span style={{ position: "absolute", bottom: 3, left: 4, fontSize: 10, fontWeight: 700, color: c.overdue || c.n / max > .5 ? "#fff" : C.t1 }}>{c.n}</span>}
+        </div>;
+      })}
+    </div>
+    <div style={{ display: "flex", gap: 14, marginTop: 8, fontSize: 10.5, color: C.t2 }}>
+      <span style={{ display: "inline-flex", gap: 5, alignItems: "center" }}><DzDot c={S.blue} />назначенные сроки</span>
+      <span style={{ display: "inline-flex", gap: 5, alignItems: "center" }}><DzDot c={S.red} />просрочено</span>
+    </div>
+  </div>;
+}
+
+/* ============ ВОРОНКА ============ */
+function DzFunnel({ stages, S }: { stages: { label: string; value: number }[]; S: any }) {
+  const max = Math.max(1, ...stages.map(s => s.value));
+  const cols = [S.gray, S.blue, S.amber, S.blue, S.green];
+  return <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    {stages.map((s, i) => <div key={i}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+        <span style={{ color: C.t1 }}>{s.label}</span>
+        <span style={{ color: C.t2 }}>{dzNum(s.value)}</span>
+      </div>
+      <div style={{ height: 14, borderRadius: 4, background: C.ib, overflow: "hidden" }}>
+        <div style={{ width: `${s.value / max * 100}%`, height: "100%", background: cols[i % cols.length], borderRadius: 4, transition: "width .6s" }} />
+      </div>
+    </div>)}
+  </div>;
+}
+
+/* ============ ГЛАВНЫЙ КОМПОНЕНТ ============ */
+function DefectsControlPage({ userId }: { userId: string }) {
+  const isMobile = useIsMobile();
+  const { dark } = useTheme();
+  const S = dzSem(dark);
+
+  // ── источник данных (демо) ──
+  const [dataSeed, setDataSeed] = (React as any).useState(0);
+  const allIssues: DZIssue[] = useMemo(() => {
+    return DZ_PROJECTS.flatMap(p => dzGenerate(p.id, p.label, p.size, p.seed + dataSeed * 97));
+  }, [dataSeed]);
+
+  // ── загрузка файла ──
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploadState, setUploadState] = useState<"idle" | "selected" | "uploading" | "processing" | "done" | "error">("idle");
+  const [fileInfo, setFileInfo] = useState<{ name: string; size: number; rows: number; found: number; at: string } | null>(null);
+  const [dragOver, setDragOver] = (React as any).useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [highlight, setHighlight] = (React as any).useState(false);
+  const [lastUpdate, setLastUpdate] = useState<string>(new Date().toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }));
+
+  const handleFile = (f: File) => {
+    const okExt = /\.(xlsx|xls)$/i.test(f.name);
+    if (!okExt) { setUploadState("error"); setToast("Неверный формат: нужен .xlsx или .xls"); return; }
+    setUploadState("uploading");
+    setTimeout(() => setUploadState("processing"), 550);
+    setTimeout(() => {
+      const rows = 800 + Math.floor(Math.random() * 700);
+      setFileInfo({ name: f.name, size: f.size, rows, found: rows, at: new Date().toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) });
+      setUploadState("done");
+      setDataSeed((s: number) => s + 1);
+      setLastUpdate(new Date().toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }));
+      setHighlight(true); setTimeout(() => setHighlight(false), 1400);
+      setToast("Файл обработан — дашборд обновлён");
+      setTimeout(() => setToast(null), 3200);
+    }, 1900);
+  };
+
+  // ── фильтры ──
+  const [project, setProject] = (React as any).useState("ЦОД Дубна");
+  const [period, setPeriod] = useState<"all" | "month" | "30d" | "quarter">("all");
+  const [fStatus, setFStatus] = useState<DZStatus | "">("");
+  const [fCrit, setFCrit] = useState<DZCrit | "">("");
+  const [fSection, setFSection] = (React as any).useState("");
+  const [fResp, setFResp] = (React as any).useState("");
+  const [fPlace, setFPlace] = (React as any).useState("");
+  const [fOnlyOverdue, setFOnlyOverdue] = (React as any).useState(false);
+  const [fNoDue, setFNoDue] = (React as any).useState(false);
+
+  const today = dzToday();
+  const isOverdue = (x: DZIssue) => x.due && x.due < today && x.status !== "done";
+  const isActive = (x: DZIssue) => x.status !== "done";
+
+  const periodStart = useMemo(() => {
+    const d = new Date();
+    if (period === "month") return dzIso(new Date(d.getFullYear(), d.getMonth(), 1));
+    if (period === "30d") return dzAdd(today, -30);
+    if (period === "quarter") { const q = Math.floor(d.getMonth() / 3) * 3; return dzIso(new Date(d.getFullYear(), q, 1)); }
+    return "0000-01-01";
+  }, [period]);
+
+  // выборка по проекту + периоду (база для дашборда)
+  const scoped = useMemo(() => allIssues.filter((x: DZIssue) =>
+    (project === "Все проекты" || x.project === project) && x.date >= periodStart
+  ), [allIssues, project, periodStart]);
+
+  // выборка с учётом ВСЕХ фильтров (для таблицы)
+  const filtered = useMemo(() => scoped.filter((x: DZIssue) =>
+    (!fStatus || x.status === fStatus) &&
+    (!fCrit || x.crit === fCrit) &&
+    (!fSection || x.section === fSection) &&
+    (!fResp || x.respSti === fResp) &&
+    (!fPlace || x.place === fPlace) &&
+    (!fOnlyOverdue || isOverdue(x)) &&
+    (!fNoDue || !x.due)
+  ), [scoped, fStatus, fCrit, fSection, fResp, fPlace, fOnlyOverdue, fNoDue]);
+
+  const resetFilters = () => { setFStatus(""); setFCrit(""); setFSection(""); setFResp(""); setFPlace(""); setFOnlyOverdue(false); setFNoDue(false); };
+  const activeFilters = [fStatus, fCrit, fSection, fResp, fPlace].filter(Boolean).length + (fOnlyOverdue ? 1 : 0) + (fNoDue ? 1 : 0);
+
+  // ── агрегаты по scoped ──
+  const K = useMemo(() => {
+    const total = scoped.length;
+    const done = scoped.filter((x: DZIssue) => x.status === "done").length;
+    const progress = scoped.filter((x: DZIssue) => x.status === "progress").length;
+    const open = scoped.filter((x: DZIssue) => x.status === "open").length;
+    const approval = scoped.filter((x: DZIssue) => x.status === "approval").length;
+    const review = scoped.filter((x: DZIssue) => x.status === "review").length;
+    const crit = scoped.filter((x: DZIssue) => x.crit === "critical");
+    const critDone = crit.filter((x: DZIssue) => x.status === "done").length;
+    const critOver = crit.filter(isOverdue).length;
+    const overdue = scoped.filter(isOverdue).length;
+    const activeCount = scoped.filter(isActive).length;
+    const resolvedDurs = scoped.filter((x: DZIssue) => x.resolvedDate).map((x: DZIssue) => dzDiff(x.date, x.resolvedDate!));
+    const avgDays = resolvedDurs.length ? resolvedDurs.reduce((a: number, b: number) => a + b, 0) / resolvedDurs.length : 0;
+    const eff = total ? Math.round(done / total * 100) : 0;
+    const noResp = scoped.filter((x: DZIssue) => !x.respSti).length;
+    const noDue = scoped.filter((x: DZIssue) => !x.due).length;
+    return { total, done, progress, open, approval, review, crit: crit.length, critDone, critOver, overdue, activeCount, avgDays, eff, noResp, noDue };
+  }, [scoped]);
+
+  // ── динамика по месяцам ──
+  const dynamics = useMemo(() => {
+    const months: string[] = [];
+    const d = new Date(); d.setDate(1);
+    for (let i = 5; i >= 0; i--) { const m = new Date(d.getFullYear(), d.getMonth() - i, 1); months.push(dzIso(m).slice(0, 7)); }
+    const mk = (fn: (x: DZIssue) => string | null) => months.map(m => scoped.filter((x: DZIssue) => (fn(x) || "").slice(0, 7) === m).length);
+    const created = mk(x => x.date);
+    const resolved = mk(x => x.resolvedDate);
+    let cumC = 0, cumR = 0;
+    const active = months.map((_, i) => { cumC += created[i]; cumR += resolved[i]; return Math.max(0, cumC - cumR); });
+    const critActive = months.map(m => scoped.filter((x: DZIssue) => x.crit === "critical" && x.date.slice(0, 7) <= m && x.status !== "done").length);
+    const lbl = (m: string) => { const [, mm] = m.split("-"); return ["", "янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"][+mm]; };
+    return {
+      main: [
+        { name: "Создано", color: S.blue, data: months.map((m, i) => ({ x: lbl(m), y: created[i] })) },
+        { name: "Устранено", color: S.green, data: months.map((m, i) => ({ x: lbl(m), y: resolved[i] })) },
+        { name: "Активные", color: S.red, data: months.map((m, i) => ({ x: lbl(m), y: active[i] })) },
+      ],
+      crit: [{ name: "Открытые критические", color: S.red, data: months.map((m, i) => ({ x: lbl(m), y: critActive[i] })) }],
+    };
+  }, [scoped, dark]);
+
+  // ── статусы для кольца ──
+  const statusParts = [
+    { label: "Решено", value: K.done, color: S.green },
+    { label: "В работе", value: K.progress, color: S.amber },
+    { label: "Не решено", value: K.open, color: S.red },
+    { label: "На согласовании", value: K.approval, color: S.blue },
+    { label: "На проверке", value: K.review, color: dark ? "#7BA0D6" : "#5A86C4" },
+  ];
+
+  // ── критичность ──
+  const critRows = (["critical", "medium", "low"] as DZCrit[]).map(c => {
+    const arr = scoped.filter((x: DZIssue) => x.crit === c);
+    const done = arr.filter((x: DZIssue) => x.status === "done").length;
+    const over = arr.filter(isOverdue).length;
+    return { label: DZ_CRIT_META[c].label, color: dzCritColor(c, S), total: arr.length, done, left: arr.length - done, overdue: over };
+  });
+
+  // ── разделы ──
+  const sectionData = useMemo(() => {
+    const map: Record<string, { done: number; active: number; overdue: number }> = {};
+    scoped.forEach((x: DZIssue) => {
+      const m = map[x.section] = map[x.section] || { done: 0, active: 0, overdue: 0 };
+      if (x.status === "done") m.done++; else if (isOverdue(x)) m.overdue++; else m.active++;
+    });
+    return Object.entries(map).map(([label, v]) => ({ label, ...v })).sort((a, b) => (b.done + b.active + b.overdue) - (a.done + a.active + a.overdue)).slice(0, 8);
+  }, [scoped]);
+
+  // ── рейтинг помещений ──
+  const placeRank = useMemo(() => {
+    const map: Record<string, number> = {};
+    scoped.forEach((x: DZIssue) => map[x.place] = (map[x.place] || 0) + 1);
+    return Object.entries(map).map(([label, n]) => ({ label, n: n as number })).sort((a, b) => b.n - a.n).slice(0, 8);
+  }, [scoped]);
+  const placeMax = Math.max(1, ...placeRank.map((p: any) => p.n));
+
+  // ── ответственные ──
+  const respRank = useMemo(() => {
+    const map: Record<string, { total: number; done: number; progress: number; overdue: number; crit: number }> = {};
+    scoped.forEach((x: DZIssue) => {
+      if (!x.respSti) return;
+      const m = map[x.respSti] = map[x.respSti] || { total: 0, done: 0, progress: 0, overdue: 0, crit: 0 };
+      m.total++; if (x.status === "done") m.done++; if (x.status === "progress") m.progress++;
+      if (isOverdue(x)) m.overdue++; if (x.crit === "critical" && x.status !== "done") m.crit++;
+    });
+    return Object.entries(map).map(([name, v]) => ({ name, ...v, eff: v.total ? Math.round(v.done / v.total * 100) : 0, active: v.total - v.done }))
+      .sort((a, b) => b.total - a.total);
+  }, [scoped]);
+  const bestResp = respRank.length ? [...respRank].sort((a: any, b: any) => b.eff - a.eff)[0] : null;
+  const worstOver = respRank.length ? [...respRank].sort((a: any, b: any) => b.overdue - a.overdue)[0] : null;
+  const respLoadMax = Math.max(1, ...respRank.map((r: any) => r.active));
+
+  // ── просрочки / ближайшие сроки ──
+  const overdueList = useMemo(() =>
+    scoped.filter(isOverdue).map((x: DZIssue) => ({ ...x, late: dzDiff(x.due!, today) })).sort((a: any, b: any) => b.late - a.late).slice(0, 10)
+  , [scoped]);
+  const upcoming = useMemo(() => {
+    const buckets = { d0: 0, d3: 0, d7: 0, d14: 0 };
+    scoped.forEach((x: DZIssue) => {
+      if (!x.due || x.status === "done" || x.due < today) return;
+      const dd = dzDiff(today, x.due);
+      if (dd === 0) buckets.d0++; else if (dd <= 3) buckets.d3++; else if (dd <= 7) buckets.d7++; else if (dd <= 14) buckets.d14++;
+    });
+    return buckets;
+  }, [scoped]);
+
+  // ── тепловая карта сроков (текущий месяц) ──
+  const heatCounts = useMemo(() => {
+    const map: Record<string, { n: number; overdue: boolean }> = {};
+    scoped.forEach((x: DZIssue) => {
+      if (!x.due) return;
+      const m = map[x.due] = map[x.due] || { n: 0, overdue: false };
+      m.n++; if (x.due < today && x.status !== "done") m.overdue = true;
+    });
+    return map;
+  }, [scoped]);
+
+  // ── воронка / матрица ──
+  const funnel = [
+    { label: "Выявлено", value: K.total },
+    { label: "Назначено", value: scoped.filter((x: DZIssue) => x.respSti).length },
+    { label: "В работе", value: K.progress + K.approval + K.review },
+    { label: "Проверка", value: K.approval + K.review },
+    { label: "Устранено", value: K.done },
+  ];
+  const matrix = (["critical", "medium", "low"] as DZCrit[]).map(c => {
+    const cell = (st: DZStatus) => scoped.filter((x: DZIssue) => x.crit === c && x.status === st).length;
+    return { crit: DZ_CRIT_META[c].label, open: cell("open"), progress: cell("progress"), review: cell("approval") + cell("review"), done: cell("done") };
+  });
+  const oldest = useMemo(() =>
+    scoped.filter((x: DZIssue) => x.status !== "done").map((x: DZIssue) => ({ ...x, age: dzDiff(x.date, today) })).sort((a: any, b: any) => b.age - a.age).slice(0, 10)
+  , [scoped]);
+
+  // ── таблица: поиск/сортировка/пагинация ──
+  const [q, setQ] = (React as any).useState("");
+  const [sortKey, setSortKey] = useState<string>("num");
+  const [sortDir, setSortDir] = useState<1 | -1>(1);
+  const [page, setPageN] = (React as any).useState(1);
+  const [perPage, setPerPage] = (React as any).useState(20);
+  const [card, setCard] = useState<DZIssue | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  const tableRows = useMemo(() => {
+    let arr = filtered.filter((x: DZIssue) =>
+      !q || (x.text + x.place + x.section + x.respSti + x.num).toLowerCase().includes(q.toLowerCase()));
+    arr = [...arr].sort((a: any, b: any) => {
+      let va = a[sortKey], vb = b[sortKey];
+      if (sortKey === "overdue") { va = isOverdue(a) ? dzDiff(a.due, today) : -1; vb = isOverdue(b) ? dzDiff(b.due, today) : -1; }
+      if (va == null) va = ""; if (vb == null) vb = "";
+      return (va > vb ? 1 : va < vb ? -1 : 0) * sortDir;
+    });
+    return arr;
+  }, [filtered, q, sortKey, sortDir]);
+  const totalPages = Math.max(1, Math.ceil(tableRows.length / perPage));
+  const pageRows = tableRows.slice((page - 1) * perPage, page * perPage);
+  useEffect(() => { setPageN(1); }, [q, sortKey, sortDir, perPage, filtered.length]);
+
+  const toggleSort = (k: string) => { if (sortKey === k) setSortDir((d: number) => -d as 1 | -1); else { setSortKey(k); setSortDir(1); } };
+
+  const exportCsv = () => {
+    const head = ["№", "Замечание", "Помещение", "Дата", "Раздел", "Критичность", "Ответственный СТИ", "Статус", "Срок", "Просрочка", "Комментарий"];
+    const rows = tableRows.map((x: DZIssue) => [
+      x.num, x.text, x.place, dzFmtRu(x.date), x.section, DZ_CRIT_META[x.crit].label,
+      x.respSti || "—", DZ_STATUS_META[x.status].label, dzFmtRu(x.due),
+      isOverdue(x) ? dzDiff(x.due!, today) + " дн." : "—", x.comment || "",
+    ]);
+    const csv = [head, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob); const a = document.createElement("a");
+    a.href = url; a.download = `Замечания_${project}_${today}.csv`; a.click(); URL.revokeObjectURL(url);
+  };
+
+  /* ---------- вспомогательные стили ---------- */
+  const selStyle: React.CSSProperties = { padding: "8px 11px", borderRadius: 9, border: "1px solid " + C.bd, background: C.ib, color: C.t1, fontSize: 12.5, fontFamily: "'Inter',sans-serif", cursor: "pointer", outline: "none" };
+  const chipBtn = (on: boolean): React.CSSProperties => ({ padding: "6px 12px", borderRadius: 8, border: "1px solid " + (on ? "transparent" : C.bd), background: on ? "rgba(124,124,124,0.16)" : "transparent", color: on ? C.t1 : C.t2, fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "'Inter',sans-serif" });
+  const th: React.CSSProperties = { padding: "10px 10px", textAlign: "left", fontSize: 11, color: C.t2, fontWeight: 600, whiteSpace: "nowrap", cursor: "pointer", userSelect: "none", borderBottom: "1px solid " + C.bd };
+  const td: React.CSSProperties = { padding: "10px 10px", fontSize: 12, color: C.t1, borderBottom: "1px solid " + C.bd, verticalAlign: "top" };
+
+  const StatusPill = ({ s }: { s: DZStatus }) => <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 500, background: dark ? "rgba(255,255,255,0.05)" : "#F3F4F6", color: dzStatusColor(s, S) }}><DzDot c={dzStatusColor(s, S)} />{DZ_STATUS_META[s].label}</span>;
+  const CritPill = ({ c }: { c: DZCrit }) => <span style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 500, color: "#fff", background: dzCritColor(c, S) }}>{DZ_CRIT_META[c].label}</span>;
+
+  return <div style={{ maxWidth: 1220, margin: "0 auto", paddingBottom: 60, fontFamily: "'Inter',sans-serif" }}>
+    <style>{`
+      @keyframes dzFade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+      @keyframes dzPulseKf{0%{box-shadow:0 0 0 0 rgba(90,134,196,.0)}30%{box-shadow:0 0 0 3px rgba(90,134,196,.35)}100%{box-shadow:0 0 0 0 rgba(90,134,196,0)}}
+      .dz-pulse{animation:dzPulseKf 1.3s ease-out}
+      @keyframes dzShimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+      .dz-skel{background:linear-gradient(90deg,${C.ib} 25%,${C.bd} 37%,${C.ib} 63%);background-size:200% 100%;animation:dzShimmer 1.3s infinite}
+    `}</style>
+
+    {/* ===== ЗАГОЛОВОК ===== */}
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap", marginBottom: 18 }}>
+      <div>
+        <h1 style={{ fontSize: isMobile ? 22 : 27, fontWeight: 800, color: C.t1, margin: 0, letterSpacing: -0.3 }}>Контроль замечаний</h1>
+        <div style={{ fontSize: 13, color: C.t2, marginTop: 4 }}>Аналитика устранения замечаний по проектам</div>
+      </div>
+      <div style={{ textAlign: isMobile ? "left" : "right", fontSize: 11.5, color: C.t2, display: "flex", flexDirection: "column", gap: 3, minWidth: 180 }}>
+        <span>Обновлено: <b style={{ color: C.t1 }}>{lastUpdate}</b></span>
+        {fileInfo && <span>Файл: <b style={{ color: C.t1 }}>{fileInfo.name}</b></span>}
+        <span style={{ display: "inline-flex", gap: 6, alignItems: "center", justifyContent: isMobile ? "flex-start" : "flex-end" }}>
+          <DzDot c={uploadState === "done" || uploadState === "idle" ? S.green : uploadState === "error" ? S.red : S.amber} />
+          {uploadState === "idle" ? "демо-данные" : uploadState === "done" ? "обработан" : uploadState === "error" ? "ошибка" : "обработка…"}
+        </span>
+        <button onClick={() => setDataSeed((s: number) => s + 1)} style={{ ...chipBtn(false), marginTop: 4, alignSelf: isMobile ? "flex-start" : "flex-end" }}>↻ Обновить данные</button>
+      </div>
+    </div>
+
+    {/* ===== БЛОК ЗАГРУЗКИ ===== */}
+    <div
+      onDragOver={(e: any) => { e.preventDefault(); setDragOver(true); }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={(e: any) => { e.preventDefault(); setDragOver(false); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); }}
+      style={{ border: `1.5px dashed ${dragOver ? S.green : C.bd}`, borderRadius: 14, padding: isMobile ? 18 : 26, background: dragOver ? S.greenBg : C.w, textAlign: "center", marginBottom: 18, transition: "all .15s" }}>
+      <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{ display: "none" }} onChange={(e: any) => e.target.files[0] && handleFile(e.target.files[0])} />
+      {uploadState === "uploading" || uploadState === "processing"
+        ? <div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: C.t1, marginBottom: 12 }}>{uploadState === "uploading" ? "Загрузка файла…" : "Обработка данных…"}</div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap", maxWidth: 420, margin: "0 auto" }}>
+              {[0, 1, 2, 3].map(i => <div key={i} className="dz-skel" style={{ height: 8, width: 80, borderRadius: 4 }} />)}
+            </div>
+          </div>
+        : <>
+            <button onClick={() => fileRef.current?.click()} style={{ padding: "12px 26px", borderRadius: 11, border: "none", background: S.green, color: "#fff", fontSize: 14.5, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 9, fontFamily: "'Inter',sans-serif", boxShadow: "0 2px 10px rgba(46,125,83,.25)" }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 5v14M5 12l7-7 7 7" /></svg>
+              Загрузить файлы
+            </button>
+            <div style={{ fontSize: 12.5, color: C.t2, marginTop: 12 }}>Перетащите Excel-файл сюда или выберите его на компьютере</div>
+            <div style={{ fontSize: 11, color: C.t2, marginTop: 3, opacity: .8 }}>После загрузки данные дашборда будут автоматически обновлены · .xlsx, .xls</div>
+            {uploadState === "error" && <div style={{ fontSize: 12, color: S.red, marginTop: 10 }}>Ошибка формата файла. Поддерживаются только .xlsx и .xls</div>}
+          </>}
+
+      {uploadState === "done" && fileInfo && <div style={{ marginTop: 16, display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center", alignItems: "center", fontSize: 12, color: C.t2 }}>
+        <span style={{ color: S.green, fontWeight: 600 }}>✓ {fileInfo.name}</span>
+        <span>{(fileInfo.size / 1024).toFixed(0)} КБ</span>
+        <span>найдено замечаний: <b style={{ color: C.t1 }}>{dzNum(fileInfo.found)}</b></span>
+        <span>обработано строк: <b style={{ color: C.t1 }}>{dzNum(fileInfo.rows)}</b></span>
+        <span>{fileInfo.at}</span>
+        <button onClick={() => fileRef.current?.click()} style={chipBtn(false)}>Заменить файл</button>
+        <button onClick={() => { setFileInfo(null); setUploadState("idle"); }} style={{ ...chipBtn(false), color: S.red }}>Удалить файл</button>
+      </div>}
+    </div>
+
+    {/* ===== ПРОЕКТ + ПЕРИОД ===== */}
+    <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ fontSize: 12, color: C.t2 }}>Проект</span>
+        <select value={project} onChange={(e: any) => setProject(e.target.value)} style={selStyle}>
+          {DZ_PROJECTS.map(p => <option key={p.id}>{p.label}</option>)}
+          <option>Все проекты</option>
+        </select>
+      </div>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        {([["all", "Всё время"], ["month", "Текущий месяц"], ["30d", "Последние 30 дней"], ["quarter", "Текущий квартал"]] as const).map(([v, l]) =>
+          <button key={v} onClick={() => setPeriod(v)} style={chipBtn(period === v)}>{l}</button>)}
+      </div>
+    </div>
+
+    {/* ===== ГЛОБАЛЬНЫЕ ФИЛЬТРЫ ===== */}
+    <DzCard style={{ marginBottom: 18 }} pad={14}>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        <select value={fStatus} onChange={(e: any) => setFStatus(e.target.value)} style={selStyle}>
+          <option value="">Статус: все</option>
+          {(Object.keys(DZ_STATUS_META) as DZStatus[]).map(s => <option key={s} value={s}>{DZ_STATUS_META[s].label}</option>)}
+        </select>
+        <select value={fCrit} onChange={(e: any) => setFCrit(e.target.value)} style={selStyle}>
+          <option value="">Критичность: все</option>
+          {(Object.keys(DZ_CRIT_META) as DZCrit[]).map(c => <option key={c} value={c}>{DZ_CRIT_META[c].label}</option>)}
+        </select>
+        <select value={fSection} onChange={(e: any) => setFSection(e.target.value)} style={selStyle}>
+          <option value="">Раздел: все</option>{DZ_SECTIONS.map(s => <option key={s}>{s}</option>)}
+        </select>
+        <select value={fResp} onChange={(e: any) => setFResp(e.target.value)} style={selStyle}>
+          <option value="">Ответственный СТИ: все</option>{DZ_RESP_STI.map(s => <option key={s}>{s}</option>)}
+        </select>
+        <select value={fPlace} onChange={(e: any) => setFPlace(e.target.value)} style={selStyle}>
+          <option value="">Помещение: все</option>{DZ_PLACES.map(s => <option key={s}>{s}</option>)}
+        </select>
+        <button onClick={() => setFOnlyOverdue((v: boolean) => !v)} style={chipBtn(fOnlyOverdue)}>Только просроченные</button>
+        <button onClick={() => setFNoDue((v: boolean) => !v)} style={chipBtn(fNoDue)}>Без срока</button>
+        {activeFilters > 0 && <button onClick={resetFilters} style={{ ...chipBtn(false), color: S.red }}>Сбросить фильтры</button>}
+      </div>
+      {activeFilters > 0 && <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
+        {fStatus && <DzTag label={DZ_STATUS_META[fStatus as DZStatus].label} onClose={() => setFStatus("")} />}
+        {fCrit && <DzTag label={DZ_CRIT_META[fCrit as DZCrit].label} onClose={() => setFCrit("")} />}
+        {fSection && <DzTag label={"Раздел: " + fSection} onClose={() => setFSection("")} />}
+        {fResp && <DzTag label={fResp} onClose={() => setFResp("")} />}
+        {fPlace && <DzTag label={fPlace} onClose={() => setFPlace("")} />}
+        {fOnlyOverdue && <DzTag label="Просроченные" onClose={() => setFOnlyOverdue(false)} color={S.red} />}
+        {fNoDue && <DzTag label="Без срока" onClose={() => setFNoDue(false)} />}
+      </div>}
+    </DzCard>
+
+    {/* ===== KPI ===== */}
+    <div style={{ display: "grid", gridTemplateColumns: `repeat(${isMobile ? 2 : 4},1fr)`, gap: 12, marginBottom: 18 }}>
+      <DzKpi label="Всего замечаний" value={K.total} trigger={dataSeed + project + period} highlight={highlight} sub={<span>активных: {dzNum(K.activeCount)}</span>} />
+      <DzKpi label="Устранено" value={K.done} accent={S.green} bar={K.total ? K.done / K.total * 100 : 0} trigger={dataSeed + project + period} highlight={highlight} sub={<span>{K.total ? Math.round(K.done / K.total * 100) : 0}% от общего</span>} />
+      <DzKpi label="В работе" value={K.progress} accent={S.amber} trigger={dataSeed + project + period} highlight={highlight} />
+      <DzKpi label="Не решено" value={K.open} accent={S.red} trigger={dataSeed + project + period} highlight={highlight} />
+      <DzKpi label="Критические" value={K.crit} accent={S.red} trigger={dataSeed + project + period} highlight={highlight} sub={<span>устр. {K.critDone} · просроч. {K.critOver}</span>} />
+      <DzKpi label="Просрочено" value={K.overdue} accent={S.red} trigger={dataSeed + project + period} highlight={highlight} sub={<span>{K.activeCount ? Math.round(K.overdue / K.activeCount * 100) : 0}% от активных</span>} />
+      <DzKpi label="Средний срок устранения" value={K.avgDays} decimals={1} trigger={dataSeed + project + period} highlight={highlight} sub={<span>дней</span>} />
+      <DzKpi label="Эффективность устранения" value={K.eff} accent={S.green} bar={K.eff} trigger={dataSeed + project + period} highlight={highlight} sub={<span>устранено / всего</span>} />
+    </div>
+
+    {/* ===== ГРАФИКИ РЯД 1: динамика + статусы ===== */}
+    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.5fr 1fr", gap: 14, marginBottom: 14 }}>
+      <DzCard>
+        <DzTitle hint="создано · устранено · активные замечания">Динамика замечаний</DzTitle>
+        <DzLineChart series={dynamics.main} S={S} />
+      </DzCard>
+      <DzCard>
+        <DzTitle hint="распределение по текущему статусу">Статусы</DzTitle>
+        <DzDonut parts={statusParts} total={K.total} S={S} />
+      </DzCard>
+    </div>
+
+    {/* ===== ГРАФИКИ РЯД 2: критичность + динамика критических ===== */}
+    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14, marginBottom: 14 }}>
+      <DzCard>
+        <DzTitle hint="всего · устранено · осталось · просрочено">Распределение по критичности</DzTitle>
+        <DzCritBars rows={critRows} S={S} />
+      </DzCard>
+      <DzCard>
+        <DzTitle hint="незакрытые критические по месяцам — тренд должен снижаться">Динамика критических</DzTitle>
+        <DzLineChart series={dynamics.crit} S={S} />
+      </DzCard>
+    </div>
+
+    {/* ===== ГРАФИКИ РЯД 3: разделы + помещения ===== */}
+    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.3fr 1fr", gap: 14, marginBottom: 14 }}>
+      <DzCard>
+        <DzTitle hint="клик по столбцу — фильтр таблицы">Замечания по разделам</DzTitle>
+        <DzStackBars data={sectionData} S={S} onPick={(l: string) => { setFSection(l); document.getElementById("dz-table")?.scrollIntoView({ behavior: "smooth" }); }} />
+        <div style={{ display: "flex", gap: 14, marginTop: 10, fontSize: 11, color: C.t2 }}>
+          <span style={{ display: "inline-flex", gap: 5, alignItems: "center" }}><DzDot c={S.green} />устранено</span>
+          <span style={{ display: "inline-flex", gap: 5, alignItems: "center" }}><DzDot c={S.amber} />активные</span>
+          <span style={{ display: "inline-flex", gap: 5, alignItems: "center" }}><DzDot c={S.red} />просрочено</span>
+        </div>
+      </DzCard>
+      <DzCard>
+        <DzTitle hint="объекты с наибольшим числом замечаний">Топ помещений и оборудования</DzTitle>
+        <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+          {placeRank.map((p: any, i: number) => <div key={i} onClick={() => { setFPlace(p.label); document.getElementById("dz-table")?.scrollIntoView({ behavior: "smooth" }); }} style={{ cursor: "pointer" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 3 }}>
+              <span style={{ color: C.t1 }}>{i + 1}. {p.label}</span><span style={{ color: C.t2 }}>{p.n}</span>
+            </div>
+            <div style={{ height: 7, borderRadius: 4, background: C.ib, overflow: "hidden" }}>
+              <div style={{ width: `${p.n / placeMax * 100}%`, height: "100%", background: S.blue, borderRadius: 4, transition: "width .6s" }} />
+            </div>
+          </div>)}
+        </div>
+      </DzCard>
+    </div>
+
+    {/* ===== АНАЛИТИКА ОТВЕТСТВЕННЫХ ===== */}
+    <DzCard style={{ marginBottom: 14 }}>
+      <DzTitle hint="рейтинг устранения · нагрузка · скорость">Аналитика ответственных</DzTitle>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
+          <thead><tr>
+            {["Ответственный", "Всего", "Устранено", "В работе", "Просрочено", "Крит.", "Нагрузка", "Эффективность"].map(h =>
+              <th key={h} style={{ ...th, cursor: "default", textAlign: h === "Ответственный" ? "left" : "right" }}>{h}</th>)}
+          </tr></thead>
+          <tbody>
+            {respRank.map((r: any) => {
+              const loadColor = r.active > respLoadMax * .75 ? S.red : r.active > respLoadMax * .45 ? S.amber : S.green;
+              const isBest = bestResp && r.name === bestResp.name;
+              const isWorst = worstOver && r.name === worstOver.name && r.overdue > 0;
+              return <tr key={r.name} style={{ background: isBest ? S.greenBg : isWorst ? S.redBg : "transparent" }}>
+                <td style={{ ...td, fontWeight: 600 }}>{r.name}
+                  {isBest && <span style={{ fontSize: 10, color: S.green, marginLeft: 6 }}>★ лучший</span>}
+                  {isWorst && <span style={{ fontSize: 10, color: S.red, marginLeft: 6 }}>! просрочки</span>}
+                </td>
+                <td style={{ ...td, textAlign: "right" }}>{r.total}</td>
+                <td style={{ ...td, textAlign: "right", color: S.green }}>{r.done}</td>
+                <td style={{ ...td, textAlign: "right", color: S.amber }}>{r.progress}</td>
+                <td style={{ ...td, textAlign: "right", color: r.overdue ? S.red : C.t2 }}>{r.overdue}</td>
+                <td style={{ ...td, textAlign: "right" }}>{r.crit}</td>
+                <td style={{ ...td, textAlign: "right" }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6, justifyContent: "flex-end" }}>
+                    <span style={{ width: 46, height: 6, borderRadius: 3, background: C.ib, overflow: "hidden", display: "inline-block" }}>
+                      <span style={{ display: "block", height: "100%", width: `${r.active / respLoadMax * 100}%`, background: loadColor }} /></span>
+                    {r.active}
+                  </span>
+                </td>
+                <td style={{ ...td, textAlign: "right", fontWeight: 700 }}>{r.eff}%</td>
+              </tr>;
+            })}
+          </tbody>
+        </table>
+      </div>
+    </DzCard>
+
+    {/* ===== КОНТРОЛЬ СРОКОВ ===== */}
+    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.4fr 1fr", gap: 14, marginBottom: 14 }}>
+      <DzCard>
+        <DzTitle hint="топ по количеству дней просрочки">Просроченные замечания</DzTitle>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 560 }}>
+            <thead><tr>{["№", "Замечание", "Объект", "Крит.", "Ответственный", "Срок", "Просрочка"].map(h => <th key={h} style={{ ...th, cursor: "default" }}>{h}</th>)}</tr></thead>
+            <tbody>
+              {overdueList.length === 0 && <tr><td style={td} colSpan={7}><span style={{ color: C.t2 }}>Просроченных замечаний нет</span></td></tr>}
+              {overdueList.map((x: any) => <tr key={x.id} onClick={() => setCard(x)} style={{ cursor: "pointer" }}>
+                <td style={td}>{x.num}</td>
+                <td style={{ ...td, maxWidth: 220 }}><span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.text}</span></td>
+                <td style={td}>{x.place}</td>
+                <td style={td}><CritPill c={x.crit} /></td>
+                <td style={td}>{x.respSti || "—"}</td>
+                <td style={td}>{dzFmtRu(x.due)}</td>
+                <td style={{ ...td, color: S.red, fontWeight: 700 }}>{x.late} дн.</td>
+              </tr>)}
+            </tbody>
+          </table>
+        </div>
+      </DzCard>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <DzCard>
+          <DzTitle hint="сроки, которые скоро наступят">Ближайшие сроки</DzTitle>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            {[["Сегодня", upcoming.d0, S.red], ["3 дня", upcoming.d3, S.amber], ["7 дней", upcoming.d7, S.amber], ["14 дней", upcoming.d14, S.blue]].map(([l, v, c]: any) =>
+              <div key={l} style={{ background: C.ib, borderRadius: 10, padding: 12, textAlign: "center" }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: c }}>{dzNum(v)}</div>
+                <div style={{ fontSize: 11, color: C.t2, marginTop: 2 }}>{l}</div>
+              </div>)}
+          </div>
+        </DzCard>
+        <DzCard>
+          <DzTitle hint="плотность назначенных сроков в этом месяце">Календарь устранения</DzTitle>
+          <DzHeat counts={heatCounts} S={S} onPick={(iso: string) => { /* можно фильтровать по дате */ document.getElementById("dz-table")?.scrollIntoView({ behavior: "smooth" }); }} />
+        </DzCard>
+      </div>
+    </div>
+
+    {/* ===== ДОП. ВИЗУАЛИЗАЦИИ ===== */}
+    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 14, marginBottom: 14 }}>
+      <DzCard>
+        <DzTitle hint="выявлено → устранено">Воронка устранения</DzTitle>
+        <DzFunnel stages={funnel} S={S} />
+      </DzCard>
+      <DzCard>
+        <DzTitle hint="критичность × статус">Матрица</DzTitle>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead><tr>{["", "Не реш.", "В раб.", "Пров.", "Реш."].map(h => <th key={h} style={{ ...th, cursor: "default", textAlign: "center", padding: "6px 4px" }}>{h}</th>)}</tr></thead>
+          <tbody>{matrix.map((m: any) => <tr key={m.crit}>
+            <td style={{ ...td, fontWeight: 600, padding: "8px 4px" }}>{m.crit}</td>
+            {[m.open, m.progress, m.review, m.done].map((v, i) => {
+              const cols = [S.red, S.amber, S.blue, S.green];
+              return <td key={i} style={{ ...td, textAlign: "center", padding: "8px 4px" }}>
+                <span style={{ display: "inline-block", minWidth: 26, padding: "2px 6px", borderRadius: 6, fontSize: 11, fontWeight: 600, color: v ? cols[i] : C.t2, background: v ? (i === 0 ? S.redBg : i === 1 ? S.amberBg : i === 2 ? S.blueBg : S.greenBg) : "transparent" }}>{v}</span>
+              </td>;
+            })}
+          </tr>)}</tbody>
+        </table>
+      </DzCard>
+      <DzCard>
+        <DzTitle hint="качество данных">Полнота данных</DzTitle>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {[["Без ответственного", K.noResp, K.total], ["Без срока устранения", K.noDue, K.total]].map(([l, v, t]: any) => {
+            const pct = t ? Math.round(v / t * 100) : 0;
+            return <div key={l}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                <span style={{ color: C.t1 }}>{l}</span><span style={{ color: pct > 15 ? S.red : C.t2 }}>{dzNum(v)} · {pct}%</span>
+              </div>
+              <div style={{ height: 7, borderRadius: 4, background: C.ib, overflow: "hidden" }}>
+                <div style={{ width: `${pct}%`, height: "100%", background: pct > 15 ? S.red : S.amber, borderRadius: 4 }} />
+              </div>
+            </div>;
+          })}
+          <div style={{ borderTop: "1px solid " + C.bd, paddingTop: 10, fontSize: 11.5, color: C.t2 }}>
+            Топ-3 самых старых незакрытых:
+            {oldest.slice(0, 3).map((x: any) => <div key={x.id} style={{ display: "flex", justifyContent: "space-between", marginTop: 5, color: C.t1 }}>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 160 }}>№{x.num} {x.text}</span>
+              <span style={{ color: S.red, fontWeight: 600 }}>{x.age} дн.</span>
+            </div>)}
+          </div>
+        </div>
+      </DzCard>
+    </div>
+
+    {/* ===== ОБЩАЯ ТАБЛИЦА ===== */}
+    <DzCard style={{ marginBottom: 14 }} pad={0}>
+      <div id="dz-table" style={{ padding: isMobile ? 14 : 18, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", borderBottom: "1px solid " + C.bd }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>Все замечания</div>
+          <div style={{ fontSize: 11.5, color: C.t2, marginTop: 2 }}>показано {dzNum(tableRows.length)} из {dzNum(scoped.length)}</div>
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <input value={q} onChange={(e: any) => setQ(e.target.value)} placeholder="Поиск по тексту…" style={{ ...selStyle, cursor: "text", minWidth: 180 }} />
+          <select value={perPage} onChange={(e: any) => setPerPage(+e.target.value)} style={selStyle}>
+            {[10, 20, 50, 100].map(n => <option key={n} value={n}>{n} строк</option>)}
+          </select>
+          <button onClick={exportCsv} style={chipBtn(false)}>Экспорт CSV</button>
+        </div>
+      </div>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
+          <thead><tr>
+            {[["num", "№"], ["text", "Замечание"], ["place", "Объект"], ["date", "Дата"], ["section", "Раздел"], ["crit", "Крит."], ["respSti", "Ответственный"], ["status", "Статус"], ["due", "Срок"], ["overdue", "Просрочка"]].map(([k, l]) =>
+              <th key={k} style={{ ...th, position: "sticky", top: 0, background: C.w }} onClick={() => toggleSort(k)}>
+                {l}{sortKey === k ? (sortDir === 1 ? " ↑" : " ↓") : ""}</th>)}
+          </tr></thead>
+          <tbody>
+            {pageRows.length === 0 && <tr><td style={td} colSpan={10}><span style={{ color: C.t2 }}>Ничего не найдено</span></td></tr>}
+            {pageRows.map((x: DZIssue) => <React.Fragment key={x.id}>
+              <tr onClick={() => setExpanded(expanded === x.id ? null : x.id)} style={{ cursor: "pointer", background: isOverdue(x) ? S.redBg : "transparent" }}>
+                <td style={td}>{x.num}</td>
+                <td style={{ ...td, maxWidth: 240 }}><span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: expanded === x.id ? "normal" : "nowrap" }}>{x.text}</span></td>
+                <td style={td}>{x.place}</td>
+                <td style={{ ...td, whiteSpace: "nowrap" }}>{dzFmtRu(x.date)}</td>
+                <td style={td}>{x.section}</td>
+                <td style={td}><CritPill c={x.crit} /></td>
+                <td style={td}>{x.respSti || <span style={{ color: C.t2 }}>—</span>}</td>
+                <td style={td}><StatusPill s={x.status} /></td>
+                <td style={{ ...td, whiteSpace: "nowrap" }}>{dzFmtRu(x.due)}</td>
+                <td style={{ ...td, color: isOverdue(x) ? S.red : C.t2, fontWeight: isOverdue(x) ? 700 : 400 }}>{isOverdue(x) ? dzDiff(x.due!, today) + " дн." : "—"}</td>
+              </tr>
+              {expanded === x.id && <tr><td colSpan={10} style={{ ...td, background: C.ib }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                  <div style={{ fontSize: 12, color: C.t2, maxWidth: 640 }}>
+                    <b style={{ color: C.t1 }}>Статус СТИ:</b> {x.stiStatus}<br />
+                    {x.note && <><b style={{ color: C.t1 }}>Примечание:</b> {x.note}<br /></>}
+                    {x.comment && <><b style={{ color: C.t1 }}>Комментарий:</b> {x.comment}</>}
+                  </div>
+                  <button onClick={(e: any) => { e.stopPropagation(); setCard(x); }} style={chipBtn(true)}>Открыть карточку</button>
+                </div>
+              </td></tr>}
+            </React.Fragment>)}
+          </tbody>
+        </table>
+      </div>
+      {/* пагинация */}
+      <div style={{ padding: "12px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, borderTop: "1px solid " + C.bd }}>
+        <span style={{ fontSize: 12, color: C.t2 }}>Стр. {page} из {totalPages}</span>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button onClick={() => setPageN((p: number) => Math.max(1, p - 1))} disabled={page === 1} style={{ ...chipBtn(false), opacity: page === 1 ? .4 : 1 }}>← Назад</button>
+          <button onClick={() => setPageN((p: number) => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ ...chipBtn(false), opacity: page === totalPages ? .4 : 1 }}>Вперёд →</button>
+        </div>
+      </div>
+    </DzCard>
+
+    {/* ===== КАРТОЧКА ЗАМЕЧАНИЯ ===== */}
+    {card && <div onClick={() => setCard(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 100, display: "flex", justifyContent: "flex-end" }}>
+      <div onClick={(e: any) => e.stopPropagation()} style={{ width: "min(480px,100%)", height: "100%", background: C.w, borderLeft: "1px solid " + C.bd, padding: isMobile ? 18 : 26, overflowY: "auto", animation: "dzFade .2s ease-out" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+          <div>
+            <div style={{ fontSize: 11, color: C.t2 }}>Замечание № {card.num} · {card.project}</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: C.t1, marginTop: 4 }}>{card.text}</div>
+          </div>
+          <button onClick={() => setCard(null)} style={{ background: "transparent", border: "none", color: C.t2, fontSize: 24, cursor: "pointer", lineHeight: 1 }}>×</button>
+        </div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 18, flexWrap: "wrap" }}>
+          <CritPill c={card.crit} /><StatusPill s={card.status} />
+          {isOverdue(card) && <span style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 600, color: "#fff", background: S.red }}>просрочено {dzDiff(card.due!, today)} дн.</span>}
+        </div>
+        {[
+          ["Помещение / оборудование", card.place],
+          ["Раздел", card.section],
+          ["Дата регистрации", dzFmtRu(card.date)],
+          ["Срок устранения", dzFmtRu(card.due)],
+          ["Ответственный от проекта", card.respProject],
+          ["Ответственный СТИ", card.respSti || "не назначен"],
+          ["Дней до срока / просрочка", card.due ? (card.due < today && card.status !== "done" ? `−${dzDiff(card.due, today)} (просрочено)` : `${dzDiff(today, card.due)}`) : "—"],
+          ["Статус СТИ", card.stiStatus],
+          ["Примечание", card.note || "—"],
+          ["Комментарий", card.comment || "—"],
+        ].map(([l, v]) => <div key={l as string} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "10px 0", borderBottom: "1px solid " + C.bd }}>
+          <span style={{ fontSize: 12, color: C.t2, flexShrink: 0 }}>{l}</span>
+          <span style={{ fontSize: 12.5, color: C.t1, textAlign: "right", fontWeight: 500 }}>{v}</span>
+        </div>)}
+        <div style={{ fontSize: 11, color: C.t2, marginTop: 16, fontStyle: "italic" }}>Режим просмотра. Редактирование — на следующем этапе.</div>
+      </div>
+    </div>}
+
+    {/* ===== TOAST ===== */}
+    {toast && <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: C.dk, color: "#fff", padding: "11px 20px", borderRadius: 11, fontSize: 13, fontWeight: 500, zIndex: 200, boxShadow: "0 8px 30px rgba(0,0,0,.4)", animation: "dzFade .2s ease-out" }}>{toast}</div>}
+  </div>;
 }
