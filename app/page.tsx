@@ -872,7 +872,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v5.6"; // v106 exact branded redirect loading screen
+  const APP_VERSION="v5.7"; // v107 fix Content persistence and inline checklist editor
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
 
   // Clear stale localStorage on version change
@@ -10098,6 +10098,7 @@ function ContentPage({userId}:{userId:string}){
   const[templatePanel,setTemplatePanel]=useState(false);
   const[newChannelName,setNewChannelName]=useState("");
   const[newTemplateName,setNewTemplateName]=useState("");
+  const[checklistDraft,setChecklistDraft]=useState("");
   const emptyF=()=>({
     platform:"instagram",
     type:"Reels",
@@ -10212,9 +10213,17 @@ ${existingScenario}`;
     finally{setAiBusy(null);}
   };
   const addChecklistItem=()=>{
-    const textValue=prompt("Название пункта");
-    if(!textValue?.trim())return;
-    sF((prev:any)=>({...prev,checklist:[...(prev.checklist||[]),{id:`c-${crypto.randomUUID()}`,text:textValue.trim(),done:false}]}));
+    const textValue=checklistDraft.trim();
+    if(!textValue)return;
+    sF((prev:any)=>({
+      ...prev,
+      checklist:[...(prev.checklist||[]),{
+        id:`c-${crypto.randomUUID()}`,
+        text:textValue,
+        done:false
+      }]
+    }));
+    setChecklistDraft("");
   };
   const saveCurrentTemplate=async()=>{
     if(!newTemplateName.trim()){alert("Укажи название шаблона.");return;}
@@ -10518,13 +10527,18 @@ ${existingScenario}`;
         setContentCalAnchor(d);
       }
       setEditId(null);
+      setChecklistDraft("");
       sF(emptyF());
       setShow(false);
       setTemplatePanel(false);
       alert(editId?"Карточка обновлена":"Карточка сохранена в «Идеи»");
     }catch(e:any){
       console.error("Content save failed",e);
-      alert(`Карточка не сохранена: ${e?.message||"неизвестная ошибка"}`);
+      const raw=String(e?.message||"неизвестная ошибка");
+      const message=raw.includes("broadcast_text")
+        ?"Карточка не сохранена: в Supabase отсутствует поле broadcast_text. Запусти SQL-файл для Content, затем повтори сохранение."
+        :`Карточка не сохранена: ${raw}`;
+      alert(message);
     }finally{
       setSavingContent(false);
     }
@@ -10553,6 +10567,7 @@ ${existingScenario}`;
       template_id:item.template_id||"",
       analytics:item.analytics||null
     });
+    setChecklistDraft("");
     setEditId(item.id);setShow(true);
   };
 
@@ -10971,19 +10986,73 @@ ${existingScenario}`;
                 </section>
 
                 <section style={{background:C.w,border:"1px solid "+C.bd,borderRadius:11,padding:16}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginBottom:12}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10,marginBottom:12}}>
                     <div>
                       <div style={{fontSize:13,fontWeight:500,color:C.t1}}>Чек-лист производства</div>
                       <div style={{fontSize:10.5,color:C.t2,marginTop:3}}>{(f.checklist||[]).filter((x:any)=>x.done).length}/{(f.checklist||[]).length} выполнено</div>
                     </div>
-                    <button onClick={addChecklistItem} style={{height:32,padding:"0 10px",borderRadius:7,border:"1px solid "+C.bd,background:"transparent",color:C.t1,fontSize:11,cursor:"pointer"}}>Добавить пункт</button>
                   </div>
+
+                  <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr auto",gap:8,marginBottom:12}}>
+                    <input
+                      value={checklistDraft}
+                      onChange={e=>setChecklistDraft(e.target.value)}
+                      onKeyDown={e=>{
+                        if(e.key==="Enter"){
+                          e.preventDefault();
+                          addChecklistItem();
+                        }
+                      }}
+                      placeholder="Новый этап производства"
+                      style={{
+                        height:38,
+                        minWidth:0,
+                        padding:"0 11px",
+                        borderRadius:8,
+                        border:"1px solid "+C.bd,
+                        background:C.ib,
+                        color:C.t1,
+                        fontSize:12,
+                        outline:"none"
+                      }}
+                    />
+                    <button
+                      onClick={addChecklistItem}
+                      disabled={!checklistDraft.trim()}
+                      style={{
+                        height:38,
+                        padding:"0 13px",
+                        borderRadius:8,
+                        border:"1px solid "+C.bd,
+                        background:checklistDraft.trim()?C.t1:"transparent",
+                        color:checklistDraft.trim()?C.bg:C.t2,
+                        fontSize:11.5,
+                        fontWeight:500,
+                        cursor:checklistDraft.trim()?"pointer":"default",
+                        opacity:checklistDraft.trim()?1:.55
+                      }}
+                    >Добавить</button>
+                  </div>
+
                   {(f.checklist||[]).length>0&&<div style={{height:5,borderRadius:5,background:C.ib,overflow:"hidden",marginBottom:12}}><div style={{height:"100%",width:`${Math.round((f.checklist||[]).filter((x:any)=>x.done).length/Math.max(1,(f.checklist||[]).length)*100)}%`,background:"#2F6BFF"}}/></div>}
+
                   <div style={{display:"grid",gap:7}}>
-                    {(f.checklist||[]).map((item:any,index:number)=><div key={item.id||index} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 9px",border:"1px solid "+C.bd,borderRadius:8}}>
-                      <button onClick={()=>sF((p:any)=>({...p,checklist:p.checklist.map((x:any,i:number)=>i===index?{...x,done:!x.done}:x)}))} style={{width:17,height:17,borderRadius:4,border:"1.5px solid "+(item.done?"#22C55E":C.bd),background:item.done?"#22C55E":"transparent",padding:0,cursor:"pointer",flexShrink:0}}/>
-                      <input value={item.text} onChange={e=>sF((p:any)=>({...p,checklist:p.checklist.map((x:any,i:number)=>i===index?{...x,text:e.target.value}:x)}))} style={{flex:1,minWidth:0,border:0,background:"transparent",color:C.t1,fontSize:12.5,outline:"none"}}/>
-                      <button onClick={()=>sF((p:any)=>({...p,checklist:p.checklist.filter((_:any,i:number)=>i!==index)}))} style={{border:0,background:"transparent",color:C.t2,cursor:"pointer"}}>×</button>
+                    {(f.checklist||[]).map((item:any,index:number)=><div key={item.id||index} style={{display:"flex",alignItems:"center",gap:8,padding:"9px 10px",border:"1px solid "+C.bd,borderRadius:8,background:C.ib}}>
+                      <button
+                        onClick={()=>sF((p:any)=>({...p,checklist:p.checklist.map((x:any,i:number)=>i===index?{...x,done:!x.done}:x)}))}
+                        aria-label={item.done?"Вернуть в работу":"Отметить выполненным"}
+                        style={{width:17,height:17,borderRadius:4,border:"1.5px solid "+(item.done?"#22C55E":C.bd),background:item.done?"#22C55E":"transparent",padding:0,cursor:"pointer",flexShrink:0}}
+                      />
+                      <input
+                        value={item.text}
+                        onChange={e=>sF((p:any)=>({...p,checklist:p.checklist.map((x:any,i:number)=>i===index?{...x,text:e.target.value}:x)}))}
+                        style={{flex:1,minWidth:0,border:0,background:"transparent",color:C.t1,fontSize:12.5,outline:"none",textDecoration:item.done?"line-through":"none",opacity:item.done?.65:1}}
+                      />
+                      <button
+                        onClick={()=>sF((p:any)=>({...p,checklist:p.checklist.filter((_:any,i:number)=>i!==index)}))}
+                        aria-label="Удалить пункт"
+                        style={{width:26,height:26,border:0,borderRadius:6,background:"transparent",color:C.t2,cursor:"pointer",fontSize:16,lineHeight:1}}
+                      >×</button>
                     </div>)}
                   </div>
                 </section>
