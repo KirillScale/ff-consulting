@@ -872,7 +872,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v4.8"; // fix Content save notification build error
+  const APP_VERSION="v5.4"; // v104 Link Tracker accuracy and reliability audit
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
 
   // Clear stale localStorage on version change
@@ -2027,16 +2027,16 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
     </div>
   );
 
-  const minTimelineWidth=isMobile?980:760;
+  const minTimelineWidth=isMobile?860:760;
 
   return <div>
-    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:14}}>
+    <div style={{display:"flex",alignItems:isMobile?"stretch":"center",justifyContent:"space-between",gap:10,marginBottom:14,flexDirection:isMobile?"column":"row"}}>
       <div>
-        <h2 style={{margin:0,fontSize:isMobile?18:20,fontWeight:500,color:C.t1,letterSpacing:"-.02em"}}>Карта года</h2>
-        <div style={{fontSize:12,color:C.t2,marginTop:4}}>Цели на временной шкале ближайших пяти лет</div>
+        <h2 style={{margin:0,fontSize:isMobile?19:20,fontWeight:500,color:C.t1,letterSpacing:"-.02em"}}>Карта года</h2>
+        <div style={{fontSize:11.5,color:C.t2,marginTop:4}}>Цели на временной шкале ближайших пяти лет</div>
       </div>
       <button onClick={()=>{setShowForm(true);setEditGoal(null);}}
-        style={{padding:"9px 16px",background:C.a,color:"#fff",border:"none",borderRadius:8,fontSize:12.5,fontWeight:500,cursor:"pointer"}}>+ Цель</button>
+        style={{height:isMobile?42:"auto",padding:isMobile?"0 16px":"9px 16px",background:C.a,color:"#fff",border:"none",borderRadius:9,fontSize:12.5,fontWeight:500,cursor:"pointer",width:isMobile?"100%":"auto"}}>Добавить цель</button>
     </div>
 
     {showForm&&renderForm(form,setForm,saveNew,"Новая цель")}
@@ -2045,8 +2045,8 @@ function YearMap({userId,goals,goalUpdate,goalAdd,goalTasks}:{userId:string,goal
     <div style={{background:C.w,border:"1px solid "+C.bd,borderRadius:12,overflow:"hidden"}}>
       <div style={{overflowX:"auto"}}>
         <div style={{minWidth:minTimelineWidth}}>
-          <div style={{display:"grid",gridTemplateColumns:"220px 1fr",borderBottom:"1px solid "+C.bd}}>
-            <div style={{padding:"12px 16px",fontSize:11.5,color:C.t2}}>Цель</div>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"160px 1fr":"220px 1fr",borderBottom:"1px solid "+C.bd}}>
+            <div style={{padding:isMobile?"12px 10px":"12px 16px",fontSize:11.5,color:C.t2,position:isMobile?"sticky":"static",left:0,zIndex:5,background:C.w}}>Цель</div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",position:"relative"}}>
               {years.map(y=><div key={y} style={{padding:"12px 10px",fontSize:11.5,color:C.t2,borderLeft:"1px solid "+C.bd,textAlign:"center"}}>{y}</div>)}
             </div>
@@ -2796,7 +2796,8 @@ function TaskPlanner({userId}:{userId:string}){
   const{dark}=useTheme();
   const isMobile=useIsMobile();
   const{data:tasks,add,update,remove,loading}=useTable("planner_tasks",userId);
-  const[view,setView]=useState<"month"|"week"|"3day"|"day"|"list">("week");
+  const[view,setView]=useState<"month"|"week"|"3day"|"day"|"list">(()=>isMobile?"list":"week");
+  useEffect(()=>{if(isMobile&&view==="week")setView("list");},[isMobile]);
   const[cur,setCur]=useState(()=>new Date());
   const[edit,setEdit]=useState<any>(null);
   const[subInput,setSubInput]=useState("");
@@ -2823,6 +2824,7 @@ function TaskPlanner({userId}:{userId:string}){
   const[wrAiBusy,setWrAiBusy]=useState(false);
   const[wrAiNotice,setWrAiNotice]=useState<{ok:boolean,text:string}|null>(null);
   const[wrHighlight,setWrHighlight]=useState<Set<string>>(new Set());
+  const[mobileAiOpen,setMobileAiOpen]=useState(false);
 
   // AI-аудит задач
   const[auditBusy,setAuditBusy]=useState(false);
@@ -3091,9 +3093,9 @@ function TaskPlanner({userId}:{userId:string}){
   const TimeGridView=({dates}:{dates:Date[]})=>{
     const nowMin=new Date().getHours()*60+new Date().getMinutes();
     const colW=dates.length===1?1:dates.length;
-    const gridMinWidth=dates.length===7?1040:dates.length===3?720:420;
+    const gridMinWidth=isMobile?(dates.length===7?980:dates.length===3?760:360):(dates.length===7?1040:dates.length===3?720:420);
     return(
-      <div style={{overflowX:"auto",borderRadius:12}}>
+      <div style={{overflowX:"auto",borderRadius:isMobile?14:12,WebkitOverflowScrolling:"touch",scrollSnapType:isMobile?"x mandatory":"none",overscrollBehaviorX:"contain"}}>
       <div style={{border:"1px solid "+bd,borderRadius:12,overflow:"hidden",background:cardBg,minWidth:gridMinWidth}}>
         {/* day headers */}
         <div style={{display:"grid",gridTemplateColumns:`52px repeat(${colW},minmax(0,1fr))`,borderBottom:"1px solid "+bd}}>
@@ -3110,9 +3112,9 @@ function TaskPlanner({userId}:{userId:string}){
           <div style={{display:"grid",gridTemplateColumns:`52px repeat(${colW},minmax(0,1fr))`,borderBottom:"1px solid "+bd,minHeight:30}}>
             <div style={{fontSize:9,color:C.t2,display:"flex",alignItems:"center",justifyContent:"center",textAlign:"center" as const}}>весь<br/>день</div>
             {dates.map((d,i)=>(
-              <div key={i} onDragOver={e=>e.preventDefault()} onDrop={async e=>{e.preventDefault();if(!calendarDrag)return;const task=tasks.find((x:any)=>x.id===calendarDrag.id);if(task)await update(task.id,{due_date:pd(d),updated_at:new Date().toISOString()});setCalendarDrag(null);}} style={{borderLeft:"1px solid "+bd,padding:3,display:"flex",flexDirection:"column",gap:3,minWidth:0,overflow:"hidden"}}>
+              <div key={i} onDragOver={e=>e.preventDefault()} onDrop={async e=>{e.preventDefault();if(!calendarDrag)return;const task=tasks.find((x:any)=>x.id===calendarDrag.id);if(task)await update(task.id,{due_date:pd(d),updated_at:new Date().toISOString()});setCalendarDrag(null);}} style={{borderLeft:"1px solid "+bd,padding:isMobile?6:3,display:"flex",flexDirection:"column",gap:isMobile?5:3,minWidth:0,overflow:"hidden"}}>
                 {forDay(d).filter((t:any)=>!t.due_time).map((t:any)=>(
-                  <div key={t.id} draggable onDragStart={e=>{setCalendarDrag({id:t.id,grabOffset:0});e.dataTransfer.effectAllowed="move";}} onDragEnd={()=>setCalendarDrag(null)} onClick={e=>{e.stopPropagation();openEdit(t);}} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 6px",borderRadius:5,background:(t.color||"#64748B")+"1E",borderLeft:"2px solid "+(t.color||"#64748B"),cursor:"pointer",minWidth:0,width:"100%",maxWidth:"100%",boxSizing:"border-box",overflow:"hidden"}}>
+                  <div key={t.id} draggable onDragStart={e=>{setCalendarDrag({id:t.id,grabOffset:0});e.dataTransfer.effectAllowed="move";}} onDragEnd={()=>setCalendarDrag(null)} onClick={e=>{e.stopPropagation();openEdit(t);}} style={{display:"flex",alignItems:"center",gap:5,padding:isMobile?"6px 8px":"3px 6px",borderRadius:isMobile?8:5,background:(t.color||"#64748B")+"1E",borderLeft:"3px solid "+(t.color||"#64748B"),cursor:"pointer",minWidth:0,width:"100%",maxWidth:"100%",boxSizing:"border-box",overflow:"hidden"}}>
                     <span onClick={e=>cycleTaskStatus(t,e)} style={{width:11,height:11,borderRadius:3,border:"1.5px solid "+(t.completion_status==="failed"?"#DC2626":t.done?"#22C55E":(t.color||"#64748B")),background:t.completion_status==="failed"?"#DC2626":t.done?"#22C55E":"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>{t.completion_status==="failed"?<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><path d="M6 6l12 12M18 6L6 18"/></svg>:t.done&&<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}</span>
                     <span style={{fontSize:11,color:t.completion_status==="failed"?"#DC2626":C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:t.done?"line-through":"none",opacity:t.done?0.5:1}}>{t.title}</span>
                   </div>
@@ -3148,7 +3150,7 @@ function TaskPlanner({userId}:{userId:string}){
                   await saveTaskTiming(task,dateStr,start,taskDuration(task));
                   setCalendarDrag(null);
                 }}
-                style={{position:"relative" as const,borderLeft:"1px solid "+bd,cursor:"pointer",minWidth:0,overflow:"hidden"}}>
+                style={{position:"relative" as const,borderLeft:"1px solid "+bd,cursor:"pointer",minWidth:0,overflow:"hidden",touchAction:"pan-y"}}>
                 {Array.from({length:HOURS},(_,h)=><div key={h} style={{height:HH,borderTop:h===0?"none":"1px solid "+(dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.05)"),boxSizing:"border-box" as const}}/>)}
                 {isToday&&nowMin>=HOUR_START*60&&nowMin<=HOUR_END*60&&(
                   <div style={{position:"absolute" as const,left:0,right:0,top:((nowMin-HOUR_START*60)/60)*HH,height:1.5,background:"#EF4444",zIndex:5}}><div style={{position:"absolute",left:0,top:-3,width:7,height:7,borderRadius:"50%",background:"#EF4444"}}/></div>
@@ -3169,7 +3171,7 @@ function TaskPlanner({userId}:{userId:string}){
                       }}
                       onDragEnd={()=>setCalendarDrag(null)}
                       onClick={e=>{e.stopPropagation();openEdit(t);}}
-                      style={{position:"absolute" as const,top,left:`calc(${leftPct}% + 2px)`,width:`calc(${wPct}% - 4px)`,height:calendarResize?.id===t.id?Math.max(20,((calendarResize?.currentDuration??taskDuration(t))/60)*HH-4):height,borderRadius:6,background:(t.color||"#64748B")+(dark?"2B":"1C"),border:"1px solid "+(t.color||"#64748B")+"40",borderLeft:"3px solid "+(t.color||"#64748B"),padding:"3px 6px 9px",overflow:"hidden",cursor:"grab",boxSizing:"border-box" as const}}>
+                      style={{position:"absolute" as const,top,left:`calc(${leftPct}% + 2px)`,width:`calc(${wPct}% - 4px)`,height:calendarResize?.id===t.id?Math.max(20,((calendarResize?.currentDuration??taskDuration(t))/60)*HH-4):height,borderRadius:6,background:(t.color||"#64748B")+(dark?"2B":"1C"),border:"1px solid "+(t.color||"#64748B")+"40",borderLeft:"3px solid "+(t.color||"#64748B"),padding:isMobile?"6px 8px 12px":"3px 6px 9px",overflow:"hidden",cursor:"grab",boxSizing:"border-box" as const,boxShadow:isMobile?"0 1px 2px rgba(0,0,0,.12)":"none"}}>
                       <div style={{display:"flex",alignItems:"center",gap:4}}>
                         <span onClick={e=>cycleTaskStatus(t,e)} style={{width:11,height:11,borderRadius:3,border:"1.5px solid "+(t.completion_status==="failed"?"#DC2626":t.done?"#22C55E":(t.color||"#64748B")),background:t.completion_status==="failed"?"#DC2626":t.done?"#22C55E":"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>{t.completion_status==="failed"?<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><path d="M6 6l12 12M18 6L6 18"/></svg>:t.done&&<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}</span>
                         {prioDot(t.priority)}
@@ -3178,8 +3180,8 @@ function TaskPlanner({userId}:{userId:string}){
                       {showRange&&<div style={{fontSize:9.5,color:C.t2,marginTop:1,paddingLeft:15,whiteSpace:"nowrap" as const,overflow:"hidden",textOverflow:"ellipsis"}}>{wrNormTime(t.due_time)}–{wrAddMin(wrNormTime(t.due_time),calendarResize?.id===t.id?(calendarResize?.currentDuration??taskDuration(t)):taskDuration(t))}</div>}
                       <div
                         onMouseDown={e=>{e.preventDefault();e.stopPropagation();setCalendarResize({id:t.id,startY:e.clientY,startDuration:taskDuration(t),currentDuration:taskDuration(t)});}}
-                        style={{position:"absolute",left:4,right:4,bottom:1,height:7,cursor:"ns-resize",display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-                        <span style={{width:28,height:2,borderRadius:2,background:"rgba(255,255,255,.45)"}}/>
+                        style={{position:"absolute",left:4,right:4,bottom:0,height:isMobile?14:7,cursor:"ns-resize",display:"flex",alignItems:"flex-end",justifyContent:"center",touchAction:"none"}}>
+                        <span style={{width:isMobile?36:28,height:isMobile?3:2,borderRadius:2,background:"rgba(255,255,255,.55)",marginBottom:isMobile?3:0}}/>
                       </div>
                     </div>
                   );
@@ -3197,43 +3199,49 @@ function TaskPlanner({userId}:{userId:string}){
     <div style={{width:"100%"}}>
       {/* ===== ДОСКА ЗАДАЧ (сегодня / 3 дня / неделя) ===== */}
       <div style={{marginBottom:22}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:12,flexWrap:"wrap" as const}}>
-          <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap" as const}}>
-            <span style={{fontSize:isMobile?15:18,fontWeight:500,color:C.t1,letterSpacing:"-0.01em"}}>{boardMode==="today"?"Задачи на сегодня":boardMode==="3day"?"Задачи на 3 дня":"Задачи на неделю"}</span>
-            <button onClick={()=>boardStep(-1)} style={{width:30,height:30,borderRadius:8,border:"1px solid "+bd,background:cardBg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-            </button>
-            <button onClick={()=>boardStep(1)} style={{width:30,height:30,borderRadius:8,border:"1px solid "+bd,background:cardBg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-            </button>
+        <div style={{display:"flex",alignItems:isMobile?"stretch":"center",justifyContent:"space-between",gap:isMobile?10:12,marginBottom:isMobile?10:12,flexDirection:isMobile?"column":"row"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,minWidth:0}}>
+            <span style={{fontSize:isMobile?18:18,fontWeight:500,color:C.t1,letterSpacing:"-0.02em",minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>
+              {boardMode==="today"?"Сегодня":boardMode==="3day"?"Ближайшие 3 дня":"Неделя"}
+            </span>
+            <div style={{display:"flex",gap:6,flexShrink:0}}>
+              <button onClick={()=>boardStep(-1)} aria-label="Назад" style={{width:isMobile?36:30,height:isMobile?36:30,borderRadius:9,border:"1px solid "+bd,background:cardBg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <button onClick={()=>boardStep(1)} aria-label="Вперёд" style={{width:isMobile?36:30,height:isMobile?36:30,borderRadius:9,border:"1px solid "+bd,background:cardBg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </div>
           </div>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginLeft:"auto",flexWrap:"wrap" as const}}>
-            <div style={{display:"flex",background:C.ib,borderRadius:8,padding:3,border:"1px solid "+bd,gap:2}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginLeft:isMobile?0:"auto",minWidth:0}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",background:C.ib,borderRadius:9,padding:3,border:"1px solid "+bd,gap:2,flex:isMobile?1:"unset",minWidth:0}}>
               {([["today","Сегодня"],["3day","3 дня"],["week","Неделя"]] as const).map(([mv,lbl])=>(
                 <button key={mv} onClick={()=>{setBoardMode(mv);setBoardStart(mv==="week"?currentWeekStart():todayAnchor());}}
-                  style={{padding:"6px 12px",borderRadius:6,border:"none",background:boardMode===mv?cardBg:"transparent",color:boardMode===mv?C.t1:C.t2,fontSize:12,fontWeight:500,cursor:"pointer",boxShadow:boardMode===mv?"0 1px 3px rgba(0,0,0,0.08)":"none",whiteSpace:"nowrap" as const}}>{lbl}</button>
+                  style={{padding:isMobile?"8px 8px":"6px 12px",borderRadius:7,border:"none",background:boardMode===mv?cardBg:"transparent",color:boardMode===mv?C.t1:C.t2,fontSize:isMobile?12.5:12,fontWeight:500,cursor:"pointer",boxShadow:boardMode===mv?"0 1px 3px rgba(0,0,0,0.08)":"none",whiteSpace:"nowrap" as const,minWidth:0}}>{lbl}</button>
               ))}
             </div>
             {!boardIsCurrent&&<button onClick={boardResetToCurrent}
-              style={{padding:"6px 14px",background:C.w,color:C.t1,border:"1px solid "+bd,borderRadius:8,fontSize:12,fontWeight:500,cursor:"pointer",boxShadow:"0 1px 3px rgba(0,0,0,0.06)",whiteSpace:"nowrap" as const}}>{boardMode==="week"?"Эта неделя":"Сегодня"}</button>}
+              style={{height:isMobile?39:32,padding:isMobile?"0 11px":"6px 14px",background:C.w,color:C.t1,border:"1px solid "+bd,borderRadius:9,fontSize:11.5,fontWeight:500,cursor:"pointer",whiteSpace:"nowrap" as const,flexShrink:0}}>
+              {boardMode==="week"?"Эта неделя":"Сегодня"}
+            </button>}
           </div>
         </div>
-        <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:6,scrollbarWidth:"none" as const}}>
+        <div style={{display:"flex",gap:isMobile?10:10,overflowX:"auto",paddingBottom:8,scrollbarWidth:"none" as const,scrollSnapType:isMobile?"x mandatory":"none",WebkitOverflowScrolling:"touch"}}>
           {board7().map((d,i)=>{
             const isToday=pd(d)===todayStr;const dt=forDay(d);
             return(
-              <div key={i} style={{flex:"1 0 0",minWidth:isMobile?152:0,background:C.ib,border:"1px solid "+(isToday?C.t1+"55":bd),borderRadius:12,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-                <div style={{padding:"9px 11px",borderBottom:"1px solid "+bd,display:"flex",alignItems:"center",justifyContent:"space-between",background:isToday?C.t1+"0D":"transparent"}}>
+              <div key={i} style={{flex:isMobile?"0 0 calc(88vw - 32px)":"1 0 0",minWidth:isMobile?270:0,maxWidth:isMobile?360:"none",background:C.ib,border:"1px solid "+(isToday?C.t1+"55":bd),borderRadius:14,display:"flex",flexDirection:"column",overflow:"hidden",scrollSnapAlign:isMobile?"start":"none"}}>
+                <div style={{padding:isMobile?"11px 13px":"9px 11px",borderBottom:"1px solid "+bd,display:"flex",alignItems:"center",justifyContent:"space-between",background:isToday?C.t1+"0D":"transparent"}}>
                   <div style={{display:"flex",flexDirection:"column",lineHeight:1.15}}>
                     <span style={{fontSize:10,fontWeight:500,color:isToday?C.t1:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3}}>{PL_WD[(d.getDay()+6)%7]}</span>
                     <span style={{fontSize:14,fontWeight:500,color:C.t1}}>{d.getDate()} {shMon(d)}</span>
                   </div>
                   <span style={{fontSize:10.5,fontWeight:500,color:C.t2,background:C.bd,borderRadius:8,padding:"1px 7px"}}>{dt.length}</span>
                 </div>
-                <div style={{padding:8,display:"flex",flexDirection:"column",gap:6,flex:1,minHeight:isMobile?110:150}}>
+                <div style={{padding:isMobile?10:8,display:"flex",flexDirection:"column",gap:7,flex:1,minHeight:isMobile?122:150}}>
                   {dt.map((t:any)=>(
                     <div key={t.id} onClick={()=>openEdit(t)}
-                      style={{padding:"7px 9px 8px",borderRadius:8,background:cardBg,
+                      style={{padding:isMobile?"10px 11px":"7px 9px 8px",borderRadius:isMobile?10:8,background:cardBg,
                         border:wrHighlight.has(t.id)?"1px solid #16A34A":"1px solid "+bd,
                         borderLeft:"3px solid "+(t.color||"#64748B"),cursor:"pointer",
                         boxShadow:wrHighlight.has(t.id)?"0 0 0 3px rgba(22,163,74,0.14)":"none",
@@ -3262,51 +3270,54 @@ function TaskPlanner({userId}:{userId:string}){
       </div>
 
       {/* AI-ассистент планирования */}
-      <div style={{background:C.w,borderRadius:12,padding:isMobile?16:18,border:"1px solid "+bd,marginBottom:22,position:"relative",overflow:"hidden"}}>
+      <div style={{background:C.w,borderRadius:isMobile?14:12,padding:isMobile?14:18,border:"1px solid "+bd,marginBottom:isMobile?12:22,position:"relative",overflow:"hidden"}}>
         <style>{`@keyframes plannerAiFlash{0%{box-shadow:0 0 0 0 rgba(22,163,74,0.35);}50%{box-shadow:0 0 0 8px rgba(22,163,74,0.10);}100%{box-shadow:0 0 0 0 rgba(22,163,74,0);}}
 @keyframes wrBrainPulse{0%,100%{transform:scale(1);opacity:0.9;}50%{transform:scale(1.08);opacity:1;}}`}</style>
-        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+        <button onClick={()=>isMobile&&setMobileAiOpen(v=>!v)}
+          style={{width:"100%",display:"flex",alignItems:"center",gap:10,border:"none",background:"transparent",padding:0,textAlign:"left",cursor:isMobile?"pointer":"default"}}>
           <div style={{width:34,height:34,borderRadius:8,background:C.ib,display:"flex",alignItems:"center",justifyContent:"center",color:C.t2,flexShrink:0,
             animation:wrAiBusy?"wrBrainPulse 1.1s ease-in-out infinite":"none"}}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 2a4 4 0 014 4v2a4 4 0 01-8 0V6a4 4 0 014-4z"/><path d="M6 12v1a6 6 0 0012 0v-1M12 19v3M8 22h8"/></svg>
           </div>
-          <div>
-            <div style={{fontSize:15,fontWeight:500,color:C.t1}}>AI-ассистент планирования</div>
-            <div style={{fontSize:12,color:C.t2,marginTop:1}}>Опиши дела на неделю обычным текстом — расставлю по дням и календарю</div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:14.5,fontWeight:500,color:C.t1}}>AI-планирование</div>
+            <div style={{fontSize:11.5,color:C.t2,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:isMobile?"nowrap":"normal"}}>Распределение задач по дням и календарю</div>
           </div>
-        </div>
+          {isMobile&&<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2" style={{transform:mobileAiOpen?"rotate(180deg)":"rotate(0)",transition:"transform .18s"}}><polyline points="6 9 12 15 18 9"/></svg>}
+        </button>
 
-        <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
-          <textarea value={wrAiInput} onChange={e=>setWrAiInput(e.target.value)} rows={2}
-            onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();runWrAi(wrAiInput);}}}
-            placeholder="Например: снять reels во вторник, в среду созвон с клиентом в 15:00, подготовить презентацию к пятнице"
-            disabled={wrAiBusy}
-            style={{flex:1,padding:"13px 14px",border:"1px solid "+bd,borderRadius:10,fontSize:13,outline:"none",background:inputBg,color:C.t1,resize:"none" as const,minHeight:64,maxHeight:140,lineHeight:1.55,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
-          <button onClick={()=>runWrAi(wrAiInput)} disabled={!wrAiInput.trim()||wrAiBusy}
-            style={{flexShrink:0,width:46,height:46,borderRadius:10,border:"none",
-              background:(wrAiInput.trim()&&!wrAiBusy)?C.t1:inputBg,
-              color:(wrAiInput.trim()&&!wrAiBusy)?C.bg:C.t2,
-              cursor:(wrAiInput.trim()&&!wrAiBusy)?"pointer":"default",
-              display:"flex",alignItems:"center",justifyContent:"center"}}>
-            {wrAiBusy
-              ?<div style={{width:16,height:16,border:"2px solid rgba(150,150,150,0.35)",borderTopColor:"currentColor",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
-              :<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>}
-          </button>
-        </div>
-
-        {wrAiBusy&&<div style={{fontSize:12.5,color:C.t2,marginTop:10}}>Разбираю задачи и распределяю по неделе…</div>}
-        {wrAiNotice&&!wrAiBusy&&<div style={{fontSize:12.5,color:wrAiNotice.ok?C.t1:"#DC2626",marginTop:10,lineHeight:1.5,display:"flex",gap:7}}>
-          <span style={{flexShrink:0,color:wrAiNotice.ok?"#16A34A":"#DC2626"}}>{wrAiNotice.ok?"✓":"✕"}</span>
-          <span>{wrAiNotice.text}</span>
+        {(!isMobile||mobileAiOpen)&&<div style={{marginTop:12}}>
+          <div style={{display:"flex",gap:8,alignItems:"flex-end",flexDirection:isMobile?"column":"row"}}>
+            <textarea value={wrAiInput} onChange={e=>setWrAiInput(e.target.value)} rows={isMobile?3:2}
+              onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();runWrAi(wrAiInput);}}}
+              placeholder="Например: снять Reels во вторник, созвон в среду в 15:00, презентация к пятнице"
+              disabled={wrAiBusy}
+              style={{width:"100%",flex:1,padding:"12px 13px",border:"1px solid "+bd,borderRadius:10,fontSize:13,outline:"none",background:inputBg,color:C.t1,resize:"none",minHeight:isMobile?86:64,maxHeight:140,lineHeight:1.5,fontFamily:"'Inter',sans-serif",boxSizing:"border-box"}}/>
+            <button onClick={()=>runWrAi(wrAiInput)} disabled={!wrAiInput.trim()||wrAiBusy}
+              style={{flexShrink:0,width:isMobile?"100%":46,height:isMobile?42:46,borderRadius:10,border:"none",
+                background:(wrAiInput.trim()&&!wrAiBusy)?C.t1:inputBg,
+                color:(wrAiInput.trim()&&!wrAiBusy)?C.bg:C.t2,
+                cursor:(wrAiInput.trim()&&!wrAiBusy)?"pointer":"default",
+                display:"flex",alignItems:"center",justifyContent:"center",fontSize:12.5,fontWeight:500}}>
+              {wrAiBusy
+                ?<div style={{width:16,height:16,border:"2px solid rgba(150,150,150,0.35)",borderTopColor:"currentColor",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+                :isMobile?"Распределить":<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>}
+            </button>
+          </div>
+          {wrAiBusy&&<div style={{fontSize:12,color:C.t2,marginTop:9}}>Распределяю задачи по неделе…</div>}
+          {wrAiNotice&&!wrAiBusy&&<div style={{fontSize:12,color:wrAiNotice.ok?C.t1:"#DC2626",marginTop:9,lineHeight:1.45,display:"flex",gap:7}}>
+            <span style={{flexShrink:0,color:wrAiNotice.ok?"#16A34A":"#DC2626"}}>{wrAiNotice.ok?"✓":"×"}</span>
+            <span>{wrAiNotice.text}</span>
+          </div>}
         </div>}
       </div>
 
       {/* AI-аудит задач */}
       <button onClick={runTaskAudit} disabled={auditBusy}
-        style={{width:"100%",padding:isMobile?"15px 20px":"17px 24px",borderRadius:10,border:"none",
+        style={{width:"100%",height:isMobile?46:"auto",padding:isMobile?"0 16px":"17px 24px",borderRadius:isMobile?11:10,border:"none",
           background:auditBusy?"#2F6BFF99":"#2F6BFF",
-          color:"#fff",fontSize:isMobile?14:15,fontWeight:500,cursor:auditBusy?"default":"pointer",
-          display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:16}}>
+          color:"#fff",fontSize:isMobile?13.5:15,fontWeight:500,cursor:auditBusy?"default":"pointer",
+          display:"flex",alignItems:"center",justifyContent:"center",gap:9,marginBottom:isMobile?12:16,boxShadow:"none"}}>
         {auditBusy
           ?<div style={{width:18,height:18,border:"2.5px solid rgba(255,255,255,0.4)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
           :<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 2a4 4 0 014 4v2a4 4 0 01-8 0V6a4 4 0 014-4z"/><path d="M6 12v1a6 6 0 0012 0v-1M12 19v3M8 22h8"/></svg>}
@@ -3315,12 +3326,12 @@ function TaskPlanner({userId}:{userId:string}){
 
       {auditErr&&<div style={{fontSize:13,color:"#DC2626",marginBottom:16}}>{auditErr}</div>}
 
-      {audit&&<div style={{background:C.w,borderRadius:14,border:"1px solid "+bd,padding:isMobile?18:24,marginBottom:22,animation:"dashFadeIn 0.25s ease-out both"}}>
+      {audit&&<div style={{background:C.w,borderRadius:14,border:"1px solid "+bd,padding:isMobile?15:24,marginBottom:isMobile?16:22,animation:"dashFadeIn 0.25s ease-out both"}}>
         <style>{`@keyframes dashFadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}`}</style>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,marginBottom:20,flexWrap:"wrap" as const}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:isMobile?14:20,flexWrap:"wrap" as const}}>
           <div>
             <div style={{fontSize:12,color:C.t2,marginBottom:4}}>Общая оценка</div>
-            <div style={{fontSize:isMobile?32:40,fontWeight:600,color:"#2F6BFF",letterSpacing:"-0.02em"}}>{audit.score}%</div>
+            <div style={{fontSize:isMobile?28:40,fontWeight:600,color:"#2F6BFF",letterSpacing:"-0.02em"}}>{audit.score}%</div>
           </div>
           {audit.rating&&<div style={{padding:"9px 16px",borderRadius:10,background:"#2F6BFF14",color:"#2F6BFF",fontSize:13.5,fontWeight:600}}>{audit.rating}</div>}
         </div>
@@ -3338,8 +3349,8 @@ function TaskPlanner({userId}:{userId:string}){
         </div>}
       </div>}
 
-      <div style={{height:1,background:bd,margin:"0 0 18px"}}/>
-      <div style={{fontSize:isMobile?15:18,fontWeight:500,color:C.t1,letterSpacing:"-0.01em",marginBottom:14}}>Календарь</div>
+      <div style={{height:1,background:bd,margin:isMobile?"4px 0 14px":"0 0 18px"}}/>
+      <div style={{fontSize:isMobile?18:18,fontWeight:500,color:C.t1,letterSpacing:"-0.02em",marginBottom:isMobile?10:14}}>Календарь задач</div>
 
       {/* Toolbar */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:16,flexWrap:"wrap" as const}}>
@@ -3357,7 +3368,7 @@ function TaskPlanner({userId}:{userId:string}){
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap" as const}}>
           {(view==="month"||isGrid)&&<button onClick={()=>setCur(new Date())} style={{padding:"6px 14px",background:"transparent",color:C.t1,border:"1px solid "+bd,borderRadius:8,fontSize:12,fontWeight:500,cursor:"pointer",whiteSpace:"nowrap" as const}}>Сегодня</button>}
-          <div style={{display:"flex",background:C.ib,borderRadius:8,padding:3,border:"1px solid "+bd,gap:2}}>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"repeat(5,minmax(0,1fr))":"repeat(5,auto)",background:C.ib,borderRadius:9,padding:3,border:"1px solid "+bd,gap:2,width:isMobile?"100%":"auto",minWidth:0}}>
             {([["month","Месяц"],["week","Неделя"],["3day","3 дня"],["day","День"],["list","Список"]] as const).map(([v,lbl])=>(
               <button key={v} onClick={()=>setView(v)} style={{padding:isMobile?"6px 9px":"6px 12px",borderRadius:6,border:"none",background:view===v?cardBg:"transparent",color:view===v?C.t1:C.t2,fontSize:12,fontWeight:500,cursor:"pointer",boxShadow:view===v?"0 1px 3px rgba(0,0,0,0.1)":"none",whiteSpace:"nowrap" as const}}>{lbl}</button>
             ))}
@@ -3445,30 +3456,30 @@ function TaskPlanner({userId}:{userId:string}){
       )}
 
       {/* ---------- EDITOR MODAL ---------- */}
-      {edit&&<div onClick={()=>setEdit(null)} style={{position:"fixed" as const,inset:0,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(4px)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:16,overflowY:"auto" as const}}>
-        <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:560,maxHeight:"90vh",overflowY:"auto" as const,background:dark?"#161616":"#fff",border:"1px solid "+bd,borderRadius:16,padding:24,boxShadow:"0 24px 60px rgba(0,0,0,0.5)"}}>
-          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:18}}>
+      {edit&&<div onClick={()=>setEdit(null)} style={{position:"fixed" as const,inset:0,background:"rgba(0,0,0,0.62)",backdropFilter:"blur(5px)",zIndex:500,display:"flex",alignItems:isMobile?"flex-end":"center",justifyContent:"center",padding:isMobile?0:16,overflow:"hidden"}}>
+        <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:isMobile?"none":560,height:isMobile?"min(92dvh,760px)":"auto",maxHeight:isMobile?"92dvh":"90vh",overflowY:"auto" as const,background:dark?"#161616":"#fff",border:isMobile?"1px solid "+bd:"1px solid "+bd,borderBottom:isMobile?"none":"1px solid "+bd,borderRadius:isMobile?"20px 20px 0 0":16,padding:isMobile?"14px 16px 0":24,boxShadow:"0 24px 60px rgba(0,0,0,0.5)",boxSizing:"border-box" as const}}>
+          <div style={{display:"flex",alignItems:"center",gap:isMobile?10:12,marginBottom:isMobile?14:18,position:isMobile?"sticky":"static",top:0,zIndex:3,background:dark?"#161616":"#fff",paddingTop:isMobile?2:0,paddingBottom:isMobile?8:0}}>
             <span onClick={()=>setEdit((x:any)=>({...x,done:!x.done}))} style={{width:24,height:24,borderRadius:7,border:"2px solid "+(edit.color||"#64748B"),background:edit.done?(edit.color||"#64748B"):"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
               {edit.done&&<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5"><polyline points="20 6 9 17 4 12"/></svg>}
             </span>
             <input value={edit.title} onChange={e=>setEdit((x:any)=>({...x,title:e.target.value}))} placeholder="Название задачи" autoFocus
-              style={{flex:1,border:"none",outline:"none",background:"transparent",fontSize:19,fontWeight:500,color:C.t1,fontFamily:"'Inter',sans-serif",textDecoration:edit.done?"line-through":"none"}}/>
+              style={{flex:1,minWidth:0,border:"none",outline:"none",background:"transparent",fontSize:isMobile?17:19,fontWeight:500,color:C.t1,fontFamily:"'Inter',sans-serif",textDecoration:edit.done?"line-through":"none"}}/>
             <button onClick={()=>setEdit(null)} style={{width:32,height:32,borderRadius:8,border:"none",background:"transparent",color:C.t2,cursor:"pointer",flexShrink:0}}>✕</button>
           </div>
 
           <textarea value={edit.description} onChange={e=>setEdit((x:any)=>({...x,description:e.target.value}))} placeholder="Описание задачи…"
-            style={{width:"100%",minHeight:70,padding:"11px 13px",border:"1px solid "+bd,borderRadius:10,fontSize:14,background:inputBg,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const,marginBottom:16}}/>
+            style={{width:"100%",minHeight:isMobile?82:70,padding:isMobile?"12px":"11px 13px",border:"1px solid "+bd,borderRadius:10,fontSize:14,background:inputBg,color:C.t1,outline:"none",resize:"vertical" as const,lineHeight:1.6,fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const,marginBottom:16}}/>
 
-          <div style={{display:"flex",gap:12,marginBottom:16,flexWrap:"wrap" as const}}>
-            <div style={{flex:1,minWidth:150}}>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"minmax(150px,1fr) 110px 130px",gap:isMobile?10:12,marginBottom:16}}>
+            <div style={{gridColumn:isMobile?"1 / -1":"auto",minWidth:0}}>
               <label style={{fontSize:11,fontWeight:500,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:6,display:"block"}}>Срок</label>
               <input type="date" value={edit.due_date} onChange={e=>setEdit((x:any)=>({...x,due_date:e.target.value}))} style={{width:"100%",padding:"10px 12px",border:"1px solid "+bd,borderRadius:9,fontSize:13,background:inputBg,color:C.t1,outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
             </div>
-            <div style={{width:110}}>
+            <div style={{width:"100%",minWidth:0}}>
               <label style={{fontSize:11,fontWeight:500,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:6,display:"block"}}>Время</label>
               <input type="time" value={wrNormTime(edit.due_time)} onChange={e=>setEdit((x:any)=>({...x,due_time:e.target.value}))} style={{width:"100%",padding:"10px 12px",border:"1px solid "+bd,borderRadius:9,fontSize:13,background:inputBg,color:C.t1,outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
             </div>
-            {edit.due_time&&<div style={{width:130}}>
+            {edit.due_time&&<div style={{width:"100%",minWidth:0}}>
               <label style={{fontSize:11,fontWeight:500,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:6,display:"block"}}>Конец</label>
               <input type="time" step={900}
                 value={wrAddMin(wrNormTime(edit.due_time),edit._duration||60)}
@@ -3487,8 +3498,8 @@ function TaskPlanner({userId}:{userId:string}){
 
           <div style={{marginBottom:16}}>
             <label style={{fontSize:11,fontWeight:500,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8,display:"block"}}>Приоритет</label>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap" as const}}>
-              {(["none","low","medium","high"] as const).map(p=><button key={p} onClick={()=>setEdit((x:any)=>({...x,priority:p}))} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:8,border:"1px solid "+(edit.priority===p?PRIO[p].color:bd),background:edit.priority===p?PRIO[p].color+"18":"transparent",color:edit.priority===p?PRIO[p].color:C.t2,fontSize:12.5,fontWeight:500,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
+            <div style={{display:"flex",gap:8,flexWrap:isMobile?"nowrap":"wrap",overflowX:isMobile?"auto":"visible",paddingBottom:isMobile?4:0,scrollbarWidth:"none" as const}}>
+              {(["none","low","medium","high"] as const).map(p=><button key={p} onClick={()=>setEdit((x:any)=>({...x,priority:p}))} style={{display:"flex",alignItems:"center",gap:6,padding:isMobile?"8px 12px":"7px 13px",borderRadius:8,border:"1px solid "+(edit.priority===p?PRIO[p].color:bd),background:edit.priority===p?PRIO[p].color+"18":"transparent",color:edit.priority===p?PRIO[p].color:C.t2,fontSize:12.5,fontWeight:500,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>
                 {p!=="none"&&<span style={{width:7,height:7,borderRadius:"50%",background:PRIO[p].color}}/>}{PRIO[p].label}
               </button>)}
             </div>
@@ -3496,8 +3507,8 @@ function TaskPlanner({userId}:{userId:string}){
 
           <div style={{marginBottom:16}}>
             <label style={{fontSize:11,fontWeight:500,color:C.t2,textTransform:"uppercase" as const,letterSpacing:0.3,marginBottom:8,display:"block"}}>Цвет</label>
-            <div style={{display:"flex",gap:8}}>
-              {PLANNER_COLORS.map(col=><button key={col} onClick={()=>setEdit((x:any)=>({...x,color:col}))} style={{width:26,height:26,borderRadius:7,border:edit.color===col?"2px solid "+C.t1:"1px solid "+bd,background:col,cursor:"pointer"}}/>)}
+            <div style={{display:"flex",gap:isMobile?10:8,flexWrap:"wrap"}}>
+              {PLANNER_COLORS.map(col=><button key={col} onClick={()=>setEdit((x:any)=>({...x,color:col}))} style={{width:isMobile?30:26,height:isMobile?30:26,borderRadius:"50%",border:edit.color===col?"2px solid "+C.t1:"1px solid "+bd,background:col,cursor:"pointer"}}/>)}
             </div>
           </div>
 
@@ -3535,18 +3546,18 @@ function TaskPlanner({userId}:{userId:string}){
                 </div>
               ))}
             </div>
-            <div style={{display:"flex",gap:8}}>
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr auto",gap:8}}>
               <input value={subInput} onChange={e=>setSubInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();addSub();}}} placeholder="Добавить подзадачу…"
                 style={{flex:1,padding:"9px 12px",border:"1px solid "+bd,borderRadius:9,fontSize:13,background:inputBg,color:C.t1,outline:"none",fontFamily:"'Inter',sans-serif",boxSizing:"border-box" as const}}/>
-              <button onClick={addSub} style={{padding:"0 16px",borderRadius:9,border:"1px solid "+bd,background:"transparent",color:C.t1,fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Добавить</button>
+              <button onClick={addSub} style={{height:isMobile?42:"auto",padding:"0 16px",borderRadius:9,border:"1px solid "+bd,background:"transparent",color:C.t1,fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Добавить</button>
             </div>
           </div>
 
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,paddingTop:16,borderTop:"1px solid "+bd}}>
-            {edit.id?<button onClick={del} style={{padding:"11px 16px",borderRadius:10,border:"none",background:"transparent",color:"#EF4444",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Удалить</button>:<span/>}
-            <div style={{display:"flex",gap:10}}>
-              <button onClick={()=>setEdit(null)} style={{padding:"11px 20px",borderRadius:10,border:"1px solid "+bd,background:"transparent",color:C.t2,fontSize:14,fontWeight:500,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Отмена</button>
-              <button onClick={save} disabled={!edit.title.trim()||saving} style={{padding:"11px 24px",borderRadius:10,border:"none",background:edit.title.trim()?C.t1:C.ib,color:edit.title.trim()?C.bg:C.t2,fontSize:14,fontWeight:500,cursor:edit.title.trim()?"pointer":"default",fontFamily:"'Inter',sans-serif"}}>{saving?"Сохраняю…":"Сохранить"}</button>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:isMobile?"12px 0 calc(12px + env(safe-area-inset-bottom))":"16px 0 0",borderTop:"1px solid "+bd,position:isMobile?"sticky":"static",bottom:0,zIndex:4,background:dark?"#161616":"#fff",marginTop:isMobile?4:0}}>
+            {edit.id?<button onClick={del} style={{height:isMobile?44:"auto",padding:isMobile?"0 10px":"11px 16px",borderRadius:10,border:"none",background:"transparent",color:"#EF4444",fontSize:12.5,fontWeight:500,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Удалить</button>:<span/>}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1.25fr",gap:8,flex:isMobile?1:"unset",maxWidth:isMobile?300:"none"}}>
+              <button onClick={()=>setEdit(null)} style={{height:isMobile?44:"auto",padding:isMobile?"0 12px":"11px 20px",borderRadius:10,border:"1px solid "+bd,background:"transparent",color:C.t2,fontSize:13.5,fontWeight:500,cursor:"pointer",fontFamily:"'Inter',sans-serif"}}>Отмена</button>
+              <button onClick={save} disabled={!edit.title.trim()||saving} style={{height:isMobile?44:"auto",padding:isMobile?"0 14px":"11px 24px",borderRadius:10,border:"none",background:edit.title.trim()?C.t1:C.ib,color:edit.title.trim()?C.bg:C.t2,fontSize:13.5,fontWeight:500,cursor:edit.title.trim()?"pointer":"default",fontFamily:"'Inter',sans-serif"}}>{saving?"Сохраняю…":"Сохранить"}</button>
             </div>
           </div>
         </div>
@@ -4339,7 +4350,7 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
         </div>
         <div style={{display:"flex",gap:6,marginTop:2}}><span style={{fontSize:10,color:C.t2}}>{t.mins}м</span>{t.fromGoal&&<span style={{fontSize:10,color:t.goalColor}}>★</span>}{showDate&&t.date&&<span style={{fontSize:10,color:taskUrgency(t).kind==="burning"?"#777777":C.t2,fontWeight:taskUrgency(t).kind==="burning"?700:400}}>{t.date.substring(5)}</span>}</div>
       </div>
-      <button onClick={()=>startEdit(t)} style={{width:16,height:16,border:"none",background:"transparent",cursor:"pointer",color:C.t2,fontSize:10,opacity:0.6}}>✏️</button>
+      <button onClick={()=>startEdit(t)} style={{width:16,height:16,border:"none",background:"transparent",cursor:"pointer",color:C.t2,fontSize:10,opacity:0.6}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L8 18l-4 1 1-4z"/></svg></button>
       {!t.fromGoal&&<button onClick={()=>setDeleteConfirm(t.id)} style={{width:16,height:16,border:"none",background:"transparent",cursor:"pointer",color:C.r,fontSize:11}}>×</button>}
     </div>;
   };
@@ -4361,9 +4372,9 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
     {/* Main content shifts when panel is open */}
 
     {/* Tabs */}
-    <div style={{display:"inline-flex",background:C.bg,borderRadius:8,padding:3,gap:2,marginBottom:24,border:"1px solid "+C.bd}}>
-      <button style={tabStyle(stratTab==="calendar")} onClick={()=>setStratTab("calendar")}>Задачи</button>
-      <button style={tabStyle(stratTab==="yearmap")} onClick={()=>setStratTab("yearmap")}>Карта года</button>
+    <div style={{display:isMobile?"grid":"inline-flex",gridTemplateColumns:isMobile?"1fr 1fr":"none",width:isMobile?"100%":"auto",background:C.bg,borderRadius:10,padding:3,gap:2,marginBottom:isMobile?16:24,border:"1px solid "+C.bd,position:isMobile?"sticky":"static",top:isMobile?0:"auto",zIndex:isMobile?40:"auto",boxShadow:isMobile?"0 8px 20px rgba(0,0,0,.08)":"none"}}>
+      <button style={{...tabStyle(stratTab==="calendar"),padding:isMobile?"10px 12px":"9px 24px",width:isMobile?"100%":"auto"}} onClick={()=>setStratTab("calendar")}>Задачи</button>
+      <button style={{...tabStyle(stratTab==="yearmap"),padding:isMobile?"10px 12px":"9px 24px",width:isMobile?"100%":"auto"}} onClick={()=>setStratTab("yearmap")}>Карта года</button>
     </div>
     {stratTab==="yearmap"&&<YearMap userId={userId} goals={goals} goalUpdate={goals.update} goalAdd={goals.add} goalTasks={goalTasks}/>}
 
@@ -4389,7 +4400,7 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
             return<div key={d} style={{background:C.w,borderRadius:10,boxShadow:C.sh,border:"2px solid "+bc,display:"flex",flexDirection:"column",minHeight:isMobile?200:300}}>
               <div style={{padding:"14px 16px",borderBottom:"1px solid "+C.bd,display:"flex",justifyContent:"space-between",background:isT?"rgba(96,96,96,0.04)":"transparent"}}>
                 <div><div style={{fontSize:20,fontWeight:700,color:isT?C.a:C.t1}}>{dt.getDate()}</div><div style={{fontSize:11,color:C.t2}}>{WDS[dt.getDay()]}, {MR[dt.getMonth()].substring(0,3)}</div></div>
-                {st.overload&&<span style={{fontSize:10,color:C.r,fontWeight:600}}>⚠️ Перегруз</span>}
+                {st.overload&&<span style={{fontSize:10,color:C.r,fontWeight:600}}>Перегруз</span>}
               </div>
               <div style={{flex:1,padding:"10px 12px",overflowY:"auto",display:"flex",flexDirection:"column",gap:6}}
                 onDragOver={e=>{e.preventDefault();}}
@@ -6539,8 +6550,20 @@ const ltPct=(cur:number,prev:number):number|null=>{
   if(prev===0)return cur>0?100:null;
   return Math.round((cur-prev)/prev*100);
 };
-const ltDayKey=(iso:string)=>String(iso||"").slice(0,10);
+const ltDateKey=(value:string|Date)=>{
+  const d=value instanceof Date?value:new Date(value);
+  if(Number.isNaN(d.getTime()))return "";
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+};
+const ltMonthKey=(value:string|Date)=>ltDateKey(value).slice(0,7);
+const ltDayKey=(iso:string)=>ltDateKey(iso);
 const ltShiftDays=(days:number)=>{const d=new Date();d.setDate(d.getDate()-days);d.setHours(0,0,0,0);return d;};
+const ltNormalizeUrl=(value:string)=>{
+  const raw=String(value||"").trim();
+  if(!raw)return "";
+  try{return new URL(/^https?:\/\//i.test(raw)?raw:`https://${raw}`).toString();}
+  catch{return "";}
+};
 
 const LT_PERIODS:{id:string,label:string,days:number}[]=[
   {id:"today",label:"Сегодня",days:1},
@@ -6584,23 +6607,43 @@ function LinkTrackerPage({userId}:{userId:string}){
   const shortUrl=(l:LtLink)=>`${origin}/l/${l.company||"link"}/${l.code}`;
 
   // ── загрузка ──
+  const loadAllTrackerClicks=async()=>{
+    const pageSize=5000;
+    const rows:LtClick[]=[];
+    for(let from=0;from<250000;from+=pageSize){
+      const{data,error}=await supabase.from("tracker_clicks")
+        .select("link_id,created_at,referrer,device")
+        .eq("user_id",userId)
+        .order("created_at",{ascending:false})
+        .range(from,from+pageSize-1);
+      if(error)throw error;
+      const part=(data||[]) as LtClick[];
+      rows.push(...part);
+      if(part.length<pageSize)break;
+    }
+    return rows;
+  };
+
   const reload=async()=>{
+    setLoading(true);
     try{
-      const[lr,cr,fr]=await Promise.all([
+      const[lr,fr,allClicks]=await Promise.all([
         supabase.from("tracker_links").select("*").eq("user_id",userId).order("created_at",{ascending:false}),
-        supabase.from("tracker_clicks").select("link_id,created_at,referrer,device").eq("user_id",userId).order("created_at",{ascending:false}).limit(20000),
         supabase.from("tracker_funnels").select("*").eq("user_id",userId).order("created_at",{ascending:true}),
+        loadAllTrackerClicks(),
       ]);
       if(lr.error)throw lr.error;
+      if(fr.error)throw fr.error;
       setLinks((lr.data||[]) as LtLink[]);
-      setClicks((cr.data||[]) as LtClick[]);
+      setClicks(allClicks);
       setFunnels(((fr.data||[]) as any[]).map(f=>({id:f.id,name:f.name,steps:Array.isArray(f.steps)?f.steps:[]})));
       setDbError(false);
     }catch(e){
-      console.error("Link Tracker: таблицы недоступны:",e);
+      console.error("Link Tracker: ошибка загрузки:",e);
       setDbError(true);
+    }finally{
+      setLoading(false);
     }
-    setLoading(false);
   };
   useEffect(()=>{reload();},[userId]);
 
@@ -6611,19 +6654,22 @@ function LinkTrackerPage({userId}:{userId:string}){
     const byLink:Record<string,number>={};
     clicks.forEach(c=>{byLink[c.link_id]=(byLink[c.link_id]||0)+1;});
 
-    const todayK=today();
-    const yK=ltDayKey(ltShiftDays(1).toISOString());
-    const curMonth=todayK.slice(0,7);
-    const d=new Date();const pm=new Date(d.getFullYear(),d.getMonth()-1,1);
-    const prevMonth=pm.getFullYear()+"-"+String(pm.getMonth()+1).padStart(2,"0");
+    const now=new Date();
+    const todayK=ltDateKey(now);
+    const yK=ltDateKey(ltShiftDays(1));
+    const curMonth=ltMonthKey(now);
+    const prevMonthDate=new Date(now.getFullYear(),now.getMonth()-1,1);
+    const prevMonth=ltMonthKey(prevMonthDate);
+    const elapsedDay=now.getDate();
 
     let cToday=0,cYest=0,cMonth=0,cPrevMonth=0;
     clicks.forEach(c=>{
-      const k=ltDayKey(c.created_at);
+      const clickDate=new Date(c.created_at);
+      const k=ltDateKey(clickDate);
       if(k===todayK)cToday++;
       if(k===yK)cYest++;
-      if(k.slice(0,7)===curMonth)cMonth++;
-      if(k.slice(0,7)===prevMonth)cPrevMonth++;
+      if(ltMonthKey(clickDate)===curMonth)cMonth++;
+      if(ltMonthKey(clickDate)===prevMonth&&clickDate.getDate()<=elapsedDay)cPrevMonth++;
     });
 
     // ряд для графика
@@ -6646,15 +6692,18 @@ function LinkTrackerPage({userId}:{userId:string}){
       }
       return k;
     };
-    // заполняем нулями
+    // заполняем нулями без пропуска месяцев и недель
     const cursor=new Date(from);
+    cursor.setHours(0,0,0,0);
     const end=new Date();end.setHours(0,0,0,0);
     const seen:string[]=[];
     let guard=0;
     while(cursor<=end&&guard<1200){
       const k=keyOf(cursor.toISOString());
       if(!(k in buckets)){buckets[k]=0;seen.push(k);}
-      cursor.setDate(cursor.getDate()+(gran==="month"?28:gran==="week"?7:1));
+      if(gran==="month")cursor.setMonth(cursor.getMonth()+1,1);
+      else if(gran==="week")cursor.setDate(cursor.getDate()+7);
+      else cursor.setDate(cursor.getDate()+1);
       guard++;
     }
     const endK=keyOf(end.toISOString());
@@ -6689,9 +6738,11 @@ function LinkTrackerPage({userId}:{userId:string}){
   const copy=(text:string,key:string)=>{navigator.clipboard.writeText(text);setCopied(key);setTimeout(()=>setCopied(null),1600);};
 
   const saveLink=async(l:LtLink,isNew:boolean)=>{
+    const normalizedTarget=ltNormalizeUrl(l.target_url);
+    if(!normalizedTarget)return "Укажи корректную ссылку, например https://instagram.com/...";
     const clean={
       name:l.name.trim()||"Без названия",
-      target_url:l.target_url.trim(),
+      target_url:normalizedTarget,
       company:ltSlugify(l.company)||"l",
       code:l.code.trim(),
       description:l.description||"",
@@ -6721,14 +6772,27 @@ function LinkTrackerPage({userId}:{userId:string}){
   };
 
   const delLink=async(l:LtLink)=>{
+    if(!confirm(`Удалить ссылку «${l.name}»? История переходов сохранится только если это разрешено базой.`))return;
+    const snapshot=links;
     setLinks(prev=>prev.filter(x=>x.id!==l.id));
-    try{await supabase.from("tracker_links").delete().eq("id",l.id);}catch(e){console.error(e);}
+    const{error}=await supabase.from("tracker_links").delete().eq("id",l.id).eq("user_id",userId);
+    if(error){
+      setLinks(snapshot);
+      flash("Не удалось удалить ссылку");
+      console.error(error);
+    }
   };
 
   const toggleActive=async(l:LtLink)=>{
     const next=l.active===false;
+    const snapshot=links;
     setLinks(prev=>prev.map(x=>x.id===l.id?{...x,active:next}:x));
-    try{await supabase.from("tracker_links").update({active:next}).eq("id",l.id);}catch(e){console.error(e);}
+    const{error}=await supabase.from("tracker_links").update({active:next}).eq("id",l.id).eq("user_id",userId);
+    if(error){
+      setLinks(snapshot);
+      flash("Не удалось изменить статус");
+      console.error(error);
+    }
   };
 
   const saveFunnel=async(f:LtFunnel,isNew:boolean)=>{
@@ -6945,6 +7009,19 @@ function LinkTrackerPage({userId}:{userId:string}){
       <Kpi label="Переходов сегодня" value={ltNum(stat.cToday)} delta={ltPct(stat.cToday,stat.cYest)} sub={`вчера ${ltNum(stat.cYest)}`}/>
       <Kpi label="Всего переходов" value={ltNum(stat.total)} delta={null} sub={`по ${links.length} ссылкам`}/>
       <Kpi label="Активных ссылок" value={ltNum(links.filter(l=>l.active!==false).length)} delta={null} sub={`из ${links.length} созданных`}/>
+    </div>
+
+    <div style={{...glass,padding:isMobile?12:14,marginBottom:16,display:"flex",alignItems:isMobile?"flex-start":"center",justifyContent:"space-between",gap:10,flexDirection:isMobile?"column":"row"}}>
+      <div style={{minWidth:0}}>
+        <div style={{fontSize:12.5,fontWeight:500,color:C.t1}}>Контроль качества данных</div>
+        <div style={{fontSize:11.5,color:C.t2,marginTop:4,lineHeight:1.5}}>
+          Загружено {ltNum(clicks.length)} переходов. Даты считаются в локальном часовом поясе устройства, сравнение месяца — с тем же числом прошлого месяца.
+        </div>
+      </div>
+      <button onClick={reload} disabled={loading}
+        style={{height:34,padding:"0 12px",borderRadius:8,border:"1px solid "+bd,background:"transparent",color:C.t1,fontSize:11.5,cursor:loading?"default":"pointer",flexShrink:0}}>
+        {loading?"Проверка...":"Перепроверить"}
+      </button>
     </div>
 
     <Chart/>
@@ -9418,7 +9495,7 @@ function CrmPage({userId}:{userId:string}){
             style={{padding:"6px 12px",borderRadius:8,border:"1px solid "+C.bd,background:"transparent",color:C.t1,fontSize:12,fontWeight:500,cursor:"pointer"}}>Текущий</button>}
         </div>}
 
-        {cohortMode==="custom"&&<div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap" as const}}>
+        {cohortMode==="custom"&&<div style={{display:"flex",alignItems:"center",gap:8,flexWrap:isMobile?"nowrap":"wrap",width:isMobile?"100%":"auto",minWidth:0}}>
           <input type="date" value={cohortFrom} onChange={e=>setCohortFrom(e.target.value)} style={{...iS(),width:"auto",padding:"7px 10px",fontSize:12}}/>
           <span style={{fontSize:12,color:C.t2}}>—</span>
           <input type="date" value={cohortTo} onChange={e=>setCohortTo(e.target.value)} style={{...iS(),width:"auto",padding:"7px 10px",fontSize:12}}/>

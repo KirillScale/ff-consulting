@@ -1,206 +1,141 @@
-// app/l/[company]/[code]/page.tsx
-//
-// Редирект коротких ссылок Link Tracker: vizzy.pro/l/{company}/{code} -> целевой сайт.
-// Префикс /l/ статический, поэтому этот роут НЕ перехватывает другие адреса сайта.
-//
-// СКОРОСТЬ (что изменилось по сравнению с прошлой версией):
-//  1) runtime = "edge" — роут выполняется на Edge-сети Vercel, а не в обычной
-//     Node.js serverless-функции. Холодного старта почти нет.
-//  2) Запись перехода в аналитику НЕ блокирует редирект — уходит в фоне.
-//  3) НОВОЕ: поиск ссылки идёт через fetch() к Supabase напрямую (в обход SDK)
-//     с кэшированием на edge-сети Vercel на 30 секунд (next.revalidate=30).
-//     Раньше каждый клик — это поход в базу заново, что и давало основную
-//     часть тех 6-7 секунд. Теперь повторный клик по той же ссылке в течение
-//     30 секунд отвечает из кэша на edge практически мгновенно, без похода
-//     в Supabase вообще. Первый клик после истечения кэша всё ещё идёт в базу
-//     (это неизбежно — надо же откуда-то узнать целевой адрес).
-//
-// Надёжность (осталось как было):
-//  - переход не ломается, если аналитика недоступна;
-//  - поиск ссылки ограничен по времени, чтобы страница не «висела»;
-//  - при отсутствии переменных окружения показывается понятная страница, а не сбой.
+"use client";
 
-import React from "react";
-import { redirect } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
-import { headers } from "next/headers";
+import {useEffect,useMemo,useState} from "react";
+import {supabase} from "@/lib/supabase";
 
-// Edge runtime — самый весомый рычаг скорости для редко посещаемого роута:
-// без него каждый «холодный» заход мог сам по себе стоить несколько секунд.
-export const runtime = "edge";
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+type Props={params:Promise<{company:string;code:string}>};
 
-const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPA_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-type TrackerLink = {
-  id: string;
-  user_id: string;
-  target_url: string;
-  active: boolean | null;
-  expires_at: string | null;
-  utm_source: string | null;
-  utm_medium: string | null;
-  utm_campaign: string | null;
+const safeTarget=(value:string)=>{
+  try{
+    const u=new URL(value);
+    if(u.protocol!=="http:"&&u.protocol!=="https:")return "";
+    return u.toString();
+  }catch{return "";}
 };
 
-// Явный тип опций fetch с расширением Next.js (next.revalidate) — так объект
-// проверяется корректно и в этом изолированном чек-окружении, и в самом проекте.
-type NextFetchInit = RequestInit & { next?: { revalidate?: number } };
+const appendUtm=(target:string,fields:{utm_source?:string;utm_medium?:string;utm_campaign?:string})=>{
+  try{
+    const u=new URL(target);
+    if(fields.utm_source&&!u.searchParams.has("utm_source"))u.searchParams.set("utm_source",fields.utm_source);
+    if(fields.utm_medium&&!u.searchParams.has("utm_medium"))u.searchParams.set("utm_medium",fields.utm_medium);
+    if(fields.utm_campaign&&!u.searchParams.has("utm_campaign"))u.searchParams.set("utm_campaign",fields.utm_campaign);
+    return u.toString();
+  }catch{return target;}
+};
 
-// Поиск ссылки напрямую через PostgREST (в обход supabase-js), чтобы можно было
-// задать Next.js кэш ответа на уровне edge-сети — это и есть основной прирост скорости.
-async function fetchLinkCached(company: string, code: string): Promise<TrackerLink | null> {
-  const url =
-    `${SUPA_URL}/rest/v1/tracker_links` +
-    `?company=eq.${encodeURIComponent(company)}` +
-    `&code=eq.${encodeURIComponent(code)}` +
-    `&select=id,user_id,target_url,active,expires_at,utm_source,utm_medium,utm_campaign` +
-    `&limit=1`;
-  const opts: NextFetchInit = {
-    headers: {
-      apikey: SUPA_KEY as string,
-      Authorization: `Bearer ${SUPA_KEY}`,
-    },
-    // Кэш ответа на edge-сети Vercel на 30 секунд. Смена адреса или отключение
-    // ссылки в Link Tracker станет заметна в течение этого окна, не мгновенно —
-    // разумный компромен между скоростью для посетителей и свежестью данных.
-    next: { revalidate: 30 },
-  };
-  let res: Response;
-  try {
-    res = await fetch(url, opts);
-  } catch {
-    return null;
-  }
-  if (!res.ok) return null;
-  let rows: TrackerLink[];
-  try {
-    rows = await res.json();
-  } catch {
-    return null;
-  }
-  return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
-}
+const deviceType=()=>{
+  const ua=navigator.userAgent||"";
+  if(/ipad|tablet/i.test(ua))return"tablet";
+  if(/mobile|iphone|android/i.test(ua))return"mobile";
+  return"desktop";
+};
 
-// не даём медленному запросу задержать переход
-function withTimeout<T>(p: PromiseLike<T>, ms: number): Promise<T | null> {
-  return Promise.race([
-    Promise.resolve(p)
-      .then((v) => v as T)
-      .catch(() => null),
-    new Promise<null>((res) => setTimeout(() => res(null), ms)),
-  ]);
-}
+export default function LinkRedirectPage({params}:Props){
+  const[status,setStatus]=useState<"loading"|"error">("loading");
+  const[message,setMessage]=useState("Проверяем ссылку");
+  const[resolved,setResolved]=useState<{company:string;code:string}|null>(null);
 
-function detectDevice(ua: string) {
-  const s = (ua || "").toLowerCase();
-  if (/ipad|tablet/.test(s)) return "tablet";
-  if (/mobile|iphone|android/.test(s)) return "mobile";
-  return "desktop";
-}
+  useEffect(()=>{
+    let active=true;
+    params.then(value=>{if(active)setResolved(value);});
+    return()=>{active=false;};
+  },[params]);
 
-function Notice({ title, text }: { title: string; text: string }) {
-  return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "#0E0E0E",
-        color: "#EDEDED",
-        fontFamily: "-apple-system, Segoe UI, Inter, Arial, sans-serif",
-        padding: 24,
-      }}
-    >
-      <div style={{ textAlign: "center", maxWidth: 420 }}>
-        <div style={{ fontSize: 19, fontWeight: 500, marginBottom: 10 }}>{title}</div>
-        <div style={{ fontSize: 14, color: "#9A9A9A", lineHeight: 1.6, marginBottom: 22 }}>{text}</div>
-        <a
-          href="/"
-          style={{
-            display: "inline-block",
-            padding: "10px 20px",
-            borderRadius: 9,
-            background: "#2F6BFF",
-            color: "#fff",
-            fontSize: 14,
-            textDecoration: "none",
-          }}
-        >
-          На главную
-        </a>
+  useEffect(()=>{
+    if(!resolved)return;
+    let cancelled=false;
+    const timeout=window.setTimeout(()=>{
+      if(!cancelled){setStatus("error");setMessage("Переход занимает больше времени, чем обычно");}
+    },10000);
+
+    const run=async()=>{
+      try{
+        setMessage("Переходим по ссылке");
+
+        const rpc=await supabase.rpc("tracker_resolve_and_log",{
+          p_company:decodeURIComponent(resolved.company),
+          p_code:decodeURIComponent(resolved.code),
+          p_referrer:document.referrer||"",
+          p_device:deviceType(),
+        });
+
+        let row:any=Array.isArray(rpc.data)?rpc.data[0]:rpc.data;
+
+        // Совместимость до запуска SQL-функции.
+        if(rpc.error||!row){
+          const{data:link,error}=await supabase.from("tracker_links")
+            .select("id,user_id,target_url,utm_source,utm_medium,utm_campaign,active,expires_at")
+            .eq("company",decodeURIComponent(resolved.company))
+            .eq("code",decodeURIComponent(resolved.code))
+            .maybeSingle();
+          if(error)throw error;
+          if(!link||link.active===false||(link.expires_at&&new Date(link.expires_at)<new Date()))throw new Error("Ссылка недоступна");
+          row=link;
+          // Аналитика не должна задерживать сам переход.
+          void supabase.from("tracker_clicks").insert({
+            link_id:link.id,
+            user_id:link.user_id,
+            referrer:document.referrer||"",
+            device:deviceType(),
+          });
+        }
+
+        const target=safeTarget(row.target_url||"");
+        if(!target)throw new Error("Некорректный адрес назначения");
+        const finalUrl=appendUtm(target,row);
+        setMessage("Открываем страницу");
+        window.setTimeout(()=>window.location.replace(finalUrl),120);
+      }catch(e){
+        console.error("Link redirect failed",e);
+        if(!cancelled){
+          setStatus("error");
+          setMessage("Ссылка недоступна или была отключена");
+        }
+      }finally{
+        window.clearTimeout(timeout);
+      }
+    };
+
+    run();
+    return()=>{cancelled=true;window.clearTimeout(timeout);};
+  },[resolved]);
+
+  const dots=useMemo(()=>[0,1,2],[]);
+
+  return <main style={{
+    minHeight:"100dvh",background:"#0A0A0A",color:"#ECECEC",display:"flex",
+    alignItems:"center",justifyContent:"center",padding:"24px",fontFamily:"Inter,Arial,sans-serif"
+  }}>
+    <style>{`
+      @keyframes vizzyJump{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-10px) scale(1.02)}}
+      @keyframes vizzyDot{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-4px)}}
+    `}</style>
+    <section style={{width:"100%",maxWidth:380,textAlign:"center"}}>
+      <div style={{
+        width:64,height:64,borderRadius:16,margin:"0 auto 22px",background:"#2F6BFF",
+        display:"flex",alignItems:"center",justifyContent:"center",
+        boxShadow:"0 14px 40px rgba(47,107,255,.22)",
+        animation:status==="loading"?"vizzyJump 1.25s ease-in-out infinite":"none"
+      }}>
+        <span style={{fontSize:28,fontWeight:600,letterSpacing:"-.06em",color:"#fff"}}>V</span>
       </div>
-    </div>
-  );
+
+      <h1 style={{fontSize:20,fontWeight:500,letterSpacing:"-.025em",margin:"0 0 8px"}}>
+        {status==="loading"?"Переходим по ссылке":"Не удалось открыть ссылку"}
+      </h1>
+      <p style={{fontSize:13,color:"#8A8A8A",lineHeight:1.55,margin:0}}>{message}</p>
+
+      {status==="loading"&&<div style={{display:"flex",gap:6,justifyContent:"center",marginTop:18}}>
+        {dots.map((d)=><span key={d} style={{
+          width:6,height:6,borderRadius:"50%",background:"#ECECEC",
+          animation:`vizzyDot 1.2s ${d*.16}s ease-in-out infinite`
+        }}/>)}
+      </div>}
+
+      {status==="error"&&<button onClick={()=>window.location.reload()} style={{
+        marginTop:20,height:40,padding:"0 16px",borderRadius:9,border:"1px solid rgba(255,255,255,.12)",
+        background:"#171717",color:"#ECECEC",fontSize:12.5,fontWeight:500,cursor:"pointer"
+      }}>Повторить</button>}
+    </section>
+  </main>;
 }
-
-export default async function ShortLinkRedirect({
-  params,
-}: {
-  params: Promise<{ company: string; code: string }>;
-}) {
-  const { company, code } = await params;
-
-  if (!SUPA_URL || !SUPA_KEY) {
-    return <Notice title="Сервис ссылок не настроен" text="Не заданы ключи подключения к базе." />;
-  }
-
-  // Поиск ссылки — единственный шаг, который ОБЯЗАН завершиться до редиректа.
-  // Кэшируется на edge на 30с (см. fetchLinkCached) — повторные клики почти мгновенны.
-  const link = await withTimeout(fetchLinkCached(company, code), 2500);
-
-  if (!link) {
-    return <Notice title="Ссылка не найдена" text="Возможно, она была удалена или адрес указан с ошибкой." />;
-  }
-  if (link.active === false) {
-    return <Notice title="Ссылка отключена" text="Владелец временно приостановил переходы по этой ссылке." />;
-  }
-  if (link.expires_at && new Date(link.expires_at) < new Date()) {
-    return <Notice title="Срок ссылки истёк" text="Эта ссылка больше не действует." />;
-  }
-
-  // подставляем UTM, если заданы
-  let target = String(link.target_url || "");
-  try {
-    const u = new URL(target);
-    if (link.utm_source) u.searchParams.set("utm_source", link.utm_source);
-    if (link.utm_medium) u.searchParams.set("utm_medium", link.utm_medium);
-    if (link.utm_campaign) u.searchParams.set("utm_campaign", link.utm_campaign);
-    target = u.toString();
-  } catch {
-    // кривой URL — оставляем как есть
-  }
-
-  if (!/^https?:\/\//i.test(target)) {
-    return <Notice title="Некорректный адрес" text="Целевая ссылка указана неверно. Исправьте её в Link Tracker." />;
-  }
-
-  // Фиксируем переход БЕЗ ожидания — пользователь не должен ждать запись аналитики.
-  // Используем SDK здесь (не критично к скорости, зато удобнее и надёжнее для записи).
-  try {
-    const h = await headers();
-    const supabase = createClient(SUPA_URL, SUPA_KEY);
-    supabase
-      .from("tracker_clicks")
-      .insert({
-        link_id: link.id,
-        user_id: link.user_id,
-        referrer: h.get("referer") || "",
-        device: detectDevice(h.get("user-agent") || ""),
-      })
-      .then(
-        () => {},
-        () => {}
-      );
-  } catch {
-    // намеренно игнорируем — аналитика не должна мешать переходу
-  }
-
-  // redirect() намеренно вызывается вне try/catch:
-  // внутри он бросает служебное исключение, и catch его бы «проглотил».
-  redirect(target);
-}
-
