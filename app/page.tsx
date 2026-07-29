@@ -872,7 +872,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v4.6"; // reliable Content saves, visible War Room tasks and calendar views
+  const APP_VERSION="v4.8"; // fix Content save notification build error
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
 
   // Clear stale localStorage on version change
@@ -9996,6 +9996,7 @@ function ContentPage({userId}:{userId:string}){
   const{data:youtubeChannels,add:addYoutubeChannel,remove:removeYoutubeChannel}=useTable("youtube_channels",userId);
   const{data:contentTasks,add:addContentTask,update:updateContentTask,remove:removeContentTask}=useTable("planner_tasks",userId);
   const[show,setShow]=useState(false);
+  const[savingContent,setSavingContent]=useState(false);
   const[productionBusy,setProductionBusy]=useState<"tasks"|"audit"|null>(null);
   const[contentAudit,setContentAudit]=useState("");
   const[showProduction,setShowProduction]=useState(false);
@@ -10208,7 +10209,6 @@ ${existingScenario}`;
       if(existing.length){
         const replace=confirm("Для этой карточки уже создан план реализации. Пересоздать его?");
         if(!replace)return;
-        for(const task of existing)await removeContentTask(task.id);
       }
 
       const steps=defaultProductionSteps(f.platform,f.content_format||f.type);
@@ -10233,29 +10233,45 @@ ${existingScenario}`;
         }));
       }
 
-      const taskRows=plan.map((p:any,index:number)=>{
-        const sourceStep=unfinished[index]||unfinished.find((x:any)=>x.title===p.title);
-        const due=addDaysToDate(publicationDate,-Math.max(0,Number(p.days_before)||0));
-        const duration=Math.max(15,Math.round((Number(p.duration_minutes)||60)/15)*15);
+      const normalizedPlan=unfinished.map((step:any,index:number)=>{
+        const exact=plan.find((p:any)=>String(p?.title||"").trim().toLowerCase()===String(step.title||"").trim().toLowerCase());
+        const candidate=exact||plan[index]||{};
+        return{
+          title:step.title,
+          sourceStep:step,
+          days_before:Number.isFinite(Number(candidate.days_before))?Math.max(0,Number(candidate.days_before)):Math.max(0,unfinished.length-1-index),
+          duration_minutes:Number(candidate.duration_minutes)||(String(step.title).toLowerCase().includes("монтаж")?180:String(step.title).toLowerCase().includes("съ")?120:60),
+          priority:["low","medium","high"].includes(candidate.priority)?candidate.priority:(index<2?"high":"medium")
+        };
+      });
+
+      const taskRows=normalizedPlan.map((p:any,index:number)=>{
+        const due=addDaysToDate(publicationDate,-p.days_before);
+        const duration=Math.max(15,Math.round(p.duration_minutes/15)*15);
         return{
           user_id:userId,
-          title:String(p.title||sourceStep?.title||`Этап ${index+1}`),
+          title:String(p.sourceStep.title),
           description:`Контент: ${f.topic}\nПлатформа: ${f.platform}\nФормат: ${f.content_format||f.type}`,
           due_date:due,
           date:due,
           due_time:index%2===0?"10:00":"15:00",
-          priority:["low","medium","high"].includes(p.priority)?p.priority:"medium",
+          priority:p.priority,
           color:"#2F6BFF",
           done:false,
           completion_status:"pending",
           status:"todo",
           subtasks:[],
           content_id:contentId,
-          content_checklist_item_id:sourceStep?.id||null,
+          content_checklist_item_id:p.sourceStep.id||null,
           duration_minutes:duration,
           _duration:duration,
         };
       });
+      if(!taskRows.length)throw new Error("В карточке нет невыполненных пунктов для создания задач");
+      if(existing.length){
+        const{error:deleteError}=await supabase.from("planner_tasks").delete().eq("user_id",userId).eq("content_id",contentId);
+        if(deleteError)throw deleteError;
+      }
       const{data:created,error:createError}=await supabase.from("planner_tasks").insert(taskRows).select("id");
       if(createError)throw createError;
       if(!created?.length)throw new Error("Supabase не создал задачи");
@@ -10284,11 +10300,21 @@ ${existingScenario}`;
 
   useEffect(()=>{
     const ids=Array.from(new Set(contentTasks.map((t:any)=>t.content_id).filter(Boolean))) as string[];
-    ids.forEach(id=>syncContentChecklistFromTasks(id));
+    if(!ids.length)return;
+    let cancelled=false;
+    const run=async()=>{
+      for(const id of ids){
+        if(cancelled)return;
+        await syncContentChecklistFromTasks(id);
+      }
+    };
+    run();
+    return()=>{cancelled=true;};
   },[contentTasks]);
 
   const runContentAudit=async()=>{
     if(productionBusy)return;
+    if(!monthItems.length){alert("В выбранном месяце нет сохранённых карточек для аудита.");return;}
     setProductionBusy("audit");setShowProduction(true);
     try{
       const monthData=monthItems.map((x:any)=>({
@@ -10357,7 +10383,9 @@ ${existingScenario}`;
   };
 
   const sub=async()=>{
+    if(savingContent)return;
     if(!f.topic?.trim()){alert("Укажи тему контента.");return;}
+    setSavingContent(true);
     const payload:any={
       platform:f.platform||"instagram",
       type:f.content_format||f.type||"Публикация",
@@ -10376,25 +10404,37 @@ ${existingScenario}`;
       scenario:f.scenario||"",
       cover_url:f.cover_url||"",
       analytics:f.analytics||null,
-      deadline_prep:null,
-      deadline_dev:null,
-      deadline_pub:null,
     };
     try{
+      let saved:any=null;
       if(editId){
-        const{error}=await supabase.from("content").update(payload).eq("id",editId).eq("user_id",userId);
+        const{data,error}=await supabase.from("content").update(payload).eq("id",editId).eq("user_id",userId).select("*").single();
         if(error)throw error;
+        saved=data;
       }else{
-        const{error}=await supabase.from("content").insert({...payload,user_id:userId});
+        const{data,error}=await supabase.from("content").insert({...payload,user_id:userId}).select("*").single();
         if(error)throw error;
+        saved=data;
       }
+      if(!saved?.id)throw new Error("База не вернула сохранённую карточку");
       await reloadContent();
+      window.dispatchEvent(new CustomEvent("ks-refresh",{detail:{table:"content"}}));
+      const savedDate=saved.publish_date||saved.date;
+      if(savedDate){
+        const d=new Date(`${savedDate}T12:00:00`);
+        setCalMonth({y:d.getFullYear(),m:d.getMonth()});
+        setContentCalAnchor(d);
+      }
       setEditId(null);
       sF(emptyF());
       setShow(false);
+      setTemplatePanel(false);
+      alert(editId?"Карточка обновлена":"Карточка сохранена в «Идеи»");
     }catch(e:any){
       console.error("Content save failed",e);
       alert(`Карточка не сохранена: ${e?.message||"неизвестная ошибка"}`);
+    }finally{
+      setSavingContent(false);
     }
   };
 
@@ -10437,8 +10477,15 @@ ${existingScenario}`;
   const onCalDayDragOver=(dateStr:string,e:React.DragEvent)=>{e.preventDefault();e.dataTransfer.dropEffect="move";setCalDragOver(dateStr);};
   const onCalDayDrop=async(dateStr:string,e:React.DragEvent)=>{
     e.preventDefault();
-    if(calDragId&&calDragId!==dateStr){
-      await update(calDragId,{date:dateStr,publish_date:dateStr});
+    if(calDragId){
+      const{error}=await supabase.from("content").update({date:dateStr,publish_date:dateStr}).eq("id",calDragId).eq("user_id",userId);
+      if(error){
+        alert(`Не удалось перенести публикацию: ${error.message}`);
+        setCalDragId(null);setCalDragOver(null);
+        return;
+      }
+      await reloadContent();
+      window.dispatchEvent(new CustomEvent("ks-refresh",{detail:{table:"content"}}));
     }
     setCalDragId(null);setCalDragOver(null);
   };
@@ -10502,7 +10549,7 @@ ${existingScenario}`;
     return first.getFullYear()===last.getFullYear()?`${fmt(first)} — ${fmt(last)} ${last.getFullYear()}`:`${fmt(first)} ${first.getFullYear()} — ${fmt(last)} ${last.getFullYear()}`;
   };
 
-  const itemsForDay=(d:Date)=>filteredItems.filter((x:any)=>(x.publish_date||x.date)===ds(d));
+  const itemsForDay=(d:Date)=>(contentCalView==="month"?filteredItems:platformFilteredItems).filter((x:any)=>(x.publish_date||x.date)===ds(d));
 
   // Group by month for list view
   const groupedByMonth=useMemo(()=>{
@@ -10563,6 +10610,16 @@ ${existingScenario}`;
     }
     return monthItems.filter((x:any)=>(x.platform||"").toLowerCase()===platformFilter);
   },[monthItems,platformFilter,groupMode]);
+
+  const platformFilteredItems=useMemo(()=>{
+    if(platformFilter==="all")return items;
+    if(groupMode==="type")return items.filter((x:any)=>(x.content_format||x.type||"Другое")===platformFilter);
+    if(platformFilter==="other"){
+      const known=["youtube","instagram","telegram"];
+      return items.filter((x:any)=>!known.includes((x.platform||"").toLowerCase()));
+    }
+    return items.filter((x:any)=>(x.platform||"").toLowerCase()===platformFilter);
+  },[items,platformFilter,groupMode]);
 
 
   return <>
@@ -10702,7 +10759,7 @@ ${existingScenario}`;
             </div>
             <div style={{display:"flex",gap:8,alignItems:"center"}}>
               <button onClick={()=>setTemplatePanel(v=>!v)} style={{height:36,padding:"0 13px",borderRadius:8,border:"1px solid "+C.bd,background:templatePanel?C.ib:"transparent",color:C.t1,fontSize:12,cursor:"pointer"}}>Шаблоны</button>
-              <button onClick={sub} disabled={!f.topic?.trim()} style={{height:36,padding:"0 16px",borderRadius:8,border:"none",background:C.t1,color:C.bg,fontSize:12.5,fontWeight:500,cursor:f.topic?.trim()?"pointer":"default",opacity:f.topic?.trim()?1:.45}}>Сохранить</button>
+              <button onClick={sub} disabled={!f.topic?.trim()||savingContent} style={{height:36,padding:"0 16px",borderRadius:8,border:"none",background:C.t1,color:C.bg,fontSize:12.5,fontWeight:500,cursor:f.topic?.trim()&&!savingContent?"pointer":"default",opacity:f.topic?.trim()&&!savingContent?1:.45}}>{savingContent?"Сохранение...":"Сохранить"}</button>
               <button onClick={()=>{setShow(false);setEditId(null);sF(emptyF());setTemplatePanel(false);}} style={{width:36,height:36,borderRadius:8,border:"1px solid "+C.bd,background:"transparent",color:C.t2,cursor:"pointer",fontSize:18}}>×</button>
             </div>
           </div>
