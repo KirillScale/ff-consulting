@@ -873,7 +873,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v6.3"; // v113 strategy context files, AI interview and full-context strategy chat
+  const APP_VERSION="v6.6"; // v116 edit interview answers and rebuild existing strategies
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker","defects"];
 
   // Clear stale localStorage on version change
@@ -23323,6 +23323,15 @@ interface SCNode {
   sort_order: number;
   depends_on?: string[];        // id узлов-предшественников
   manual_progress?: number | null;
+  path_type?: "critical" | "optional";
+  estimate_hours?: number;
+  completion_criteria?: string;
+  external_dependency?: string;
+  deadline_type?: "external" | "internal";
+  failure_cost?: string;
+  checkpoint_metric?: string;
+  checkpoint_threshold?: string;
+  checkpoint_date?: string | null;
 }
 interface SCDoc { id:string;node_id:string;file_name:string;file_type:string;file_url?:string|null;created_at?:string; }
 interface SCComment { id:string;node_id:string;text:string;at:string;created_at?:string; }
@@ -23336,6 +23345,17 @@ interface SCContextFile {
   extraction_note?:string;
 }
 interface SCChatMsg { role:"user"|"assistant";content:string;at:string; }
+interface SCInterviewAnswers {
+  goal:string;
+  deadline:string;
+  why:string;
+  now:string;
+  limits:string;
+  resources:string;
+  kpi:string;
+  people:string;
+  risks:string;
+}
 
 /* ============ ОСНОВНОЙ ПРОМПТ СТРАТЕГИЧЕСКОГО AI ============ */
 const SC_STRATEGIST_SYSTEM_PROMPT=`Ты — стратегический консультант пользователя. Твоя единственная задача —
@@ -23394,6 +23414,77 @@ const SC_STRATEGIST_SYSTEM_PROMPT=`Ты — стратегический кон�
 Если пользователь сам явно описывает кризис (не гипотезу о будущем бизнеса,
 а собственное острое состояние) — прямая забота уместна. Не превентивно,
 не как дежурная фраза, только по факту явного описания.`;
+
+const SC_CRITICAL_PATH_PROMPT=`Ты собираешь план достижения цели из интервью с пользователем. Цель и конечное измеримое событие уже определены. Твоя работа — превратить их в критический путь исполнимых задач. Нельзя пропускать шаги, подменять действия результатами или добавлять декоративную активность.
+
+ШАГ 1. ОТДЕЛИ РЫЧАГИ ОТ ШУМА
+Для каждой потенциальной задачи проверь: если это не сделать, цель провалится или лишь станет немного хуже?
+— Без этого цель провалится: critical.
+— Это улучшает результат, но не является обязательным: optional.
+Никогда не смешивай critical и optional. Пользователь склонен уходить в более лёгкие и приятные опциональные задачи. Показывай это прямо.
+
+ШАГ 2. ПРОВЕРЬ «РЕЗУЛЬТАТ ИЛИ ДЕЙСТВИЕ»
+Формулировки вроде «готовый лид-магнит», «рабочая платформа», «запустить продажи» — это результаты или заголовки, а не готовые задачи.
+Каждую ветку дроби до физического действия, которое:
+— можно начать за 15–20 минут;
+— не требует дополнительного прояснения;
+— имеет понятный объект работы;
+— заканчивается наблюдаемым результатом.
+Если задачу нельзя начать прямо сейчас без додумывания — она не готова. Дроби дальше.
+
+ШАГ 3. НАЙДИ УЗКОЕ МЕСТО
+Определи одну задачу, которая блокирует максимальное число других.
+Она должна идти первой независимо от неприятности.
+Если узких мест несколько — упорядочь их по числу разблокируемых задач.
+Нельзя ставить зависимую задачу раньше блокирующей.
+
+ШАГ 4. ПРИВЯЖИ К РЕСУРСУ И ВРЕМЕНИ
+Для каждой critical-задачи укажи:
+— честную оценку часов;
+— зависит ли от другого человека или внешнего события;
+— внешний или внутренний дедлайн;
+— риск срыва;
+— способ сделать нарушение внутреннего дедлайна дороже.
+Не используй оптимистичные оценки. Добавляй резерв на согласования, правки и внешние зависимости.
+
+ШАГ 5. НАЙДИ ТОЧКИ ПРОВЕРКИ
+Для каждого значимого этапа создай контрольную точку:
+— метрика;
+— дата;
+— минимальный порог;
+— сигнал провала;
+— корректирующее действие.
+Пример: «к 7 числу минимум 10 заявок; если меньше 5 — проверить верх воронки и остановить масштабирование трафика».
+
+ОБЯЗАТЕЛЬНАЯ ПРОВЕРКА ПОЛНОТЫ
+Перед ответом проверь:
+1. Все ли обязательные условия конечной цели покрыты задачами.
+2. Есть ли у каждой critical-задачи физическое первое действие.
+3. Нет ли задач без владельца, срока, оценки времени или критерия завершения.
+4. Нет ли зависимостей, которые нарушают последовательность.
+5. Есть ли хотя бы одна контрольная точка до конечного дедлайна.
+6. Не вышел ли ни один этап за дедлайн цели.
+7. Не перегружен ли один день или один человек нереалистичным объёмом.
+8. Есть ли резерв времени перед конечным дедлайном.
+9. Что должно быть удалено как шум.
+10. Что пользователь должен сделать первым в ближайшие 15–20 минут.
+
+ПРИНЦИП ДОСТИЖЕНИЯ ЦЕЛИ
+Ты не обещаешь гарантированный результат и не выдумываешь отсутствующие данные. Ты строишь максимально полный и реалистичный план, явно показываешь критический путь, неопределённости, цену ошибки и точки пересмотра. Если данных недостаточно — не маскируй пробел: задай конкретный уточняющий вопрос или пометь допущение.
+
+Требование к формулировкам:
+— глагол действия в начале;
+— один результат на задачу;
+— конкретный объект;
+— критерий готовности;
+— оценка времени;
+— зависимость;
+— ответственный;
+— дата;
+— тип critical или optional.
+
+Нельзя создавать задачи вида: «проработать», «заняться», «улучшить», «подготовить всё», «запустить проект» без конкретизации физического действия и критерия готовности.`;
+
 
 const scLoadScript=(src:string,ready:()=>boolean)=>new Promise<void>((resolve,reject)=>{
   if(ready()){resolve();return;}
@@ -23485,6 +23576,41 @@ const scToday=()=>scIso(new Date());
 const scAddDays=(iso:string,n:number)=>{const d=scParseDate(iso);d.setDate(d.getDate()+n);return scIso(d);};
 const scDiff=(a:string,b:string)=>Math.round((+scParseDate(b)-+scParseDate(a))/86400000);
 const scFmt=(iso:string|null)=>{if(!iso)return"—";const d=scParseDate(iso);return`${String(d.getDate()).padStart(2,"0")}.${String(d.getMonth()+1).padStart(2,"0")}.${d.getFullYear()}`;};
+const scClampIso=(iso:string,minIso:string,maxIso:string)=>iso<minIso?minIso:iso>maxIso?maxIso:iso;
+const scResolveDeadline=(raw:string,baseIso:string)=>{
+  const source=String(raw||"").trim().toLowerCase();
+  const base=scParseDate(baseIso);
+  const months:Record<string,number>={январ:0,феврал:1,март:2,апрел:3,май:4,мая:4,июн:5,июл:6,август:7,сентябр:8,октябр:9,ноябр:10,декабр:11};
+  const iso=source.match(/\b(20\d{2})[-./](\d{1,2})[-./](\d{1,2})\b/);
+  if(iso)return scIso(new Date(Number(iso[1]),Number(iso[2])-1,Number(iso[3]),12));
+  const dmy=source.match(/\b(\d{1,2})[./-](\d{1,2})(?:[./-](20\d{2}|\d{2}))?\b/);
+  if(dmy){
+    let y=dmy[3]?Number(dmy[3]):base.getFullYear();if(y<100)y+=2000;
+    let d=new Date(y,Number(dmy[2])-1,Number(dmy[1]),12);
+    if(+d<+base&&!dmy[3])d=new Date(y+1,Number(dmy[2])-1,Number(dmy[1]),12);
+    return scIso(d);
+  }
+  const words=source.match(/\b(\d{1,2})\s+([а-яё]+)(?:\s+(20\d{2}))?\b/i);
+  if(words){
+    const key=Object.keys(months).find(k=>words[2].toLowerCase().startsWith(k));
+    if(key){
+      let y=words[3]?Number(words[3]):base.getFullYear();
+      let d=new Date(y,months[key],Number(words[1]),12);
+      if(+d<+base&&!words[3])d=new Date(y+1,months[key],Number(words[1]),12);
+      return scIso(d);
+    }
+  }
+  const rel=source.match(/\b(\d+)\s*(дн|день|дня|дней|недел|месяц|месяца|месяцев|год|года|лет)\b/);
+  if(rel){
+    const n=Math.max(1,Number(rel[1])),u=rel[2];
+    if(u.startsWith("д"))return scAddDays(baseIso,n);
+    if(u.startsWith("н"))return scAddDays(baseIso,n*7);
+    const d=scParseDate(baseIso);
+    if(u.startsWith("м"))d.setMonth(d.getMonth()+n);else d.setFullYear(d.getFullYear()+n);
+    return scIso(d);
+  }
+  return null;
+};
 const scNum=(n:number)=>Math.round(n).toLocaleString("ru-RU");
 const scUid=()=>`sc_${typeof crypto!=="undefined"&&crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2)};`.replace(";","");
 
@@ -23630,6 +23756,8 @@ function ScalingModule({ userId }: { userId: string }) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [interview, setInterview] = useState(false);
   const[chatNode,setChatNode]=useState<SCNode|null>(null);
+  const[rebuildRoot,setRebuildRoot]=useState<SCNode|null>(null);
+  const[rebuilding,setRebuilding]=useState(false);
   const [audit, setAudit] = useState<{ open: boolean; loading: boolean; text: string }>({ open: false, loading: false, text: "" });
   const [wrModal, setWrModal] = useState<SCNode | null>(null);
   const [decomposing, setDecomposing] = useState<string | null>(null);
@@ -23685,8 +23813,19 @@ function ScalingModule({ userId }: { userId: string }) {
     const move = (ev: any) => {
       const cx = ev.clientX ?? ev.touches?.[0]?.clientX; const d = dragRef.current; if (!d) return;
       const dd = Math.round((cx - d.startX) / dayW);
-      if(d.mode==="move")patch(d.id,{start_date:scAddDays(d.s0,dd),due_date:scAddDays(d.e0,dd)},false);
-      else{const ne=scAddDays(d.e0,dd);if(scDiff(d.s0,ne)>=1)patch(d.id,{due_date:ne},false);}
+      const current=nodes.find((x:SCNode)=>x.id===d.id);
+      const parent=current?.parent_id?nodes.find((x:SCNode)=>x.id===current.parent_id):null;
+      if(d.mode==="move"){
+        const duration=Math.max(1,scDiff(d.s0,d.e0));
+        let ns=scAddDays(d.s0,dd),ne=scAddDays(d.e0,dd);
+        if(parent?.start_date&&ns<parent.start_date){ns=parent.start_date;ne=scAddDays(ns,duration);}
+        if(parent?.due_date&&ne>parent.due_date){ne=parent.due_date;ns=scAddDays(ne,-duration);}
+        patch(d.id,{start_date:ns,due_date:ne},false);
+      }else{
+        let ne=scAddDays(d.e0,dd);
+        if(parent?.due_date&&ne>parent.due_date)ne=parent.due_date;
+        if(scDiff(d.s0,ne)>=1)patch(d.id,{due_date:ne},false);
+      }
     };
     const up=()=>{
       const d=dragRef.current;
@@ -23795,19 +23934,189 @@ ${commentLines||"Нет комментариев"}
 ${taskLines||"Нет задач"}`;
   };
 
+  const interviewStorageKey=(rootId:string)=>`vizzy_scaling_interview_${userId}_${rootId}`;
+  const readInterviewAnswers=(root:SCNode):SCInterviewAnswers=>{
+    try{
+      const saved=JSON.parse(localStorage.getItem(interviewStorageKey(root.id))||"null");
+      if(saved)return{
+        goal:String(saved.goal||root.title||""),
+        deadline:String(saved.deadline||root.due_date||""),
+        why:String(saved.why||root.description||""),
+        now:String(saved.now||""),
+        limits:String(saved.limits||""),
+        resources:String(saved.resources||""),
+        kpi:String(saved.kpi||root.kpi||""),
+        people:String(saved.people||root.responsible||""),
+        risks:String(saved.risks||""),
+      };
+    }catch{}
+    return{
+      goal:root.title||"",
+      deadline:root.due_date||"",
+      why:root.description||"",
+      now:"",
+      limits:"",
+      resources:"",
+      kpi:root.kpi||"",
+      people:root.responsible||"",
+      risks:"",
+    };
+  };
+  const saveInterviewAnswers=(rootId:string,answers:SCInterviewAnswers)=>{
+    try{localStorage.setItem(interviewStorageKey(rootId),JSON.stringify(answers));}catch{}
+  };
+
+  const rebuildStrategy=async(root:SCNode,answers:SCInterviewAnswers)=>{
+    setRebuilding(true);
+    try{
+      const contextFiles=readStoredContext(root.id);
+      const fileContext=contextFiles.map(f=>`ФАЙЛ: ${f.name}\n${f.text||f.extraction_note||"Текст не извлечён"}`).join("\n\n");
+      const struct=await scAskJson(
+        SC_STRATEGIST_SYSTEM_PROMPT+"\n\n"+SC_CRITICAL_PATH_PROMPT+"\n\nПересобери существующую стратегию с учётом обновлённых ответов интервью и документов. Сохрани конечную цель, но полностью пересмотри критический путь. Строго соблюдай дедлайн. Ни один проект, этап или контрольная точка не может завершаться позже корневой цели. Верни JSON строго по схеме: {title,due_date:\"YYYY-MM-DD\",bottleneck:{title,reason,unblocks},projects:[{title,path_type:\"critical|optional\",responsible,estimate_hours,completion_criteria,external_dependency,deadline_type:\"external|internal\",failure_cost,checkpoint:{metric,threshold,date:\"YYYY-MM-DD\",failure_signal,corrective_action},stages:[{title,path_type:\"critical|optional\",responsible,estimate_hours,completion_criteria,external_dependency,deadline_type:\"external|internal\",failure_cost,checkpoint:{metric,threshold,date:\"YYYY-MM-DD\",failure_signal,corrective_action}}]}],removed_noise:[{title,reason}],first_action_20_min:{title,completion_criteria}}.",
+        `ТЕКУЩАЯ ДАТА: ${scToday()}\nОБНОВЛЁННЫЕ ОТВЕТЫ ИНТЕРВЬЮ:\n${Object.entries(answers).map(([k,v])=>`${k}: ${v}`).join("\n")}\n\nТЕКУЩАЯ СТРАТЕГИЯ:\n${strategyContext(root)}\n\nКОНТЕКСТ ИЗ ФАЙЛОВ:\n${fileContext||"Файлы не загружены."}`,
+        2200
+      );
+
+      const t=scToday();
+      const userDue=scResolveDeadline(answers.deadline,t);
+      const aiDue=/^20\d{2}-\d{2}-\d{2}$/.test(String(struct.due_date||""))?String(struct.due_date):null;
+      let rootDue=userDue||aiDue||root.due_date||scAddDays(t,90);
+      if(rootDue<t)rootDue=scAddDays(t,30);
+      const totalDays=Math.max(1,scDiff(t,rootDue));
+
+      const updatedRoot:SCNode={
+        ...root,
+        title:String(struct.title||answers.goal||root.title).slice(0,90),
+        description:`${answers.why||""}${answers.now?`\n\nТекущая ситуация: ${answers.now}`:""}\n\nЗафиксированный дедлайн: ${scFmt(rootDue)}`.trim(),
+        kpi:answers.kpi||root.kpi,
+        responsible:answers.people||root.responsible,
+        start_date:t,
+        due_date:rootDue,
+        status:"active",
+        path_type:"critical",
+        priority:"high",
+      };
+
+      const generated:SCNode[]=[];
+      const projects=(struct.projects||[]).slice(0,5);
+      const projectCount=Math.max(1,projects.length);
+      const projectSlot=Math.max(1,Math.floor(totalDays/projectCount));
+
+      projects.forEach((p:any,pi:number)=>{
+        const psDay=Math.min(totalDays-1,pi*projectSlot);
+        const peDay=pi===projectCount-1?totalDays:Math.min(totalDays,(pi+1)*projectSlot);
+        const ps=scClampIso(scAddDays(t,psDay),t,rootDue);
+        const pe=scClampIso(scAddDays(t,Math.max(psDay+1,peDay)),ps,rootDue);
+        const proj:SCNode={
+          id:scUid(),parent_id:root.id,title:String(p.title||"Проект").slice(0,100),status:"planned",
+          color:SC_COLORS[(pi+1)%SC_COLORS.length],priority:p.path_type==="critical"?"high":"medium",
+          start_date:ps,due_date:pe,sort_order:pi,depends_on:pi>0?[generated.filter(x=>x.parent_id===root.id).slice(-1)[0]?.id].filter(Boolean):[],
+          manual_progress:null,path_type:p.path_type==="optional"?"optional":"critical",
+          responsible:String(p.responsible||"").slice(0,120),estimate_hours:Math.max(0,Number(p.estimate_hours)||0),
+          completion_criteria:String(p.completion_criteria||"").slice(0,500),
+          external_dependency:String(p.external_dependency||"").slice(0,500),
+          deadline_type:p.deadline_type==="external"?"external":"internal",
+          failure_cost:String(p.failure_cost||"").slice(0,500),
+          checkpoint_metric:String(p.checkpoint?.metric||"").slice(0,300),
+          checkpoint_threshold:String(p.checkpoint?.threshold||"").slice(0,300),
+          checkpoint_date:/^20\d{2}-\d{2}-\d{2}$/.test(String(p.checkpoint?.date||""))?scClampIso(String(p.checkpoint.date),ps,rootDue):null
+        };
+        generated.push(proj);
+
+        const stages=(p.stages||[]).slice(0,6);
+        const stageCount=Math.max(1,stages.length);
+        const projDays=Math.max(1,scDiff(ps,pe));
+        const stageSlot=Math.max(1,Math.floor(projDays/stageCount));
+        let previousStageId:string|null=null;
+        stages.forEach((s:any,si:number)=>{
+          const ss=scClampIso(scAddDays(ps,si*stageSlot),ps,pe);
+          const se=scClampIso(scAddDays(ps,si===stageCount-1?projDays:(si+1)*stageSlot),ss,pe);
+          const stage:SCNode={
+            id:scUid(),parent_id:proj.id,title:String(s.title||"Этап").slice(0,120),status:"planned",
+            color:proj.color,priority:s.path_type==="critical"?"high":"medium",start_date:ss,due_date:se,
+            sort_order:si,depends_on:previousStageId?[previousStageId]:[],manual_progress:null,
+            path_type:s.path_type==="optional"?"optional":"critical",
+            responsible:String(s.responsible||p.responsible||"").slice(0,120),
+            estimate_hours:Math.max(0,Number(s.estimate_hours)||0),
+            completion_criteria:String(s.completion_criteria||"").slice(0,500),
+            external_dependency:String(s.external_dependency||"").slice(0,500),
+            deadline_type:s.deadline_type==="external"?"external":"internal",
+            failure_cost:String(s.failure_cost||"").slice(0,500),
+            checkpoint_metric:String(s.checkpoint?.metric||"").slice(0,300),
+            checkpoint_threshold:String(s.checkpoint?.threshold||"").slice(0,300),
+            checkpoint_date:/^20\d{2}-\d{2}-\d{2}$/.test(String(s.checkpoint?.date||""))?scClampIso(String(s.checkpoint.date),ss,rootDue):null
+          };
+          generated.push(stage);
+          previousStageId=stage.id;
+        });
+      });
+
+      const oldIds=new Set<string>();
+      const collect=(id:string)=>{nodes.filter(n=>n.parent_id===id).forEach(n=>{oldIds.add(n.id);collect(n.id);});};
+      collect(root.id);
+
+      setNodes(prev=>[
+        ...prev.filter(n=>n.id!==root.id&&!oldIds.has(n.id)),
+        updatedRoot,
+        ...generated
+      ]);
+
+      if(dbAvailable){
+        for(const id of oldIds)await persistDel(id);
+        await persist(updatedRoot);
+        for(const item of generated)await persist(item);
+      }
+
+      saveInterviewAnswers(root.id,answers);
+      setSel(root.id);
+      setRebuildRoot(null);
+      flash(`Стратегия «${updatedRoot.title}» пересобрана по обновлённому интервью`);
+    }catch(e:any){
+      flash("Не удалось пересобрать стратегию: "+(e.message||"ошибка"));
+    }finally{
+      setRebuilding(false);
+    }
+  };
+
+
   // ── AI: декомпозиция ──
   const decompose = async (n: SCNode) => {
     setDecomposing(n.id);
     try {
       const arr = await scAskJson(
-        SC_STRATEGIST_SYSTEM_PROMPT+"\n\nРазбей выбранный элемент стратегии на 3–6 конкретных подэлементов следующего уровня. Не создавай абстрактные результаты: формулируй управляемые направления, этапы или физические действия. Формат: массив объектов {title}.",
+        SC_STRATEGIST_SYSTEM_PROMPT+"\n\n"+SC_CRITICAL_PATH_PROMPT+"\n\nРазбей выбранный элемент стратегии на 3–6 конкретных исполнимых подэлементов. Сначала critical, затем optional. Каждый элемент должен быть физическим действием или управляемым этапом с критерием готовности. Учитывай зависимости и узкое место. Формат: массив объектов {title,path_type:\"critical|optional\",responsible,estimate_hours,completion_criteria,external_dependency,deadline_type:\"external|internal\",failure_cost,checkpoint:{metric,threshold,date:\"YYYY-MM-DD\"}}.",
         `${strategyContext(n)}\n\nНужно декомпозировать элемент: «${n.title}». Верни только массив.`, 900);
       const items: any[] = Array.isArray(arr) ? arr : arr.items || [];
-      const t = scToday();
-      const created: SCNode[] = items.slice(0, 6).map((it: any, i: number) => ({ id: scUid(), parent_id: n.id, title: String(it.title || it).slice(0, 80), status: "planned", color: n.color, priority: "medium", start_date: scAddDays(t, i * 10), due_date: scAddDays(t, i * 10 + 18), sort_order: i, depends_on: [], manual_progress: null }));
-      setNodes((prev: SCNode[]) => [...prev, ...created]); created.forEach(persist);
+      const parentStart=n.start_date||scToday();
+      const parentDue=n.due_date||scAddDays(parentStart,60);
+      const count=Math.max(1,Math.min(6,items.slice(0,6).length));
+      const slot=Math.max(1,Math.floor(Math.max(1,scDiff(parentStart,parentDue))/count));
+      const created:SCNode[]=items.slice(0,6).map((it:any,i:number)=>{
+        const start=scClampIso(scAddDays(parentStart,i*slot),parentStart,parentDue);
+        const due=scClampIso(scAddDays(start,Math.max(1,slot-1)),start,parentDue);
+        return{
+          id:scUid(),parent_id:n.id,title:String(it.title||it).slice(0,120),status:"planned",color:n.color,
+          priority:it.path_type==="critical"?"high":"medium",start_date:start,due_date:due,sort_order:i,
+          depends_on:i>0?["__PREVIOUS__"]:[],manual_progress:null,
+          path_type:it.path_type==="optional"?"optional":"critical",
+          responsible:String(it.responsible||"").slice(0,120),
+          estimate_hours:Math.max(0,Number(it.estimate_hours)||0),
+          completion_criteria:String(it.completion_criteria||"").slice(0,500),
+          external_dependency:String(it.external_dependency||"").slice(0,500),
+          deadline_type:it.deadline_type==="external"?"external":"internal",
+          failure_cost:String(it.failure_cost||"").slice(0,500),
+          checkpoint_metric:String(it.checkpoint?.metric||"").slice(0,300),
+          checkpoint_threshold:String(it.checkpoint?.threshold||"").slice(0,300),
+          checkpoint_date:/^20\d{2}-\d{2}-\d{2}$/.test(String(it.checkpoint?.date||""))?scClampIso(String(it.checkpoint.date),start,parentDue):null
+        };
+      });
+      const linkedCreated=created.map((item,index)=>({
+        ...item,
+        depends_on:(item.depends_on||[]).map(dep=>dep==="__PREVIOUS__"&&index>0?created[index-1].id:dep).filter(dep=>dep!=="__PREVIOUS__")
+      }));
+      setNodes((prev: SCNode[]) => [...prev, ...linkedCreated]); linkedCreated.forEach(persist);
       setCollapsed((prev: Set<string>) => { const s = new Set(prev); s.delete(n.id); return s; });
-      flash(`AI предложил ${created.length} подэлемента для «${n.title}»`);
+      flash(`AI создал ${linkedCreated.length} элементов критического пути для «${n.title}»`);
     } catch (e: any) { flash("AI: " + (e.message || "ошибка декомпозиции")); }
     setDecomposing(null);
   };
@@ -23818,7 +24127,7 @@ ${taskLines||"Нет задач"}`;
     try {
       const ctx = nodes.map((n: SCNode) => `- ${n.title} [${SC_STATUS[n.status]}, прогресс ${progressOf(n.id)}%, срок ${scFmt(n.due_date)}${n.due_date && n.due_date < scToday() && progressOf(n.id) < 100 ? ", ПРОСРОЧЕНО" : ""}]`).join("\n");
       const text = await scAsk([
-        { role: "system", content: SC_STRATEGIST_SYSTEM_PROMPT+"\n\nПроведи сжатый стратегический аудит без воды. Обязательно отдели факты от предположений, назови слабые предпосылки, цену ошибки, незавершённые обязательства и первое действие на ближайшие 24 часа. Пиши по-русски, структурно, без markdown-заголовков и эмодзи." },
+        { role: "system", content: SC_STRATEGIST_SYSTEM_PROMPT+"\n\n"+SC_CRITICAL_PATH_PROMPT+"\n\nПроведи сжатый стратегический аудит без воды. Обязательно отдели факты от предположений, назови слабые предпосылки, цену ошибки, незавершённые обязательства и первое действие на ближайшие 24 часа. Пиши по-русски, структурно, без markdown-заголовков и эмодзи." },
         { role: "user", content: `Стратегия:\n${ctx}\n\nОбщий прогресс ${A.overall}%, просрочено этапов ${A.overdue}, под угрозой ${A.risks}. Дай аудит и рекомендации.` },
       ], 1400, 0.5);
       setAudit({ open: true, loading: false, text });
@@ -23930,7 +24239,7 @@ ${taskLines||"Нет задач"}`;
               ? <span onClick={(e: any) => { e.stopPropagation(); toggleCollapse(node.id); }} style={{ width: 14, textAlign: "center", color: C.t2, fontSize: 10, cursor: "pointer" }}>{collapsed.has(node.id) ? "▸" : "▾"}</span>
               : <span style={{ width: 14 }} />}
             <span style={{ width: 8, height: 8, borderRadius: 3, background: node.color, flexShrink: 0 }} />
-            <span style={{ fontSize: 12.5, color: C.t1, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{node.title}</span>
+            <span style={{ fontSize: 12.5, color: C.t1, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{node.path_type==="optional"?"[Опц.] ":""}{node.title}</span>
             <span style={{ fontSize: 10, color: C.t2, fontVariantNumeric: "tabular-nums" }}>{pr}%</span>
           </div>;
         })}
@@ -24030,6 +24339,59 @@ ${taskLines||"Нет задач"}`;
             <input type="date" value={selNode.due_date || ""} onChange={(e: any) => patch(selNode.id, { due_date: e.target.value || null })} style={inp} /></div>
         </div>
 
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+          <div>
+            <div style={{fontSize:11,color:C.t2,marginBottom:4}}>Роль в плане</div>
+            <select value={selNode.path_type||"critical"} onChange={(e:any)=>patch(selNode.id,{path_type:e.target.value as any})} style={inp}>
+              <option value="critical">Критический путь</option>
+              <option value="optional">Опционально</option>
+            </select>
+          </div>
+          <div>
+            <div style={{fontSize:11,color:C.t2,marginBottom:4}}>Оценка, часов</div>
+            <input type="number" min="0" step="0.5" value={selNode.estimate_hours??""} onChange={(e:any)=>patch(selNode.id,{estimate_hours:e.target.value===""?undefined:Number(e.target.value)})} style={inp}/>
+          </div>
+        </div>
+
+        <div style={{marginBottom:10}}>
+          <div style={{fontSize:11,color:C.t2,marginBottom:4}}>Критерий готовности</div>
+          <textarea value={selNode.completion_criteria||""} onChange={(e:any)=>patch(selNode.id,{completion_criteria:e.target.value})} rows={2} style={{...inp,resize:"vertical"}}/>
+        </div>
+
+        <div style={{marginBottom:10}}>
+          <div style={{fontSize:11,color:C.t2,marginBottom:4}}>Внешняя зависимость</div>
+          <input value={selNode.external_dependency||""} onChange={(e:any)=>patch(selNode.id,{external_dependency:e.target.value})} placeholder="Человек, согласование или событие" style={inp}/>
+        </div>
+
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+          <div>
+            <div style={{fontSize:11,color:C.t2,marginBottom:4}}>Тип дедлайна</div>
+            <select value={selNode.deadline_type||"internal"} onChange={(e:any)=>patch(selNode.id,{deadline_type:e.target.value as any})} style={inp}>
+              <option value="external">Внешний</option>
+              <option value="internal">Внутренний</option>
+            </select>
+          </div>
+          <div>
+            <div style={{fontSize:11,color:C.t2,marginBottom:4}}>Дата проверки</div>
+            <input type="date" value={selNode.checkpoint_date||""} onChange={(e:any)=>patch(selNode.id,{checkpoint_date:e.target.value||null})} style={inp}/>
+          </div>
+        </div>
+
+        <div style={{marginBottom:10}}>
+          <div style={{fontSize:11,color:C.t2,marginBottom:4}}>Метрика проверки</div>
+          <input value={selNode.checkpoint_metric||""} onChange={(e:any)=>patch(selNode.id,{checkpoint_metric:e.target.value})} style={inp}/>
+        </div>
+
+        <div style={{marginBottom:10}}>
+          <div style={{fontSize:11,color:C.t2,marginBottom:4}}>Порог результата</div>
+          <input value={selNode.checkpoint_threshold||""} onChange={(e:any)=>patch(selNode.id,{checkpoint_threshold:e.target.value})} placeholder="Минимальное значение к дате" style={inp}/>
+        </div>
+
+        {selNode.deadline_type==="internal"&&<div style={{marginBottom:12}}>
+          <div style={{fontSize:11,color:C.t2,marginBottom:4}}>Цена срыва внутреннего дедлайна</div>
+          <textarea value={selNode.failure_cost||""} onChange={(e:any)=>patch(selNode.id,{failure_cost:e.target.value})} rows={2} placeholder="Публичное обязательство, финансовая ставка или внешний контролёр" style={{...inp,resize:"vertical"}}/>
+        </div>}
+
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 11, color: C.t2, marginBottom: 5 }}>Цвет</div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -24096,6 +24458,7 @@ ${taskLines||"Нет задач"}`;
         </div>
 
         <div style={{display:"grid",gridTemplateColumns:"1fr",gap:8}}>
+          <button style={{ ...btn(false), width: "100%", justifyContent: "center" }} onClick={() => setRebuildRoot(rootOf(selNode.id)||selNode)}>Обновить интервью и пересобрать</button>
           <button style={{ ...btn(false), width: "100%", justifyContent: "center" }} onClick={() => setChatNode(selNode)}>Обсудить стратегию с AI</button>
           <button style={{ ...btn(true), width: "100%", justifyContent: "center", background: selNode.color, border: "none" }} onClick={() => setWrModal(selNode)}>Добавить в War Room</button>
         </div>
@@ -24132,10 +24495,25 @@ ${taskLines||"Нет задач"}`;
       persist(root).catch(()=>{});
       kids.forEach(k=>persist(k).catch(()=>{}));
       saveInitialContextFiles(root.id,files);
+      saveInterviewAnswers(root.id,(window as any).__vizzyLastScalingInterview||{
+        goal:root.title,deadline:root.due_date||"",why:root.description||"",now:"",limits:"",resources:"",kpi:root.kpi||"",people:root.responsible||"",risks:""
+      });
+      try{delete (window as any).__vizzyLastScalingInterview;}catch{}
       setSel(root.id);
       setInterview(false);
       flash(files.length?`Стратегия создана. Контекстных файлов: ${files.length}`:"Стратегия создана");
     }} btn={btn} inp={inp} card={card} />}
+
+    {rebuildRoot&&<ScRebuildInterview
+      root={rebuildRoot}
+      initial={readInterviewAnswers(rebuildRoot)}
+      loading={rebuilding}
+      onClose={()=>!rebuilding&&setRebuildRoot(null)}
+      onSubmit={(answers:SCInterviewAnswers)=>rebuildStrategy(rebuildRoot,answers)}
+      btn={btn}
+      inp={inp}
+      card={card}
+    />}
 
     {chatNode&&<ScStrategyChat
       node={chatNode}
@@ -24218,22 +24596,65 @@ function ScInterview({ onClose, onDone, btn, inp, card }: any) {
     try {
       const fileContext=files.map(f=>`ФАЙЛ: ${f.name}\n${f.text||f.extraction_note||"Текст не извлечён"}`).join("\n\n");
       const struct = await scAskJson(
-        SC_STRATEGIST_SYSTEM_PROMPT+"\n\nНа основе интервью и документов построй стратегию: корневая цель и 3–5 проектов первого уровня, у каждого 2–4 этапа. Этапы должны быть управляемыми и проверяемыми, а не абстрактными результатами. Формат JSON: {title, deadline_days, projects:[{title, stages:[{title}]}]}.",
-        `ОТВЕТЫ ИНТЕРВЬЮ:\n${Object.entries(na).map(([k,v])=>`${k}: ${v}`).join("\n")}\n\nКОНТЕКСТ ИЗ ФАЙЛОВ:\n${fileContext||"Файлы не загружены."}`, 1800);
-      const t = scToday();
-      const parsedDays=Math.max(30,Math.min(1095,Number(struct.deadline_days)||180));
-      const root: SCNode = { id: scUid(), parent_id: null, title: String(struct.title || na.goal).slice(0, 90), status: "active", color: SC_COLORS[0], priority: "high", start_date: t, due_date: scAddDays(t, parsedDays), sort_order: 0, kpi: na.kpi, description: `${na.why||""}${na.now?`\n\nТекущая ситуация: ${na.now}`:""}`.trim(), depends_on: [], manual_progress: null };
-      const kids: SCNode[] = [];
-      (struct.projects || []).slice(0, 5).forEach((p: any, pi: number) => {
-        const projStart=Math.round((parsedDays/Math.max(1,(struct.projects||[]).length))*pi*.45);
-        const projDur=Math.max(30,Math.round(parsedDays*.45));
-        const proj: SCNode = { id: scUid(), parent_id: root.id, title: String(p.title).slice(0, 80), status: "planned", color: SC_COLORS[(pi + 1) % SC_COLORS.length], priority: "medium", start_date: scAddDays(t, projStart), due_date: scAddDays(t, Math.min(parsedDays,projStart+projDur)), sort_order: pi, depends_on: [], manual_progress: null };
+        SC_STRATEGIST_SYSTEM_PROMPT+"\n\n"+SC_CRITICAL_PATH_PROMPT+"\n\nПострой полный критический путь достижения цели. Сначала выдели обязательные проекты, затем конкретные исполнимые действия. Опциональные действия вынеси отдельно и не ставь их раньше критических. Строго соблюдай дедлайн пользователя. Ни один проект, этап или контрольная точка не может завершаться позже корневой цели. Верни JSON строго по схеме: {title, due_date:\"YYYY-MM-DD\", bottleneck:{title,reason,unblocks}, projects:[{title,path_type:\"critical|optional\",responsible,estimate_hours,completion_criteria,external_dependency,deadline_type:\"external|internal\",failure_cost,checkpoint:{metric,threshold,date:\"YYYY-MM-DD\",failure_signal,corrective_action},stages:[{title,path_type:\"critical|optional\",responsible,estimate_hours,completion_criteria,external_dependency,deadline_type:\"external|internal\",failure_cost,checkpoint:{metric,threshold,date:\"YYYY-MM-DD\",failure_signal,corrective_action}}]}], removed_noise:[{title,reason}], first_action_20_min:{title,completion_criteria}}.",
+        `ТЕКУЩАЯ ДАТА: ${scToday()}\nОТВЕТЫ ИНТЕРВЬЮ:\n${Object.entries(na).map(([k,v])=>`${k}: ${v}`).join("\n")}\n\nКОНТЕКСТ ИЗ ФАЙЛОВ:\n${fileContext||"Файлы не загружены."}`, 1800);
+      const t=scToday();
+      const userDue=scResolveDeadline(na.deadline,t);
+      const aiDue=/^20\d{2}-\d{2}-\d{2}$/.test(String(struct.due_date||""))?String(struct.due_date):null;
+      let rootDue=userDue||aiDue||scAddDays(t,90);
+      if(rootDue<t)rootDue=scAddDays(t,30);
+      const totalDays=Math.max(1,scDiff(t,rootDue));
+      const root:SCNode={id:scUid(),parent_id:null,title:String(struct.title||na.goal).slice(0,90),status:"active",color:SC_COLORS[0],priority:"high",start_date:t,due_date:rootDue,sort_order:0,kpi:na.kpi,description:`${na.why||""}${na.now?`\n\nТекущая ситуация: ${na.now}`:""}\n\nЗафиксированный дедлайн: ${scFmt(rootDue)}`.trim(),depends_on:[],manual_progress:null};
+      const kids:SCNode[]=[];
+      const projects=(struct.projects||[]).slice(0,5);
+      const projectCount=Math.max(1,projects.length);
+      const projectSlot=Math.max(1,Math.floor(totalDays/projectCount));
+      projects.forEach((p:any,pi:number)=>{
+        const psDay=Math.min(totalDays-1,pi*projectSlot);
+        const peDay=pi===projectCount-1?totalDays:Math.min(totalDays,(pi+1)*projectSlot);
+        const ps=scClampIso(scAddDays(t,psDay),t,rootDue);
+        const pe=scClampIso(scAddDays(t,Math.max(psDay+1,peDay)),ps,rootDue);
+        const proj:SCNode={
+          id:scUid(),parent_id:root.id,title:String(p.title).slice(0,80),status:"planned",
+          color:SC_COLORS[(pi+1)%SC_COLORS.length],priority:p.path_type==="critical"?"high":"medium",
+          start_date:ps,due_date:pe,sort_order:pi,depends_on:[],manual_progress:null,
+          path_type:p.path_type==="optional"?"optional":"critical",
+          responsible:String(p.responsible||"").slice(0,120),
+          estimate_hours:Math.max(0,Number(p.estimate_hours)||0),
+          completion_criteria:String(p.completion_criteria||"").slice(0,500),
+          external_dependency:String(p.external_dependency||"").slice(0,500),
+          deadline_type:p.deadline_type==="external"?"external":"internal",
+          failure_cost:String(p.failure_cost||"").slice(0,500),
+          checkpoint_metric:String(p.checkpoint?.metric||"").slice(0,300),
+          checkpoint_threshold:String(p.checkpoint?.threshold||"").slice(0,300),
+          checkpoint_date:/^20\d{2}-\d{2}-\d{2}$/.test(String(p.checkpoint?.date||""))?scClampIso(String(p.checkpoint.date),ps,rootDue):null
+        };
         kids.push(proj);
-        (p.stages || []).slice(0, 4).forEach((s: any, si: number) => {
-          const stageStart=projStart+si*Math.max(7,Math.round(projDur/5));
-          kids.push({ id: scUid(), parent_id: proj.id, title: String(s.title).slice(0, 80), status: "planned", color: proj.color, priority: "medium", start_date: scAddDays(t, stageStart), due_date: scAddDays(t, Math.min(parsedDays,stageStart+Math.max(10,Math.round(projDur/4)))), sort_order: si, depends_on: [], manual_progress: null });
+        const stages=(p.stages||[]).slice(0,4);
+        const stageCount=Math.max(1,stages.length);
+        const projDays=Math.max(1,scDiff(ps,pe));
+        const stageSlot=Math.max(1,Math.floor(projDays/stageCount));
+        stages.forEach((s:any,si:number)=>{
+          const ss=scClampIso(scAddDays(ps,si*stageSlot),ps,pe);
+          const se=scClampIso(scAddDays(ps,si===stageCount-1?projDays:(si+1)*stageSlot),ss,pe);
+          kids.push({
+            id:scUid(),parent_id:proj.id,title:String(s.title).slice(0,120),status:"planned",
+            color:proj.color,priority:s.path_type==="critical"?"high":"medium",start_date:ss,due_date:se,
+            sort_order:si,depends_on:si>0?[kids[kids.length-1]?.id].filter(Boolean):[],manual_progress:null,
+            path_type:s.path_type==="optional"?"optional":"critical",
+            responsible:String(s.responsible||p.responsible||"").slice(0,120),
+            estimate_hours:Math.max(0,Number(s.estimate_hours)||0),
+            completion_criteria:String(s.completion_criteria||"").slice(0,500),
+            external_dependency:String(s.external_dependency||"").slice(0,500),
+            deadline_type:s.deadline_type==="external"?"external":"internal",
+            failure_cost:String(s.failure_cost||"").slice(0,500),
+            checkpoint_metric:String(s.checkpoint?.metric||"").slice(0,300),
+            checkpoint_threshold:String(s.checkpoint?.threshold||"").slice(0,300),
+            checkpoint_date:/^20\d{2}-\d{2}-\d{2}$/.test(String(s.checkpoint?.date||""))?scClampIso(String(s.checkpoint.date),ss,rootDue):null
+          });
         });
       });
+      try{(window as any).__vizzyLastScalingInterview=na;}catch{}
       onDone(root, kids, files);
     } catch (e: any) {
       setErr("Не удалось построить структуру: " + (e.message || "ошибка") + ". Попробуй ещё раз.");
@@ -24301,6 +24722,56 @@ function ScInterview({ onClose, onDone, btn, inp, card }: any) {
   </div>;
 }
 
+/* ============ ОБНОВЛЕНИЕ ИНТЕРВЬЮ И ПЕРЕСБОРКА ============ */
+function ScRebuildInterview({root,initial,loading,onClose,onSubmit,btn,inp,card}:any){
+  const[form,setForm]=useState<SCInterviewAnswers>(initial);
+  const fields:{key:keyof SCInterviewAnswers;label:string;rows?:number}[]=[
+    {key:"goal",label:"Конечная измеримая цель"},
+    {key:"deadline",label:"Дедлайн"},
+    {key:"why",label:"Почему цель важна сейчас",rows:2},
+    {key:"now",label:"Текущая ситуация: только факты",rows:3},
+    {key:"limits",label:"Ограничения: время, деньги, люди, компетенции",rows:3},
+    {key:"resources",label:"Доступные ресурсы",rows:3},
+    {key:"kpi",label:"Измеримый KPI результата",rows:2},
+    {key:"people",label:"Ответственные и участники",rows:2},
+    {key:"risks",label:"Риски и критерии их проверки",rows:3},
+  ];
+  const update=(key:keyof SCInterviewAnswers,value:string)=>setForm(prev=>({...prev,[key]:value}));
+  const ready=form.goal.trim()&&form.deadline.trim()&&form.kpi.trim();
+
+  return <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.58)",zIndex:125,display:"flex",alignItems:"center",justifyContent:"center",padding:18}}>
+    <div onClick={(e:any)=>e.stopPropagation()} style={{...card,width:"min(700px,100%)",maxHeight:"90vh",overflowY:"auto",padding:22,animation:"scFade .2s"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:14,marginBottom:6}}>
+        <div>
+          <div style={{fontSize:15,fontWeight:750,color:C.t1}}>Обновить интервью и пересобрать стратегию</div>
+          <div style={{fontSize:11.5,color:C.t2,marginTop:3}}>Текущая цель: {root.title}</div>
+        </div>
+        <button onClick={onClose} disabled={loading} style={{background:"none",border:"none",color:C.t2,fontSize:23,cursor:loading?"default":"pointer"}}>×</button>
+      </div>
+
+      <div style={{fontSize:12.5,color:C.t2,lineHeight:1.55,padding:"10px 12px",background:C.ib,border:"1px solid "+C.bd,borderRadius:10,margin:"14px 0"}}>
+        После подтверждения AI заново построит критический путь. Старые проекты и этапы этой цели будут заменены. Сама корневая цель, документы, история AI-чата и связанные задачи War Room останутся.
+      </div>
+
+      <div style={{display:"grid",gap:11}}>
+        {fields.map(f=><div key={f.key}>
+          <div style={{fontSize:11,color:C.t2,marginBottom:4}}>{f.label}</div>
+          {f.rows
+            ?<textarea value={form[f.key]} onChange={e=>update(f.key,e.target.value)} rows={f.rows} style={{...inp,resize:"vertical"}}/>
+            :<input value={form[f.key]} onChange={e=>update(f.key,e.target.value)} style={inp}/>}
+        </div>)}
+      </div>
+
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:18}}>
+        <button style={btn(false)} disabled={loading} onClick={onClose}>Отмена</button>
+        <button style={btn(true)} disabled={!ready||loading} onClick={()=>onSubmit(form)}>
+          {loading?<span style={{display:"inline-flex",alignItems:"center",gap:8}}><span className="sc-spin"/>Пересобираю…</span>:"Пересобрать стратегию"}
+        </button>
+      </div>
+    </div>
+  </div>;
+}
+
 /* ============ ЧАТ ПО СТРАТЕГИИ ============ */
 function ScStrategyChat({node,context,storageKey,onClose,btn,inp,card}:any){
   const[messages,setMessages]=useState<SCChatMsg[]>(()=>{
@@ -24322,7 +24793,7 @@ function ScStrategyChat({node,context,storageKey,onClose,btn,inp,card}:any){
     try{
       const history=next.slice(-18).map(m=>({role:m.role,content:m.content}));
       const answer=await scAsk([
-        {role:"system",content:SC_STRATEGIST_SYSTEM_PROMPT+`\n\nТы работаешь внутри конкретной стратегической цели Vizzy. Ниже дан её полный доступный контекст. Не выдумывай данные, которых нет. Если данных недостаточно — укажи, каких именно не хватает. В конце каждого содержательного ответа дай одно конкретное действие, которое пользователь должен сделать сейчас.\n\n${context}`},
+        {role:"system",content:SC_STRATEGIST_SYSTEM_PROMPT+"\n\n"+SC_CRITICAL_PATH_PROMPT+`\n\nТы работаешь внутри конкретной стратегической цели Vizzy. Ниже дан её полный доступный контекст. Не выдумывай данные, которых нет. Если данных недостаточно — укажи, каких именно не хватает. В конце каждого содержательного ответа дай одно конкретное действие, которое пользователь должен сделать сейчас.\n\n${context}`},
         ...history,
       ],1800,0.45);
       setMessages(prev=>[...prev,{role:"assistant",content:answer,at:new Date().toISOString()}]);
