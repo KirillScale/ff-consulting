@@ -873,7 +873,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v6.7"; // v117 robust AI JSON recovery for strategy rebuilds
+  const APP_VERSION="v6.8"; // v118 durable Scaling Gantt persistence across tab and page switches
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker","defects"];
 
   // Clear stale localStorage on version change
@@ -23613,6 +23613,17 @@ const scResolveDeadline=(raw:string,baseIso:string)=>{
 };
 const scNum=(n:number)=>Math.round(n).toLocaleString("ru-RU");
 const scUid=()=>`sc_${typeof crypto!=="undefined"&&crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2)};`.replace(";","");
+const scStrategyCacheKey=(userId:string)=>`vizzy_scaling_nodes_${userId}`;
+const scReadCachedNodes=(userId:string):SCNode[]=>{
+  try{
+    const value=localStorage.getItem(scStrategyCacheKey(userId));
+    const parsed=value?JSON.parse(value):[];
+    return Array.isArray(parsed)?parsed:[];
+  }catch{return[];}
+};
+const scWriteCachedNodes=(userId:string,value:SCNode[])=>{
+  try{localStorage.setItem(scStrategyCacheKey(userId),JSON.stringify(value));}catch{}
+};
 
 /* ============ AI (DeepSeek) ============ */
 function scStripMd(s:string){return String(s).replace(/^```[a-z]*\n?/i,"").replace(/```$/i,"").trim();}
@@ -23739,6 +23750,9 @@ function ScalingModule({ userId }: { userId: string }) {
 
   useEffect(()=>{
     let alive=true;
+    const cached=scReadCachedNodes(userId);
+    if(cached.length)setNodes(cached);
+
     (async()=>{
       setLoadingStrategy(true);
       try{
@@ -23751,24 +23765,51 @@ function ScalingModule({ userId }: { userId: string }) {
         if(dr.error)throw dr.error;
         if(cr.error)throw cr.error;
         if(!alive)return;
-        setNodes((nr.data||[]) as SCNode[]);
+
+        const dbNodes=(nr.data||[]) as SCNode[];
+        const localNodes=scReadCachedNodes(userId);
+        const dbIds=new Set(dbNodes.map(n=>n.id));
+        const localById=new Map(localNodes.map(n=>[n.id,n]));
+        const mergedDb=dbNodes.map(n=>({...localById.get(n.id),...n}));
+        const localOnly=localNodes.filter(n=>!dbIds.has(n.id));
+        const merged=[...mergedDb,...localOnly];
+
+        if(merged.length){
+          setNodes(merged);
+          scWriteCachedNodes(userId,merged);
+        }else{
+          setNodes([]);
+          scWriteCachedNodes(userId,[]);
+        }
         setDocs((dr.data||[]) as SCDoc[]);
         setComments(((cr.data||[]) as any[]).map(c=>({...c,at:c.created_at||scToday()})));
         setDbAvailable(true);
       }catch(e){
         console.error("Scaling schema unavailable",e);
         if(alive){
-          setNodes(scDemo());
+          const local=scReadCachedNodes(userId);
+          setNodes(local.length?local:scDemo());
           setDbAvailable(false);
         }
       }finally{
         if(alive)setLoadingStrategy(false);
       }
     })();
+
     return()=>{alive=false;Object.values(persistTimers.current).forEach(clearTimeout);};
   },[userId]);
 
+  useEffect(()=>{
+    if(!loadingStrategy)scWriteCachedNodes(userId,nodes);
+  },[userId,nodes,loadingStrategy]);
+
   const persist=async(n:SCNode)=>{
+    try{
+      const cached=scReadCachedNodes(userId);
+      const exists=cached.some(x=>x.id===n.id);
+      const next=exists?cached.map(x=>x.id===n.id?n:x):[...cached,n];
+      scWriteCachedNodes(userId,next);
+    }catch{}
     if(!dbAvailable)return;
     const{error}=await supabase.from("strategy_nodes").upsert({...n,user_id:userId},{onConflict:"id"});
     if(error)throw error;
@@ -23787,6 +23828,7 @@ function ScalingModule({ userId }: { userId: string }) {
   // ── операции над деревом ──
   const patch=(id:string,up:Partial<SCNode>,save=true)=>setNodes((prev:SCNode[])=>{
     const next=prev.map(n=>n.id===id?{...n,...up}:n);
+    scWriteCachedNodes(userId,next);
     const target=next.find(n=>n.id===id);
     if(target&&save)schedulePersist(target);
     return next;
@@ -23795,12 +23837,14 @@ function ScalingModule({ userId }: { userId: string }) {
     const sib = nodes.filter((n: SCNode) => n.parent_id === parent);
     const t = scToday();
     const node: SCNode = { id: scUid(), parent_id: parent, title, status: "planned", color: parent ? (nodes.find((x: SCNode) => x.id === parent)?.color || SC_COLORS[0]) : SC_COLORS[sib.length % SC_COLORS.length], priority: "medium", start_date: t, due_date: scAddDays(t, 21), sort_order: sib.length, depends_on: [], manual_progress: null };
-    setNodes((prev:SCNode[])=>[...prev,node]);persist(node).catch(()=>flash("Не удалось сохранить новый элемент"));setSel(node.id);return node.id;
+    setNodes((prev:SCNode[])=>{const next=[...prev,node];scWriteCachedNodes(userId,next);return next;});
+    persist(node).catch(()=>flash("Элемент сохранён локально; синхронизация с базой временно недоступна"));
+    setSel(node.id);return node.id;
   };
   const delNode = (id: string) => {
     const ids = new Set<string>(); const collect = (x: string) => { ids.add(x); nodes.filter((n: SCNode) => n.parent_id === x).forEach((c: SCNode) => collect(c.id)); };
     collect(id);
-    setNodes((prev: SCNode[]) => prev.filter((n: SCNode) => !ids.has(n.id)));
+    setNodes((prev:SCNode[])=>{const next=prev.filter((n:SCNode)=>!ids.has(n.id));scWriteCachedNodes(userId,next);return next;});
     ids.forEach(persistDel); if (ids.has(sel!)) setSel(null);
   };
 
@@ -24124,11 +24168,11 @@ ${taskLines||"Нет задач"}`;
       const collect=(id:string)=>{nodes.filter(n=>n.parent_id===id).forEach(n=>{oldIds.add(n.id);collect(n.id);});};
       collect(root.id);
 
-      setNodes(prev=>[
-        ...prev.filter(n=>n.id!==root.id&&!oldIds.has(n.id)),
-        updatedRoot,
-        ...generated
-      ]);
+      setNodes(prev=>{
+        const next=[...prev.filter(n=>n.id!==root.id&&!oldIds.has(n.id)),updatedRoot,...generated];
+        scWriteCachedNodes(userId,next);
+        return next;
+      });
 
       if(dbAvailable){
         for(const id of oldIds)await persistDel(id);
@@ -24183,7 +24227,8 @@ ${taskLines||"Нет задач"}`;
         ...item,
         depends_on:(item.depends_on||[]).map(dep=>dep==="__PREVIOUS__"&&index>0?created[index-1].id:dep).filter(dep=>dep!=="__PREVIOUS__")
       }));
-      setNodes((prev: SCNode[]) => [...prev, ...linkedCreated]); linkedCreated.forEach(persist);
+      setNodes((prev:SCNode[])=>{const next=[...prev,...linkedCreated];scWriteCachedNodes(userId,next);return next;});
+      linkedCreated.forEach(persist);
       setCollapsed((prev: Set<string>) => { const s = new Set(prev); s.delete(n.id); return s; });
       flash(`AI создал ${linkedCreated.length} элементов критического пути для «${n.title}»`);
     } catch (e: any) { flash("AI: " + (e.message || "ошибка декомпозиции")); }
@@ -24288,6 +24333,11 @@ ${taskLines||"Нет задач"}`;
       </div>
       <div style={{ flex: 1 }} />
       <button style={btn(true)} onClick={() => setInterview(true)}>+ Новая цель (AI)</button>
+      <button style={btn(false)} onClick={()=>{
+        const saved=scReadCachedNodes(userId);
+        if(saved.length){setNodes(saved);flash("Сохранённая диаграмма восстановлена");}
+        else flash("Сохранённой диаграммы пока нет");
+      }}>Восстановить</button>
       <button style={btn(false)} onClick={runAudit}>Стратегический аудит</button>
     </div>
 
@@ -24317,7 +24367,10 @@ ${taskLines||"Нет задач"}`;
       {/* ===== ГАНТ ===== */}
       <div style={{ ...card, padding: 12, overflow: "hidden" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
-          <span style={{ fontSize: 12.5, fontWeight: 700, color: C.t1 }}>Диаграмма Ганта</span>
+          <div>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: C.t1 }}>Диаграмма Ганта</span>
+            <div style={{fontSize:10.5,color:"#2E7D53",marginTop:2}}>Автосохранение включено</div>
+          </div>
           <div style={{ display: "inline-flex", gap: 4 }}>
             {(["month", "quarter", "year"] as const).map(s => <button key={s} style={chip(scale === s)} onClick={() => setScale(s)}>{s === "month" ? "Месяц" : s === "quarter" ? "Квартал" : "Год"}</button>)}
           </div>
@@ -24560,7 +24613,7 @@ ${taskLines||"Нет задач"}`;
 
     {/* ===== МОДАЛКА: AI-ИНТЕРВЬЮ ===== */}
     {interview && <ScInterview onClose={() => setInterview(false)} onDone={(root: SCNode, kids: SCNode[], files:SCContextFile[]) => {
-      setNodes((prev: SCNode[]) => [...prev, root, ...kids]);
+      setNodes((prev:SCNode[])=>{const next=[...prev,root,...kids];scWriteCachedNodes(userId,next);return next;});
       persist(root).catch(()=>{});
       kids.forEach(k=>persist(k).catch(()=>{}));
       saveInitialContextFiles(root.id,files);
