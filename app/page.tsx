@@ -873,7 +873,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v6.2"; // v112 audited War Room Scaling integration
+  const APP_VERSION="v6.3"; // v113 strategy context files, AI interview and full-context strategy chat
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker","defects"];
 
   // Clear stale localStorage on version change
@@ -23326,6 +23326,151 @@ interface SCNode {
 }
 interface SCDoc { id:string;node_id:string;file_name:string;file_type:string;file_url?:string|null;created_at?:string; }
 interface SCComment { id:string;node_id:string;text:string;at:string;created_at?:string; }
+interface SCContextFile {
+  id:string;
+  name:string;
+  type:string;
+  size:number;
+  text:string;
+  file?:File;
+  extraction_note?:string;
+}
+interface SCChatMsg { role:"user"|"assistant";content:string;at:string; }
+
+/* ============ ОСНОВНОЙ ПРОМПТ СТРАТЕГИЧЕСКОГО AI ============ */
+const SC_STRATEGIST_SYSTEM_PROMPT=`Ты — стратегический консультант пользователя. Твоя единственная задача —
+не дать ему проиграть себе самому.
+
+КОНТЕКСТ
+Пользователь диагностирует проблемы точно и быстро. Его слабость не в анализе —
+в разрыве между диагнозом и действием. Он может использовать тревожные гипотезы
+("а вдруг это умрёт/перестанет работать") как псевдоаналитический механизм
+отсрочки. Он завершает задачи только под давлением собственной воли, без
+внешней структуры это не масштабируется.
+
+ТВОЙ РЕЖИМ
+1. Не валидатор. Не соглашайся по умолчанию. Разделяй факты, интерпретации,
+   предположения. Называй слабые предпосылки прямо.
+2. Не терапевт. Никакой психологизации без запроса, никакого смягчения тона
+   заботой. Аналитический регистр — постоянный режим по умолчанию.
+3. Для решений с высокой ценой ошибки — явно называй цену ошибки,
+   не нейтральный список вариантов.
+4. Формат ответа на серьёзные вопросы: факты → сомнения → альтернативные
+   объяснения → его слабые места → лучшее решение → почему →
+   недооценённые риски → что делать прямо сейчас.
+
+ЧТО ТЫ ОТСЛЕЖИВАЕШЬ ПОСТОЯННО
+— Момент, когда гипотетическая угроза будущему используется вместо действия
+  в настоящем. Ловишь это конкретно: "у тебя нет данных, есть ощущение —
+  это не одно и то же".
+— Момент переключения на новую задачу до завершения текущей. Называешь
+  это паттерном по имени каждый раз, не даёшь пройти незамеченным.
+— Разрыв между "я вижу проблему" и "я её решил". Если один и тот же диагноз
+  формулируется повторно без изменения поведения — говоришь об этом прямо,
+  это не прогресс, это стагнация с самоосознанием.
+— Задачи без внешней цены за срыв. Если дедлайн self-imposed и обратим —
+  указываешь на это и предлагаешь, как сделать нарушение дороже
+  (публичное обязательство, финансовая ставка, внешний партнёр-контролёр).
+— Крупные нерасчленённые цели. Если задача сформулирована как результат,
+  а не как первое физическое действие — дробишь её сам, не жди запроса.
+
+ЧЕГО ТЫ НЕ ДЕЛАЕШЬ
+— Не хвалишь прогресс, которого не было, чтобы поддержать настроение.
+— Не принимаешь тревожную гипотезу за стратегический риск без критериев
+  проверки (срок, метрика, источник данных).
+— Не даёшь новой идее приоритет над незакрытым обязательством, даже если
+  она приходит с энтузиазмом — сначала спрашиваешь, что из текущего
+  фундамента это откладывает.
+— Не смягчаешь формулировку, если точная формулировка неприятна.
+
+ГРАНИЦА
+Приоритеты: бизнес → физическое состояние и саморазвитие → отношения.
+Ты защищаешь этот порядок, но не игнорируешь второй и третий пункт —
+если бизнес систематически съедает физическое состояние без остатка,
+называешь это как риск для первого пункта тоже, потому что истощённый
+исполнитель хуже исполняет бизнес-задачи.
+
+ЕДИНСТВЕННОЕ ИСКЛЮЧЕНИЕ
+Если пользователь сам явно описывает кризис (не гипотезу о будущем бизнеса,
+а собственное острое состояние) — прямая забота уместна. Не превентивно,
+не как дежурная фраза, только по факту явного описания.`;
+
+const scLoadScript=(src:string,ready:()=>boolean)=>new Promise<void>((resolve,reject)=>{
+  if(ready()){resolve();return;}
+  const old=[...document.scripts].find(s=>s.src===src) as HTMLScriptElement|undefined;
+  if(old){
+    old.addEventListener("load",()=>resolve(),{once:true});
+    old.addEventListener("error",()=>reject(new Error("Не удалось загрузить библиотеку обработки файла.")),{once:true});
+    return;
+  }
+  const script=document.createElement("script");
+  script.src=src;script.async=true;
+  script.onload=()=>resolve();
+  script.onerror=()=>reject(new Error("Не удалось загрузить библиотеку обработки файла."));
+  document.head.appendChild(script);
+});
+
+const scCleanExtractedText=(value:string,max=50000)=>String(value||"")
+  .replace(/\u0000/g," ")
+  .replace(/[ \t]+/g," ")
+  .replace(/\n{3,}/g,"\n\n")
+  .trim()
+  .slice(0,max);
+
+async function scExtractFileText(file:File):Promise<{text:string;note:string}>{
+  const ext=(file.name.split(".").pop()||"").toLowerCase();
+  const plain=["txt","md","csv","json","html","xml"];
+  if(plain.includes(ext)){
+    const raw=await file.text();
+    return{text:scCleanExtractedText(raw),note:"Текст извлечён полностью или до лимита контекста."};
+  }
+  if(ext==="pdf"){
+    await scLoadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",()=>Boolean((window as any).pdfjsLib));
+    const pdfjs=(window as any).pdfjsLib;
+    pdfjs.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    const pdf=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
+    const chunks:string[]=[];
+    const pages=Math.min(pdf.numPages,80);
+    for(let i=1;i<=pages;i++){
+      const page=await pdf.getPage(i);
+      const content=await page.getTextContent();
+      chunks.push(content.items.map((it:any)=>it.str||"").join(" "));
+      if(chunks.join("\n").length>50000)break;
+    }
+    return{text:scCleanExtractedText(chunks.join("\n\n")),note:`Извлечён текст из ${Math.min(pages,pdf.numPages)} стр.`};
+  }
+  if(ext==="docx"){
+    await scLoadScript("https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js",()=>Boolean((window as any).mammoth));
+    const result=await (window as any).mammoth.extractRawText({arrayBuffer:await file.arrayBuffer()});
+    return{text:scCleanExtractedText(result.value),note:"Текст DOCX извлечён."};
+  }
+  if(ext==="xlsx"||ext==="xls"){
+    await scLoadScript("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",()=>Boolean((window as any).XLSX));
+    const XLSX=(window as any).XLSX;
+    const wb=XLSX.read(await file.arrayBuffer(),{type:"array"});
+    const parts=wb.SheetNames.slice(0,12).map((name:string)=>{
+      const csv=XLSX.utils.sheet_to_csv(wb.Sheets[name],{blankrows:false});
+      return`Лист: ${name}\n${csv}`;
+    });
+    return{text:scCleanExtractedText(parts.join("\n\n")),note:`Извлечены данные из ${Math.min(wb.SheetNames.length,12)} листов.`};
+  }
+  if(ext==="pptx"){
+    await scLoadScript("https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js",()=>Boolean((window as any).JSZip));
+    const zip=await (window as any).JSZip.loadAsync(await file.arrayBuffer());
+    const names=Object.keys(zip.files).filter((n:string)=>/^ppt\/slides\/slide\d+\.xml$/.test(n))
+      .sort((a:string,b:string)=>Number(a.match(/\d+/)?.[0]||0)-Number(b.match(/\d+/)?.[0]||0));
+    const slides:string[]=[];
+    for(const name of names.slice(0,80)){
+      const xml=await zip.files[name].async("string");
+      const words=[...xml.matchAll(/<a:t>([\s\S]*?)<\/a:t>/g)].map((m:any)=>m[1]
+        .replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">"));
+      slides.push(words.join(" "));
+      if(slides.join("\n").length>50000)break;
+    }
+    return{text:scCleanExtractedText(slides.join("\n\n")),note:`Извлечён текст из ${Math.min(names.length,80)} слайдов.`};
+  }
+  throw new Error("Этот формат нельзя прочитать как контекст. Используй PDF, DOCX, XLSX, PPTX, TXT, MD, CSV или JSON.");
+}
 
 /* ============ СПРАВОЧНИКИ ============ */
 const SC_STATUS: Record<SCStatus, string> = { planned: "Запланировано", active: "В работе", done: "Выполнено", risk: "Под угрозой" };
@@ -23484,6 +23629,7 @@ function ScalingModule({ userId }: { userId: string }) {
   const [scale, setScale] = useState<"month" | "quarter" | "year">("quarter");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [interview, setInterview] = useState(false);
+  const[chatNode,setChatNode]=useState<SCNode|null>(null);
   const [audit, setAudit] = useState<{ open: boolean; loading: boolean; text: string }>({ open: false, loading: false, text: "" });
   const [wrModal, setWrModal] = useState<SCNode | null>(null);
   const [decomposing, setDecomposing] = useState<string | null>(null);
@@ -23564,13 +23710,98 @@ function ScalingModule({ userId }: { userId: string }) {
 
   const selNode: SCNode | undefined = nodes.find((n: SCNode) => n.id === sel);
 
+  const rootOf=(id:string)=>{
+    let current=nodes.find(n=>n.id===id);
+    const seen=new Set<string>();
+    while(current?.parent_id&&!seen.has(current.id)){
+      seen.add(current.id);
+      current=nodes.find(n=>n.id===current!.parent_id);
+    }
+    return current||nodes.find(n=>n.id===id);
+  };
+  const subtreeOf=(rootId:string)=>{
+    const ids=new Set<string>();
+    const walk=(id:string)=>{if(ids.has(id))return;ids.add(id);nodes.filter(n=>n.parent_id===id).forEach(n=>walk(n.id));};
+    walk(rootId);
+    return nodes.filter(n=>ids.has(n.id));
+  };
+  const contextStorageKey=(rootId:string)=>`vizzy_scaling_context_${userId}_${rootId}`;
+  const readStoredContext=(rootId:string):SCContextFile[]=>{
+    try{return JSON.parse(localStorage.getItem(contextStorageKey(rootId))||"[]");}catch{return[];}
+  };
+  const saveInitialContextFiles=async(rootId:string,files:SCContextFile[])=>{
+    if(!files.length)return;
+    const serializable=files.map(({file,...rest})=>rest);
+    try{localStorage.setItem(contextStorageKey(rootId),JSON.stringify(serializable));}catch{}
+    if(!dbAvailable)return;
+    const created:SCDoc[]=[];
+    for(const item of files){
+      try{
+        let fileUrl:string|null=null;
+        if(item.file){
+          const safe=item.name.replace(/[^\w.\-а-яё]+/gi,"_");
+          const path=`${userId}/${rootId}/${Date.now()}_${safe}`;
+          const upload=await supabase.storage.from("strategy-files").upload(path,item.file,{upsert:false});
+          if(upload.error)throw upload.error;
+          fileUrl=path;
+        }
+        const row:any={
+          id:item.id,user_id:userId,node_id:rootId,file_name:item.name,file_type:item.type,
+          file_url:fileUrl,context_text:item.text||"",extraction_note:item.extraction_note||"",
+        };
+        let ins=await supabase.from("strategy_docs").insert(row).select("*").single();
+        if(ins.error&&String(ins.error.message||"").includes("context_text")){
+          const fallback={id:item.id,user_id:userId,node_id:rootId,file_name:item.name,file_type:item.type,file_url:fileUrl};
+          ins=await supabase.from("strategy_docs").insert(fallback).select("*").single();
+        }
+        if(ins.error)throw ins.error;
+        created.push(ins.data as SCDoc);
+      }catch(e){console.error("Initial strategy file save failed",e);}
+    }
+    if(created.length)setDocs(prev=>[...prev,...created]);
+  };
+  const strategyContext=(node:SCNode)=>{
+    const root=rootOf(node.id)||node;
+    const branch=subtreeOf(root.id);
+    const branchIds=new Set(branch.map(n=>n.id));
+    const contextFiles=readStoredContext(root.id);
+    const dbDocs=docs.filter(d=>branchIds.has(d.node_id));
+    const branchComments=comments.filter(c=>branchIds.has(c.node_id));
+    const tasks=plannerTasks.data.filter((t:any)=>branchIds.has(t.strategy_node_id));
+    const nodeLines=branch.map(n=>{
+      const parent=nodes.find(x=>x.id===n.parent_id)?.title||"корневая цель";
+      return`- ${n.title}; родитель: ${parent}; статус: ${SC_STATUS[n.status]}; приоритет: ${SC_PRIORITY[n.priority]}; сроки: ${scFmt(n.start_date)}–${scFmt(n.due_date)}; прогресс: ${progressOf(n.id)}%; KPI: ${n.kpi||"не указан"}; описание: ${n.description||"нет"}`;
+    }).join("\n");
+    const fileLines=contextFiles.map(f=>`ФАЙЛ: ${f.name}\n${f.text||f.extraction_note||"Текст не извлечён"}`).join("\n\n");
+    const dbFileLines=dbDocs.map(d=>`Документ стратегии: ${d.file_name} (${d.file_type})`).join("\n");
+    const commentLines=branchComments.map(c=>`Комментарий к ${nodes.find(n=>n.id===c.node_id)?.title||"элементу"}: ${c.text}`).join("\n");
+    const taskLines=tasks.map((t:any)=>`Задача War Room: ${t.title}; дата ${t.due_date||"нет"} ${t.due_time||""}; выполнено: ${Boolean(t.done||t.completion_status==="done")}`).join("\n");
+    return`КОРНЕВАЯ ЦЕЛЬ: ${root.title}
+ТЕКУЩИЙ ВЫБРАННЫЙ ЭЛЕМЕНТ: ${node.title}
+
+СТРУКТУРА И ПРОГРЕСС:
+${nodeLines||"Нет элементов"}
+
+ИСХОДНЫЕ ФАЙЛЫ ИЗ AI-ИНТЕРВЬЮ:
+${fileLines||"Нет извлечённого контекста"}
+
+ПРИКРЕПЛЁННЫЕ ДОКУМЕНТЫ:
+${dbFileLines||"Нет документов"}
+
+КОММЕНТАРИИ:
+${commentLines||"Нет комментариев"}
+
+СВЯЗАННЫЕ ЗАДАЧИ WAR ROOM:
+${taskLines||"Нет задач"}`;
+  };
+
   // ── AI: декомпозиция ──
   const decompose = async (n: SCNode) => {
     setDecomposing(n.id);
     try {
       const arr = await scAskJson(
-        "Ты стратег. Разбей элемент стратегии на 3–6 логичных подэлементов следующего уровня. Формат: массив объектов {title}.",
-        `Элемент: «${n.title}». Контекст (родитель): ${nodes.find((x: SCNode) => x.id === n.parent_id)?.title || "верхний уровень"}. Верни массив.`, 700);
+        SC_STRATEGIST_SYSTEM_PROMPT+"\n\nРазбей выбранный элемент стратегии на 3–6 конкретных подэлементов следующего уровня. Не создавай абстрактные результаты: формулируй управляемые направления, этапы или физические действия. Формат: массив объектов {title}.",
+        `${strategyContext(n)}\n\nНужно декомпозировать элемент: «${n.title}». Верни только массив.`, 900);
       const items: any[] = Array.isArray(arr) ? arr : arr.items || [];
       const t = scToday();
       const created: SCNode[] = items.slice(0, 6).map((it: any, i: number) => ({ id: scUid(), parent_id: n.id, title: String(it.title || it).slice(0, 80), status: "planned", color: n.color, priority: "medium", start_date: scAddDays(t, i * 10), due_date: scAddDays(t, i * 10 + 18), sort_order: i, depends_on: [], manual_progress: null }));
@@ -23587,7 +23818,7 @@ function ScalingModule({ userId }: { userId: string }) {
     try {
       const ctx = nodes.map((n: SCNode) => `- ${n.title} [${SC_STATUS[n.status]}, прогресс ${progressOf(n.id)}%, срок ${scFmt(n.due_date)}${n.due_date && n.due_date < scToday() && progressOf(n.id) < 100 ? ", ПРОСРОЧЕНО" : ""}]`).join("\n");
       const text = await scAsk([
-        { role: "system", content: "Ты стратегический директор. Дай сжатый аудит без воды: какие проекты тормозят, что под угрозой, что перенести, чему уделить внимание, прогноз достижения. Пиши по-русски, структурно, без markdown-заголовков и эмодзи." },
+        { role: "system", content: SC_STRATEGIST_SYSTEM_PROMPT+"\n\nПроведи сжатый стратегический аудит без воды. Обязательно отдели факты от предположений, назови слабые предпосылки, цену ошибки, незавершённые обязательства и первое действие на ближайшие 24 часа. Пиши по-русски, структурно, без markdown-заголовков и эмодзи." },
         { role: "user", content: `Стратегия:\n${ctx}\n\nОбщий прогресс ${A.overall}%, просрочено этапов ${A.overdue}, под угрозой ${A.risks}. Дай аудит и рекомендации.` },
       ], 1400, 0.5);
       setAudit({ open: true, loading: false, text });
@@ -23864,7 +24095,10 @@ function ScalingModule({ userId }: { userId: string }) {
           }}/>
         </div>
 
-        <button style={{ ...btn(true), width: "100%", justifyContent: "center", background: selNode.color, border: "none" }} onClick={() => setWrModal(selNode)}>Добавить в War Room</button>
+        <div style={{display:"grid",gridTemplateColumns:"1fr",gap:8}}>
+          <button style={{ ...btn(false), width: "100%", justifyContent: "center" }} onClick={() => setChatNode(selNode)}>Обсудить стратегию с AI</button>
+          <button style={{ ...btn(true), width: "100%", justifyContent: "center", background: selNode.color, border: "none" }} onClick={() => setWrModal(selNode)}>Добавить в War Room</button>
+        </div>
       </div> : <div style={{ ...card, padding: 20, color: C.t2, fontSize: 12.5 }}>Выбери элемент дерева, чтобы редактировать свойства</div>}
 
     </div> : (
@@ -23893,9 +24127,25 @@ function ScalingModule({ userId }: { userId: string }) {
     )}
 
     {/* ===== МОДАЛКА: AI-ИНТЕРВЬЮ ===== */}
-    {interview && <ScInterview onClose={() => setInterview(false)} onDone={(root: SCNode, kids: SCNode[]) => {
-      setNodes((prev: SCNode[]) => [...prev, root, ...kids]); persist(root); kids.forEach(persist); setSel(root.id); setInterview(false); flash("Стратегия создана");
+    {interview && <ScInterview onClose={() => setInterview(false)} onDone={(root: SCNode, kids: SCNode[], files:SCContextFile[]) => {
+      setNodes((prev: SCNode[]) => [...prev, root, ...kids]);
+      persist(root).catch(()=>{});
+      kids.forEach(k=>persist(k).catch(()=>{}));
+      saveInitialContextFiles(root.id,files);
+      setSel(root.id);
+      setInterview(false);
+      flash(files.length?`Стратегия создана. Контекстных файлов: ${files.length}`:"Стратегия создана");
     }} btn={btn} inp={inp} card={card} />}
+
+    {chatNode&&<ScStrategyChat
+      node={chatNode}
+      context={strategyContext(chatNode)}
+      storageKey={`vizzy_scaling_chat_${userId}_${rootOf(chatNode.id)?.id||chatNode.id}`}
+      onClose={()=>setChatNode(null)}
+      btn={btn}
+      inp={inp}
+      card={card}
+    />}
 
     {/* ===== МОДАЛКА: ДОБАВИТЬ В WAR ROOM ===== */}
     {wrModal && <ScWarRoomModal node={wrModal} onClose={() => setWrModal(null)} onSubmit={(f: any) => addToWarRoom(wrModal, f)} btn={btn} inp={inp} card={card} />}
@@ -23920,15 +24170,19 @@ function ScalingModule({ userId }: { userId: string }) {
 function ScInterview({ onClose, onDone, btn, inp, card }: any) {
   const QUESTIONS = [
     { k: "goal", q: "Какую большую цель нужно достичь?" },
-    { k: "deadline", q: "К какому сроку? (например, 6 месяцев / до 31.12)" },
+    { k: "deadline", q: "К какому сроку? Назови конкретную дату или период." },
     { k: "why", q: "Почему эта цель важна именно сейчас?" },
-    { k: "now", q: "Где ты сейчас по этой цели? Текущая ситуация." },
-    { k: "limits", q: "Какие есть ограничения (время, деньги, люди)?" },
+    { k: "now", q: "Где ты сейчас по этой цели? Опиши текущую ситуацию фактами." },
+    { k: "limits", q: "Какие есть реальные ограничения: время, деньги, люди, компетенции?" },
     { k: "resources", q: "Какие ресурсы уже есть в наличии?" },
-    { k: "kpi", q: "Как поймёшь, что цель достигнута? Ключевой KPI." },
-    { k: "people", q: "Кто участвует в достижении?" },
-    { k: "risks", q: "Что может помешать? Основные риски." },
+    { k: "kpi", q: "Как поймёшь, что цель достигнута? Назови измеримый KPI." },
+    { k: "people", q: "Кто участвует и кто отвечает за результат?" },
+    { k: "risks", q: "Что может помешать? Для каждого риска назови критерий проверки." },
   ];
+  const[phase,setPhase]=useState<"files"|"questions">("files");
+  const[files,setFiles]=useState<SCContextFile[]>([]);
+  const[extracting,setExtracting]=useState(false);
+  const[dragging,setDragging]=useState(false);
   const [step, setStep] = useState(0);
   const [ans, setAns] = useState<Record<string, string>>({});
   const [val, setVal] = useState("");
@@ -23936,46 +24190,169 @@ function ScInterview({ onClose, onDone, btn, inp, card }: any) {
   const [err, setErr] = useState("");
   const last = step === QUESTIONS.length - 1;
 
+  const addFiles=async(list:FileList|File[])=>{
+    const incoming=Array.from(list).slice(0,Math.max(0,10-files.length));
+    if(!incoming.length)return;
+    setExtracting(true);setErr("");
+    const next:SCContextFile[]=[];
+    for(const file of incoming){
+      if(file.size>25*1024*1024){
+        next.push({id:scUid(),name:file.name,type:file.name.split(".").pop()||"",size:file.size,text:"",file,extraction_note:"Файл больше 25 МБ и не был прочитан."});
+        continue;
+      }
+      try{
+        const extracted=await scExtractFileText(file);
+        next.push({id:scUid(),name:file.name,type:file.name.split(".").pop()||"",size:file.size,text:extracted.text,file,extraction_note:extracted.note});
+      }catch(e:any){
+        next.push({id:scUid(),name:file.name,type:file.name.split(".").pop()||"",size:file.size,text:"",file,extraction_note:e.message||"Не удалось извлечь текст."});
+      }
+    }
+    setFiles(prev=>[...prev,...next]);
+    setExtracting(false);
+  };
+
   const next = async () => {
     const na = { ...ans, [QUESTIONS[step].k]: val }; setAns(na); setVal("");
     if (!last) { setStep(step + 1); return; }
-    // построение структуры
     setBuilding(true); setErr("");
     try {
+      const fileContext=files.map(f=>`ФАЙЛ: ${f.name}\n${f.text||f.extraction_note||"Текст не извлечён"}`).join("\n\n");
       const struct = await scAskJson(
-        "Ты стратег. На основе интервью построй структуру стратегии: корневая цель и 3–5 проектов первого уровня, у каждого 2–4 этапа. Формат JSON: {title, projects:[{title, stages:[{title}]}]}.",
-        Object.entries(na).map(([k, v]) => `${k}: ${v}`).join("\n"), 1400);
+        SC_STRATEGIST_SYSTEM_PROMPT+"\n\nНа основе интервью и документов построй стратегию: корневая цель и 3–5 проектов первого уровня, у каждого 2–4 этапа. Этапы должны быть управляемыми и проверяемыми, а не абстрактными результатами. Формат JSON: {title, deadline_days, projects:[{title, stages:[{title}]}]}.",
+        `ОТВЕТЫ ИНТЕРВЬЮ:\n${Object.entries(na).map(([k,v])=>`${k}: ${v}`).join("\n")}\n\nКОНТЕКСТ ИЗ ФАЙЛОВ:\n${fileContext||"Файлы не загружены."}`, 1800);
       const t = scToday();
-      const root: SCNode = { id: scUid(), parent_id: null, title: String(struct.title || na.goal).slice(0, 90), status: "active", color: SC_COLORS[0], priority: "high", start_date: t, due_date: scAddDays(t, 180), sort_order: 0, kpi: na.kpi, description: na.why, depends_on: [], manual_progress: null };
+      const parsedDays=Math.max(30,Math.min(1095,Number(struct.deadline_days)||180));
+      const root: SCNode = { id: scUid(), parent_id: null, title: String(struct.title || na.goal).slice(0, 90), status: "active", color: SC_COLORS[0], priority: "high", start_date: t, due_date: scAddDays(t, parsedDays), sort_order: 0, kpi: na.kpi, description: `${na.why||""}${na.now?`\n\nТекущая ситуация: ${na.now}`:""}`.trim(), depends_on: [], manual_progress: null };
       const kids: SCNode[] = [];
       (struct.projects || []).slice(0, 5).forEach((p: any, pi: number) => {
-        const proj: SCNode = { id: scUid(), parent_id: root.id, title: String(p.title).slice(0, 80), status: "planned", color: SC_COLORS[(pi + 1) % SC_COLORS.length], priority: "medium", start_date: scAddDays(t, pi * 14), due_date: scAddDays(t, pi * 14 + 60), sort_order: pi, depends_on: [], manual_progress: null };
+        const projStart=Math.round((parsedDays/Math.max(1,(struct.projects||[]).length))*pi*.45);
+        const projDur=Math.max(30,Math.round(parsedDays*.45));
+        const proj: SCNode = { id: scUid(), parent_id: root.id, title: String(p.title).slice(0, 80), status: "planned", color: SC_COLORS[(pi + 1) % SC_COLORS.length], priority: "medium", start_date: scAddDays(t, projStart), due_date: scAddDays(t, Math.min(parsedDays,projStart+projDur)), sort_order: pi, depends_on: [], manual_progress: null };
         kids.push(proj);
-        (p.stages || []).slice(0, 4).forEach((s: any, si: number) => kids.push({ id: scUid(), parent_id: proj.id, title: String(s.title).slice(0, 80), status: "planned", color: proj.color, priority: "medium", start_date: scAddDays(t, pi * 14 + si * 10), due_date: scAddDays(t, pi * 14 + si * 10 + 16), sort_order: si, depends_on: [], manual_progress: null }));
+        (p.stages || []).slice(0, 4).forEach((s: any, si: number) => {
+          const stageStart=projStart+si*Math.max(7,Math.round(projDur/5));
+          kids.push({ id: scUid(), parent_id: proj.id, title: String(s.title).slice(0, 80), status: "planned", color: proj.color, priority: "medium", start_date: scAddDays(t, stageStart), due_date: scAddDays(t, Math.min(parsedDays,stageStart+Math.max(10,Math.round(projDur/4)))), sort_order: si, depends_on: [], manual_progress: null });
+        });
       });
-      onDone(root, kids);
-    } catch (e: any) { setErr("Не удалось построить структуру: " + (e.message || "ошибка") + ". Попробуй ещё раз."); setBuilding(false); }
+      onDone(root, kids, files);
+    } catch (e: any) {
+      setErr("Не удалось построить структуру: " + (e.message || "ошибка") + ". Попробуй ещё раз.");
+      setBuilding(false);
+    }
   };
 
   return <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 110, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-    <div onClick={(e: any) => e.stopPropagation()} style={{ ...card, padding: 24, width: "min(540px,100%)", animation: "scFade .2s" }}>
+    <div onClick={(e: any) => e.stopPropagation()} style={{ ...card, padding: 24, width: "min(620px,100%)", maxHeight:"88vh",overflowY:"auto",animation: "scFade .2s" }}>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-        <span style={{ fontSize: 15, fontWeight: 700, color: C.t1 }}>AI-интервью · новая цель</span>
+        <span style={{ fontSize: 15, fontWeight: 700, color: C.t1 }}>{phase==="files"?"Контекст перед AI-интервью":"AI-интервью · новая цель"}</span>
         <button onClick={onClose} style={{ background: "none", border: "none", color: C.t2, fontSize: 22, cursor: "pointer" }}>×</button>
       </div>
-      <div style={{ height: 4, borderRadius: 3, background: C.ib, marginBottom: 18, overflow: "hidden" }}><div style={{ height: "100%", width: `${(step + 1) / QUESTIONS.length * 100}%`, background: C.t1, transition: "width .3s" }} /></div>
-      {building ? <div style={{ display: "flex", alignItems: "center", gap: 10, color: C.t2, fontSize: 13, padding: "20px 0" }}><span className="sc-spin" /> AI строит структуру стратегии…</div>
-        : <>
-          <div style={{ fontSize: 11.5, color: C.t2, marginBottom: 6 }}>Вопрос {step + 1} из {QUESTIONS.length}</div>
-          <div style={{ fontSize: 15, fontWeight: 600, color: C.t1, marginBottom: 14 }}>{QUESTIONS[step].q}</div>
-          <textarea autoFocus value={val} onChange={(e: any) => setVal(e.target.value)} rows={3} style={{ ...inp, resize: "vertical", marginBottom: 6 }}
-            onKeyDown={(e: any) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) next(); }} />
-          {err && <div style={{ fontSize: 12, color: "#C0392B", marginBottom: 8 }}>{err}</div>}
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10 }}>
-            <button style={btn(false)} onClick={() => step > 0 && setStep(step - 1)} disabled={step === 0}>Назад</button>
-            <button style={btn(true)} onClick={next} disabled={!val.trim()}>{last ? "Построить стратегию" : "Далее"}</button>
-          </div>
-        </>}
+
+      {phase==="files"?<>
+        <div style={{fontSize:12.5,color:C.t2,lineHeight:1.55,marginBottom:14}}>
+          Сначала загрузи документы, которые описывают тебя, бизнес, текущую ситуацию, ограничения и стратегию. AI прочитает их до первого вопроса и будет использовать в интервью и дальнейшей работе по цели.
+        </div>
+        <div
+          onDragOver={e=>{e.preventDefault();setDragging(true);}}
+          onDragLeave={()=>setDragging(false)}
+          onDrop={e=>{e.preventDefault();setDragging(false);addFiles(e.dataTransfer.files);}}
+          style={{border:`1.5px dashed ${dragging?C.t1:C.bd}`,borderRadius:12,padding:"26px 18px",textAlign:"center",background:dragging?C.ib:"transparent",marginBottom:12}}>
+          <div style={{fontSize:13,fontWeight:650,color:C.t1,marginBottom:5}}>{extracting?"AI подготавливает контекст…":"Перетащи файлы сюда"}</div>
+          <div style={{fontSize:11.5,color:C.t2,marginBottom:12}}>PDF, DOCX, XLSX, PPTX, TXT, MD, CSV, JSON · до 10 файлов · до 25 МБ каждый</div>
+          <label style={{...btn(false),display:"inline-block"}}>
+            Выбрать файлы
+            <input type="file" multiple accept=".pdf,.docx,.xlsx,.xls,.pptx,.txt,.md,.csv,.json" style={{display:"none"}} onChange={e=>{if(e.target.files)addFiles(e.target.files);e.currentTarget.value="";}}/>
+          </label>
+        </div>
+        {files.length>0&&<div style={{display:"grid",gap:7,marginBottom:14}}>
+          {files.map(f=><div key={f.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 10px",border:"1px solid "+C.bd,borderRadius:9}}>
+            <div style={{width:34,height:34,borderRadius:8,background:C.ib,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:800,color:C.t2}}>{f.type.toUpperCase()}</div>
+            <div style={{minWidth:0,flex:1}}>
+              <div style={{fontSize:12.5,color:C.t1,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.name}</div>
+              <div style={{fontSize:10.5,color:f.text? "#2E7D53":"#B8860B"}}>{f.text?f.extraction_note:(f.extraction_note||"Текст не извлечён")}</div>
+            </div>
+            <button onClick={()=>setFiles(prev=>prev.filter(x=>x.id!==f.id))} style={{border:"none",background:"transparent",color:C.t2,cursor:"pointer",fontSize:18}}>×</button>
+          </div>)}
+        </div>}
+        {err&&<div style={{fontSize:12,color:"#C0392B",marginBottom:10}}>{err}</div>}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
+          <button style={btn(false)} onClick={onClose}>Отмена</button>
+          <button style={btn(true)} disabled={extracting} onClick={()=>setPhase("questions")}>{files.length?"Начать интервью с контекстом":"Продолжить без файлов"}</button>
+        </div>
+      </>:<>
+        <div style={{ height: 4, borderRadius: 3, background: C.ib, marginBottom: 18, overflow: "hidden" }}><div style={{ height: "100%", width: `${(step + 1) / QUESTIONS.length * 100}%`, background: C.t1, transition: "width .3s" }} /></div>
+        {building ? <div style={{ display: "flex", alignItems: "center", gap: 10, color: C.t2, fontSize: 13, padding: "20px 0" }}><span className="sc-spin" /> AI сопоставляет документы, интервью и строит стратегию…</div>
+          : <>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+              <div style={{ fontSize: 11.5, color: C.t2 }}>Вопрос {step + 1} из {QUESTIONS.length}</div>
+              <button onClick={()=>setPhase("files")} style={{border:"none",background:"transparent",fontSize:11.5,color:C.t2,cursor:"pointer"}}>Файлы: {files.length}</button>
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: C.t1, marginBottom: 14 }}>{QUESTIONS[step].q}</div>
+            <textarea autoFocus value={val} onChange={(e: any) => setVal(e.target.value)} rows={4} style={{ ...inp, resize: "vertical", marginBottom: 6 }}
+              onKeyDown={(e: any) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) next(); }} />
+            {err && <div style={{ fontSize: 12, color: "#C0392B", marginBottom: 8 }}>{err}</div>}
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10 }}>
+              <button style={btn(false)} onClick={() => step > 0 ? setStep(step - 1) : setPhase("files")}>Назад</button>
+              <button style={btn(true)} onClick={next} disabled={!val.trim()}>{last ? "Построить стратегию" : "Далее"}</button>
+            </div>
+          </>}
+      </>}
+    </div>
+  </div>;
+}
+
+/* ============ ЧАТ ПО СТРАТЕГИИ ============ */
+function ScStrategyChat({node,context,storageKey,onClose,btn,inp,card}:any){
+  const[messages,setMessages]=useState<SCChatMsg[]>(()=>{
+    try{return JSON.parse(localStorage.getItem(storageKey)||"[]");}catch{return[];}
+  });
+  const[value,setValue]=useState("");
+  const[loading,setLoading]=useState(false);
+  const[err,setErr]=useState("");
+  const bottomRef=useRef<HTMLDivElement|null>(null);
+
+  useEffect(()=>{try{localStorage.setItem(storageKey,JSON.stringify(messages.slice(-80)));}catch{}},[messages,storageKey]);
+  useEffect(()=>{bottomRef.current?.scrollIntoView({behavior:"smooth"});},[messages,loading]);
+
+  const send=async()=>{
+    const q=value.trim();if(!q||loading)return;
+    const userMsg:SCChatMsg={role:"user",content:q,at:new Date().toISOString()};
+    const next=[...messages,userMsg];
+    setMessages(next);setValue("");setLoading(true);setErr("");
+    try{
+      const history=next.slice(-18).map(m=>({role:m.role,content:m.content}));
+      const answer=await scAsk([
+        {role:"system",content:SC_STRATEGIST_SYSTEM_PROMPT+`\n\nТы работаешь внутри конкретной стратегической цели Vizzy. Ниже дан её полный доступный контекст. Не выдумывай данные, которых нет. Если данных недостаточно — укажи, каких именно не хватает. В конце каждого содержательного ответа дай одно конкретное действие, которое пользователь должен сделать сейчас.\n\n${context}`},
+        ...history,
+      ],1800,0.45);
+      setMessages(prev=>[...prev,{role:"assistant",content:answer,at:new Date().toISOString()}]);
+    }catch(e:any){setErr(e.message||"Не удалось получить ответ AI.");}
+    finally{setLoading(false);}
+  };
+
+  return <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:120,display:"flex",alignItems:"center",justifyContent:"center",padding:18}}>
+    <div onClick={(e:any)=>e.stopPropagation()} style={{...card,width:"min(760px,100%)",height:"min(760px,90vh)",display:"flex",flexDirection:"column",overflow:"hidden",animation:"scFade .2s"}}>
+      <div style={{padding:"15px 17px",borderBottom:"1px solid "+C.bd,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div>
+          <div style={{fontSize:14,fontWeight:750,color:C.t1}}>Стратегический AI</div>
+          <div style={{fontSize:11.5,color:C.t2,marginTop:2}}>Контекст цели: {node.title}</div>
+        </div>
+        <button onClick={onClose} style={{background:"none",border:"none",color:C.t2,fontSize:23,cursor:"pointer"}}>×</button>
+      </div>
+      <div style={{flex:1,overflowY:"auto",padding:16,display:"flex",flexDirection:"column",gap:10}}>
+        {messages.length===0&&<div style={{border:"1px solid "+C.bd,borderRadius:12,padding:14,color:C.t2,fontSize:12.5,lineHeight:1.55}}>
+          AI видит дерево цели, сроки, KPI, прогресс, комментарии, связанные задачи War Room и текст файлов, загруженных перед интервью. Спроси о решении, рисках, приоритетах или следующем действии.
+        </div>}
+        {messages.map((m,i)=><div key={i} style={{alignSelf:m.role==="user"?"flex-end":"flex-start",maxWidth:"88%",background:m.role==="user"?C.t1:C.ib,color:m.role==="user"?C.w:C.t1,border:m.role==="assistant"?"1px solid "+C.bd:"none",borderRadius:12,padding:"10px 12px",fontSize:13,lineHeight:1.55,whiteSpace:"pre-wrap"}}>{m.content}</div>)}
+        {loading&&<div style={{alignSelf:"flex-start",display:"flex",alignItems:"center",gap:8,color:C.t2,fontSize:12.5}}><span className="sc-spin"/>AI проверяет факты и структуру…</div>}
+        {err&&<div style={{fontSize:12,color:"#C0392B"}}>{err}</div>}
+        <div ref={bottomRef}/>
+      </div>
+      <div style={{padding:12,borderTop:"1px solid "+C.bd,display:"flex",gap:8,alignItems:"flex-end"}}>
+        <textarea value={value} onChange={e=>setValue(e.target.value)} placeholder="Обсуди решение, риск или следующий шаг…" rows={2} style={{...inp,resize:"none",flex:1}}
+          onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}}/>
+        <button style={{...btn(true),height:39}} disabled={!value.trim()||loading} onClick={send}>Отправить</button>
+      </div>
     </div>
   </div>;
 }
