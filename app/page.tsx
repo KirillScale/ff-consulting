@@ -873,7 +873,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v6.8"; // v118 durable Scaling Gantt persistence across tab and page switches
+  const APP_VERSION="v7.1"; // v121 fix nullable treeDrop TypeScript error
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker","defects"];
 
   // Clear stale localStorage on version change
@@ -23332,6 +23332,8 @@ interface SCNode {
   checkpoint_metric?: string;
   checkpoint_threshold?: string;
   checkpoint_date?: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 interface SCDoc { id:string;node_id:string;file_name:string;file_type:string;file_url?:string|null;created_at?:string; }
 interface SCComment { id:string;node_id:string;text:string;at:string;created_at?:string; }
@@ -23566,7 +23568,7 @@ async function scExtractFileText(file:File):Promise<{text:string;note:string}>{
 /* ============ СПРАВОЧНИКИ ============ */
 const SC_STATUS: Record<SCStatus, string> = { planned: "Запланировано", active: "В работе", done: "Выполнено", risk: "Под угрозой" };
 const SC_PRIORITY: Record<SCPriority, string> = { low: "Низкий", medium: "Средний", high: "Высокий" };
-const SC_COLORS = ["#3B6FB0", "#2E7D53", "#B8860B", "#C0392B", "#7A5CC0", "#0E8A8A", "#C05A8A", "#5A6472"];
+const SC_COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#06B6D4", "#EC4899", "#64748B"];
 const SC_DOC_FORMATS = "PDF · DOCX · XLSX · PPTX · PNG · JPG";
 
 /* ============ ДАТЫ ============ */
@@ -23623,6 +23625,21 @@ const scReadCachedNodes=(userId:string):SCNode[]=>{
 };
 const scWriteCachedNodes=(userId:string,value:SCNode[])=>{
   try{localStorage.setItem(scStrategyCacheKey(userId),JSON.stringify(value));}catch{}
+};
+const scOutboxKey=(userId:string)=>`vizzy_scaling_outbox_${userId}`;
+type SCOutboxItem={op:"upsert"|"delete";id:string;node?:SCNode;queued_at:string};
+const scReadOutbox=(userId:string):SCOutboxItem[]=>{
+  try{
+    const parsed=JSON.parse(localStorage.getItem(scOutboxKey(userId))||"[]");
+    return Array.isArray(parsed)?parsed:[];
+  }catch{return[];}
+};
+const scWriteOutbox=(userId:string,items:SCOutboxItem[])=>{
+  try{localStorage.setItem(scOutboxKey(userId),JSON.stringify(items));}catch{}
+};
+const scQueueOutbox=(userId:string,item:SCOutboxItem)=>{
+  const prev=scReadOutbox(userId).filter(x=>x.id!==item.id);
+  scWriteOutbox(userId,[...prev,item]);
 };
 
 /* ============ AI (DeepSeek) ============ */
@@ -23750,14 +23767,14 @@ function ScalingModule({ userId }: { userId: string }) {
 
   useEffect(()=>{
     let alive=true;
-    const cached=scReadCachedNodes(userId);
-    if(cached.length)setNodes(cached);
+    setSyncState("loading");
+    setSyncError("");
 
-    (async()=>{
+    const loadCloud=async()=>{
       setLoadingStrategy(true);
       try{
         const[nr,dr,cr]=await Promise.all([
-          supabase.from("strategy_nodes").select("*").eq("user_id",userId).order("sort_order",{ascending:true}),
+          supabase.from("strategy_nodes").select("*").eq("user_id",userId).order("parent_id",{ascending:true,nullsFirst:true}).order("sort_order",{ascending:true}),
           supabase.from("strategy_docs").select("*").eq("user_id",userId).order("created_at",{ascending:true}),
           supabase.from("strategy_comments").select("*").eq("user_id",userId).order("created_at",{ascending:true}),
         ]);
@@ -23766,64 +23783,156 @@ function ScalingModule({ userId }: { userId: string }) {
         if(cr.error)throw cr.error;
         if(!alive)return;
 
-        const dbNodes=(nr.data||[]) as SCNode[];
-        const localNodes=scReadCachedNodes(userId);
-        const dbIds=new Set(dbNodes.map(n=>n.id));
-        const localById=new Map(localNodes.map(n=>[n.id,n]));
-        const mergedDb=dbNodes.map(n=>({...localById.get(n.id),...n}));
-        const localOnly=localNodes.filter(n=>!dbIds.has(n.id));
-        const merged=[...mergedDb,...localOnly];
+        const cloud=(nr.data||[]) as SCNode[];
+        const outbox=scReadOutbox(userId);
+        const pendingDeletes=new Set(outbox.filter(x=>x.op==="delete").map(x=>x.id));
+        const pendingUpserts=outbox.filter(x=>x.op==="upsert"&&x.node).map(x=>x.node!) as SCNode[];
+        const pendingById=new Map(pendingUpserts.map(n=>[n.id,n]));
 
-        if(merged.length){
-          setNodes(merged);
-          scWriteCachedNodes(userId,merged);
-        }else{
-          setNodes([]);
-          scWriteCachedNodes(userId,[]);
-        }
+        const merged=cloud
+          .filter(n=>!pendingDeletes.has(n.id))
+          .map(n=>pendingById.get(n.id)?{...n,...pendingById.get(n.id)}:n);
+        const cloudIds=new Set(cloud.map(n=>n.id));
+        pendingUpserts.forEach(n=>{if(!cloudIds.has(n.id))merged.push(n);});
+
+        setNodes(merged);
+        scWriteCachedNodes(userId,merged);
         setDocs((dr.data||[]) as SCDoc[]);
         setComments(((cr.data||[]) as any[]).map(c=>({...c,at:c.created_at||scToday()})));
         setDbAvailable(true);
-      }catch(e){
-        console.error("Scaling schema unavailable",e);
-        if(alive){
-          const local=scReadCachedNodes(userId);
-          setNodes(local.length?local:scDemo());
-          setDbAvailable(false);
-        }
+        setCloudUpdatedAt(new Date().toISOString());
+        setSyncState(outbox.length?"syncing":"synced");
+      }catch(e:any){
+        console.error("Scaling cloud load failed",e);
+        if(!alive)return;
+        const cached=scReadCachedNodes(userId);
+        setNodes(cached.length?cached:scDemo());
+        setDbAvailable(false);
+        setSyncState(navigator.onLine?"error":"offline");
+        setSyncError(e?.message||"Не удалось загрузить облачные данные");
       }finally{
         if(alive)setLoadingStrategy(false);
       }
-    })();
+    };
 
-    return()=>{alive=false;Object.values(persistTimers.current).forEach(clearTimeout);};
+    loadCloud();
+    const onOnline=()=>{setDbAvailable(true);setSyncState("syncing");loadCloud();};
+    const onOffline=()=>setSyncState("offline");
+    window.addEventListener("online",onOnline);
+    window.addEventListener("offline",onOffline);
+
+    return()=>{
+      alive=false;
+      window.removeEventListener("online",onOnline);
+      window.removeEventListener("offline",onOffline);
+      Object.values(persistTimers.current).forEach(clearTimeout);
+    };
   },[userId]);
 
   useEffect(()=>{
     if(!loadingStrategy)scWriteCachedNodes(userId,nodes);
   },[userId,nodes,loadingStrategy]);
 
+  const flushOutbox=async()=>{
+    if(!navigator.onLine)return false;
+    const queue=scReadOutbox(userId);
+    if(!queue.length){setSyncState("synced");setSyncError("");return true;}
+    setSyncState("syncing");
+    setSyncError("");
+
+    const remaining:SCOutboxItem[]=[];
+    for(const item of queue){
+      try{
+        if(item.op==="delete"){
+          const{error}=await supabase.from("strategy_nodes").delete().eq("id",item.id).eq("user_id",userId);
+          if(error)throw error;
+        }else if(item.node){
+          const payload={...item.node,user_id:userId,updated_at:new Date().toISOString()};
+          const{error}=await supabase.from("strategy_nodes").upsert(payload,{onConflict:"id"});
+          if(error)throw error;
+        }
+      }catch(e:any){
+        console.error("Scaling cloud sync failed",e);
+        remaining.push(item);
+        setSyncError(e?.message||"Ошибка синхронизации");
+      }
+    }
+    scWriteOutbox(userId,remaining);
+    if(remaining.length){
+      setSyncState(navigator.onLine?"error":"offline");
+      return false;
+    }
+    setDbAvailable(true);
+    setCloudUpdatedAt(new Date().toISOString());
+    setSyncState("synced");
+    return true;
+  };
+
   const persist=async(n:SCNode)=>{
-    try{
-      const cached=scReadCachedNodes(userId);
-      const exists=cached.some(x=>x.id===n.id);
-      const next=exists?cached.map(x=>x.id===n.id?n:x):[...cached,n];
-      scWriteCachedNodes(userId,next);
-    }catch{}
-    if(!dbAvailable)return;
-    const{error}=await supabase.from("strategy_nodes").upsert({...n,user_id:userId},{onConflict:"id"});
-    if(error)throw error;
+    const stamped={...n,updated_at:new Date().toISOString()};
+    const cached=scReadCachedNodes(userId);
+    const exists=cached.some(x=>x.id===stamped.id);
+    scWriteCachedNodes(userId,exists?cached.map(x=>x.id===stamped.id?stamped:x):[...cached,stamped]);
+    scQueueOutbox(userId,{op:"upsert",id:stamped.id,node:stamped,queued_at:new Date().toISOString()});
+    setSyncState(navigator.onLine?"syncing":"offline");
+    return flushOutbox();
   };
+
   const schedulePersist=(n:SCNode)=>{
-    if(!dbAvailable)return;
     if(persistTimers.current[n.id])clearTimeout(persistTimers.current[n.id]);
-    persistTimers.current[n.id]=setTimeout(()=>{persist(n).catch(e=>console.error("Scaling save failed",e));},450);
+    setSyncState(navigator.onLine?"syncing":"offline");
+    persistTimers.current[n.id]=setTimeout(()=>{persist(n);},500);
   };
+
   const persistDel=async(id:string)=>{
-    if(!dbAvailable)return;
-    const{error}=await supabase.from("strategy_nodes").delete().eq("id",id).eq("user_id",userId);
-    if(error)throw error;
+    scQueueOutbox(userId,{op:"delete",id,queued_at:new Date().toISOString()});
+    setSyncState(navigator.onLine?"syncing":"offline");
+    return flushOutbox();
   };
+
+  useEffect(()=>{
+    const retry=window.setInterval(()=>{if(navigator.onLine&&scReadOutbox(userId).length)flushOutbox();},5000);
+    if(navigator.onLine&&scReadOutbox(userId).length)flushOutbox();
+
+    const channel=supabase
+      .channel(`strategy_nodes_${userId}`)
+      .on("postgres_changes",{event:"*",schema:"public",table:"strategy_nodes",filter:`user_id=eq.${userId}`},(payload:any)=>{
+        const event=payload.eventType;
+        if(event==="DELETE"){
+          const id=String(payload.old?.id||"");
+          if(!id)return;
+          const pending=scReadOutbox(userId).some(x=>x.id===id);
+          if(pending)return;
+          setNodes(prev=>{
+            const next=prev.filter(n=>n.id!==id);
+            scWriteCachedNodes(userId,next);
+            return next;
+          });
+        }else{
+          const incoming=payload.new as SCNode;
+          if(!incoming?.id)return;
+          const pending=scReadOutbox(userId).some(x=>x.id===incoming.id);
+          if(pending)return;
+          setNodes(prev=>{
+            const exists=prev.some(n=>n.id===incoming.id);
+            const next=exists?prev.map(n=>n.id===incoming.id?incoming:n):[...prev,incoming];
+            scWriteCachedNodes(userId,next);
+            return next;
+          });
+          setCloudUpdatedAt(new Date().toISOString());
+          setSyncState("synced");
+        }
+      })
+      .subscribe((status:string)=>{
+        if(status==="SUBSCRIBED"&&!scReadOutbox(userId).length)setSyncState("synced");
+        if(status==="CHANNEL_ERROR")setSyncState("error");
+      });
+
+    return()=>{
+      window.clearInterval(retry);
+      supabase.removeChannel(channel);
+    };
+  },[userId]);
 
   // ── операции над деревом ──
   const patch=(id:string,up:Partial<SCNode>,save=true)=>setNodes((prev:SCNode[])=>{
@@ -23865,8 +23974,13 @@ function ScalingModule({ userId }: { userId: string }) {
   // ── состояние UI ──
   const [tab, setTab] = useState<"structure" | "timeline">("structure");
   const[sel,setSel]=useState<string|null>(null);
-  const [scale, setScale] = useState<"month" | "quarter" | "year">("quarter");
+  const [scale, setScale] = useState<"fourDays" | "month" | "quarter" | "year">("quarter");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const[treeDragId,setTreeDragId]=useState<string|null>(null);
+  const[treeDrop,setTreeDrop]=useState<{id:string;position:"before"|"inside"|"after"}|null>(null);
+  const[syncState,setSyncState]=useState<"loading"|"synced"|"syncing"|"offline"|"error">("loading");
+  const[syncError,setSyncError]=useState("");
+  const[cloudUpdatedAt,setCloudUpdatedAt]=useState<string|null>(null);
   const [interview, setInterview] = useState(false);
   const[chatNode,setChatNode]=useState<SCNode|null>(null);
   const[rebuildRoot,setRebuildRoot]=useState<SCNode|null>(null);
@@ -23880,6 +23994,60 @@ function ScalingModule({ userId }: { userId: string }) {
   useEffect(()=>{if(!sel&&nodes.length)setSel(nodes[0].id);},[nodes,sel]);
 
   const toggleCollapse = (id: string) => setCollapsed((prev: Set<string>) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+
+  const moveTreeNode=(dragId:string,targetId:string,position:"before"|"inside"|"after")=>{
+    if(dragId===targetId)return;
+    const drag=nodes.find(n=>n.id===dragId);
+    const target=nodes.find(n=>n.id===targetId);
+    if(!drag||!target)return;
+
+    const descendants=new Set<string>();
+    const collect=(id:string)=>{
+      nodes.filter(n=>n.parent_id===id).forEach(child=>{
+        descendants.add(child.id);
+        collect(child.id);
+      });
+    };
+    collect(dragId);
+    if(descendants.has(targetId)){
+      flash("Нельзя переместить элемент внутрь собственного подэлемента");
+      return;
+    }
+
+    const oldParent=drag.parent_id;
+    const newParent=position==="inside"?target.id:target.parent_id;
+    const destination=nodes
+      .filter(n=>n.parent_id===newParent&&n.id!==dragId)
+      .sort((a,b)=>a.sort_order-b.sort_order);
+
+    let index=destination.length;
+    if(position!=="inside"){
+      const targetIndex=destination.findIndex(n=>n.id===targetId);
+      index=targetIndex<0?destination.length:targetIndex+(position==="after"?1:0);
+    }
+    destination.splice(index,0,{...drag,parent_id:newParent});
+
+    const oldSiblings=nodes
+      .filter(n=>n.parent_id===oldParent&&n.id!==dragId)
+      .sort((a,b)=>a.sort_order-b.sort_order);
+
+    const destinationOrder=new Map(destination.map((n,i)=>[n.id,i]));
+    const oldOrder=new Map(oldSiblings.map((n,i)=>[n.id,i]));
+
+    const next=nodes.map(n=>{
+      if(n.id===dragId)return{...n,parent_id:newParent,sort_order:destinationOrder.get(n.id)??0};
+      if(n.parent_id===newParent&&destinationOrder.has(n.id))return{...n,sort_order:destinationOrder.get(n.id)!};
+      if(oldParent!==newParent&&n.parent_id===oldParent&&oldOrder.has(n.id))return{...n,sort_order:oldOrder.get(n.id)!};
+      return n;
+    });
+
+    setNodes(next);
+    scWriteCachedNodes(userId,next);
+    next.filter(n=>n.id===dragId||n.parent_id===newParent||n.parent_id===oldParent).forEach(n=>persist(n).catch(()=>{}));
+    if(position==="inside")setCollapsed(prev=>{const s=new Set(prev);s.delete(target.id);return s;});
+    setSel(dragId);
+    flash("Положение элемента сохранено");
+  };
 
   // ── плоский видимый список (учёт сворачивания) ──
   const flat = useMemo(() => {
@@ -23914,7 +24082,7 @@ function ScalingModule({ userId }: { userId: string }) {
     min = scAddDays(min, -7); max = scAddDays(max, 14);
     return { min, max, days: Math.max(30, scDiff(min, max)) };
   }, [nodes]);
-  const dayW = scale === "year" ? 3.2 : scale === "quarter" ? 8 : 26;
+  const dayW = scale === "fourDays" ? 150 : scale === "year" ? 3.2 : scale === "quarter" ? 8 : 26;
   const ganttW = range.days * dayW;
   const xOf = (iso: string) => scDiff(range.min, iso) * dayW;
 
@@ -23959,6 +24127,20 @@ function ScalingModule({ userId }: { userId: string }) {
     while (scIso(d) <= range.max) { marks.push({ x: xOf(scIso(d)), label: `${MON[d.getMonth()]} ${String(d.getFullYear()).slice(2)}` }); d.setMonth(d.getMonth() + 1); }
     return marks;
   }, [range, dayW]);
+  const dayMarks=useMemo(()=>{
+    if(scale!=="fourDays")return[];
+    const marks:{x:number;label:string;weekend:boolean}[]=[];
+    const d=scParseDate(range.min);
+    while(scIso(d)<=range.max){
+      marks.push({
+        x:xOf(scIso(d)),
+        label:d.toLocaleDateString("ru-RU",{day:"2-digit",month:"short",weekday:"short"}),
+        weekend:[0,6].includes(d.getDay())
+      });
+      d.setDate(d.getDate()+1);
+    }
+    return marks;
+  },[range,dayW,scale]);
 
   const selNode: SCNode | undefined = nodes.find((n: SCNode) => n.id === sel);
 
@@ -24333,11 +24515,11 @@ ${taskLines||"Нет задач"}`;
       </div>
       <div style={{ flex: 1 }} />
       <button style={btn(true)} onClick={() => setInterview(true)}>+ Новая цель (AI)</button>
-      <button style={btn(false)} onClick={()=>{
-        const saved=scReadCachedNodes(userId);
-        if(saved.length){setNodes(saved);flash("Сохранённая диаграмма восстановлена");}
-        else flash("Сохранённой диаграммы пока нет");
-      }}>Восстановить</button>
+      <button style={btn(false)} onClick={async()=>{
+        const ok=await flushOutbox();
+        if(ok)flash("Все изменения синхронизированы с облаком");
+        else flash("Не удалось синхронизировать: "+(syncError||"проверь соединение и SQL-схему"));
+      }}>Синхронизировать</button>
       <button style={btn(false)} onClick={runAudit}>Стратегический аудит</button>
     </div>
 
@@ -24349,11 +24531,43 @@ ${taskLines||"Нет задач"}`;
           <span style={{ fontSize: 12.5, fontWeight: 700, color: C.t1 }}>Дерево стратегии</span>
           <button onClick={() => addChild(null)} style={{ ...chip(false), padding: "4px 9px" }}>+ Цель</button>
         </div>
+        <div style={{fontSize:10.5,color:C.t2,marginBottom:7,lineHeight:1.35}}>Перетащи строку выше или ниже, чтобы изменить порядок. Наведи в центр строки, чтобы вложить её внутрь.</div>
         {flat.map(({ node, depth }: any) => {
           const kids = nodes.filter((n: SCNode) => n.parent_id === node.id);
           const pr = progressOf(node.id);
+          const dropActive=treeDrop?.id===node.id;
           return <div key={node.id} className="sc-row" onClick={() => setSel(node.id)}
-            style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 6px", paddingLeft: 6 + depth * 14, borderRadius: 8, cursor: "pointer", background: sel === node.id ? (dark ? "rgba(255,255,255,.06)" : "#F0F2F5") : "transparent", marginBottom: 1 }}>
+            draggable
+            onDragStart={(e:any)=>{
+              setTreeDragId(node.id);
+              e.dataTransfer.effectAllowed="move";
+              e.dataTransfer.setData("text/plain",node.id);
+            }}
+            onDragEnd={()=>{setTreeDragId(null);setTreeDrop(null);}}
+            onDragOver={(e:any)=>{
+              e.preventDefault();
+              e.dataTransfer.dropEffect="move";
+              const rect=e.currentTarget.getBoundingClientRect();
+              const ratio=(e.clientY-rect.top)/Math.max(1,rect.height);
+              const position=ratio<.28?"before":ratio>.72?"after":"inside";
+              setTreeDrop({id:node.id,position});
+            }}
+            onDrop={(e:any)=>{
+              e.preventDefault();e.stopPropagation();
+              const dragId=treeDragId||e.dataTransfer.getData("text/plain");
+              const drop=treeDrop;
+              if(dragId&&drop&&drop.id===node.id)moveTreeNode(dragId,node.id,drop.position);
+              setTreeDragId(null);setTreeDrop(null);
+            }}
+            style={{
+              display:"flex",alignItems:"center",gap:6,padding:"6px 6px",paddingLeft:6+depth*14,
+              borderRadius:8,cursor:treeDragId===node.id?"grabbing":"grab",
+              background:dropActive&&treeDrop?.position==="inside"?(dark?"rgba(59,130,246,.18)":"#DBEAFE"):sel===node.id?(dark?"rgba(255,255,255,.06)":"#F0F2F5"):"transparent",
+              borderTop:dropActive&&treeDrop?.position==="before"?"2px solid #3B82F6":"2px solid transparent",
+              borderBottom:dropActive&&treeDrop?.position==="after"?"2px solid #3B82F6":"2px solid transparent",
+              opacity:treeDragId===node.id?.45:1,
+              marginBottom:1
+            }}>
             {kids.length > 0
               ? <span onClick={(e: any) => { e.stopPropagation(); toggleCollapse(node.id); }} style={{ width: 14, textAlign: "center", color: C.t2, fontSize: 10, cursor: "pointer" }}>{collapsed.has(node.id) ? "▸" : "▾"}</span>
               : <span style={{ width: 14 }} />}
@@ -24369,22 +24583,26 @@ ${taskLines||"Нет задач"}`;
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
           <div>
             <span style={{ fontSize: 12.5, fontWeight: 700, color: C.t1 }}>Диаграмма Ганта</span>
-            <div style={{fontSize:10.5,color:"#2E7D53",marginTop:2}}>Автосохранение включено</div>
+            <div style={{display:"flex",alignItems:"center",gap:6,fontSize:10.5,marginTop:2,color:syncState==="synced"?"#10B981":syncState==="syncing"||syncState==="loading"?"#F59E0B":"#EF4444"}}>
+              <span style={{width:6,height:6,borderRadius:"50%",background:"currentColor"}}/>
+              {syncState==="synced"?"Сохранено в облаке":syncState==="syncing"?"Синхронизация…":syncState==="loading"?"Загрузка облака…":syncState==="offline"?"Нет сети — сохранено на устройстве":"Ошибка облачной синхронизации"}
+            </div>
           </div>
           <div style={{ display: "inline-flex", gap: 4 }}>
-            {(["month", "quarter", "year"] as const).map(s => <button key={s} style={chip(scale === s)} onClick={() => setScale(s)}>{s === "month" ? "Месяц" : s === "quarter" ? "Квартал" : "Год"}</button>)}
+            {(["fourDays","month","quarter","year"] as const).map(s=><button key={s} style={chip(scale===s)} onClick={()=>setScale(s)}>{s==="fourDays"?"4 дня":s==="month"?"Месяц":s==="quarter"?"Квартал":"Год"}</button>)}
           </div>
         </div>
         <div style={{ overflowX: "auto", overflowY: "hidden" }}>
           <div style={{ minWidth: ganttW, position: "relative" }}>
             {/* шапка месяцев */}
             <div style={{ position: "relative", height: 22, borderBottom: "1px solid " + C.bd, marginBottom: 6 }}>
-              {monthMarks.map((m: any, i: number) => <div key={i} style={{ position: "absolute", left: m.x, top: 0, fontSize: 10, color: C.t2, borderLeft: "1px solid " + C.bd, paddingLeft: 4, height: 22 }}>{m.label}</div>)}
+              {(scale==="fourDays"?dayMarks:monthMarks).map((m:any,i:number)=><div key={i} style={{position:"absolute",left:m.x,top:0,fontSize:10,color:m.weekend?"#EF4444":C.t2,borderLeft:"1px solid "+C.bd,paddingLeft:5,height:22,width:scale==="fourDays"?dayW:undefined,background:m.weekend&&scale==="fourDays"?"rgba(239,68,68,.035)":"transparent"}}>{m.label}</div>)}
               {/* сегодня */}
               <div style={{ position: "absolute", left: xOf(scToday()), top: 0, bottom: -1000, width: 1, background: "#C0392B", opacity: .5 }} />
             </div>
             {/* строки */}
             <div style={{ position: "relative" }}>
+              {scale==="fourDays"&&dayMarks.map((m:any,i:number)=><div key={"grid"+i} style={{position:"absolute",left:m.x,top:0,bottom:0,width:dayW,borderLeft:"1px solid "+C.bd,background:m.weekend?"rgba(239,68,68,.028)":"transparent",pointerEvents:"none"}}/>)}
               {flat.map(({ node, depth }: any, ri: number) => {
                 if (!node.start_date || !node.due_date) return null;
                 const x = xOf(node.start_date); const w = Math.max(8, scDiff(node.start_date, node.due_date) * dayW);
@@ -24401,8 +24619,8 @@ ${taskLines||"Нет задач"}`;
                   })}
                   <div onMouseDown={(e: any) => onBarDown(e, node, "move")} onTouchStart={(e: any) => onBarDown(e, node, "move")} onClick={() => setSel(node.id)}
                     title={`${node.title} · ${scFmt(node.start_date)} – ${scFmt(node.due_date)} · ${pr}%`}
-                    style={{ position: "absolute", left: x, top: 4, width: w, height: 22, borderRadius: 6, background: node.color, opacity: sel === node.id ? 1 : .82, cursor: "grab", boxShadow: sel === node.id ? "0 0 0 2px " + C.t1 : over ? "0 0 0 1.5px #C0392B" : "none", display: "flex", alignItems: "center", overflow: "hidden", transition: "opacity .15s" }}>
-                    <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${pr}%`, background: "rgba(255,255,255,.28)" }} />
+                    style={{ position: "absolute", left: x, top: 4, width: w, height: 22, borderRadius: 6, background: node.color, opacity:1,cursor:"grab",boxShadow:sel===node.id?"0 0 0 2px "+C.t1+", 0 4px 14px rgba(0,0,0,.28)":over?"0 0 0 2px #EF4444":"0 2px 8px rgba(0,0,0,.22)", display: "flex", alignItems: "center", overflow: "hidden", transition: "opacity .15s" }}>
+                    <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${pr}%`, background: "rgba(255,255,255,.36)" }} />
                     <span style={{ fontSize: 10.5, color: "#fff", fontWeight: 600, padding: "0 8px", whiteSpace: "nowrap", position: "relative", zIndex: 1, textShadow: "0 1px 2px rgba(0,0,0,.3)" }}>{node.title}</span>
                     {/* хват для длительности */}
                     <div onMouseDown={(e: any) => onBarDown(e, node, "resize")} onTouchStart={(e: any) => onBarDown(e, node, "resize")} style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: 8, cursor: "ew-resize", zIndex: 2 }} />
@@ -24593,7 +24811,7 @@ ${taskLines||"Нет задач"}`;
         <div style={{ fontSize: 12.5, fontWeight: 700, color: C.t1, marginBottom: 12 }}>Timeline — все проекты на единой шкале</div>
         <div style={{ minWidth: ganttW, position: "relative" }}>
           <div style={{ position: "relative", height: 22, borderBottom: "1px solid " + C.bd, marginBottom: 10 }}>
-            {monthMarks.map((m: any, i: number) => <div key={i} style={{ position: "absolute", left: m.x, fontSize: 10, color: C.t2, borderLeft: "1px solid " + C.bd, paddingLeft: 4, height: 22 }}>{m.label}</div>)}
+            {(scale==="fourDays"?dayMarks:monthMarks).map((m:any,i:number)=><div key={i} style={{position:"absolute",left:m.x,fontSize:10,color:m.weekend?"#EF4444":C.t2,borderLeft:"1px solid "+C.bd,paddingLeft:5,height:22,width:scale==="fourDays"?dayW:undefined}}>{m.label}</div>)}
             <div style={{ position: "absolute", left: xOf(scToday()), top: 0, bottom: -600, width: 1, background: "#C0392B", opacity: .5 }} />
           </div>
           {nodes.filter((n: SCNode) => n.parent_id === null || nodes.find((r: SCNode) => r.id === n.parent_id)?.parent_id === null).map((n: SCNode) => {
