@@ -873,7 +873,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v6.1"; // v111 fix typed React hooks in Defect Control module
+  const APP_VERSION="v6.2"; // v112 audited War Room Scaling integration
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker","defects"];
 
   // Clear stale localStorage on version change
@@ -3573,7 +3573,7 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
   const goals = useTable("goals", userId);
   const goalTasks = useTable("goal_tasks", userId);
   const isMobile=useIsMobile();
-  const[stratTab,setStratTab]=useState<"sprint"|"yearmap"|"calendar">("calendar");
+  const[stratTab,setStratTab]=useState<"sprint"|"scaling"|"calendar">("calendar");
   // ── Calendar state ──────────────────────────────────────────
   const calTasks=useTable("cal_tasks",userId);
   const plannerTasks=useTable("planner_tasks",userId);
@@ -4376,9 +4376,9 @@ function StrategyPage({userId,onNav}:{userId:string,onNav?:(id:string)=>void}){
     {/* Tabs */}
     <div style={{display:isMobile?"grid":"inline-flex",gridTemplateColumns:isMobile?"1fr 1fr":"none",width:isMobile?"100%":"auto",background:C.bg,borderRadius:10,padding:3,gap:2,marginBottom:isMobile?16:24,border:"1px solid "+C.bd,position:isMobile?"sticky":"static",top:isMobile?0:"auto",zIndex:isMobile?40:"auto",boxShadow:isMobile?"0 8px 20px rgba(0,0,0,.08)":"none"}}>
       <button style={{...tabStyle(stratTab==="calendar"),padding:isMobile?"10px 12px":"9px 24px",width:isMobile?"100%":"auto"}} onClick={()=>setStratTab("calendar")}>Задачи</button>
-      <button style={{...tabStyle(stratTab==="yearmap"),padding:isMobile?"10px 12px":"9px 24px",width:isMobile?"100%":"auto"}} onClick={()=>setStratTab("yearmap")}>Карта года</button>
+      <button style={{...tabStyle(stratTab==="scaling"),padding:isMobile?"10px 12px":"9px 24px",width:isMobile?"100%":"auto"}} onClick={()=>setStratTab("scaling")}>Масштабирование</button>
     </div>
-    {stratTab==="yearmap"&&<YearMap userId={userId} goals={goals} goalUpdate={goals.update} goalAdd={goals.add} goalTasks={goalTasks}/>}
+    {stratTab==="scaling"&&<ScalingModule userId={userId}/>}
 
     {/* CALENDAR — Task Planner */}
     {stratTab==="calendar"&&<TaskPlanner userId={userId}/>}
@@ -23269,5 +23269,756 @@ function DefectsControlPage({ userId }: { userId: string }) {
 
     {/* ===== TOAST ===== */}
     {toast && <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: C.dk, color: "#fff", padding: "11px 20px", borderRadius: 11, fontSize: 13, fontWeight: 500, zIndex: 200, boxShadow: "0 8px 30px rgba(0,0,0,.4)", animation: "dzFade .2s ease-out" }}>{toast}</div>}
+  </div>;
+}
+
+/* ============================================================================
+   VIZZY · War Room → «Масштабирование» (Scaling)
+   ----------------------------------------------------------------------------
+   Заменяет вкладку «Карта года» внутри War Room. Второй уровень работы:
+   стратегическое планирование и декомпозиция целей до задач планировщика.
+
+   Дерево стратегии (∞ вложенность) · интерактивная диаграмма Ганта (drag&drop
+   сроков и длительности, масштаб месяц/квартал/год, зависимости, сворачивание)
+   · панель свойств с inline-редактированием · AI-интервью при создании цели ·
+   AI-декомпозиция узла · документы · стратегический AI-аудит · Timeline ·
+   перенос выбранных этапов в War Room (planner_tasks) с обратной связью прогресса.
+
+   ЗАВИСИМОСТИ (уже есть в page.tsx — импортировать не нужно):
+     C · useTheme() · useIsMobile() · useTable() · supabase · React
+
+   ИНТЕГРАЦИЯ (правки в StrategyPage, ~строка 3576 и 4379):
+     1) тип вкладки:  "sprint"|"yearmap"|"calendar"  →  добавить  "scaling"
+        (или заменить "yearmap" на "scaling", т.к. «Карта года» убирается)
+     2) кнопка вкладки:
+        <button style={{...tabStyle(stratTab==="scaling"),padding:isMobile?"10px 12px":"9px 24px",width:isMobile?"100%":"auto"}}
+                onClick={()=>setStratTab("scaling")}>Масштабирование</button>
+     3) рендер (вместо строки с <YearMap/>):
+        {stratTab==="scaling"&&<ScalingModule userId={userId}/>}
+     4) вставить тело этого файла (без "use client"/import) в page.tsx.
+   Компонент <YearMap/> можно оставить в файле — он просто перестанет вызываться.
+
+   SQL под таблицы стратегии — в warroom_scaling_schema.sql.
+   Beta: если таблицы ещё не созданы — модуль работает на демо-дереве в памяти
+   (graceful degradation), edits применяются локально и best-effort пишутся в БД.
+============================================================================ */
+
+/* ============ ТИПЫ ============ */
+type SCStatus = "planned" | "active" | "done" | "risk";
+type SCPriority = "low" | "medium" | "high";
+
+interface SCNode {
+  id: string;
+  parent_id: string | null;
+  title: string;
+  description?: string;
+  status: SCStatus;
+  color: string;
+  priority: SCPriority;
+  kpi?: string;
+  responsible?: string;
+  start_date: string | null;   // ISO yyyy-mm-dd
+  due_date: string | null;
+  collapsed?: boolean;
+  sort_order: number;
+  depends_on?: string[];        // id узлов-предшественников
+  manual_progress?: number | null;
+}
+interface SCDoc { id:string;node_id:string;file_name:string;file_type:string;file_url?:string|null;created_at?:string; }
+interface SCComment { id:string;node_id:string;text:string;at:string;created_at?:string; }
+
+/* ============ СПРАВОЧНИКИ ============ */
+const SC_STATUS: Record<SCStatus, string> = { planned: "Запланировано", active: "В работе", done: "Выполнено", risk: "Под угрозой" };
+const SC_PRIORITY: Record<SCPriority, string> = { low: "Низкий", medium: "Средний", high: "Высокий" };
+const SC_COLORS = ["#3B6FB0", "#2E7D53", "#B8860B", "#C0392B", "#7A5CC0", "#0E8A8A", "#C05A8A", "#5A6472"];
+const SC_DOC_FORMATS = "PDF · DOCX · XLSX · PPTX · PNG · JPG";
+
+/* ============ ДАТЫ ============ */
+const scParseDate=(iso:string)=>new Date(`${iso}T12:00:00`);
+const scIso=(d:Date)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const scToday=()=>scIso(new Date());
+const scAddDays=(iso:string,n:number)=>{const d=scParseDate(iso);d.setDate(d.getDate()+n);return scIso(d);};
+const scDiff=(a:string,b:string)=>Math.round((+scParseDate(b)-+scParseDate(a))/86400000);
+const scFmt=(iso:string|null)=>{if(!iso)return"—";const d=scParseDate(iso);return`${String(d.getDate()).padStart(2,"0")}.${String(d.getMonth()+1).padStart(2,"0")}.${d.getFullYear()}`;};
+const scNum=(n:number)=>Math.round(n).toLocaleString("ru-RU");
+const scUid=()=>`sc_${typeof crypto!=="undefined"&&crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2)};`.replace(";","");
+
+/* ============ AI (DeepSeek) ============ */
+function scStripMd(s:string){return String(s).replace(/^```[a-z]*\n?/i,"").replace(/```$/i,"").trim();}
+async function scAsk(messages:{role:string;content:string}[],maxTokens=1200,temperature=0.6):Promise<string>{
+  return dsMessages(messages,maxTokens,temperature);
+}
+async function scAskJson(system:string,user:string,maxTokens=1200):Promise<any>{
+  const raw=await scAsk(
+    [{role:"system",content:system+"\nОтвечай ТОЛЬКО валидным JSON без markdown и пояснений."},{role:"user",content:user}],
+    maxTokens,
+    0.35
+  );
+  const cleaned=scStripMd(raw);
+  const first=Math.min(...[cleaned.indexOf("{"),cleaned.indexOf("[")].filter(x=>x>=0));
+  if(!Number.isFinite(first))throw new Error("AI не вернул JSON");
+  const sliced=cleaned.slice(first);
+  const last=Math.max(sliced.lastIndexOf("}"),sliced.lastIndexOf("]"));
+  return JSON.parse(last>=0?sliced.slice(0,last+1):sliced);
+}
+
+/* ============ ДЕМО-ДЕРЕВО ============ */
+function scDemo(): SCNode[] {
+  const t = scToday();
+  const mk = (id: string, parent: string | null, title: string, color: string, off: number, dur: number, st: SCStatus, ord: number, pr: SCPriority = "medium", deps: string[] = []): SCNode =>
+    ({ id, parent_id: parent, title, color, status: st, priority: pr, start_date: scAddDays(t, off), due_date: scAddDays(t, off + dur), sort_order: ord, depends_on: deps, manual_progress: null });
+  return [
+    mk("g1", null, "Масштабировать компанию", SC_COLORS[0], -20, 300, "active", 0, "high"),
+    mk("p1", "g1", "Продажи", SC_COLORS[1], -10, 120, "active", 0, "high"),
+    mk("s1", "p1", "Отдел продаж", SC_COLORS[1], -5, 90, "active", 0),
+    mk("s1a", "s1", "Найти РОПа", SC_COLORS[1], 0, 25, "active", 0, "high"),
+    mk("s1b", "s1", "Настроить CRM", SC_COLORS[1], 20, 20, "planned", 1, "medium", ["s1a"]),
+    mk("s1c", "s1", "Скрипты", SC_COLORS[1], 35, 15, "planned", 2, "low", ["s1b"]),
+    mk("p2", "g1", "Контент", SC_COLORS[2], 10, 160, "planned", 1),
+    mk("c1", "p2", "Instagram", SC_COLORS[2], 10, 60, "planned", 0),
+    mk("c2", "p2", "YouTube", SC_COLORS[2], 20, 80, "planned", 1),
+    mk("c3", "p2", "Telegram", SC_COLORS[2], 15, 50, "planned", 2),
+    mk("p3", "g1", "Команда", SC_COLORS[4], 30, 120, "planned", 2),
+    mk("p4", "g1", "Финансы", SC_COLORS[3], 5, 200, "risk", 3, "high"),
+  ];
+}
+
+/* ============ ГЛАВНЫЙ КОМПОНЕНТ ============ */
+function ScalingModule({ userId }: { userId: string }) {
+  const isMobile = useIsMobile();
+  const { dark } = useTheme();
+
+  // ── данные стратегии ──
+  const[nodes,setNodes]=useState<SCNode[]>([]);
+  const[docs,setDocs]=useState<SCDoc[]>([]);
+  const[comments,setComments]=useState<SCComment[]>([]);
+  const[loadingStrategy,setLoadingStrategy]=useState(true);
+  const[dbAvailable,setDbAvailable]=useState(true);
+  const plannerTasks=useTable("planner_tasks",userId);
+  const persistTimers=useRef<Record<string,ReturnType<typeof setTimeout>>>({});
+
+  useEffect(()=>{
+    let alive=true;
+    (async()=>{
+      setLoadingStrategy(true);
+      try{
+        const[nr,dr,cr]=await Promise.all([
+          supabase.from("strategy_nodes").select("*").eq("user_id",userId).order("sort_order",{ascending:true}),
+          supabase.from("strategy_docs").select("*").eq("user_id",userId).order("created_at",{ascending:true}),
+          supabase.from("strategy_comments").select("*").eq("user_id",userId).order("created_at",{ascending:true}),
+        ]);
+        if(nr.error)throw nr.error;
+        if(dr.error)throw dr.error;
+        if(cr.error)throw cr.error;
+        if(!alive)return;
+        setNodes((nr.data||[]) as SCNode[]);
+        setDocs((dr.data||[]) as SCDoc[]);
+        setComments(((cr.data||[]) as any[]).map(c=>({...c,at:c.created_at||scToday()})));
+        setDbAvailable(true);
+      }catch(e){
+        console.error("Scaling schema unavailable",e);
+        if(alive){
+          setNodes(scDemo());
+          setDbAvailable(false);
+        }
+      }finally{
+        if(alive)setLoadingStrategy(false);
+      }
+    })();
+    return()=>{alive=false;Object.values(persistTimers.current).forEach(clearTimeout);};
+  },[userId]);
+
+  const persist=async(n:SCNode)=>{
+    if(!dbAvailable)return;
+    const{error}=await supabase.from("strategy_nodes").upsert({...n,user_id:userId},{onConflict:"id"});
+    if(error)throw error;
+  };
+  const schedulePersist=(n:SCNode)=>{
+    if(!dbAvailable)return;
+    if(persistTimers.current[n.id])clearTimeout(persistTimers.current[n.id]);
+    persistTimers.current[n.id]=setTimeout(()=>{persist(n).catch(e=>console.error("Scaling save failed",e));},450);
+  };
+  const persistDel=async(id:string)=>{
+    if(!dbAvailable)return;
+    const{error}=await supabase.from("strategy_nodes").delete().eq("id",id).eq("user_id",userId);
+    if(error)throw error;
+  };
+
+  // ── операции над деревом ──
+  const patch=(id:string,up:Partial<SCNode>,save=true)=>setNodes((prev:SCNode[])=>{
+    const next=prev.map(n=>n.id===id?{...n,...up}:n);
+    const target=next.find(n=>n.id===id);
+    if(target&&save)schedulePersist(target);
+    return next;
+  });
+  const addChild = (parent: string | null, title = "Новый элемент") => {
+    const sib = nodes.filter((n: SCNode) => n.parent_id === parent);
+    const t = scToday();
+    const node: SCNode = { id: scUid(), parent_id: parent, title, status: "planned", color: parent ? (nodes.find((x: SCNode) => x.id === parent)?.color || SC_COLORS[0]) : SC_COLORS[sib.length % SC_COLORS.length], priority: "medium", start_date: t, due_date: scAddDays(t, 21), sort_order: sib.length, depends_on: [], manual_progress: null };
+    setNodes((prev:SCNode[])=>[...prev,node]);persist(node).catch(()=>flash("Не удалось сохранить новый элемент"));setSel(node.id);return node.id;
+  };
+  const delNode = (id: string) => {
+    const ids = new Set<string>(); const collect = (x: string) => { ids.add(x); nodes.filter((n: SCNode) => n.parent_id === x).forEach((c: SCNode) => collect(c.id)); };
+    collect(id);
+    setNodes((prev: SCNode[]) => prev.filter((n: SCNode) => !ids.has(n.id)));
+    ids.forEach(persistDel); if (ids.has(sel!)) setSel(null);
+  };
+
+  // ── прогресс: лист = из задач War Room, ветка = среднее по детям ──
+  const linkedTasks=(id:string)=>plannerTasks.data.filter((t:any)=>t.strategy_node_id===id);
+  const progressOf=(id:string,visited=new Set<string>()):number=>{
+    if(visited.has(id))return 0;
+    visited.add(id);
+    const kids=nodes.filter((n:SCNode)=>n.parent_id===id);
+    const node=nodes.find((n:SCNode)=>n.id===id);
+    if(node?.manual_progress!=null)return Math.max(0,Math.min(100,node.manual_progress));
+    if(kids.length)return Math.round(kids.reduce((sum,k)=>sum+progressOf(k.id,new Set(visited)),0)/kids.length);
+    const tasks=linkedTasks(id);
+    if(tasks.length)return Math.round(tasks.filter((t:any)=>t.done||t.completion_status==="done").length/tasks.length*100);
+    return node?.status==="done"?100:0;
+  };
+
+  // ── состояние UI ──
+  const [tab, setTab] = useState<"structure" | "timeline">("structure");
+  const[sel,setSel]=useState<string|null>(null);
+  const [scale, setScale] = useState<"month" | "quarter" | "year">("quarter");
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [interview, setInterview] = useState(false);
+  const [audit, setAudit] = useState<{ open: boolean; loading: boolean; text: string }>({ open: false, loading: false, text: "" });
+  const [wrModal, setWrModal] = useState<SCNode | null>(null);
+  const [decomposing, setDecomposing] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 3000); };
+
+  useEffect(()=>{if(!sel&&nodes.length)setSel(nodes[0].id);},[nodes,sel]);
+
+  const toggleCollapse = (id: string) => setCollapsed((prev: Set<string>) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+
+  // ── плоский видимый список (учёт сворачивания) ──
+  const flat = useMemo(() => {
+    const out: { node: SCNode; depth: number }[] = [];
+    const walk = (parent: string | null, depth: number) => {
+      nodes.filter((n: SCNode) => n.parent_id === parent).sort((a: SCNode, b: SCNode) => a.sort_order - b.sort_order).forEach((n: SCNode) => {
+        out.push({ node: n, depth });
+        if (!collapsed.has(n.id)) walk(n.id, depth + 1);
+      });
+    };
+    walk(null, 0); return out;
+  }, [nodes, collapsed]);
+
+  // ── аналитика ──
+  const A = useMemo(() => {
+    const roots = nodes.filter((n: SCNode) => n.parent_id === null);
+    const projects = nodes.filter((n: SCNode) => roots.some((r: SCNode) => r.id === n.parent_id));
+    const stages = nodes.length - roots.length - projects.length;
+    const linked = plannerTasks.data.filter((t: any) => t.strategy_node_id).length;
+    const avg = nodes.length ? Math.round(nodes.reduce((s: number, n: SCNode) => s + progressOf(n.id), 0) / nodes.length) : 0;
+    const overall = roots.length ? Math.round(roots.reduce((s: number, r: SCNode) => s + progressOf(r.id), 0) / roots.length) : 0;
+    const overdue = nodes.filter((n: SCNode) => n.due_date && n.due_date < scToday() && progressOf(n.id) < 100).length;
+    const risks = nodes.filter((n: SCNode) => n.status === "risk").length;
+    return { goals: roots.length, projects: projects.length, stages, linked, avg, overall, overdue, risks };
+  }, [nodes, plannerTasks.data, collapsed]);
+
+  // ── диапазон Ганта ──
+  const range = useMemo(() => {
+    const ds = nodes.flatMap((n: SCNode) => [n.start_date, n.due_date]).filter(Boolean) as string[];
+    let min = ds.length ? ds.reduce((a, b) => a < b ? a : b) : scToday();
+    let max = ds.length ? ds.reduce((a, b) => a > b ? a : b) : scAddDays(scToday(), 90);
+    min = scAddDays(min, -7); max = scAddDays(max, 14);
+    return { min, max, days: Math.max(30, scDiff(min, max)) };
+  }, [nodes]);
+  const dayW = scale === "year" ? 3.2 : scale === "quarter" ? 8 : 26;
+  const ganttW = range.days * dayW;
+  const xOf = (iso: string) => scDiff(range.min, iso) * dayW;
+
+  // ── drag&drop по Ганту ──
+  const dragRef = useRef<{ id: string; mode: "move" | "resize"; startX: number; s0: string; e0: string } | null>(null);
+  const onBarDown = (e: any, n: SCNode, mode: "move" | "resize") => {
+    e.preventDefault(); e.stopPropagation();
+    dragRef.current = { id: n.id, mode, startX: e.clientX ?? e.touches?.[0]?.clientX, s0: n.start_date!, e0: n.due_date! };
+    const move = (ev: any) => {
+      const cx = ev.clientX ?? ev.touches?.[0]?.clientX; const d = dragRef.current; if (!d) return;
+      const dd = Math.round((cx - d.startX) / dayW);
+      if(d.mode==="move")patch(d.id,{start_date:scAddDays(d.s0,dd),due_date:scAddDays(d.e0,dd)},false);
+      else{const ne=scAddDays(d.e0,dd);if(scDiff(d.s0,ne)>=1)patch(d.id,{due_date:ne},false);}
+    };
+    const up=()=>{
+      const d=dragRef.current;
+      if(d){
+        const latest=nodes.find(x=>x.id===d.id);
+        if(latest)persist(latest).catch(()=>flash("Не удалось сохранить новые сроки"));
+      }
+      dragRef.current=null;window.removeEventListener("mousemove",move); window.removeEventListener("mouseup", up); window.removeEventListener("touchmove", move); window.removeEventListener("touchend", up); };
+    window.addEventListener("mousemove", move); window.addEventListener("mouseup", up);
+    window.addEventListener("touchmove", move, { passive: false }); window.addEventListener("touchend", up);
+  };
+
+  // ── месячная сетка для шапки Ганта ──
+  const monthMarks = useMemo(() => {
+    const marks: { x: number; label: string }[] = [];
+    const d = new Date(range.min); d.setDate(1);
+    const MON = ["Янв", "Фев", "Мар", "Апр", "Май", "Июн", "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек"];
+    while (scIso(d) <= range.max) { marks.push({ x: xOf(scIso(d)), label: `${MON[d.getMonth()]} ${String(d.getFullYear()).slice(2)}` }); d.setMonth(d.getMonth() + 1); }
+    return marks;
+  }, [range, dayW]);
+
+  const selNode: SCNode | undefined = nodes.find((n: SCNode) => n.id === sel);
+
+  // ── AI: декомпозиция ──
+  const decompose = async (n: SCNode) => {
+    setDecomposing(n.id);
+    try {
+      const arr = await scAskJson(
+        "Ты стратег. Разбей элемент стратегии на 3–6 логичных подэлементов следующего уровня. Формат: массив объектов {title}.",
+        `Элемент: «${n.title}». Контекст (родитель): ${nodes.find((x: SCNode) => x.id === n.parent_id)?.title || "верхний уровень"}. Верни массив.`, 700);
+      const items: any[] = Array.isArray(arr) ? arr : arr.items || [];
+      const t = scToday();
+      const created: SCNode[] = items.slice(0, 6).map((it: any, i: number) => ({ id: scUid(), parent_id: n.id, title: String(it.title || it).slice(0, 80), status: "planned", color: n.color, priority: "medium", start_date: scAddDays(t, i * 10), due_date: scAddDays(t, i * 10 + 18), sort_order: i, depends_on: [], manual_progress: null }));
+      setNodes((prev: SCNode[]) => [...prev, ...created]); created.forEach(persist);
+      setCollapsed((prev: Set<string>) => { const s = new Set(prev); s.delete(n.id); return s; });
+      flash(`AI предложил ${created.length} подэлемента для «${n.title}»`);
+    } catch (e: any) { flash("AI: " + (e.message || "ошибка декомпозиции")); }
+    setDecomposing(null);
+  };
+
+  // ── AI: стратегический аудит ──
+  const runAudit = async () => {
+    setAudit({ open: true, loading: true, text: "" });
+    try {
+      const ctx = nodes.map((n: SCNode) => `- ${n.title} [${SC_STATUS[n.status]}, прогресс ${progressOf(n.id)}%, срок ${scFmt(n.due_date)}${n.due_date && n.due_date < scToday() && progressOf(n.id) < 100 ? ", ПРОСРОЧЕНО" : ""}]`).join("\n");
+      const text = await scAsk([
+        { role: "system", content: "Ты стратегический директор. Дай сжатый аудит без воды: какие проекты тормозят, что под угрозой, что перенести, чему уделить внимание, прогноз достижения. Пиши по-русски, структурно, без markdown-заголовков и эмодзи." },
+        { role: "user", content: `Стратегия:\n${ctx}\n\nОбщий прогресс ${A.overall}%, просрочено этапов ${A.overdue}, под угрозой ${A.risks}. Дай аудит и рекомендации.` },
+      ], 1400, 0.5);
+      setAudit({ open: true, loading: false, text });
+    } catch (e: any) { setAudit({ open: true, loading: false, text: "Не удалось выполнить аудит: " + (e.message || "ошибка") }); }
+  };
+
+  // ── перенос в War Room ──
+  const addToWarRoom=async(n:SCNode,form:any)=>{
+    const duration=Math.max(15,Math.round((Number(form.dur)||60)/15)*15);
+    const combined=[
+      ...(form.checklist||[]).map((s:string)=>({text:s,done:false,kind:"checklist"})),
+      ...(form.subtasks||[]).map((s:string)=>({text:s,done:false,kind:"subtask"})),
+    ];
+    const row:any={
+      title:n.title,
+      description:form.comment||n.description||"",
+      due_date:form.date||null,
+      date:form.date||null,
+      due_time:form.time||null,
+      priority:form.priority||"none",
+      color:n.color,
+      done:false,
+      completion_status:"pending",
+      status:"todo",
+      subtasks:combined,
+      duration_minutes:duration,
+      _duration:duration,
+      strategy_node_id:n.id,
+      user_id:userId,
+      updated_at:new Date().toISOString(),
+    };
+    try{
+      const{error}=await supabase.from("planner_tasks").insert(row);
+      if(error)throw error;
+      window.dispatchEvent(new CustomEvent("ks-refresh",{detail:{table:"planner_tasks"}}));
+      await plannerTasks.reload?.();
+      flash(`«${n.title}» добавлено в War Room`);
+      setWrModal(null);
+    }catch(e:any){
+      flash("Не удалось создать задачу: "+(e.message||"ошибка"));
+    }
+  };
+
+  /* ---------- стили ---------- */
+  const card: React.CSSProperties = { background: C.w, border: "1px solid " + C.bd, borderRadius: 14 };
+  const btn = (primary?: boolean): React.CSSProperties => ({ padding: "8px 14px", borderRadius: 9, border: "1px solid " + (primary ? "transparent" : C.bd), background: primary ? C.t1 : C.ib, color: primary ? C.w : C.t1, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" });
+  const chip = (on: boolean): React.CSSProperties => ({ padding: "6px 12px", borderRadius: 8, border: "1px solid " + (on ? "transparent" : C.bd), background: on ? "rgba(124,124,124,0.16)" : "transparent", color: on ? C.t1 : C.t2, fontSize: 12, fontWeight: 500, cursor: "pointer" });
+  const inp: React.CSSProperties = { width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid " + C.bd, background: C.ib, color: C.t1, fontSize: 12.5, fontFamily: "'Inter',sans-serif", outline: "none", boxSizing: "border-box" };
+  const statusColor = (s: SCStatus) => s === "done" ? "#2E7D53" : s === "active" ? "#B8860B" : s === "risk" ? "#C0392B" : C.t2;
+
+  if(loadingStrategy)return <div style={{padding:32,textAlign:"center",color:C.t2,fontSize:13}}>Загружаем стратегию…</div>;
+
+  return <div style={{fontFamily:"'Inter',sans-serif"}}>
+    <style>{`
+      @keyframes scFade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+      @keyframes scSpin{to{transform:rotate(360deg)}}
+      .sc-spin{width:14px;height:14px;border:2px solid ${C.bd};border-top-color:${C.t1};border-radius:50%;animation:scSpin .7s linear infinite;display:inline-block}
+      .sc-row:hover{background:${dark ? "rgba(255,255,255,.03)" : "#FAFAFA"}}
+    `}</style>
+
+    {!dbAvailable&&<div style={{background:"rgba(184,134,11,.10)",border:"1px solid rgba(184,134,11,.28)",borderRadius:10,padding:"10px 12px",marginBottom:12,fontSize:11.5,color:C.t1}}>
+      Демо-режим: таблицы Scaling ещё не подключены. Изменения сохраняются только до обновления страницы.
+    </div>}
+    {dbAvailable&&nodes.length===0&&<div style={{...card,padding:isMobile?20:28,textAlign:"center",marginBottom:14}}>
+      <div style={{fontSize:17,fontWeight:600,color:C.t1}}>Создай первую стратегическую цель</div>
+      <div style={{fontSize:12.5,color:C.t2,marginTop:7,lineHeight:1.55}}>Пройди AI-интервью или добавь цель вручную, затем разбей её на проекты и этапы.</div>
+      <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:14,flexWrap:"wrap"}}>
+        <button style={btn(true)} onClick={()=>setInterview(true)}>Создать через AI</button>
+        <button style={btn(false)} onClick={()=>addChild(null)}>Добавить вручную</button>
+      </div>
+    </div>}
+
+    {/* ===== АНАЛИТИКА ===== */}
+    <div style={{ display: "grid", gridTemplateColumns: `repeat(${isMobile ? 2 : 4},1fr)`, gap: 10, marginBottom: 14 }}>
+      {[
+        ["Стратегических целей", A.goals], ["Проектов", A.projects], ["Этапов", A.stages], ["Связанных задач", A.linked],
+        ["Средний прогресс", A.avg + "%"], ["Прогноз достижения", A.overall + "%"], ["Просрочено этапов", A.overdue], ["Под угрозой", A.risks],
+      ].map(([l, v], i) => <div key={i} style={{ ...card, padding: 13, animation: "scFade .3s ease-out both" }}>
+        <div style={{ fontSize: 11, color: C.t2, marginBottom: 6 }}>{l}</div>
+        <div style={{ fontSize: 22, fontWeight: 600, color: (l as string).includes("Просроч") && (v as number) > 0 ? "#C0392B" : (l as string).includes("угроз") && (v as number) > 0 ? "#C0392B" : C.t1 }}>{v}</div>
+      </div>)}
+    </div>
+
+    {/* ===== ПАНЕЛЬ ДЕЙСТВИЙ ===== */}
+    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 14 }}>
+      <div style={{ display: "inline-flex", background: C.bg, borderRadius: 10, padding: 3, gap: 2, border: "1px solid " + C.bd }}>
+        <button style={chip(tab === "structure")} onClick={() => setTab("structure")}>Структура</button>
+        <button style={chip(tab === "timeline")} onClick={() => setTab("timeline")}>Timeline</button>
+      </div>
+      <div style={{ flex: 1 }} />
+      <button style={btn(true)} onClick={() => setInterview(true)}>+ Новая цель (AI)</button>
+      <button style={btn(false)} onClick={runAudit}>Стратегический аудит</button>
+    </div>
+
+    {tab === "structure" ? <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "300px 1fr 320px", gap: 14, alignItems: "start" }}>
+
+      {/* ===== ДЕРЕВО ===== */}
+      <div style={{ ...card, padding: 12, maxHeight: 620, overflowY: "auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <span style={{ fontSize: 12.5, fontWeight: 700, color: C.t1 }}>Дерево стратегии</span>
+          <button onClick={() => addChild(null)} style={{ ...chip(false), padding: "4px 9px" }}>+ Цель</button>
+        </div>
+        {flat.map(({ node, depth }: any) => {
+          const kids = nodes.filter((n: SCNode) => n.parent_id === node.id);
+          const pr = progressOf(node.id);
+          return <div key={node.id} className="sc-row" onClick={() => setSel(node.id)}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 6px", paddingLeft: 6 + depth * 14, borderRadius: 8, cursor: "pointer", background: sel === node.id ? (dark ? "rgba(255,255,255,.06)" : "#F0F2F5") : "transparent", marginBottom: 1 }}>
+            {kids.length > 0
+              ? <span onClick={(e: any) => { e.stopPropagation(); toggleCollapse(node.id); }} style={{ width: 14, textAlign: "center", color: C.t2, fontSize: 10, cursor: "pointer" }}>{collapsed.has(node.id) ? "▸" : "▾"}</span>
+              : <span style={{ width: 14 }} />}
+            <span style={{ width: 8, height: 8, borderRadius: 3, background: node.color, flexShrink: 0 }} />
+            <span style={{ fontSize: 12.5, color: C.t1, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{node.title}</span>
+            <span style={{ fontSize: 10, color: C.t2, fontVariantNumeric: "tabular-nums" }}>{pr}%</span>
+          </div>;
+        })}
+      </div>
+
+      {/* ===== ГАНТ ===== */}
+      <div style={{ ...card, padding: 12, overflow: "hidden" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
+          <span style={{ fontSize: 12.5, fontWeight: 700, color: C.t1 }}>Диаграмма Ганта</span>
+          <div style={{ display: "inline-flex", gap: 4 }}>
+            {(["month", "quarter", "year"] as const).map(s => <button key={s} style={chip(scale === s)} onClick={() => setScale(s)}>{s === "month" ? "Месяц" : s === "quarter" ? "Квартал" : "Год"}</button>)}
+          </div>
+        </div>
+        <div style={{ overflowX: "auto", overflowY: "hidden" }}>
+          <div style={{ minWidth: ganttW, position: "relative" }}>
+            {/* шапка месяцев */}
+            <div style={{ position: "relative", height: 22, borderBottom: "1px solid " + C.bd, marginBottom: 6 }}>
+              {monthMarks.map((m: any, i: number) => <div key={i} style={{ position: "absolute", left: m.x, top: 0, fontSize: 10, color: C.t2, borderLeft: "1px solid " + C.bd, paddingLeft: 4, height: 22 }}>{m.label}</div>)}
+              {/* сегодня */}
+              <div style={{ position: "absolute", left: xOf(scToday()), top: 0, bottom: -1000, width: 1, background: "#C0392B", opacity: .5 }} />
+            </div>
+            {/* строки */}
+            <div style={{ position: "relative" }}>
+              {flat.map(({ node, depth }: any, ri: number) => {
+                if (!node.start_date || !node.due_date) return null;
+                const x = xOf(node.start_date); const w = Math.max(8, scDiff(node.start_date, node.due_date) * dayW);
+                const pr = progressOf(node.id);
+                const over = node.due_date < scToday() && pr < 100;
+                return <div key={node.id} style={{ position: "relative", height: 30 }}>
+                  {/* зависимости */}
+                  {(node.depends_on || []).map((dep: string) => {
+                    const dn = nodes.find((x: SCNode) => x.id === dep); if (!dn || !dn.due_date) return null;
+                    const fromX = xOf(dn.due_date); const toX = x;
+                    return <svg key={dep} style={{ position: "absolute", left: 0, top: 0, overflow: "visible", pointerEvents: "none" }} width={1} height={1}>
+                      <path d={`M${fromX},${-6} C${(fromX + toX) / 2},${-6} ${(fromX + toX) / 2},15 ${toX},15`} fill="none" stroke={C.t2} strokeWidth={1} strokeDasharray="3 3" opacity={.5} />
+                    </svg>;
+                  })}
+                  <div onMouseDown={(e: any) => onBarDown(e, node, "move")} onTouchStart={(e: any) => onBarDown(e, node, "move")} onClick={() => setSel(node.id)}
+                    title={`${node.title} · ${scFmt(node.start_date)} – ${scFmt(node.due_date)} · ${pr}%`}
+                    style={{ position: "absolute", left: x, top: 4, width: w, height: 22, borderRadius: 6, background: node.color, opacity: sel === node.id ? 1 : .82, cursor: "grab", boxShadow: sel === node.id ? "0 0 0 2px " + C.t1 : over ? "0 0 0 1.5px #C0392B" : "none", display: "flex", alignItems: "center", overflow: "hidden", transition: "opacity .15s" }}>
+                    <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${pr}%`, background: "rgba(255,255,255,.28)" }} />
+                    <span style={{ fontSize: 10.5, color: "#fff", fontWeight: 600, padding: "0 8px", whiteSpace: "nowrap", position: "relative", zIndex: 1, textShadow: "0 1px 2px rgba(0,0,0,.3)" }}>{node.title}</span>
+                    {/* хват для длительности */}
+                    <div onMouseDown={(e: any) => onBarDown(e, node, "resize")} onTouchStart={(e: any) => onBarDown(e, node, "resize")} style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: 8, cursor: "ew-resize", zIndex: 2 }} />
+                  </div>
+                </div>;
+              })}
+            </div>
+          </div>
+        </div>
+        <div style={{ fontSize: 11, color: C.t2, marginTop: 8 }}>Перетаскивай полосу — сдвиг сроков · тяни правый край — длительность · пунктир — зависимости</div>
+      </div>
+
+      {/* ===== ПАНЕЛЬ СВОЙСТВ ===== */}
+      {selNode ? <div style={{ ...card, padding: 14, maxHeight: 620, overflowY: "auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+          <input value={selNode.title} onChange={(e: any) => patch(selNode.id, { title: e.target.value })} style={{ ...inp, fontWeight: 700, fontSize: 14, border: "none", background: "transparent", padding: "2px 0" }} />
+          <button onClick={() => delNode(selNode.id)} style={{ ...chip(false), color: "#C0392B", padding: "3px 8px" }}>Удалить</button>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+          <button style={btn(true)} onClick={() => addChild(selNode.id)}>+ Подэлемент</button>
+          <button style={btn(false)} onClick={() => decompose(selNode)} disabled={decomposing === selNode.id}>
+            {decomposing === selNode.id ? <span className="sc-spin" /> : "Разбить с помощью AI"}
+          </button>
+        </div>
+
+        {/* прогресс */}
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, color: C.t2, marginBottom: 5 }}><span>Прогресс</span><span style={{ color: C.t1, fontWeight: 700 }}>{progressOf(selNode.id)}%</span></div>
+          <div style={{ height: 8, borderRadius: 4, background: C.ib, overflow: "hidden" }}><div style={{ height: "100%", width: `${progressOf(selNode.id)}%`, background: selNode.color, transition: "width .5s" }} /></div>
+          <div style={{ fontSize: 10.5, color: C.t2, marginTop: 4 }}>Связанных задач War Room: {linkedTasks(selNode.id).length} · выполнено {linkedTasks(selNode.id).filter((t: any) => t.done).length}</div>
+        </div>
+
+        {/* поля */}
+        {[
+          ["Описание", "description", "textarea"], ["KPI", "kpi", "text"], ["Ответственный", "responsible", "text"],
+        ].map(([label, key, type]) => <div key={key as string} style={{ marginBottom: 10 }}>
+          <div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>{label}</div>
+          {type === "textarea"
+            ? <textarea value={(selNode as any)[key as string] || ""} onChange={(e: any) => patch(selNode.id, { [key as string]: e.target.value } as any)} rows={2} style={{ ...inp, resize: "vertical" }} />
+            : <input value={(selNode as any)[key as string] || ""} onChange={(e: any) => patch(selNode.id, { [key as string]: e.target.value } as any)} style={inp} />}
+        </div>)}
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+          <div><div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Статус</div>
+            <select value={selNode.status} onChange={(e: any) => patch(selNode.id, { status: e.target.value })} style={inp}>
+              {(Object.keys(SC_STATUS) as SCStatus[]).map(s => <option key={s} value={s}>{SC_STATUS[s]}</option>)}
+            </select></div>
+          <div><div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Приоритет</div>
+            <select value={selNode.priority} onChange={(e: any) => patch(selNode.id, { priority: e.target.value })} style={inp}>
+              {(Object.keys(SC_PRIORITY) as SCPriority[]).map(p => <option key={p} value={p}>{SC_PRIORITY[p]}</option>)}
+            </select></div>
+          <div><div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Начало</div>
+            <input type="date" value={selNode.start_date || ""} onChange={(e: any) => patch(selNode.id, { start_date: e.target.value || null })} style={inp} /></div>
+          <div><div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Дедлайн</div>
+            <input type="date" value={selNode.due_date || ""} onChange={(e: any) => patch(selNode.id, { due_date: e.target.value || null })} style={inp} /></div>
+        </div>
+
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 11, color: C.t2, marginBottom: 5 }}>Цвет</div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {SC_COLORS.map(c => <div key={c} onClick={() => patch(selNode.id, { color: c })} style={{ width: 22, height: 22, borderRadius: 6, background: c, cursor: "pointer", boxShadow: selNode.color === c ? "0 0 0 2px " + C.t1 : "none" }} />)}
+          </div>
+        </div>
+
+        {/* документы */}
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 11, color: C.t2, marginBottom: 5 }}>Документы <span style={{ opacity: .7 }}>({SC_DOC_FORMATS})</span></div>
+          {docs.filter((d: SCDoc) => d.node_id === selNode.id).map((d: SCDoc) => <div key={d.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C.t1, padding: "5px 0", borderBottom: "1px solid " + C.bd }}>
+            <span onClick={()=>d.file_url&&window.open(d.file_url,"_blank")} style={{cursor:d.file_url?"pointer":"default",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.file_name}</span>
+            <span onClick={async()=>{
+              setDocs(p=>p.filter(x=>x.id!==d.id));
+              if(dbAvailable)await supabase.from("strategy_docs").delete().eq("id",d.id).eq("user_id",userId);
+            }} style={{color:C.t2,cursor:"pointer"}}>×</span></div>)}
+          <label style={{...chip(false),display:"inline-block",marginTop:6}}>
+            Прикрепить
+            <input type="file" accept=".pdf,.docx,.xlsx,.pptx,.png,.jpg,.jpeg" style={{display:"none"}}
+              onChange={async(e:any)=>{
+                const file=e.target.files?.[0];
+                if(!file)return;
+                if(file.size>25*1024*1024){flash("Максимальный размер документа — 25 МБ");return;}
+                const id=scUid();
+                const ext=file.name.split(".").pop()?.toLowerCase()||"file";
+                try{
+                  let fileUrl:string|null=null;
+                  if(dbAvailable){
+                    const path=`${userId}/${selNode.id}/${id}.${ext}`;
+                    const upload=await supabase.storage.from("strategy-files").upload(path,file,{upsert:false});
+                    if(upload.error)throw upload.error;
+                    const pub=supabase.storage.from("strategy-files").getPublicUrl(path);
+                    fileUrl=pub.data.publicUrl;
+                    const{error}=await supabase.from("strategy_docs").insert({
+                      id,user_id:userId,node_id:selNode.id,file_name:file.name,file_type:ext,file_url:fileUrl
+                    });
+                    if(error)throw error;
+                  }
+                  setDocs(p=>[...p,{id,node_id:selNode.id,file_name:file.name,file_type:ext,file_url:fileUrl}]);
+                  flash("Документ прикреплён");
+                }catch(err:any){flash("Не удалось загрузить документ: "+(err.message||"ошибка"));}
+                e.target.value="";
+              }}/>
+          </label>
+        </div>
+
+        {/* комментарии */}
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 11, color: C.t2, marginBottom: 5 }}>Комментарии</div>
+          {comments.filter((c: SCComment) => c.node_id === selNode.id).map((c: SCComment) => <div key={c.id} style={{ fontSize: 12, color: C.t1, padding: "5px 0", borderBottom: "1px solid " + C.bd }}>{c.text}</div>)}
+          <input placeholder="Добавить комментарий…" style={{...inp,marginTop:6}} onKeyDown={async(e:any)=>{
+            if(e.key!=="Enter"||!e.currentTarget.value.trim())return;
+            const value=e.currentTarget.value.trim();
+            const item:SCComment={id:scUid(),node_id:selNode.id,text:value,at:scToday(),created_at:new Date().toISOString()};
+            setComments(p=>[...p,item]);
+            e.currentTarget.value="";
+            if(dbAvailable){
+              const{error}=await supabase.from("strategy_comments").insert({
+                id:item.id,user_id:userId,node_id:item.node_id,text:item.text,created_at:item.created_at
+              });
+              if(error)flash("Комментарий не сохранён");
+            }
+          }}/>
+        </div>
+
+        <button style={{ ...btn(true), width: "100%", justifyContent: "center", background: selNode.color, border: "none" }} onClick={() => setWrModal(selNode)}>Добавить в War Room</button>
+      </div> : <div style={{ ...card, padding: 20, color: C.t2, fontSize: 12.5 }}>Выбери элемент дерева, чтобы редактировать свойства</div>}
+
+    </div> : (
+
+      /* ===== TIMELINE ===== */
+      <div style={{ ...card, padding: 14, overflowX: "auto" }}>
+        <div style={{ fontSize: 12.5, fontWeight: 700, color: C.t1, marginBottom: 12 }}>Timeline — все проекты на единой шкале</div>
+        <div style={{ minWidth: ganttW, position: "relative" }}>
+          <div style={{ position: "relative", height: 22, borderBottom: "1px solid " + C.bd, marginBottom: 10 }}>
+            {monthMarks.map((m: any, i: number) => <div key={i} style={{ position: "absolute", left: m.x, fontSize: 10, color: C.t2, borderLeft: "1px solid " + C.bd, paddingLeft: 4, height: 22 }}>{m.label}</div>)}
+            <div style={{ position: "absolute", left: xOf(scToday()), top: 0, bottom: -600, width: 1, background: "#C0392B", opacity: .5 }} />
+          </div>
+          {nodes.filter((n: SCNode) => n.parent_id === null || nodes.find((r: SCNode) => r.id === n.parent_id)?.parent_id === null).map((n: SCNode) => {
+            if (!n.start_date || !n.due_date) return null;
+            const x = xOf(n.start_date); const w = Math.max(10, scDiff(n.start_date, n.due_date) * dayW);
+            const isRoot = n.parent_id === null;
+            return <div key={n.id} style={{ position: "relative", height: 32 }}>
+              <div onClick={() => { setSel(n.id); setTab("structure"); }} title={n.title}
+                style={{ position: "absolute", left: x, top: 5, width: w, height: 22, borderRadius: 6, background: n.color, opacity: isRoot ? 1 : .7, cursor: "pointer", display: "flex", alignItems: "center", paddingLeft: 8 }}>
+                <span style={{ fontSize: 10.5, color: "#fff", fontWeight: 600, whiteSpace: "nowrap", textShadow: "0 1px 2px rgba(0,0,0,.3)" }}>{n.title} · {progressOf(n.id)}%</span>
+              </div>
+            </div>;
+          })}
+        </div>
+      </div>
+    )}
+
+    {/* ===== МОДАЛКА: AI-ИНТЕРВЬЮ ===== */}
+    {interview && <ScInterview onClose={() => setInterview(false)} onDone={(root: SCNode, kids: SCNode[]) => {
+      setNodes((prev: SCNode[]) => [...prev, root, ...kids]); persist(root); kids.forEach(persist); setSel(root.id); setInterview(false); flash("Стратегия создана");
+    }} btn={btn} inp={inp} card={card} />}
+
+    {/* ===== МОДАЛКА: ДОБАВИТЬ В WAR ROOM ===== */}
+    {wrModal && <ScWarRoomModal node={wrModal} onClose={() => setWrModal(null)} onSubmit={(f: any) => addToWarRoom(wrModal, f)} btn={btn} inp={inp} card={card} />}
+
+    {/* ===== МОДАЛКА: АУДИТ ===== */}
+    {audit.open && <div onClick={() => setAudit({ ...audit, open: false })} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 100, display:"flex",alignItems:isMobile?"flex-end":"center",justifyContent:"center",padding:isMobile?0:20 }}>
+      <div onClick={(e: any) => e.stopPropagation()} style={{ ...card, padding: 22, width: "min(620px,100%)", maxHeight: "80vh", overflowY: "auto", animation: "scFade .2s" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: C.t1 }}>Стратегический аудит</span>
+          <button onClick={() => setAudit({ ...audit, open: false })} style={{ background: "none", border: "none", color: C.t2, fontSize: 22, cursor: "pointer" }}>×</button>
+        </div>
+        {audit.loading ? <div style={{ display: "flex", alignItems: "center", gap: 10, color: C.t2, fontSize: 13 }}><span className="sc-spin" /> AI анализирует стратегию…</div>
+          : <div style={{ fontSize: 13, color: C.t1, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{audit.text}</div>}
+      </div>
+    </div>}
+
+    {toast && <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: C.dk, color: "#fff", padding: "11px 20px", borderRadius: 11, fontSize: 13, fontWeight: 500, zIndex: 200, boxShadow: "0 8px 30px rgba(0,0,0,.4)", animation: "scFade .2s" }}>{toast}</div>}
+  </div>;
+}
+
+/* ============ МОДАЛКА AI-ИНТЕРВЬЮ ============ */
+function ScInterview({ onClose, onDone, btn, inp, card }: any) {
+  const QUESTIONS = [
+    { k: "goal", q: "Какую большую цель нужно достичь?" },
+    { k: "deadline", q: "К какому сроку? (например, 6 месяцев / до 31.12)" },
+    { k: "why", q: "Почему эта цель важна именно сейчас?" },
+    { k: "now", q: "Где ты сейчас по этой цели? Текущая ситуация." },
+    { k: "limits", q: "Какие есть ограничения (время, деньги, люди)?" },
+    { k: "resources", q: "Какие ресурсы уже есть в наличии?" },
+    { k: "kpi", q: "Как поймёшь, что цель достигнута? Ключевой KPI." },
+    { k: "people", q: "Кто участвует в достижении?" },
+    { k: "risks", q: "Что может помешать? Основные риски." },
+  ];
+  const [step, setStep] = useState(0);
+  const [ans, setAns] = useState<Record<string, string>>({});
+  const [val, setVal] = useState("");
+  const [building, setBuilding] = useState(false);
+  const [err, setErr] = useState("");
+  const last = step === QUESTIONS.length - 1;
+
+  const next = async () => {
+    const na = { ...ans, [QUESTIONS[step].k]: val }; setAns(na); setVal("");
+    if (!last) { setStep(step + 1); return; }
+    // построение структуры
+    setBuilding(true); setErr("");
+    try {
+      const struct = await scAskJson(
+        "Ты стратег. На основе интервью построй структуру стратегии: корневая цель и 3–5 проектов первого уровня, у каждого 2–4 этапа. Формат JSON: {title, projects:[{title, stages:[{title}]}]}.",
+        Object.entries(na).map(([k, v]) => `${k}: ${v}`).join("\n"), 1400);
+      const t = scToday();
+      const root: SCNode = { id: scUid(), parent_id: null, title: String(struct.title || na.goal).slice(0, 90), status: "active", color: SC_COLORS[0], priority: "high", start_date: t, due_date: scAddDays(t, 180), sort_order: 0, kpi: na.kpi, description: na.why, depends_on: [], manual_progress: null };
+      const kids: SCNode[] = [];
+      (struct.projects || []).slice(0, 5).forEach((p: any, pi: number) => {
+        const proj: SCNode = { id: scUid(), parent_id: root.id, title: String(p.title).slice(0, 80), status: "planned", color: SC_COLORS[(pi + 1) % SC_COLORS.length], priority: "medium", start_date: scAddDays(t, pi * 14), due_date: scAddDays(t, pi * 14 + 60), sort_order: pi, depends_on: [], manual_progress: null };
+        kids.push(proj);
+        (p.stages || []).slice(0, 4).forEach((s: any, si: number) => kids.push({ id: scUid(), parent_id: proj.id, title: String(s.title).slice(0, 80), status: "planned", color: proj.color, priority: "medium", start_date: scAddDays(t, pi * 14 + si * 10), due_date: scAddDays(t, pi * 14 + si * 10 + 16), sort_order: si, depends_on: [], manual_progress: null }));
+      });
+      onDone(root, kids);
+    } catch (e: any) { setErr("Не удалось построить структуру: " + (e.message || "ошибка") + ". Попробуй ещё раз."); setBuilding(false); }
+  };
+
+  return <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 110, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+    <div onClick={(e: any) => e.stopPropagation()} style={{ ...card, padding: 24, width: "min(540px,100%)", animation: "scFade .2s" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+        <span style={{ fontSize: 15, fontWeight: 700, color: C.t1 }}>AI-интервью · новая цель</span>
+        <button onClick={onClose} style={{ background: "none", border: "none", color: C.t2, fontSize: 22, cursor: "pointer" }}>×</button>
+      </div>
+      <div style={{ height: 4, borderRadius: 3, background: C.ib, marginBottom: 18, overflow: "hidden" }}><div style={{ height: "100%", width: `${(step + 1) / QUESTIONS.length * 100}%`, background: C.t1, transition: "width .3s" }} /></div>
+      {building ? <div style={{ display: "flex", alignItems: "center", gap: 10, color: C.t2, fontSize: 13, padding: "20px 0" }}><span className="sc-spin" /> AI строит структуру стратегии…</div>
+        : <>
+          <div style={{ fontSize: 11.5, color: C.t2, marginBottom: 6 }}>Вопрос {step + 1} из {QUESTIONS.length}</div>
+          <div style={{ fontSize: 15, fontWeight: 600, color: C.t1, marginBottom: 14 }}>{QUESTIONS[step].q}</div>
+          <textarea autoFocus value={val} onChange={(e: any) => setVal(e.target.value)} rows={3} style={{ ...inp, resize: "vertical", marginBottom: 6 }}
+            onKeyDown={(e: any) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) next(); }} />
+          {err && <div style={{ fontSize: 12, color: "#C0392B", marginBottom: 8 }}>{err}</div>}
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10 }}>
+            <button style={btn(false)} onClick={() => step > 0 && setStep(step - 1)} disabled={step === 0}>Назад</button>
+            <button style={btn(true)} onClick={next} disabled={!val.trim()}>{last ? "Построить стратегию" : "Далее"}</button>
+          </div>
+        </>}
+    </div>
+  </div>;
+}
+
+/* ============ МОДАЛКА «ДОБАВИТЬ В WAR ROOM» ============ */
+function ScWarRoomModal({ node, onClose, onSubmit, btn, inp, card }: any) {
+  const [date, setDate] = useState(scToday());
+  const [time, setTime] = useState("");
+  const [dur, setDur] = useState("60");
+  const [priority, setPriority] = useState("none");
+  const [comment, setComment] = useState("");
+  const [checklist, setChecklist] = useState<string[]>([]);
+  const [subtasks, setSubtasks] = useState<string[]>([]);
+  const [ci, setCi] = useState("");
+  const [si, setSi] = useState("");
+  return <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 110, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+    <div onClick={(e: any) => e.stopPropagation()} style={{ ...card, padding: 22, width: "min(480px,100%)", maxHeight: "85vh", overflowY: "auto", animation: "scFade .2s" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+        <span style={{ fontSize: 15, fontWeight: 700, color: C.t1 }}>В War Room → Задачи</span>
+        <button onClick={onClose} style={{ background: "none", border: "none", color: C.t2, fontSize: 22, cursor: "pointer" }}>×</button>
+      </div>
+      <div style={{ fontSize: 12.5, color: C.t2, marginBottom: 16 }}>{node.title}</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+        <div><div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Дата</div><input type="date" value={date} onChange={(e: any) => setDate(e.target.value)} style={inp} /></div>
+        <div><div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Время</div><input type="time" value={time} onChange={(e: any) => setTime(e.target.value)} style={inp} /></div>
+        <div><div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Длительность, мин</div><input value={dur} onChange={(e: any) => setDur(e.target.value)} style={inp} /></div>
+        <div><div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Приоритет</div>
+          <select value={priority} onChange={(e: any) => setPriority(e.target.value)} style={inp}>
+            <option value="none">Без приоритета</option><option value="low">Низкий</option><option value="medium">Средний</option><option value="high">Высокий</option>
+          </select></div>
+      </div>
+      <div style={{ marginBottom: 10 }}><div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Комментарий</div><textarea value={comment} onChange={(e: any) => setComment(e.target.value)} rows={2} style={{ ...inp, resize: "vertical" }} /></div>
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Чек-лист</div>
+        {checklist.map((c: string, i: number) => <div key={i} style={{ fontSize: 12.5, color: C.t1, display: "flex", justifyContent: "space-between", padding: "3px 0" }}>{c}<span onClick={() => setChecklist((p: string[]) => p.filter((_, j) => j !== i))} style={{ color: C.t2, cursor: "pointer" }}>×</span></div>)}
+        <input value={ci} onChange={(e: any) => setCi(e.target.value)} placeholder="Пункт + Enter" style={inp} onKeyDown={(e: any) => { if (e.key === "Enter" && ci.trim()) { setChecklist((p: string[]) => [...p, ci.trim()]); setCi(""); } }} />
+      </div>
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Подзадачи</div>
+        {subtasks.map((c: string, i: number) => <div key={i} style={{ fontSize: 12.5, color: C.t1, display: "flex", justifyContent: "space-between", padding: "3px 0" }}>{c}<span onClick={() => setSubtasks((p: string[]) => p.filter((_, j) => j !== i))} style={{ color: C.t2, cursor: "pointer" }}>×</span></div>)}
+        <input value={si} onChange={(e: any) => setSi(e.target.value)} placeholder="Подзадача + Enter" style={inp} onKeyDown={(e: any) => { if (e.key === "Enter" && si.trim()) { setSubtasks((p: string[]) => [...p, si.trim()]); setSi(""); } }} />
+      </div>
+      <button style={{ ...btn(true), width: "100%", justifyContent: "center" }} onClick={() => onSubmit({ date, time, dur, priority, comment, checklist, subtasks })}>Создать задачу</button>
+    </div>
   </div>;
 }
