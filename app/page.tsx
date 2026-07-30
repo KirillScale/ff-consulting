@@ -873,7 +873,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v6.6"; // v116 edit interview answers and rebuild existing strategies
+  const APP_VERSION="v6.7"; // v117 robust AI JSON recovery for strategy rebuilds
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker","defects"];
 
   // Clear stale localStorage on version change
@@ -23619,18 +23619,87 @@ function scStripMd(s:string){return String(s).replace(/^```[a-z]*\n?/i,"").repla
 async function scAsk(messages:{role:string;content:string}[],maxTokens=1200,temperature=0.6):Promise<string>{
   return dsMessages(messages,maxTokens,temperature);
 }
+function scExtractJsonCandidate(raw:string){
+  const source=String(raw||"").trim()
+    .replace(/^```(?:json)?\s*/i,"")
+    .replace(/\s*```$/i,"")
+    .trim();
+
+  const firstObj=source.indexOf("{");
+  const firstArr=source.indexOf("[");
+  let start=-1;
+  if(firstObj===-1)start=firstArr;
+  else if(firstArr===-1)start=firstObj;
+  else start=Math.min(firstObj,firstArr);
+  if(start<0)throw new Error("AI не вернул JSON.");
+
+  const open=source[start];
+  const close=open==="{"?"}":"]";
+  let depth=0,inString=false,escaped=false;
+
+  for(let i=start;i<source.length;i++){
+    const ch=source[i];
+    if(inString){
+      if(escaped){escaped=false;continue;}
+      if(ch==="\\"){escaped=true;continue;}
+      if(ch==='"')inString=false;
+      continue;
+    }
+    if(ch==='"'){inString=true;continue;}
+    if(ch===open)depth++;
+    if(ch===close){
+      depth--;
+      if(depth===0)return source.slice(start,i+1);
+    }
+  }
+
+  // Best-effort recovery for truncated but otherwise valid output.
+  let candidate=source.slice(start)
+    .replace(/,\s*([}\]])/g,"$1")
+    .replace(/[\u0000-\u001F]+/g," ");
+  const missing=Math.max(0,depth);
+  candidate+=close.repeat(missing);
+  return candidate;
+}
+
+function scNormalizeJsonCandidate(candidate:string){
+  return String(candidate)
+    .replace(/[“”]/g,'"')
+    .replace(/[‘’]/g,"'")
+    .replace(/,\s*([}\]])/g,"$1")
+    .replace(/([{,]\s*)([A-Za-zА-Яа-яЁё_][A-Za-zА-Яа-яЁё0-9_]*)(\s*:)/g,'$1"$2"$3')
+    .replace(/:\s*'([^'\\]*(?:\\.[^'\\]*)*)'/g,(_,v)=>':"'+String(v).replace(/"/g,'\\"')+'"');
+}
+
 async function scAskJson(system:string,user:string,maxTokens=1200):Promise<any>{
-  const raw=await scAsk(
-    [{role:"system",content:system+"\nОтвечай ТОЛЬКО валидным JSON без markdown и пояснений."},{role:"user",content:user}],
-    maxTokens,
-    0.35
-  );
-  const cleaned=scStripMd(raw);
-  const first=Math.min(...[cleaned.indexOf("{"),cleaned.indexOf("[")].filter(x=>x>=0));
-  if(!Number.isFinite(first))throw new Error("AI не вернул JSON");
-  const sliced=cleaned.slice(first);
-  const last=Math.max(sliced.lastIndexOf("}"),sliced.lastIndexOf("]"));
-  return JSON.parse(last>=0?sliced.slice(0,last+1):sliced);
+  const strictSystem=system+"\nОтвечай ТОЛЬКО одним валидным JSON-объектом или JSON-массивом. Не используй markdown, комментарии, многоточия и текст до или после JSON. Все строки заключай в двойные кавычки.";
+  const raw=await scAsk([{role:"system",content:strictSystem},{role:"user",content:user}],maxTokens,0.35);
+
+  const attempts:string[]=[];
+  try{attempts.push(scExtractJsonCandidate(raw));}catch{}
+  if(attempts[0])attempts.push(scNormalizeJsonCandidate(attempts[0]));
+
+  for(const candidate of attempts){
+    try{return JSON.parse(candidate);}catch{}
+  }
+
+  // One repair request instead of failing the whole strategy rebuild.
+  const repairRaw=await scAsk([
+    {
+      role:"system",
+      content:"Ты исправляешь повреждённый JSON. Верни только валидный JSON без markdown и пояснений. Не меняй смысл, поля и значения. Удали оборванные фрагменты, исправь кавычки, запятые и скобки."
+    },
+    {
+      role:"user",
+      content:`Исправь этот JSON:\n${raw.slice(0,30000)}`
+    }
+  ],Math.min(maxTokens+500,3500),0);
+
+  const repaired=scNormalizeJsonCandidate(scExtractJsonCandidate(repairRaw));
+  try{return JSON.parse(repaired);}
+  catch(e:any){
+    throw new Error("AI вернул повреждённую структуру плана. Повтори пересборку — ответы интервью сохранены.");
+  }
 }
 
 /* ============ ДЕМО-ДЕРЕВО ============ */
@@ -23974,7 +24043,7 @@ ${taskLines||"Нет задач"}`;
       const struct=await scAskJson(
         SC_STRATEGIST_SYSTEM_PROMPT+"\n\n"+SC_CRITICAL_PATH_PROMPT+"\n\nПересобери существующую стратегию с учётом обновлённых ответов интервью и документов. Сохрани конечную цель, но полностью пересмотри критический путь. Строго соблюдай дедлайн. Ни один проект, этап или контрольная точка не может завершаться позже корневой цели. Верни JSON строго по схеме: {title,due_date:\"YYYY-MM-DD\",bottleneck:{title,reason,unblocks},projects:[{title,path_type:\"critical|optional\",responsible,estimate_hours,completion_criteria,external_dependency,deadline_type:\"external|internal\",failure_cost,checkpoint:{metric,threshold,date:\"YYYY-MM-DD\",failure_signal,corrective_action},stages:[{title,path_type:\"critical|optional\",responsible,estimate_hours,completion_criteria,external_dependency,deadline_type:\"external|internal\",failure_cost,checkpoint:{metric,threshold,date:\"YYYY-MM-DD\",failure_signal,corrective_action}}]}],removed_noise:[{title,reason}],first_action_20_min:{title,completion_criteria}}.",
         `ТЕКУЩАЯ ДАТА: ${scToday()}\nОБНОВЛЁННЫЕ ОТВЕТЫ ИНТЕРВЬЮ:\n${Object.entries(answers).map(([k,v])=>`${k}: ${v}`).join("\n")}\n\nТЕКУЩАЯ СТРАТЕГИЯ:\n${strategyContext(root)}\n\nКОНТЕКСТ ИЗ ФАЙЛОВ:\n${fileContext||"Файлы не загружены."}`,
-        2200
+        3200
       );
 
       const t=scToday();
@@ -24072,7 +24141,7 @@ ${taskLines||"Нет задач"}`;
       setRebuildRoot(null);
       flash(`Стратегия «${updatedRoot.title}» пересобрана по обновлённому интервью`);
     }catch(e:any){
-      flash("Не удалось пересобрать стратегию: "+(e.message||"ошибка"));
+      flash("Не удалось пересобрать стратегию: "+(e.message||"ошибка")+" Ответы интервью сохранены — можно нажать ещё раз.");
     }finally{
       setRebuilding(false);
     }
@@ -24597,7 +24666,7 @@ function ScInterview({ onClose, onDone, btn, inp, card }: any) {
       const fileContext=files.map(f=>`ФАЙЛ: ${f.name}\n${f.text||f.extraction_note||"Текст не извлечён"}`).join("\n\n");
       const struct = await scAskJson(
         SC_STRATEGIST_SYSTEM_PROMPT+"\n\n"+SC_CRITICAL_PATH_PROMPT+"\n\nПострой полный критический путь достижения цели. Сначала выдели обязательные проекты, затем конкретные исполнимые действия. Опциональные действия вынеси отдельно и не ставь их раньше критических. Строго соблюдай дедлайн пользователя. Ни один проект, этап или контрольная точка не может завершаться позже корневой цели. Верни JSON строго по схеме: {title, due_date:\"YYYY-MM-DD\", bottleneck:{title,reason,unblocks}, projects:[{title,path_type:\"critical|optional\",responsible,estimate_hours,completion_criteria,external_dependency,deadline_type:\"external|internal\",failure_cost,checkpoint:{metric,threshold,date:\"YYYY-MM-DD\",failure_signal,corrective_action},stages:[{title,path_type:\"critical|optional\",responsible,estimate_hours,completion_criteria,external_dependency,deadline_type:\"external|internal\",failure_cost,checkpoint:{metric,threshold,date:\"YYYY-MM-DD\",failure_signal,corrective_action}}]}], removed_noise:[{title,reason}], first_action_20_min:{title,completion_criteria}}.",
-        `ТЕКУЩАЯ ДАТА: ${scToday()}\nОТВЕТЫ ИНТЕРВЬЮ:\n${Object.entries(na).map(([k,v])=>`${k}: ${v}`).join("\n")}\n\nКОНТЕКСТ ИЗ ФАЙЛОВ:\n${fileContext||"Файлы не загружены."}`, 1800);
+        `ТЕКУЩАЯ ДАТА: ${scToday()}\nОТВЕТЫ ИНТЕРВЬЮ:\n${Object.entries(na).map(([k,v])=>`${k}: ${v}`).join("\n")}\n\nКОНТЕКСТ ИЗ ФАЙЛОВ:\n${fileContext||"Файлы не загружены."}`, 2800);
       const t=scToday();
       const userDue=scResolveDeadline(na.deadline,t);
       const aiDue=/^20\d{2}-\d{2}-\d{2}$/.test(String(struct.due_date||""))?String(struct.due_date):null;
