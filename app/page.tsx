@@ -873,7 +873,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v7.5"; // v125 subtle hierarchy connectors and independent branch color overrides
+  const APP_VERSION="v7.6"; // v126 custom branch colors with native picker, HEX input and hierarchy preview
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker","defects"];
 
   // Clear stale localStorage on version change
@@ -24156,6 +24156,10 @@ function ScalingModule({ userId }: { userId: string }) {
   },[range,dayW,scale]);
 
   const selNode: SCNode | undefined = nodes.find((n: SCNode) => n.id === sel);
+  const[customBranchColor,setCustomBranchColor]=useState("#3B82F6");
+  useEffect(()=>{
+    if(selNode)setCustomBranchColor(branchRootForColor(selNode).color||selNode.color||"#3B82F6");
+  },[selNode?.id,selNode?.color,nodes]);
 
   const rootOf=(id:string)=>{
     let current=nodes.find(n=>n.id===id);
@@ -24641,6 +24645,32 @@ ${taskLines||"Нет задач"}`;
     return luminance>.72?"#111827":"#FFFFFF";
   };
 
+  const scNormalizeHex=(value:string)=>{
+    const raw=String(value||"").trim();
+    const withHash=raw.startsWith("#")?raw:`#${raw}`;
+    if(/^#[0-9a-fA-F]{6}$/.test(withHash))return withHash.toUpperCase();
+    if(/^#[0-9a-fA-F]{3}$/.test(withHash)){
+      return("#"+withHash.slice(1).split("").map(x=>x+x).join("")).toUpperCase();
+    }
+    return null;
+  };
+  const applyBranchColor=(nodeId:string,color:string)=>{
+    const normalized=scNormalizeHex(color);
+    if(!normalized){flash("Укажи цвет в формате HEX, например #22C55E");return;}
+    const branchIds=new Set<string>();
+    const collect=(id:string)=>{
+      branchIds.add(id);
+      nodes.filter(n=>n.parent_id===id).forEach(n=>collect(n.id));
+    };
+    collect(nodeId);
+    setNodes(prev=>{
+      const next=prev.map(n=>branchIds.has(n.id)?{...n,color:normalized}:n);
+      scWriteCachedNodes(userId,next);
+      next.filter(n=>branchIds.has(n.id)).forEach(n=>schedulePersist({...n,color:normalized}));
+      return next;
+    });
+  };
+
   if(loadingStrategy)return <div style={{padding:32,textAlign:"center",color:C.t2,fontSize:13}}>Загружаем стратегию…</div>;
 
   return <div style={{fontFamily:"'Inter',sans-serif"}}>
@@ -25006,7 +25036,7 @@ ${taskLines||"Нет задач"}`;
 
         <div style={{ marginBottom: 12 }}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:5}}>
-            <div style={{fontSize:11,color:C.t2}}>Базовый цвет ветки</div>
+            <div style={{fontSize:11,color:C.t2}}>Цвет ветки</div>
             <div style={{fontSize:9.5,color:C.t2}}>Выбранный цвет применяется к этой ветке, подуровни осветляются автоматически</div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
@@ -25014,20 +25044,79 @@ ${taskLines||"Нет задач"}`;
             <span style={{fontSize:10.5,color:C.t2}}>Текущий оттенок уровня · базовый цвет ветки: {branchRootForColor(selNode).color}</span>
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {SC_COLORS.map(c=><div key={c} onClick={()=>{
-              const branchIds=new Set<string>();
-              const collect=(id:string)=>{branchIds.add(id);nodes.filter(n=>n.parent_id===id).forEach(n=>collect(n.id));};
-              collect(selNode.id);
-              setNodes(prev=>{
-                const next=prev.map(n=>branchIds.has(n.id)?{...n,color:c}:n);
-                scWriteCachedNodes(userId,next);
-                next.filter(n=>branchIds.has(n.id)).forEach(n=>schedulePersist({...n,color:c}));
-                return next;
-              });
+            {SC_COLORS.map(c=><button key={c} type="button" title={c} onClick={()=>{
+              setCustomBranchColor(c);
+              applyBranchColor(selNode.id,c);
             }} style={{
-              width:22,height:22,borderRadius:6,background:c,cursor:"pointer",
-              boxShadow:branchRootForColor(selNode).color===c?"0 0 0 2px "+C.t1:"none"
+              width:24,height:24,borderRadius:7,background:c,cursor:"pointer",
+              border:"1px solid "+(branchRootForColor(selNode).color===c?C.t1:"transparent"),
+              boxShadow:branchRootForColor(selNode).color===c?"0 0 0 2px "+C.w+", 0 0 0 3px "+C.t1:"none",
+              padding:0
             }}/>) }
+          </div>
+
+          <div style={{marginTop:11,padding:10,border:"1px solid "+C.bd,borderRadius:10,background:C.ib}}>
+            <div style={{fontSize:10.5,fontWeight:700,color:C.t1,marginBottom:7}}>Свой цвет</div>
+            <div style={{display:"grid",gridTemplateColumns:"42px 1fr auto",gap:8,alignItems:"center"}}>
+              <label title="Открыть палитру" style={{
+                width:42,height:36,borderRadius:8,overflow:"hidden",
+                border:"1px solid "+C.bd,background:customBranchColor,
+                cursor:"pointer",position:"relative",display:"block"
+              }}>
+                <input
+                  type="color"
+                  value={scNormalizeHex(customBranchColor)||"#3B82F6"}
+                  onChange={(e:any)=>{
+                    const value=e.target.value.toUpperCase();
+                    setCustomBranchColor(value);
+                    applyBranchColor(selNode.id,value);
+                  }}
+                  style={{position:"absolute",inset:-8,width:58,height:52,opacity:0,cursor:"pointer"}}
+                />
+              </label>
+              <input
+                value={customBranchColor}
+                onChange={(e:any)=>setCustomBranchColor(e.target.value)}
+                onBlur={()=>{
+                  const normalized=scNormalizeHex(customBranchColor);
+                  if(normalized){setCustomBranchColor(normalized);applyBranchColor(selNode.id,normalized);}
+                }}
+                onKeyDown={(e:any)=>{
+                  if(e.key==="Enter"){
+                    e.preventDefault();
+                    const normalized=scNormalizeHex(customBranchColor);
+                    if(normalized){setCustomBranchColor(normalized);applyBranchColor(selNode.id,normalized);}
+                    else flash("Укажи цвет в формате HEX, например #22C55E");
+                  }
+                }}
+                placeholder="#22C55E"
+                maxLength={7}
+                style={{...inp,textTransform:"uppercase",fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace"}}
+              />
+              <button
+                type="button"
+                style={{...btn(false),padding:"8px 11px"}}
+                onClick={()=>{
+                  const normalized=scNormalizeHex(customBranchColor);
+                  if(normalized){setCustomBranchColor(normalized);applyBranchColor(selNode.id,normalized);}
+                  else flash("Укажи цвет в формате HEX, например #22C55E");
+                }}>
+                Применить
+              </button>
+            </div>
+            <div style={{display:"flex",gap:5,alignItems:"center",marginTop:8}}>
+              {[0,.16,.32,.48].map((level,i)=>{
+                const base=scNormalizeHex(customBranchColor)||branchRootForColor(selNode).color;
+                const shade=scMixHex(base,"#FFFFFF",level);
+                return <div key={i} title={`Уровень ${i+1}: ${shade}`} style={{
+                  flex:1,height:12,borderRadius:4,background:shade,
+                  border:"1px solid "+C.bd
+                }}/>;
+              })}
+            </div>
+            <div style={{fontSize:9.8,color:C.t2,marginTop:6,lineHeight:1.35}}>
+              Цвет применяется к выбранной ветке. Каждый следующий подуровень автоматически получает более светлый оттенок.
+            </div>
           </div>
         </div>
 
