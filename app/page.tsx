@@ -873,7 +873,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v7.1"; // v121 fix nullable treeDrop TypeScript error
+  const APP_VERSION="v7.2"; // v122 idempotent War Room transfer, duration sync and clearer Scaling editor
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker","defects"];
 
   // Clear stale localStorage on version change
@@ -23987,6 +23987,7 @@ function ScalingModule({ userId }: { userId: string }) {
   const[rebuilding,setRebuilding]=useState(false);
   const [audit, setAudit] = useState<{ open: boolean; loading: boolean; text: string }>({ open: false, loading: false, text: "" });
   const [wrModal, setWrModal] = useState<SCNode | null>(null);
+  const wrTransferLocks=useRef<Set<string>>(new Set());
   const [decomposing, setDecomposing] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 3000); };
@@ -24432,18 +24433,26 @@ ${taskLines||"Нет задач"}`;
 
   // ── перенос в War Room ──
   const addToWarRoom=async(n:SCNode,form:any)=>{
-    const duration=Math.max(15,Math.round((Number(form.dur)||60)/15)*15);
+    if(wrTransferLocks.current.has(n.id)){
+      flash("Задача уже переносится в War Room");
+      return;
+    }
+    wrTransferLocks.current.add(n.id);
+
+    const estimateMinutes=n.estimate_hours&&n.estimate_hours>0?Math.round(n.estimate_hours*60):60;
+    const duration=Math.max(15,Math.round((Number(form.dur)||estimateMinutes)/15)*15);
     const combined=[
       ...(form.checklist||[]).map((s:string)=>({text:s,done:false,kind:"checklist"})),
       ...(form.subtasks||[]).map((s:string)=>({text:s,done:false,kind:"subtask"})),
     ];
+
     const row:any={
       title:n.title,
       description:form.comment||n.description||"",
       due_date:form.date||null,
       date:form.date||null,
       due_time:form.time||null,
-      priority:form.priority||"none",
+      priority:form.priority||n.priority||"none",
       color:n.color,
       done:false,
       completion_status:"pending",
@@ -24455,15 +24464,51 @@ ${taskLines||"Нет задач"}`;
       user_id:userId,
       updated_at:new Date().toISOString(),
     };
+
     try{
-      const{error}=await supabase.from("planner_tasks").insert(row);
-      if(error)throw error;
+      const existingResult=await supabase
+        .from("planner_tasks")
+        .select("id")
+        .eq("user_id",userId)
+        .eq("strategy_node_id",n.id)
+        .limit(1);
+
+      if(existingResult.error)throw existingResult.error;
+      const existing=existingResult.data?.[0];
+
+      if(existing?.id){
+        const{error}=await supabase
+          .from("planner_tasks")
+          .update(row)
+          .eq("id",existing.id)
+          .eq("user_id",userId);
+        if(error)throw error;
+        flash(`«${n.title}» обновлено в War Room`);
+      }else{
+        const{error}=await supabase.from("planner_tasks").insert(row);
+        if(error){
+          if((error as any).code==="23505"){
+            const retry=await supabase
+              .from("planner_tasks")
+              .update(row)
+              .eq("user_id",userId)
+              .eq("strategy_node_id",n.id);
+            if(retry.error)throw retry.error;
+            flash(`«${n.title}» обновлено в War Room`);
+          }else throw error;
+        }else{
+          flash(`«${n.title}» добавлено в War Room`);
+        }
+      }
+
       window.dispatchEvent(new CustomEvent("ks-refresh",{detail:{table:"planner_tasks"}}));
       await plannerTasks.reload?.();
-      flash(`«${n.title}» добавлено в War Room`);
       setWrModal(null);
     }catch(e:any){
-      flash("Не удалось создать задачу: "+(e.message||"ошибка"));
+      flash("Не удалось перенести задачу: "+(e.message||"ошибка"));
+      throw e;
+    }finally{
+      wrTransferLocks.current.delete(n.id);
     }
   };
 
@@ -24639,6 +24684,20 @@ ${taskLines||"Нет задач"}`;
           <input value={selNode.title} onChange={(e: any) => patch(selNode.id, { title: e.target.value })} style={{ ...inp, fontWeight: 700, fontSize: 14, border: "none", background: "transparent", padding: "2px 0" }} />
           <button onClick={() => delNode(selNode.id)} style={{ ...chip(false), color: "#C0392B", padding: "3px 8px" }}>Удалить</button>
         </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:7,marginBottom:12}}>
+          <div style={{padding:"8px 9px",borderRadius:9,background:C.ib,border:"1px solid "+C.bd}}>
+            <div style={{fontSize:9.5,color:C.t2,marginBottom:3}}>Статус</div>
+            <div style={{fontSize:11.5,fontWeight:650,color:statusColor(selNode.status)}}>{SC_STATUS[selNode.status]}</div>
+          </div>
+          <div style={{padding:"8px 9px",borderRadius:9,background:C.ib,border:"1px solid "+C.bd}}>
+            <div style={{fontSize:9.5,color:C.t2,marginBottom:3}}>Оценка</div>
+            <div style={{fontSize:11.5,fontWeight:650,color:C.t1}}>{selNode.estimate_hours?`${selNode.estimate_hours} ч`:"Не указана"}</div>
+          </div>
+          <div style={{padding:"8px 9px",borderRadius:9,background:C.ib,border:"1px solid "+C.bd}}>
+            <div style={{fontSize:9.5,color:C.t2,marginBottom:3}}>Дедлайн</div>
+            <div style={{fontSize:11.5,fontWeight:650,color:C.t1}}>{scFmt(selNode.due_date)}</div>
+          </div>
+        </div>
 
         <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
           <button style={btn(true)} onClick={() => addChild(selNode.id)}>+ Подэлемент</button>
@@ -24654,6 +24713,7 @@ ${taskLines||"Нет задач"}`;
           <div style={{ fontSize: 10.5, color: C.t2, marginTop: 4 }}>Связанных задач War Room: {linkedTasks(selNode.id).length} · выполнено {linkedTasks(selNode.id).filter((t: any) => t.done).length}</div>
         </div>
 
+        <div style={{fontSize:10.5,fontWeight:750,color:C.t2,textTransform:"uppercase",letterSpacing:".06em",margin:"4px 0 9px"}}>Основная информация</div>
         {/* поля */}
         {[
           ["Описание", "description", "textarea"], ["KPI", "kpi", "text"], ["Ответственный", "responsible", "text"],
@@ -24679,6 +24739,7 @@ ${taskLines||"Нет задач"}`;
             <input type="date" value={selNode.due_date || ""} onChange={(e: any) => patch(selNode.id, { due_date: e.target.value || null })} style={inp} /></div>
         </div>
 
+        <div style={{fontSize:10.5,fontWeight:750,color:C.t2,textTransform:"uppercase",letterSpacing:".06em",margin:"14px 0 9px"}}>Исполнение и контроль</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
           <div>
             <div style={{fontSize:11,color:C.t2,marginBottom:4}}>Роль в плане</div>
@@ -24739,6 +24800,7 @@ ${taskLines||"Нет задач"}`;
           </div>
         </div>
 
+        <div style={{fontSize:10.5,fontWeight:750,color:C.t2,textTransform:"uppercase",letterSpacing:".06em",margin:"14px 0 9px"}}>Материалы и обсуждение</div>
         {/* документы */}
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 11, color: C.t2, marginBottom: 5 }}>Документы <span style={{ opacity: .7 }}>({SC_DOC_FORMATS})</span></div>
@@ -25170,43 +25232,91 @@ function ScStrategyChat({node,context,storageKey,onClose,btn,inp,card}:any){
 
 /* ============ МОДАЛКА «ДОБАВИТЬ В WAR ROOM» ============ */
 function ScWarRoomModal({ node, onClose, onSubmit, btn, inp, card }: any) {
+  const defaultMinutes=Math.max(15,Math.round(((Number(node.estimate_hours)||1)*60)/15)*15);
   const [date, setDate] = useState(scToday());
   const [time, setTime] = useState("");
-  const [dur, setDur] = useState("60");
-  const [priority, setPriority] = useState("none");
-  const [comment, setComment] = useState("");
+  const [dur, setDur] = useState(String(defaultMinutes));
+  const [priority, setPriority] = useState(node.priority||"none");
+  const [comment, setComment] = useState(node.description||"");
   const [checklist, setChecklist] = useState<string[]>([]);
   const [subtasks, setSubtasks] = useState<string[]>([]);
   const [ci, setCi] = useState("");
   const [si, setSi] = useState("");
-  return <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 110, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-    <div onClick={(e: any) => e.stopPropagation()} style={{ ...card, padding: 22, width: "min(480px,100%)", maxHeight: "85vh", overflowY: "auto", animation: "scFade .2s" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-        <span style={{ fontSize: 15, fontWeight: 700, color: C.t1 }}>В War Room → Задачи</span>
-        <button onClick={onClose} style={{ background: "none", border: "none", color: C.t2, fontSize: 22, cursor: "pointer" }}>×</button>
+  const[submitting,setSubmitting]=useState(false);
+
+  const submit=async()=>{
+    if(submitting)return;
+    setSubmitting(true);
+    try{await onSubmit({date,time,dur,priority,comment,checklist,subtasks});}
+    finally{setSubmitting(false);}
+  };
+
+  return <div onClick={()=>!submitting&&onClose()} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:110,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+    <div onClick={(e:any)=>e.stopPropagation()} style={{...card,padding:0,width:"min(540px,100%)",maxHeight:"88vh",overflowY:"auto",animation:"scFade .2s"}}>
+      <div style={{padding:"17px 18px 13px",borderBottom:"1px solid "+C.bd}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12}}>
+          <div>
+            <div style={{fontSize:15,fontWeight:750,color:C.t1}}>Добавить задачу в War Room</div>
+            <div style={{fontSize:12.5,color:C.t2,marginTop:4}}>{node.title}</div>
+          </div>
+          <button onClick={()=>!submitting&&onClose()} disabled={submitting} style={{background:"none",border:"none",color:C.t2,fontSize:22,cursor:submitting?"default":"pointer"}}>×</button>
+        </div>
+        <div style={{display:"flex",gap:7,flexWrap:"wrap",marginTop:11}}>
+          <span style={{fontSize:10.5,padding:"4px 7px",borderRadius:7,background:node.color+"20",color:node.color,fontWeight:700}}>Из масштабирования</span>
+          <span style={{fontSize:10.5,padding:"4px 7px",borderRadius:7,background:C.ib,color:C.t2}}>Оценка: {node.estimate_hours?`${node.estimate_hours} ч`:"1 ч"}</span>
+        </div>
       </div>
-      <div style={{ fontSize: 12.5, color: C.t2, marginBottom: 16 }}>{node.title}</div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-        <div><div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Дата</div><input type="date" value={date} onChange={(e: any) => setDate(e.target.value)} style={inp} /></div>
-        <div><div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Время</div><input type="time" value={time} onChange={(e: any) => setTime(e.target.value)} style={inp} /></div>
-        <div><div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Длительность, мин</div><input value={dur} onChange={(e: any) => setDur(e.target.value)} style={inp} /></div>
-        <div><div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Приоритет</div>
-          <select value={priority} onChange={(e: any) => setPriority(e.target.value)} style={inp}>
-            <option value="none">Без приоритета</option><option value="low">Низкий</option><option value="medium">Средний</option><option value="high">Высокий</option>
-          </select></div>
+
+      <div style={{padding:18}}>
+        <div style={{padding:12,borderRadius:11,background:C.ib,border:"1px solid "+C.bd,marginBottom:14}}>
+          <div style={{fontSize:11,fontWeight:700,color:C.t1,marginBottom:9}}>Когда выполнить</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <div><div style={{fontSize:11,color:C.t2,marginBottom:4}}>Дата</div><input type="date" value={date} onChange={(e:any)=>setDate(e.target.value)} style={inp}/></div>
+            <div><div style={{fontSize:11,color:C.t2,marginBottom:4}}>Время начала</div><input type="time" value={time} onChange={(e:any)=>setTime(e.target.value)} style={inp}/></div>
+          </div>
+        </div>
+
+        <div style={{padding:12,borderRadius:11,background:C.ib,border:"1px solid "+C.bd,marginBottom:14}}>
+          <div style={{fontSize:11,fontWeight:700,color:C.t1,marginBottom:9}}>Параметры задачи</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <div>
+              <div style={{fontSize:11,color:C.t2,marginBottom:4}}>Длительность</div>
+              <select value={dur} onChange={(e:any)=>setDur(e.target.value)} style={inp}>
+                {[15,30,45,60,90,120,150,180,240,300,360,480].map(v=><option key={v} value={String(v)}>{v<60?`${v} мин`:v%60===0?`${v/60} ч`:`${Math.floor(v/60)} ч ${v%60} мин`}</option>)}
+              </select>
+              <div style={{fontSize:10,color:C.t2,marginTop:4}}>Автоматически взято из оценки задачи в масштабировании</div>
+            </div>
+            <div>
+              <div style={{fontSize:11,color:C.t2,marginBottom:4}}>Приоритет</div>
+              <select value={priority} onChange={(e:any)=>setPriority(e.target.value)} style={inp}>
+                <option value="none">Без приоритета</option><option value="low">Низкий</option><option value="medium">Средний</option><option value="high">Высокий</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <details style={{marginBottom:14,border:"1px solid "+C.bd,borderRadius:11}}>
+          <summary style={{padding:"10px 12px",cursor:"pointer",fontSize:11.5,fontWeight:700,color:C.t1}}>Описание и декомпозиция</summary>
+          <div style={{padding:"0 12px 12px"}}>
+            <div style={{marginBottom:10}}><div style={{fontSize:11,color:C.t2,marginBottom:4}}>Комментарий</div><textarea value={comment} onChange={(e:any)=>setComment(e.target.value)} rows={2} style={{...inp,resize:"vertical"}}/></div>
+            <div style={{marginBottom:10}}>
+              <div style={{fontSize:11,color:C.t2,marginBottom:4}}>Чек-лист</div>
+              {checklist.map((c:string,i:number)=><div key={i} style={{fontSize:12.5,color:C.t1,display:"flex",justifyContent:"space-between",padding:"4px 0"}}>{c}<span onClick={()=>setChecklist(p=>p.filter((_,j)=>j!==i))} style={{color:C.t2,cursor:"pointer"}}>×</span></div>)}
+              <input value={ci} onChange={(e:any)=>setCi(e.target.value)} placeholder="Пункт + Enter" style={inp} onKeyDown={(e:any)=>{if(e.key==="Enter"&&ci.trim()){e.preventDefault();setChecklist(p=>[...p,ci.trim()]);setCi("");}}}/>
+            </div>
+            <div>
+              <div style={{fontSize:11,color:C.t2,marginBottom:4}}>Подзадачи</div>
+              {subtasks.map((c:string,i:number)=><div key={i} style={{fontSize:12.5,color:C.t1,display:"flex",justifyContent:"space-between",padding:"4px 0"}}>{c}<span onClick={()=>setSubtasks(p=>p.filter((_,j)=>j!==i))} style={{color:C.t2,cursor:"pointer"}}>×</span></div>)}
+              <input value={si} onChange={(e:any)=>setSi(e.target.value)} placeholder="Подзадача + Enter" style={inp} onKeyDown={(e:any)=>{if(e.key==="Enter"&&si.trim()){e.preventDefault();setSubtasks(p=>[...p,si.trim()]);setSi("");}}}/>
+            </div>
+          </div>
+        </details>
+
+        <button style={{...btn(true),width:"100%",justifyContent:"center",height:42,opacity:submitting?.65:1}} disabled={submitting||!date} onClick={submit}>
+          {submitting?<span style={{display:"inline-flex",alignItems:"center",gap:8}}><span className="sc-spin"/>Сохраняю…</span>:"Добавить в War Room"}
+        </button>
+        <div style={{fontSize:10.5,color:C.t2,textAlign:"center",marginTop:8,lineHeight:1.4}}>Повторное добавление обновит существующую карточку, а не создаст дубликат.</div>
       </div>
-      <div style={{ marginBottom: 10 }}><div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Комментарий</div><textarea value={comment} onChange={(e: any) => setComment(e.target.value)} rows={2} style={{ ...inp, resize: "vertical" }} /></div>
-      <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Чек-лист</div>
-        {checklist.map((c: string, i: number) => <div key={i} style={{ fontSize: 12.5, color: C.t1, display: "flex", justifyContent: "space-between", padding: "3px 0" }}>{c}<span onClick={() => setChecklist((p: string[]) => p.filter((_, j) => j !== i))} style={{ color: C.t2, cursor: "pointer" }}>×</span></div>)}
-        <input value={ci} onChange={(e: any) => setCi(e.target.value)} placeholder="Пункт + Enter" style={inp} onKeyDown={(e: any) => { if (e.key === "Enter" && ci.trim()) { setChecklist((p: string[]) => [...p, ci.trim()]); setCi(""); } }} />
-      </div>
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 11, color: C.t2, marginBottom: 4 }}>Подзадачи</div>
-        {subtasks.map((c: string, i: number) => <div key={i} style={{ fontSize: 12.5, color: C.t1, display: "flex", justifyContent: "space-between", padding: "3px 0" }}>{c}<span onClick={() => setSubtasks((p: string[]) => p.filter((_, j) => j !== i))} style={{ color: C.t2, cursor: "pointer" }}>×</span></div>)}
-        <input value={si} onChange={(e: any) => setSi(e.target.value)} placeholder="Подзадача + Enter" style={inp} onKeyDown={(e: any) => { if (e.key === "Enter" && si.trim()) { setSubtasks((p: string[]) => [...p, si.trim()]); setSi(""); } }} />
-      </div>
-      <button style={{ ...btn(true), width: "100%", justifyContent: "center" }} onClick={() => onSubmit({ date, time, dur, priority, comment, checklist, subtasks })}>Создать задачу</button>
     </div>
   </div>;
 }
