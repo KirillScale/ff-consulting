@@ -873,7 +873,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v7.4"; // v124 automatic hierarchy colors and parent-child Gantt connectors
+  const APP_VERSION="v7.5"; // v125 subtle hierarchy connectors and independent branch color overrides
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker","defects"];
 
   // Clear stale localStorage on version change
@@ -24603,22 +24603,37 @@ ${taskLines||"Нет задач"}`;
     }
     return depth;
   };
-  const rootForColor=(node:SCNode)=>{
+  const branchRootForColor=(node:SCNode)=>{
     let current=node;
     const seen=new Set<string>();
     while(current.parent_id&&!seen.has(current.id)){
       seen.add(current.id);
       const parent=nodes.find(n=>n.id===current.parent_id);
       if(!parent)break;
+      if(String(parent.color||"").toLowerCase()!==String(current.color||"").toLowerCase())break;
       current=parent;
     }
     return current;
   };
+  const branchDepthOf=(node:SCNode)=>{
+    const branchRoot=branchRootForColor(node);
+    let depth=0;
+    let current=node;
+    const seen=new Set<string>();
+    while(current.id!==branchRoot.id&&current.parent_id&&!seen.has(current.id)){
+      seen.add(current.id);
+      depth++;
+      const parent=nodes.find(n=>n.id===current.parent_id);
+      if(!parent)break;
+      current=parent;
+    }
+    return depth;
+  };
   const hierarchyColor=(node:SCNode)=>{
-    const depth=depthOf(node.id);
-    const root=rootForColor(node);
-    const lighten=Math.min(.54,depth*.14);
-    return scMixHex(root.color||node.color||SC_COLORS[0],"#FFFFFF",lighten);
+    const branchRoot=branchRootForColor(node);
+    const relativeDepth=branchDepthOf(node);
+    const lighten=Math.min(.52,relativeDepth*.16);
+    return scMixHex(branchRoot.color||node.color||SC_COLORS[0],"#FFFFFF",lighten);
   };
   const hierarchyTextColor=(node:SCNode)=>{
     const rgb=scHexToRgb(hierarchyColor(node));
@@ -24748,8 +24763,8 @@ ${taskLines||"Нет задач"}`;
               top:-8,
               bottom:"50%",
               width:10,
-              borderLeft:"1px dashed "+hierarchyColor(node)+"88",
-              borderBottom:"1px dashed "+hierarchyColor(node)+"88",
+              borderLeft:"1px dashed "+(dark?"rgba(180,186,196,.24)":"rgba(100,116,139,.20)"),
+              borderBottom:"1px dashed "+(dark?"rgba(180,186,196,.24)":"rgba(100,116,139,.20)"),
               borderBottomLeftRadius:6,
               pointerEvents:"none"
             }}/>}
@@ -24824,7 +24839,7 @@ ${taskLines||"Нет задач"}`;
                     const parentY=(parentRow-ri)*30+15;
                     const childY=15;
                     const elbow=Math.max(fromX+18,Math.min(toX-12,(fromX+toX)/2));
-                    const stroke=hierarchyColor(node);
+                    const stroke=dark?"rgba(180,186,196,.34)":"rgba(100,116,139,.28)";
                     return <svg
                       style={{position:"absolute",left:0,top:0,overflow:"visible",pointerEvents:"none",zIndex:0}}
                       width={1}
@@ -24833,12 +24848,12 @@ ${taskLines||"Нет задач"}`;
                         d={`M${fromX},${parentY} H${elbow} V${childY} H${Math.max(elbow,toX-4)}`}
                         fill="none"
                         stroke={stroke}
-                        strokeWidth={1.5}
-                        strokeDasharray="4 4"
-                        opacity={.72}
+                        strokeWidth={.8}
+                        strokeDasharray="2.5 4.5"
+                        opacity={.62}
                       />
-                      <circle cx={fromX} cy={parentY} r={2.2} fill={stroke} opacity={.85}/>
-                      <circle cx={Math.max(elbow,toX-4)} cy={childY} r={2.2} fill={stroke} opacity={.85}/>
+                      <circle cx={fromX} cy={parentY} r={1.25} fill={stroke}/>
+                      <circle cx={Math.max(elbow,toX-4)} cy={childY} r={1.25} fill={stroke}/>
                     </svg>;
                   })()}
                   <div onMouseDown={(e: any) => onBarDown(e, node, "move")} onTouchStart={(e: any) => onBarDown(e, node, "move")} onClick={() => setSel(node.id)}
@@ -24992,7 +25007,11 @@ ${taskLines||"Нет задач"}`;
         <div style={{ marginBottom: 12 }}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:5}}>
             <div style={{fontSize:11,color:C.t2}}>Базовый цвет ветки</div>
-            <div style={{fontSize:9.5,color:C.t2}}>Подуровни осветляются автоматически</div>
+            <div style={{fontSize:9.5,color:C.t2}}>Выбранный цвет применяется к этой ветке, подуровни осветляются автоматически</div>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
+            <span style={{width:12,height:12,borderRadius:4,background:hierarchyColor(selNode),boxShadow:"0 0 0 1px "+C.bd}}/>
+            <span style={{fontSize:10.5,color:C.t2}}>Текущий оттенок уровня · базовый цвет ветки: {branchRootForColor(selNode).color}</span>
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {SC_COLORS.map(c=><div key={c} onClick={()=>{
@@ -25007,7 +25026,7 @@ ${taskLines||"Нет задач"}`;
               });
             }} style={{
               width:22,height:22,borderRadius:6,background:c,cursor:"pointer",
-              boxShadow:rootForColor(selNode).color===c?"0 0 0 2px "+C.t1:"none"
+              boxShadow:branchRootForColor(selNode).color===c?"0 0 0 2px "+C.t1:"none"
             }}/>) }
           </div>
         </div>
