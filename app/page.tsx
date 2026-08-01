@@ -873,7 +873,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v7.2"; // v122 idempotent War Room transfer, duration sync and clearer Scaling editor
+  const APP_VERSION="v7.4"; // v124 automatic hierarchy colors and parent-child Gantt connectors
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker","defects"];
 
   // Clear stale localStorage on version change
@@ -23978,6 +23978,18 @@ function ScalingModule({ userId }: { userId: string }) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const[treeDragId,setTreeDragId]=useState<string|null>(null);
   const[treeDrop,setTreeDrop]=useState<{id:string;position:"before"|"inside"|"after"}|null>(null);
+  const layoutStorageKey=`vizzy_scaling_layout_${userId}`;
+  const[panelWidths,setPanelWidths]=useState<{tree:number;editor:number}>(()=>{
+    try{
+      const saved=JSON.parse(localStorage.getItem(layoutStorageKey)||"null");
+      if(saved&&Number(saved.tree)&&Number(saved.editor))return{
+        tree:Math.max(240,Math.min(520,Number(saved.tree))),
+        editor:Math.max(280,Math.min(620,Number(saved.editor)))
+      };
+    }catch{}
+    return{tree:300,editor:320};
+  });
+  const resizeRef=useRef<{side:"tree"|"editor";startX:number;tree:number;editor:number}|null>(null);
   const[syncState,setSyncState]=useState<"loading"|"synced"|"syncing"|"offline"|"error">("loading");
   const[syncError,setSyncError]=useState("");
   const[cloudUpdatedAt,setCloudUpdatedAt]=useState<string|null>(null);
@@ -24512,12 +24524,107 @@ ${taskLines||"Нет задач"}`;
     }
   };
 
+  const beginPanelResize=(e:any,side:"tree"|"editor")=>{
+    if(isMobile)return;
+    e.preventDefault();
+    e.stopPropagation();
+    const startX=e.clientX??e.touches?.[0]?.clientX;
+    resizeRef.current={side,startX,tree:panelWidths.tree,editor:panelWidths.editor};
+
+    const move=(ev:any)=>{
+      const state=resizeRef.current;
+      if(!state)return;
+      const x=ev.clientX??ev.touches?.[0]?.clientX;
+      const delta=x-state.startX;
+      setPanelWidths(()=>{
+        const next=state.side==="tree"
+          ?{tree:Math.max(240,Math.min(520,state.tree+delta)),editor:state.editor}
+          :{tree:state.tree,editor:Math.max(280,Math.min(620,state.editor-delta))};
+        try{localStorage.setItem(layoutStorageKey,JSON.stringify(next));}catch{}
+        return next;
+      });
+    };
+
+    const stop=()=>{
+      resizeRef.current=null;
+      document.body.style.cursor="";
+      document.body.style.userSelect="";
+      window.removeEventListener("mousemove",move);
+      window.removeEventListener("mouseup",stop);
+      window.removeEventListener("touchmove",move);
+      window.removeEventListener("touchend",stop);
+    };
+
+    document.body.style.cursor="col-resize";
+    document.body.style.userSelect="none";
+    window.addEventListener("mousemove",move);
+    window.addEventListener("mouseup",stop);
+    window.addEventListener("touchmove",move,{passive:false});
+    window.addEventListener("touchend",stop);
+  };
+
+  const resetPanelLayout=()=>{
+    const next={tree:300,editor:320};
+    setPanelWidths(next);
+    try{localStorage.setItem(layoutStorageKey,JSON.stringify(next));}catch{}
+    flash("Размеры блоков восстановлены");
+  };
+
   /* ---------- стили ---------- */
   const card: React.CSSProperties = { background: C.w, border: "1px solid " + C.bd, borderRadius: 14 };
   const btn = (primary?: boolean): React.CSSProperties => ({ padding: "8px 14px", borderRadius: 9, border: "1px solid " + (primary ? "transparent" : C.bd), background: primary ? C.t1 : C.ib, color: primary ? C.w : C.t1, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" });
   const chip = (on: boolean): React.CSSProperties => ({ padding: "6px 12px", borderRadius: 8, border: "1px solid " + (on ? "transparent" : C.bd), background: on ? "rgba(124,124,124,0.16)" : "transparent", color: on ? C.t1 : C.t2, fontSize: 12, fontWeight: 500, cursor: "pointer" });
   const inp: React.CSSProperties = { width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid " + C.bd, background: C.ib, color: C.t1, fontSize: 12.5, fontFamily: "'Inter',sans-serif", outline: "none", boxSizing: "border-box" };
   const statusColor = (s: SCStatus) => s === "done" ? "#2E7D53" : s === "active" ? "#B8860B" : s === "risk" ? "#C0392B" : C.t2;
+
+  const scHexToRgb=(hex:string)=>{
+    const value=String(hex||"#3B82F6").replace("#","");
+    const full=value.length===3?value.split("").map(x=>x+x).join(""):value.padEnd(6,"0").slice(0,6);
+    return{
+      r:parseInt(full.slice(0,2),16)||0,
+      g:parseInt(full.slice(2,4),16)||0,
+      b:parseInt(full.slice(4,6),16)||0,
+    };
+  };
+  const scMixHex=(base:string,target:string,amount:number)=>{
+    const a=scHexToRgb(base),b=scHexToRgb(target);
+    const t=Math.max(0,Math.min(.58,amount));
+    const c=(x:number,y:number)=>Math.round(x+(y-x)*t).toString(16).padStart(2,"0");
+    return`#${c(a.r,b.r)}${c(a.g,b.g)}${c(a.b,b.b)}`;
+  };
+  const depthOf=(id:string)=>{
+    let depth=0;
+    let current=nodes.find(n=>n.id===id);
+    const seen=new Set<string>();
+    while(current?.parent_id&&!seen.has(current.id)){
+      seen.add(current.id);
+      depth++;
+      current=nodes.find(n=>n.id===current!.parent_id);
+    }
+    return depth;
+  };
+  const rootForColor=(node:SCNode)=>{
+    let current=node;
+    const seen=new Set<string>();
+    while(current.parent_id&&!seen.has(current.id)){
+      seen.add(current.id);
+      const parent=nodes.find(n=>n.id===current.parent_id);
+      if(!parent)break;
+      current=parent;
+    }
+    return current;
+  };
+  const hierarchyColor=(node:SCNode)=>{
+    const depth=depthOf(node.id);
+    const root=rootForColor(node);
+    const lighten=Math.min(.54,depth*.14);
+    return scMixHex(root.color||node.color||SC_COLORS[0],"#FFFFFF",lighten);
+  };
+  const hierarchyTextColor=(node:SCNode)=>{
+    const rgb=scHexToRgb(hierarchyColor(node));
+    const luminance=(.299*rgb.r+.587*rgb.g+.114*rgb.b)/255;
+    return luminance>.72?"#111827":"#FFFFFF";
+  };
 
   if(loadingStrategy)return <div style={{padding:32,textAlign:"center",color:C.t2,fontSize:13}}>Загружаем стратегию…</div>;
 
@@ -24527,6 +24634,10 @@ ${taskLines||"Нет задач"}`;
       @keyframes scSpin{to{transform:rotate(360deg)}}
       .sc-spin{width:14px;height:14px;border:2px solid ${C.bd};border-top-color:${C.t1};border-radius:50%;animation:scSpin .7s linear infinite;display:inline-block}
       .sc-row:hover{background:${dark ? "rgba(255,255,255,.03)" : "#FAFAFA"}}
+      .sc-resize-handle{position:relative;width:10px;min-width:10px;align-self:stretch;cursor:col-resize;touch-action:none;z-index:4}
+      .sc-resize-handle:before{content:"";position:absolute;left:4px;top:12px;bottom:12px;width:2px;border-radius:2px;background:${C.bd};transition:background .15s,width .15s}
+      .sc-resize-handle:hover:before{background:#3B82F6;width:3px}
+      .sc-resize-handle:after{content:"";position:absolute;left:1px;top:50%;transform:translateY(-50%);width:8px;height:34px;border-radius:6px;background:transparent}
     `}</style>
 
     {!dbAvailable&&<div style={{background:"rgba(184,134,11,.10)",border:"1px solid rgba(184,134,11,.28)",borderRadius:10,padding:"10px 12px",marginBottom:12,fontSize:11.5,color:C.t1}}>
@@ -24565,13 +24676,30 @@ ${taskLines||"Нет задач"}`;
         if(ok)flash("Все изменения синхронизированы с облаком");
         else flash("Не удалось синхронизировать: "+(syncError||"проверь соединение и SQL-схему"));
       }}>Синхронизировать</button>
+      {!isMobile&&<button style={btn(false)} onClick={resetPanelLayout}>Сбросить размеры</button>}
       <button style={btn(false)} onClick={runAudit}>Стратегический аудит</button>
     </div>
 
-    {tab === "structure" ? <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "300px 1fr 320px", gap: 14, alignItems: "start" }}>
+    {tab === "structure" ? <div style={{
+      display:isMobile?"grid":"flex",
+      gridTemplateColumns:isMobile?"1fr":undefined,
+      gap:isMobile?14:0,
+      alignItems:"stretch",
+      minWidth:0
+    }}>
 
       {/* ===== ДЕРЕВО ===== */}
-      <div style={{ ...card, padding: 12, maxHeight: 620, overflowY: "auto" }}>
+      <div style={{
+        ...card,
+        padding:12,
+        maxHeight:620,
+        overflowY:"auto",
+        width:isMobile?"100%":panelWidths.tree,
+        minWidth:isMobile?0:240,
+        maxWidth:isMobile?"100%":520,
+        flexShrink:0,
+        boxSizing:"border-box"
+      }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
           <span style={{ fontSize: 12.5, fontWeight: 700, color: C.t1 }}>Дерево стратегии</span>
           <button onClick={() => addChild(null)} style={{ ...chip(false), padding: "4px 9px" }}>+ Цель</button>
@@ -24611,20 +24739,52 @@ ${taskLines||"Нет задач"}`;
               borderTop:dropActive&&treeDrop?.position==="before"?"2px solid #3B82F6":"2px solid transparent",
               borderBottom:dropActive&&treeDrop?.position==="after"?"2px solid #3B82F6":"2px solid transparent",
               opacity:treeDragId===node.id?.45:1,
-              marginBottom:1
+              marginBottom:1,
+              position:"relative"
             }}>
+            {depth>0&&<span style={{
+              position:"absolute",
+              left:9+(depth-1)*14,
+              top:-8,
+              bottom:"50%",
+              width:10,
+              borderLeft:"1px dashed "+hierarchyColor(node)+"88",
+              borderBottom:"1px dashed "+hierarchyColor(node)+"88",
+              borderBottomLeftRadius:6,
+              pointerEvents:"none"
+            }}/>}
             {kids.length > 0
               ? <span onClick={(e: any) => { e.stopPropagation(); toggleCollapse(node.id); }} style={{ width: 14, textAlign: "center", color: C.t2, fontSize: 10, cursor: "pointer" }}>{collapsed.has(node.id) ? "▸" : "▾"}</span>
               : <span style={{ width: 14 }} />}
-            <span style={{ width: 8, height: 8, borderRadius: 3, background: node.color, flexShrink: 0 }} />
+            <span title={`Уровень ${depth+1}`} style={{
+              width:9,height:9,borderRadius:3,
+              background:hierarchyColor(node),
+              boxShadow:`0 0 0 1px ${hierarchyColor(node)}55`,
+              flexShrink:0
+            }} />
             <span style={{ fontSize: 12.5, color: C.t1, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{node.path_type==="optional"?"[Опц.] ":""}{node.title}</span>
             <span style={{ fontSize: 10, color: C.t2, fontVariantNumeric: "tabular-nums" }}>{pr}%</span>
           </div>;
         })}
       </div>
 
+      {!isMobile&&<div
+        className="sc-resize-handle"
+        title="Потяни, чтобы изменить ширину дерева стратегии"
+        onMouseDown={(e:any)=>beginPanelResize(e,"tree")}
+        onTouchStart={(e:any)=>beginPanelResize(e,"tree")}
+      />}
+
       {/* ===== ГАНТ ===== */}
-      <div style={{ ...card, padding: 12, overflow: "hidden" }}>
+      <div style={{
+        ...card,
+        padding:12,
+        overflow:"hidden",
+        flex:isMobile?undefined:"1 1 auto",
+        minWidth:isMobile?0:360,
+        width:isMobile?"100%":undefined,
+        boxSizing:"border-box"
+      }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
           <div>
             <span style={{ fontSize: 12.5, fontWeight: 700, color: C.t1 }}>Диаграмма Ганта</span>
@@ -24654,19 +24814,38 @@ ${taskLines||"Нет задач"}`;
                 const pr = progressOf(node.id);
                 const over = node.due_date < scToday() && pr < 100;
                 return <div key={node.id} style={{ position: "relative", height: 30 }}>
-                  {/* зависимости */}
-                  {(node.depends_on || []).map((dep: string) => {
-                    const dn = nodes.find((x: SCNode) => x.id === dep); if (!dn || !dn.due_date) return null;
-                    const fromX = xOf(dn.due_date); const toX = x;
-                    return <svg key={dep} style={{ position: "absolute", left: 0, top: 0, overflow: "visible", pointerEvents: "none" }} width={1} height={1}>
-                      <path d={`M${fromX},${-6} C${(fromX + toX) / 2},${-6} ${(fromX + toX) / 2},15 ${toX},15`} fill="none" stroke={C.t2} strokeWidth={1} strokeDasharray="3 3" opacity={.5} />
+                  {/* связь родитель → подзадача */}
+                  {node.parent_id&&(()=>{
+                    const parent=nodes.find((p:SCNode)=>p.id===node.parent_id);
+                    const parentRow=flat.findIndex((item:any)=>item.node.id===node.parent_id);
+                    if(!parent||!parent.start_date||parentRow<0)return null;
+                    const fromX=xOf(parent.start_date)+6;
+                    const toX=x;
+                    const parentY=(parentRow-ri)*30+15;
+                    const childY=15;
+                    const elbow=Math.max(fromX+18,Math.min(toX-12,(fromX+toX)/2));
+                    const stroke=hierarchyColor(node);
+                    return <svg
+                      style={{position:"absolute",left:0,top:0,overflow:"visible",pointerEvents:"none",zIndex:0}}
+                      width={1}
+                      height={1}>
+                      <path
+                        d={`M${fromX},${parentY} H${elbow} V${childY} H${Math.max(elbow,toX-4)}`}
+                        fill="none"
+                        stroke={stroke}
+                        strokeWidth={1.5}
+                        strokeDasharray="4 4"
+                        opacity={.72}
+                      />
+                      <circle cx={fromX} cy={parentY} r={2.2} fill={stroke} opacity={.85}/>
+                      <circle cx={Math.max(elbow,toX-4)} cy={childY} r={2.2} fill={stroke} opacity={.85}/>
                     </svg>;
-                  })}
+                  })()}
                   <div onMouseDown={(e: any) => onBarDown(e, node, "move")} onTouchStart={(e: any) => onBarDown(e, node, "move")} onClick={() => setSel(node.id)}
                     title={`${node.title} · ${scFmt(node.start_date)} – ${scFmt(node.due_date)} · ${pr}%`}
-                    style={{ position: "absolute", left: x, top: 4, width: w, height: 22, borderRadius: 6, background: node.color, opacity:1,cursor:"grab",boxShadow:sel===node.id?"0 0 0 2px "+C.t1+", 0 4px 14px rgba(0,0,0,.28)":over?"0 0 0 2px #EF4444":"0 2px 8px rgba(0,0,0,.22)", display: "flex", alignItems: "center", overflow: "hidden", transition: "opacity .15s" }}>
+                    style={{ position: "absolute", left: x, top: 4, width: w, height: 22, borderRadius: 6, background:hierarchyColor(node),opacity:1,cursor:"grab",boxShadow:sel===node.id?"0 0 0 2px "+C.t1+", 0 4px 14px rgba(0,0,0,.28)":over?"0 0 0 2px #EF4444":"0 2px 8px rgba(0,0,0,.22)", display: "flex", alignItems: "center", overflow: "hidden", transition: "opacity .15s" }}>
                     <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${pr}%`, background: "rgba(255,255,255,.36)" }} />
-                    <span style={{ fontSize: 10.5, color: "#fff", fontWeight: 600, padding: "0 8px", whiteSpace: "nowrap", position: "relative", zIndex: 1, textShadow: "0 1px 2px rgba(0,0,0,.3)" }}>{node.title}</span>
+                    <span style={{ fontSize: 10.5, color:hierarchyTextColor(node),fontWeight:650, padding: "0 8px", whiteSpace: "nowrap", position: "relative", zIndex: 1, textShadow: "0 1px 2px rgba(0,0,0,.3)" }}>{node.title}</span>
                     {/* хват для длительности */}
                     <div onMouseDown={(e: any) => onBarDown(e, node, "resize")} onTouchStart={(e: any) => onBarDown(e, node, "resize")} style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: 8, cursor: "ew-resize", zIndex: 2 }} />
                   </div>
@@ -24675,11 +24854,28 @@ ${taskLines||"Нет задач"}`;
             </div>
           </div>
         </div>
-        <div style={{ fontSize: 11, color: C.t2, marginTop: 8 }}>Перетаскивай полосу — сдвиг сроков · тяни правый край — длительность · пунктир — зависимости</div>
+        <div style={{ fontSize: 11, color: C.t2, marginTop: 8 }}>Перетаскивай полосу — сдвиг сроков · тяни правый край — длительность · пунктир показывает связь родитель → подзадача</div>
       </div>
 
+      {!isMobile&&<div
+        className="sc-resize-handle"
+        title="Потяни, чтобы изменить ширину редактора"
+        onMouseDown={(e:any)=>beginPanelResize(e,"editor")}
+        onTouchStart={(e:any)=>beginPanelResize(e,"editor")}
+      />}
+
       {/* ===== ПАНЕЛЬ СВОЙСТВ ===== */}
-      {selNode ? <div style={{ ...card, padding: 14, maxHeight: 620, overflowY: "auto" }}>
+      {selNode ? <div style={{
+        ...card,
+        padding:14,
+        maxHeight:620,
+        overflowY:"auto",
+        width:isMobile?"100%":panelWidths.editor,
+        minWidth:isMobile?0:280,
+        maxWidth:isMobile?"100%":620,
+        flexShrink:0,
+        boxSizing:"border-box"
+      }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
           <input value={selNode.title} onChange={(e: any) => patch(selNode.id, { title: e.target.value })} style={{ ...inp, fontWeight: 700, fontSize: 14, border: "none", background: "transparent", padding: "2px 0" }} />
           <button onClick={() => delNode(selNode.id)} style={{ ...chip(false), color: "#C0392B", padding: "3px 8px" }}>Удалить</button>
@@ -24709,7 +24905,7 @@ ${taskLines||"Нет задач"}`;
         {/* прогресс */}
         <div style={{ marginBottom: 14 }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, color: C.t2, marginBottom: 5 }}><span>Прогресс</span><span style={{ color: C.t1, fontWeight: 700 }}>{progressOf(selNode.id)}%</span></div>
-          <div style={{ height: 8, borderRadius: 4, background: C.ib, overflow: "hidden" }}><div style={{ height: "100%", width: `${progressOf(selNode.id)}%`, background: selNode.color, transition: "width .5s" }} /></div>
+          <div style={{ height: 8, borderRadius: 4, background: C.ib, overflow: "hidden" }}><div style={{ height: "100%", width: `${progressOf(selNode.id)}%`, background:hierarchyColor(selNode),transition:"width .5s" }} /></div>
           <div style={{ fontSize: 10.5, color: C.t2, marginTop: 4 }}>Связанных задач War Room: {linkedTasks(selNode.id).length} · выполнено {linkedTasks(selNode.id).filter((t: any) => t.done).length}</div>
         </div>
 
@@ -24794,9 +24990,25 @@ ${taskLines||"Нет задач"}`;
         </div>}
 
         <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 11, color: C.t2, marginBottom: 5 }}>Цвет</div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:5}}>
+            <div style={{fontSize:11,color:C.t2}}>Базовый цвет ветки</div>
+            <div style={{fontSize:9.5,color:C.t2}}>Подуровни осветляются автоматически</div>
+          </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {SC_COLORS.map(c => <div key={c} onClick={() => patch(selNode.id, { color: c })} style={{ width: 22, height: 22, borderRadius: 6, background: c, cursor: "pointer", boxShadow: selNode.color === c ? "0 0 0 2px " + C.t1 : "none" }} />)}
+            {SC_COLORS.map(c=><div key={c} onClick={()=>{
+              const branchIds=new Set<string>();
+              const collect=(id:string)=>{branchIds.add(id);nodes.filter(n=>n.parent_id===id).forEach(n=>collect(n.id));};
+              collect(selNode.id);
+              setNodes(prev=>{
+                const next=prev.map(n=>branchIds.has(n.id)?{...n,color:c}:n);
+                scWriteCachedNodes(userId,next);
+                next.filter(n=>branchIds.has(n.id)).forEach(n=>schedulePersist({...n,color:c}));
+                return next;
+              });
+            }} style={{
+              width:22,height:22,borderRadius:6,background:c,cursor:"pointer",
+              boxShadow:rootForColor(selNode).color===c?"0 0 0 2px "+C.t1:"none"
+            }}/>) }
           </div>
         </div>
 
@@ -24862,9 +25074,16 @@ ${taskLines||"Нет задач"}`;
         <div style={{display:"grid",gridTemplateColumns:"1fr",gap:8}}>
           <button style={{ ...btn(false), width: "100%", justifyContent: "center" }} onClick={() => setRebuildRoot(rootOf(selNode.id)||selNode)}>Обновить интервью и пересобрать</button>
           <button style={{ ...btn(false), width: "100%", justifyContent: "center" }} onClick={() => setChatNode(selNode)}>Обсудить стратегию с AI</button>
-          <button style={{ ...btn(true), width: "100%", justifyContent: "center", background: selNode.color, border: "none" }} onClick={() => setWrModal(selNode)}>Добавить в War Room</button>
+          <button style={{ ...btn(true), width: "100%", justifyContent: "center", background:hierarchyColor(selNode),border:"none",color:hierarchyTextColor(selNode) }} onClick={() => setWrModal(selNode)}>Добавить в War Room</button>
         </div>
-      </div> : <div style={{ ...card, padding: 20, color: C.t2, fontSize: 12.5 }}>Выбери элемент дерева, чтобы редактировать свойства</div>}
+      </div> : <div style={{
+        ...card,padding:20,color:C.t2,fontSize:12.5,
+        width:isMobile?"100%":panelWidths.editor,
+        minWidth:isMobile?0:280,
+        maxWidth:isMobile?"100%":620,
+        flexShrink:0,
+        boxSizing:"border-box"
+      }}>Выбери элемент дерева, чтобы редактировать свойства</div>}
 
     </div> : (
 
@@ -24882,8 +25101,8 @@ ${taskLines||"Нет задач"}`;
             const isRoot = n.parent_id === null;
             return <div key={n.id} style={{ position: "relative", height: 32 }}>
               <div onClick={() => { setSel(n.id); setTab("structure"); }} title={n.title}
-                style={{ position: "absolute", left: x, top: 5, width: w, height: 22, borderRadius: 6, background: n.color, opacity: isRoot ? 1 : .7, cursor: "pointer", display: "flex", alignItems: "center", paddingLeft: 8 }}>
-                <span style={{ fontSize: 10.5, color: "#fff", fontWeight: 600, whiteSpace: "nowrap", textShadow: "0 1px 2px rgba(0,0,0,.3)" }}>{n.title} · {progressOf(n.id)}%</span>
+                style={{ position: "absolute", left: x, top: 5, width: w, height: 22, borderRadius: 6, background:hierarchyColor(n),opacity:1, cursor: "pointer", display: "flex", alignItems: "center", paddingLeft: 8 }}>
+                <span style={{ fontSize: 10.5, color:hierarchyTextColor(n),fontWeight:650,whiteSpace:"nowrap", textShadow: "0 1px 2px rgba(0,0,0,.3)" }}>{n.title} · {progressOf(n.id)}%</span>
               </div>
             </div>;
           })}
