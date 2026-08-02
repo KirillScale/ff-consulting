@@ -873,7 +873,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v7.6"; // v126 custom branch colors with native picker, HEX input and hierarchy preview
+  const APP_VERSION="v7.7"; // v127 AI plan repair and tight Scaling-War Room task synchronization
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker","defects"];
 
   // Clear stale localStorage on version change
@@ -2833,6 +2833,42 @@ function TaskPlanner({userId}:{userId:string}){
   const[auditErr,setAuditErr]=useState("");
   const[audit,setAudit]=useState<{score:number,rating:string,good:string,problems:string,advice:string}|null>(null);
 
+  const[replanBusy,setReplanBusy]=useState(false);
+  const[replanNotice,setReplanNotice]=useState("");
+  const runAiReplan=async()=>{
+    if(replanBusy)return;
+    const today=pd(new Date());
+    const movable=tasks.filter((t:any)=>!t.done&&t.completion_status!=="done"&&t.due_date);
+    const overdue=movable.filter((t:any)=>t.due_date<today);
+    if(!overdue.length){setReplanNotice("Просроченных задач нет — пересборка не требуется.");return;}
+    setReplanBusy(true);setReplanNotice("");
+    try{
+      const payload=movable.map((t:any)=>({
+        id:t.id,title:t.title,due_date:t.due_date,due_time:wrNormTime(t.due_time),
+        duration_minutes:t.duration_minutes||t._duration||wrParseDuration(t.description)||60,
+        priority:t.priority||"none",strategy_node_id:t.strategy_node_id||null
+      }));
+      const plan=await scAskJson(
+        "Ты — диспетчер рабочего календаря. Пересобери только существующие невыполненные задачи после срыва плана. Ничего не добавляй, не удаляй и не переименовывай. Сохрани длительность каждой задачи. Прошедшие даты оставь пустыми: перенеси просроченные и при необходимости сдвинь будущие задачи вперёд. Не ставь пересекающиеся задачи в одно время. Верни строго JSON: {tasks:[{id,due_date:\"YYYY-MM-DD\",due_time:\"HH:MM или null\"}],explanation:\"кратко\"}.",
+        `Сегодня: ${today}\nСуществующие задачи:\n${JSON.stringify(payload)}`,1800
+      );
+      const allowed=new Set(movable.map((t:any)=>String(t.id)));
+      let changed=0;
+      for(const u of (Array.isArray(plan.tasks)?plan.tasks:[])){
+        if(!allowed.has(String(u.id))||!/^20\d{2}-\d{2}-\d{2}$/.test(String(u.due_date||"")))continue;
+        await update(String(u.id),{
+          due_date:String(u.due_date),
+          due_time:u.due_time&&/^\d{2}:\d{2}$/.test(String(u.due_time))?String(u.due_time):null,
+          updated_at:new Date().toISOString()
+        });
+        changed++;
+      }
+      setReplanNotice(changed?`План пересобран: перенесено ${changed} задач. Прошедшие даты остались пустыми.`:"AI не предложил допустимых переносов.");
+      window.dispatchEvent(new CustomEvent("vizzy-strategy-replan-refresh"));
+    }catch(e:any){setReplanNotice("Не удалось пересобрать план: "+(e?.message||"ошибка"));}
+    finally{setReplanBusy(false);}
+  };
+
   const runTaskAudit=async()=>{
     if(auditBusy)return;
     setAuditBusy(true);setAuditErr("");setAudit(null);
@@ -3313,6 +3349,15 @@ function TaskPlanner({userId}:{userId:string}){
           </div>}
         </div>}
       </div>
+
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:8}}>
+        <button onClick={runAiReplan} disabled={replanBusy} style={{
+          border:"1px solid "+C.bd,borderRadius:10,padding:"9px 12px",
+          background:dark?"rgba(59,130,246,.10)":"#EFF6FF",color:dark?"#93C5FD":"#1D4ED8",
+          fontSize:12,fontWeight:700,cursor:replanBusy?"wait":"pointer"
+        }}>{replanBusy?"AI пересобирает план…":"AI пересобрать сорванный план"}</button>
+      </div>
+      {replanNotice&&<div style={{fontSize:11.5,color:C.t2,marginBottom:10,lineHeight:1.45}}>{replanNotice}</div>}
 
       {/* AI-аудит задач */}
       <button onClick={runTaskAudit} disabled={auditBusy}
@@ -24000,6 +24045,8 @@ function ScalingModule({ userId }: { userId: string }) {
   const [audit, setAudit] = useState<{ open: boolean; loading: boolean; text: string }>({ open: false, loading: false, text: "" });
   const [wrModal, setWrModal] = useState<SCNode | null>(null);
   const wrTransferLocks=useRef<Set<string>>(new Set());
+  const[planRepairBusy,setPlanRepairBusy]=useState(false);
+  const[planRepairText,setPlanRepairText]=useState("");
   const [decomposing, setDecomposing] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 3000); };
@@ -24447,6 +24494,75 @@ ${taskLines||"Нет задач"}`;
     } catch (e: any) { setAudit({ open: true, loading: false, text: "Не удалось выполнить аудит: " + (e.message || "ошибка") }); }
   };
 
+  const leafNodes=nodes.filter(n=>!nodes.some(x=>x.parent_id===n.id));
+  const unlinkedLeafNodes=leafNodes.filter(n=>!linkedTasks(n.id).length&&n.status!=="done");
+
+  const distributeUnlinked=async()=>{
+    if(!unlinkedLeafNodes.length){flash("Все активные конечные задачи уже распределены в War Room");return;}
+    for(const n of unlinkedLeafNodes){
+      const minutes=Math.max(15,Math.round(((Number(n.estimate_hours)||1)*60)/15)*15);
+      const taskDate=n.start_date||n.due_date||scToday();
+      const row:any={
+        title:n.title,description:n.description||"",due_date:taskDate,date:taskDate,due_time:null,
+        priority:n.priority||"medium",color:n.color,done:false,completion_status:"pending",status:"todo",
+        subtasks:[],duration_minutes:minutes,_duration:minutes,strategy_node_id:n.id,user_id:userId,
+        updated_at:new Date().toISOString()
+      };
+      const existing=await supabase.from("planner_tasks").select("id").eq("user_id",userId).eq("strategy_node_id",n.id).limit(1);
+      if(existing.data?.[0]?.id)await supabase.from("planner_tasks").update(row).eq("id",existing.data[0].id);
+      else await supabase.from("planner_tasks").insert(row);
+    }
+    await plannerTasks.reload?.();
+    flash(`В War Room распределено задач: ${unlinkedLeafNodes.length}`);
+  };
+
+  const repairPlanWithAi=async()=>{
+    if(planRepairBusy)return;
+    const today=scToday();
+    const linked=plannerTasks.data.filter((t:any)=>t.strategy_node_id&&!t.done&&t.completion_status!=="done"&&t.due_date);
+    if(!linked.some((t:any)=>t.due_date<today)){setPlanRepairText("Просроченных связанных задач нет.");return;}
+    setPlanRepairBusy(true);setPlanRepairText("");
+    try{
+      const taskPayload=linked.map((t:any)=>({
+        id:t.id,strategy_node_id:t.strategy_node_id,title:t.title,due_date:t.due_date,due_time:t.due_time||null,
+        duration_minutes:t.duration_minutes||t._duration||60,priority:t.priority||"none"
+      }));
+      const strategyPayload=nodes.filter(n=>linked.some((t:any)=>t.strategy_node_id===n.id)).map(n=>({
+        id:n.id,title:n.title,start_date:n.start_date,due_date:n.due_date,parent_id:n.parent_id
+      }));
+      const result=await scAskJson(
+        "Ты — AI-диспетчер стратегии и календаря. План сорван. Пересобери только даты и время уже существующих связанных задач. Ничего не добавляй, не удаляй и не переименовывай. Сохрани длительности и порядок зависимостей. Прошлые даты оставь пустыми: все незавершённые просроченные задачи перенеси начиная с сегодняшнего дня, а будущие сдвинь только при необходимости. Верни JSON: {tasks:[{id,due_date:\\\"YYYY-MM-DD\\\",due_time:\\\"HH:MM или null\\\"}],nodes:[{id,start_date:\\\"YYYY-MM-DD\\\",due_date:\\\"YYYY-MM-DD\\\"}],explanation:\\\"кратко\\\"}.",
+        `Сегодня: ${today}\\nЗадачи War Room:\\n${JSON.stringify(taskPayload)}\\nУзлы масштабирования:\\n${JSON.stringify(strategyPayload)}`,2200
+      );
+      const allowedTasks=new Set(linked.map((t:any)=>String(t.id)));
+      for(const u of (result.tasks||[])){
+        if(!allowedTasks.has(String(u.id))||!/^20\\d{2}-\\d{2}-\\d{2}$/.test(String(u.due_date||"")))continue;
+        await supabase.from("planner_tasks").update({
+          due_date:String(u.due_date),date:String(u.due_date),
+          due_time:u.due_time&&/^\\d{2}:\\d{2}$/.test(String(u.due_time))?String(u.due_time):null,
+          updated_at:new Date().toISOString()
+        }).eq("id",String(u.id)).eq("user_id",userId);
+      }
+      const allowedNodes=new Set(nodes.map(n=>n.id));
+      const nodeUpdates=new Map<string,any>();
+      for(const u of (result.nodes||[])){
+        if(!allowedNodes.has(String(u.id)))continue;
+        if(!/^20\\d{2}-\\d{2}-\\d{2}$/.test(String(u.start_date||""))||!/^20\\d{2}-\\d{2}-\\d{2}$/.test(String(u.due_date||"")))continue;
+        nodeUpdates.set(String(u.id),{start_date:String(u.start_date),due_date:String(u.due_date)});
+      }
+      setNodes(prev=>{
+        const next=prev.map(n=>nodeUpdates.has(n.id)?{...n,...nodeUpdates.get(n.id)}:n);
+        scWriteCachedNodes(userId,next);
+        next.filter(n=>nodeUpdates.has(n.id)).forEach(n=>schedulePersist(n));
+        return next;
+      });
+      await plannerTasks.reload?.();
+      setPlanRepairText(result.explanation||"План пересобран. Прошедшие даты оставлены пустыми.");
+      flash("Новая версия плана готова");
+    }catch(e:any){setPlanRepairText("Не удалось пересобрать план: "+(e?.message||"ошибка"));}
+    finally{setPlanRepairBusy(false);}
+  };
+
   // ── перенос в War Room ──
   const addToWarRoom=async(n:SCNode,form:any)=>{
     if(wrTransferLocks.current.has(n.id)){
@@ -24722,8 +24838,15 @@ ${taskLines||"Нет задач"}`;
         else flash("Не удалось синхронизировать: "+(syncError||"проверь соединение и SQL-схему"));
       }}>Синхронизировать</button>
       {!isMobile&&<button style={btn(false)} onClick={resetPanelLayout}>Сбросить размеры</button>}
+      <button style={btn(false)} onClick={repairPlanWithAi} disabled={planRepairBusy}>{planRepairBusy?"Пересобираю план…":"AI пересобрать план"}</button>
+      {unlinkedLeafNodes.length>0&&<button style={{...btn(false),borderColor:"#F59E0B",color:"#B45309"}} onClick={distributeUnlinked}>Распределить в задачи · {unlinkedLeafNodes.length}</button>}
       <button style={btn(false)} onClick={runAudit}>Стратегический аудит</button>
     </div>
+
+    {planRepairText&&<div style={{padding:"9px 11px",borderRadius:10,border:"1px solid "+C.bd,background:C.ib,color:C.t2,fontSize:11.5,marginBottom:10,lineHeight:1.45}}>{planRepairText}</div>}
+    {unlinkedLeafNodes.length>0&&<div style={{padding:"9px 11px",borderRadius:10,border:"1px solid rgba(245,158,11,.35)",background:"rgba(245,158,11,.08)",color:dark?"#FCD34D":"#92400E",fontSize:11.5,marginBottom:10}}>
+      Не распределено в War Room: {unlinkedLeafNodes.length}. Эти задачи не появятся в календаре, пока их не распределить.
+    </div>}
 
     {tab === "structure" ? <div style={{
       display:isMobile?"grid":"flex",
@@ -24801,6 +24924,10 @@ ${taskLines||"Нет задач"}`;
             {kids.length > 0
               ? <span onClick={(e: any) => { e.stopPropagation(); toggleCollapse(node.id); }} style={{ width: 14, textAlign: "center", color: C.t2, fontSize: 10, cursor: "pointer" }}>{collapsed.has(node.id) ? "▸" : "▾"}</span>
               : <span style={{ width: 14 }} />}
+            {!nodes.some((x:SCNode)=>x.parent_id===node.id)&&!linkedTasks(node.id).length&&node.status!=="done"&&<span title="Задача ещё не распределена в War Room" style={{
+              width:16,height:16,borderRadius:"50%",background:"#F59E0B",color:"#fff",
+              display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800,flexShrink:0
+            }}>!</span>}
             <span title={`Уровень ${depth+1}`} style={{
               width:9,height:9,borderRadius:3,
               background:hierarchyColor(node),
