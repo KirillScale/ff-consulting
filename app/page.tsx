@@ -873,7 +873,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v7.7"; // v127 AI plan repair and tight Scaling-War Room task synchronization
+  const APP_VERSION="v7.8"; // v128 binary task completion and two-sided Gantt date resizing
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker","defects"];
 
   // Clear stale localStorage on version change
@@ -2948,17 +2948,15 @@ function TaskPlanner({userId}:{userId:string}){
     if(!edit||!edit.title.trim())return;
     setSaving(true);
     const due_time=edit.due_time?wrNormTime(edit.due_time):null;
-    const payload={title:edit.title.trim(),description:wrComposeDescription(edit.description||"",due_time?(edit._duration||60):null),due_date:edit.due_date||null,due_time,priority:edit.priority||"none",color:edit.color||PLANNER_COLORS[0],done:!!edit.done,completion_status:edit.done?"done":(edit.completion_status||"pending"),subtasks:edit.subtasks||[],updated_at:new Date().toISOString()};
+    const payload={title:edit.title.trim(),description:wrComposeDescription(edit.description||"",due_time?(edit._duration||60):null),due_date:edit.due_date||null,due_time,priority:edit.priority||"none",color:edit.color||PLANNER_COLORS[0],done:!!edit.done,completion_status:edit.done?"done":"pending",subtasks:edit.subtasks||[],updated_at:new Date().toISOString()};
     if(edit.id)await update(edit.id,payload); else await add(payload);
     setSaving(false);setEdit(null);
   };
   const del=async()=>{if(edit?.id&&confirm("Удалить задачу?")){await remove(edit.id);setEdit(null);}};
   const cycleTaskStatus=(t:any,e?:any)=>{
     e&&e.stopPropagation();
-    const status=t.done||t.completion_status==="done"?"done":t.completion_status==="failed"?"failed":"pending";
-    if(status==="pending")update(t.id,{done:true,completion_status:"done"});
-    else if(status==="done")update(t.id,{done:false,completion_status:"failed"});
-    else update(t.id,{done:false,completion_status:"pending"});
+    const isDone=Boolean(t.done||t.completion_status==="done");
+    update(t.id,{done:!isDone,completion_status:isDone?"pending":"done"});
   };
   const snap15=(v:number)=>Math.round(v/15)*15;
   const taskDuration=(t:any)=>Math.max(15,wrParseDuration(t.description)||Number(t._duration)||60);
@@ -24146,37 +24144,98 @@ function ScalingModule({ userId }: { userId: string }) {
   const ganttW = range.days * dayW;
   const xOf = (iso: string) => scDiff(range.min, iso) * dayW;
 
-  // ── drag&drop по Ганту ──
-  const dragRef = useRef<{ id: string; mode: "move" | "resize"; startX: number; s0: string; e0: string } | null>(null);
-  const onBarDown = (e: any, n: SCNode, mode: "move" | "resize") => {
-    e.preventDefault(); e.stopPropagation();
-    dragRef.current = { id: n.id, mode, startX: e.clientX ?? e.touches?.[0]?.clientX, s0: n.start_date!, e0: n.due_date! };
-    const move = (ev: any) => {
-      const cx = ev.clientX ?? ev.touches?.[0]?.clientX; const d = dragRef.current; if (!d) return;
-      const dd = Math.round((cx - d.startX) / dayW);
-      const current=nodes.find((x:SCNode)=>x.id===d.id);
-      const parent=current?.parent_id?nodes.find((x:SCNode)=>x.id===current.parent_id):null;
+  // ── перемещение и растягивание блоков Ганта ──
+  const dragRef=useRef<{
+    id:string;
+    mode:"move"|"resize-start"|"resize-end";
+    startX:number;
+    s0:string;
+    e0:string;
+    currentStart:string;
+    currentEnd:string;
+  }|null>(null);
+
+  const onBarDown=(e:any,n:SCNode,mode:"move"|"resize-start"|"resize-end")=>{
+    e.preventDefault();
+    e.stopPropagation();
+    if(!n.start_date||!n.due_date)return;
+
+    const pointerX=e.clientX??e.touches?.[0]?.clientX;
+    dragRef.current={
+      id:n.id,mode,startX:pointerX,s0:n.start_date,e0:n.due_date,
+      currentStart:n.start_date,currentEnd:n.due_date
+    };
+
+    const move=(ev:any)=>{
+      ev.preventDefault?.();
+      const d=dragRef.current;
+      if(!d)return;
+
+      const x=ev.clientX??ev.touches?.[0]?.clientX;
+      const deltaDays=Math.round((x-d.startX)/dayW);
+      const current=nodes.find((item:SCNode)=>item.id===d.id);
+      const parent=current?.parent_id?nodes.find((item:SCNode)=>item.id===current.parent_id):null;
+
+      let nextStart=d.s0;
+      let nextEnd=d.e0;
+
       if(d.mode==="move"){
         const duration=Math.max(1,scDiff(d.s0,d.e0));
-        let ns=scAddDays(d.s0,dd),ne=scAddDays(d.e0,dd);
-        if(parent?.start_date&&ns<parent.start_date){ns=parent.start_date;ne=scAddDays(ns,duration);}
-        if(parent?.due_date&&ne>parent.due_date){ne=parent.due_date;ns=scAddDays(ne,-duration);}
-        patch(d.id,{start_date:ns,due_date:ne},false);
-      }else{
-        let ne=scAddDays(d.e0,dd);
-        if(parent?.due_date&&ne>parent.due_date)ne=parent.due_date;
-        if(scDiff(d.s0,ne)>=1)patch(d.id,{due_date:ne},false);
+        nextStart=scAddDays(d.s0,deltaDays);
+        nextEnd=scAddDays(d.e0,deltaDays);
+
+        if(parent?.start_date&&nextStart<parent.start_date){
+          nextStart=parent.start_date;
+          nextEnd=scAddDays(nextStart,duration);
+        }
+        if(parent?.due_date&&nextEnd>parent.due_date){
+          nextEnd=parent.due_date;
+          nextStart=scAddDays(nextEnd,-duration);
+        }
       }
+
+      if(d.mode==="resize-start"){
+        nextStart=scAddDays(d.s0,deltaDays);
+        if(parent?.start_date&&nextStart<parent.start_date)nextStart=parent.start_date;
+        if(scDiff(nextStart,d.e0)<1)nextStart=scAddDays(d.e0,-1);
+      }
+
+      if(d.mode==="resize-end"){
+        nextEnd=scAddDays(d.e0,deltaDays);
+        if(parent?.due_date&&nextEnd>parent.due_date)nextEnd=parent.due_date;
+        if(scDiff(d.s0,nextEnd)<1)nextEnd=scAddDays(d.s0,1);
+      }
+
+      d.currentStart=nextStart;
+      d.currentEnd=nextEnd;
+      patch(d.id,{start_date:nextStart,due_date:nextEnd},false);
     };
+
     const up=()=>{
       const d=dragRef.current;
       if(d){
-        const latest=nodes.find(x=>x.id===d.id);
-        if(latest)persist(latest).catch(()=>flash("Не удалось сохранить новые сроки"));
+        const latest=nodes.find((item:SCNode)=>item.id===d.id);
+        if(latest){
+          const updated={...latest,start_date:d.currentStart,due_date:d.currentEnd};
+          patch(d.id,{start_date:d.currentStart,due_date:d.currentEnd},false);
+          persist(updated).catch(()=>flash("Не удалось сохранить новые сроки"));
+        }
       }
-      dragRef.current=null;window.removeEventListener("mousemove",move); window.removeEventListener("mouseup", up); window.removeEventListener("touchmove", move); window.removeEventListener("touchend", up); };
-    window.addEventListener("mousemove", move); window.addEventListener("mouseup", up);
-    window.addEventListener("touchmove", move, { passive: false }); window.addEventListener("touchend", up);
+      dragRef.current=null;
+      document.body.style.cursor="";
+      document.body.style.userSelect="";
+      window.removeEventListener("mousemove",move);
+      window.removeEventListener("mouseup",up);
+      window.removeEventListener("touchmove",move);
+      window.removeEventListener("touchend",up);
+    };
+
+    document.body.style.cursor=mode==="move"?"grabbing":"ew-resize";
+    document.body.style.userSelect="none";
+    window.addEventListener("mousemove",move);
+    window.addEventListener("mouseup",up);
+    window.addEventListener("touchmove",move,{passive:false});
+    window.addEventListener("touchend",up);
   };
 
   // ── месячная сетка для шапки Ганта ──
@@ -25018,15 +25077,33 @@ ${taskLines||"Нет задач"}`;
                     style={{ position: "absolute", left: x, top: 4, width: w, height: 22, borderRadius: 6, background:hierarchyColor(node),opacity:1,cursor:"grab",boxShadow:sel===node.id?"0 0 0 2px "+C.t1+", 0 4px 14px rgba(0,0,0,.28)":over?"0 0 0 2px #EF4444":"0 2px 8px rgba(0,0,0,.22)", display: "flex", alignItems: "center", overflow: "hidden", transition: "opacity .15s" }}>
                     <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${pr}%`, background: "rgba(255,255,255,.36)" }} />
                     <span style={{ fontSize: 10.5, color:hierarchyTextColor(node),fontWeight:650, padding: "0 8px", whiteSpace: "nowrap", position: "relative", zIndex: 1, textShadow: "0 1px 2px rgba(0,0,0,.3)" }}>{node.title}</span>
-                    {/* хват для длительности */}
-                    <div onMouseDown={(e: any) => onBarDown(e, node, "resize")} onTouchStart={(e: any) => onBarDown(e, node, "resize")} style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: 8, cursor: "ew-resize", zIndex: 2 }} />
+                    {/* левый край меняет дату начала */}
+                    <div
+                      title="Потяни, чтобы изменить дату начала"
+                      onMouseDown={(e:any)=>onBarDown(e,node,"resize-start")}
+                      onTouchStart={(e:any)=>onBarDown(e,node,"resize-start")}
+                      style={{
+                        position:"absolute",left:0,top:0,bottom:0,width:10,cursor:"ew-resize",zIndex:3,
+                        borderLeft:"2px solid rgba(255,255,255,.72)"
+                      }}
+                    />
+                    {/* правый край меняет дедлайн */}
+                    <div
+                      title="Потяни, чтобы изменить дедлайн"
+                      onMouseDown={(e:any)=>onBarDown(e,node,"resize-end")}
+                      onTouchStart={(e:any)=>onBarDown(e,node,"resize-end")}
+                      style={{
+                        position:"absolute",right:0,top:0,bottom:0,width:10,cursor:"ew-resize",zIndex:3,
+                        borderRight:"2px solid rgba(255,255,255,.72)"
+                      }}
+                    />
                   </div>
                 </div>;
               })}
             </div>
           </div>
         </div>
-        <div style={{ fontSize: 11, color: C.t2, marginTop: 8 }}>Перетаскивай полосу — сдвиг сроков · тяни правый край — длительность · пунктир показывает связь родитель → подзадача</div>
+        <div style={{ fontSize: 11, color: C.t2, marginTop: 8 }}>Перетаскивай полосу — сдвиг сроков · тяни левый край — дата начала · правый край — дедлайн · пунктир показывает связь родитель → подзадача</div>
       </div>
 
       {!isMobile&&<div
