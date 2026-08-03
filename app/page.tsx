@@ -873,7 +873,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v7.8"; // v128 binary task completion and two-sided Gantt date resizing
+  const APP_VERSION="v7.9"; // v129 context-aware strategy decomposition and bulk AI content calendar creation
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker","defects"];
 
   // Clear stale localStorage on version change
@@ -10144,6 +10144,10 @@ function ContentPage({userId}:{userId:string}){
   const[newChannelName,setNewChannelName]=useState("");
   const[newTemplateName,setNewTemplateName]=useState("");
   const[checklistDraft,setChecklistDraft]=useState("");
+  const[bulkAiOpen,setBulkAiOpen]=useState(false);
+  const[bulkAiText,setBulkAiText]=useState("");
+  const[bulkAiBusy,setBulkAiBusy]=useState(false);
+  const[bulkAiResult,setBulkAiResult]=useState("");
   const emptyF=()=>({
     platform:"instagram",
     type:"Reels",
@@ -10253,6 +10257,86 @@ function ContentPage({userId}:{userId:string}){
       icp:matching?.icp||prev.icp||"",
     }));
   };
+  const createBulkContentWithAi=async()=>{
+    if(bulkAiBusy)return;
+    if(!bulkAiText.trim()){setBulkAiResult("Опиши контент-план или вставь список публикаций с датами.");return;}
+    setBulkAiBusy(true);
+    setBulkAiResult("");
+    try{
+      const today=ds(new Date());
+      const result=await scAskJson(
+        `Ты — редактор контент-календаря. Преобразуй пользовательский текст в карточки контента.
+
+Правила:
+1. Создавай карточки только из того, что пользователь явно перечислил или однозначно описал.
+2. Не добавляй новые темы от себя.
+3. Сохраняй указанные даты. Если указан день и месяц без года — выбери ближайшую будущую такую дату относительно ${today}.
+4. Если пользователь указал период и последовательность без точной даты для каждого пункта — равномерно распредели перечисленные материалы внутри периода, сохранив порядок.
+5. Если дата отсутствует и период не указан — используй последовательные даты начиная с ${today}.
+6. Все карточки должны иметь status "idea".
+7. Определи platform только из: instagram, telegram, youtube, other.
+8. Определи format по смыслу: Reels, Публикация, История, Пост, Рассылка в боте, Видео или Публикация.
+9. Ничего не публикуй и не создавай задачи производства.
+10. Верни строго JSON без markdown:
+{"items":[{"topic":"название карточки","publish_date":"YYYY-MM-DD","platform":"instagram|telegram|youtube|other","content_format":"формат","scenario":"краткие исходные заметки пользователя или пустая строка"}],"summary":"кратко"}`,
+        `Сегодня: ${today}
+Текст пользователя:
+${bulkAiText}`,
+        3200
+      );
+
+      const rows=Array.isArray(result?.items)?result.items:[];
+      if(!rows.length)throw new Error("ИИ не нашёл карточек для создания");
+
+      const prepared=rows.slice(0,120).map((item:any,index:number)=>{
+        const date=/^20\d{2}-\d{2}-\d{2}$/.test(String(item.publish_date||""))
+          ?String(item.publish_date)
+          :addDaysToDate(today,index);
+        const platform=["instagram","telegram","youtube","other"].includes(String(item.platform))
+          ?String(item.platform)
+          :"other";
+        const allowedFormats=PLATFORM_FORMATS[platform]||["Публикация"];
+        const requested=String(item.content_format||"").trim();
+        const format=allowedFormats.includes(requested)?requested:(platform==="youtube"?"Видео":platform==="telegram"?"Пост":platform==="instagram"?"Reels":"Публикация");
+        return{
+          platform,
+          type:format,
+          content_format:format,
+          topic:String(item.topic||"").trim().slice(0,240),
+          status:"idea",
+          date,
+          publish_date:date,
+          scenario:String(item.scenario||"").trim().slice(0,4000),
+          broadcast_text:"",
+          icp:"",
+          cover_url:"",
+          content_url:"",
+          link:"",
+          checklist:normalizeChecklist([],platform,format),
+          analytics:null,
+          user_id:userId
+        };
+      }).filter((row:any)=>row.topic);
+
+      if(!prepared.length)throw new Error("Не удалось сформировать карточки с темами");
+
+      const{error}=await supabase.from("content").insert(prepared);
+      if(error)throw error;
+      await reloadContent();
+
+      const dates=prepared.map((x:any)=>x.publish_date).sort();
+      setBulkAiResult(`Создано карточек: ${prepared.length}. Период: ${dates[0]} — ${dates[dates.length-1]}. Все карточки добавлены в «Идеи».`);
+      setCalMonth(()=>{
+        const d=new Date(`${dates[0]}T12:00:00`);
+        return{y:d.getFullYear(),m:d.getMonth()};
+      });
+    }catch(e:any){
+      setBulkAiResult("Не удалось создать контент-план: "+(e?.message||"ошибка"));
+    }finally{
+      setBulkAiBusy(false);
+    }
+  };
+
   const runContentAi=async(mode:"fill"|"script"|"improve")=>{
     if(aiBusy)return;
     if(!f.topic?.trim()){alert("Сначала укажи тему контента.");return;}
@@ -10920,12 +11004,70 @@ ${existingScenario}`;
           <div style={{fontSize:18,fontWeight:500,color:C.t1}}>Контент-план · {contentMonthLabel}</div>
           <div style={{fontSize:12,color:C.t2,marginTop:3}}>Перетаскивай карточки между этапами. На доске только выбранный месяц.</div>
         </div>
-        <button onClick={()=>{setShow(!show);setEditId(null);const d=selectedMonthDefaultDate();const base=emptyF();sF({...base,date:d,publish_date:d,checklist:normalizeChecklist([],base.platform,base.content_format)});}}
-          style={{padding:"9px 18px",background:C.t1,color:C.bg,border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,boxShadow:"none"}}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Контент
-        </button>
+        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+          <button onClick={()=>{setBulkAiOpen(true);setBulkAiResult("");}}
+            style={{padding:"9px 14px",background:C.ib,color:C.t1,border:"1px solid "+C.bd,borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer"}}>
+            AI контент-план
+          </button>
+          <button onClick={()=>{setShow(!show);setEditId(null);const d=selectedMonthDefaultDate();const base=emptyF();sF({...base,date:d,publish_date:d,checklist:normalizeChecklist([],base.platform,base.content_format)});}}
+            style={{padding:"9px 18px",background:C.t1,color:C.bg,border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,boxShadow:"none"}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Контент
+          </button>
+        </div>
       </div>
+
+      {bulkAiOpen&&<div onClick={()=>!bulkAiBusy&&setBulkAiOpen(false)} style={{
+        position:"fixed",inset:0,zIndex:530,background:"rgba(0,0,0,.65)",backdropFilter:"blur(5px)",
+        display:"flex",alignItems:"center",justifyContent:"center",padding:isMobile?12:24
+      }}>
+        <div onClick={(e:any)=>e.stopPropagation()} style={{
+          width:"min(720px,100%)",maxHeight:"88vh",overflowY:"auto",
+          background:C.w,border:"1px solid "+C.bd,borderRadius:14,padding:isMobile?16:22,
+          boxShadow:"0 24px 80px rgba(0,0,0,.35)"
+        }}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,marginBottom:14}}>
+            <div>
+              <div style={{fontSize:17,fontWeight:650,color:C.t1}}>AI-создание контент-плана</div>
+              <div style={{fontSize:12,color:C.t2,marginTop:5,lineHeight:1.5}}>Вставь расписание на месяц, неделю или любой период. ИИ создаст отдельные карточки и поставит их на указанные даты.</div>
+            </div>
+            <button onClick={()=>!bulkAiBusy&&setBulkAiOpen(false)} disabled={bulkAiBusy} style={{border:"none",background:"transparent",color:C.t2,fontSize:22,cursor:"pointer"}}>×</button>
+          </div>
+
+          <div style={{padding:11,borderRadius:10,background:C.ib,border:"1px solid "+C.bd,marginBottom:12,fontSize:11.5,color:C.t2,lineHeight:1.55}}>
+            Пример: «10 августа — YouTube-видео про финансовую модель. 11 августа — Telegram-пост с выводами. С 12 по 20 августа ежедневно публиковать перечисленные ниже Reels…»
+          </div>
+
+          <textarea
+            value={bulkAiText}
+            onChange={(e:any)=>setBulkAiText(e.target.value)}
+            placeholder="Опиши весь контент-план свободным текстом или вставь список с датами..."
+            rows={12}
+            style={{
+              width:"100%",boxSizing:"border-box",resize:"vertical",minHeight:220,
+              border:"1px solid "+C.bd,borderRadius:10,background:C.bg,color:C.t1,
+              padding:12,fontSize:13,lineHeight:1.55,outline:"none"
+            }}
+          />
+
+          {bulkAiResult&&<div style={{
+            marginTop:11,padding:"9px 11px",borderRadius:9,
+            background:C.ib,border:"1px solid "+C.bd,color:C.t2,fontSize:11.5,lineHeight:1.45
+          }}>{bulkAiResult}</div>}
+
+          <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:14}}>
+            <button onClick={()=>setBulkAiOpen(false)} disabled={bulkAiBusy} style={{
+              height:38,padding:"0 14px",borderRadius:8,border:"1px solid "+C.bd,
+              background:"transparent",color:C.t1,cursor:bulkAiBusy?"default":"pointer"
+            }}>Закрыть</button>
+            <button onClick={createBulkContentWithAi} disabled={bulkAiBusy||!bulkAiText.trim()} style={{
+              height:38,padding:"0 16px",borderRadius:8,border:"none",background:C.t1,color:C.bg,
+              fontSize:12.5,fontWeight:650,cursor:bulkAiBusy?"wait":"pointer",
+              opacity:bulkAiBusy||!bulkAiText.trim()?.55:1
+            }}>{bulkAiBusy?"Создаю карточки…":"Создать карточки"}</button>
+          </div>
+        </div>
+      </div>}
 
       {/* Full content card editor */}
       {show&&<div onClick={()=>{setShow(false);setEditId(null);sF(emptyF());setTemplatePanel(false);}}
@@ -24327,7 +24469,7 @@ function ScalingModule({ userId }: { userId: string }) {
     const tasks=plannerTasks.data.filter((t:any)=>branchIds.has(t.strategy_node_id));
     const nodeLines=branch.map(n=>{
       const parent=nodes.find(x=>x.id===n.parent_id)?.title||"корневая цель";
-      return`- ${n.title}; родитель: ${parent}; статус: ${SC_STATUS[n.status]}; приоритет: ${SC_PRIORITY[n.priority]}; сроки: ${scFmt(n.start_date)}–${scFmt(n.due_date)}; прогресс: ${progressOf(n.id)}%; KPI: ${n.kpi||"не указан"}; описание: ${n.description||"нет"}`;
+      return`- ${n.title}; родитель: ${parent}; статус: ${SC_STATUS[n.status]}; приоритет: ${SC_PRIORITY[n.priority]}; сроки: ${scFmt(n.start_date)}–${scFmt(n.due_date)}; прогресс: ${progressOf(n.id)}%; KPI: ${n.kpi||"не указан"}; критерий готовности: ${n.completion_criteria||"не указан"}; описание: ${n.description||"нет"}`;
     }).join("\n");
     const fileLines=contextFiles.map(f=>`ФАЙЛ: ${f.name}\n${f.text||f.extraction_note||"Текст не извлечён"}`).join("\n\n");
     const dbFileLines=dbDocs.map(d=>`Документ стратегии: ${d.file_name} (${d.file_type})`).join("\n");
@@ -24501,9 +24643,25 @@ ${taskLines||"Нет задач"}`;
   const decompose = async (n: SCNode) => {
     setDecomposing(n.id);
     try {
+      const decompositionBrief=`НАЗВАНИЕ ЭЛЕМЕНТА: ${n.title}
+ОПИСАНИЕ: ${n.description?.trim()||"не указано"}
+KPI: ${n.kpi?.trim()||"не указан"}
+КРИТЕРИЙ ГОТОВНОСТИ: ${n.completion_criteria?.trim()||"не указан"}
+СРОКИ: ${n.start_date||"не указаны"} — ${n.due_date||"не указаны"}
+ОТВЕТСТВЕННЫЙ: ${n.responsible?.trim()||"не указан"}`;
+
       const arr = await scAskJson(
-        SC_STRATEGIST_SYSTEM_PROMPT+"\n\n"+SC_CRITICAL_PATH_PROMPT+"\n\nРазбей выбранный элемент стратегии на 3–6 конкретных исполнимых подэлементов. Сначала critical, затем optional. Каждый элемент должен быть физическим действием или управляемым этапом с критерием готовности. Учитывай зависимости и узкое место. Формат: массив объектов {title,path_type:\"critical|optional\",responsible,estimate_hours,completion_criteria,external_dependency,deadline_type:\"external|internal\",failure_cost,checkpoint:{metric,threshold,date:\"YYYY-MM-DD\"}}.",
-        `${strategyContext(n)}\n\nНужно декомпозировать элемент: «${n.title}». Верни только массив.`, 900);
+        SC_STRATEGIST_SYSTEM_PROMPT+"\n\n"+SC_CRITICAL_PATH_PROMPT+`\n\nПеред декомпозицией обязательно прочитай отдельный бриф выбранного элемента. Главные источники смысла: описание, KPI и критерий готовности. Не подменяй их шаблонными этапами. Если заполнены все три поля — каждый подэлемент должен быть логически связан с ними. Если заполнена часть — опирайся на доступные поля. Только если описание, KPI и критерий готовности одновременно отсутствуют, разрешено самостоятельно вывести рабочую логику из названия и общего контекста стратегии.
+
+Разбей выбранный элемент на 3–6 конкретных исполнимых подэлементов. Подэлементы должны вместе приводить к KPI и критерию готовности родителя, а не просто повторять универсальный список действий. Сначала critical, затем optional. Каждый элемент — физическое действие или управляемый этап с проверяемым результатом. Учитывай зависимости, узкое место и сроки родителя.
+
+Формат: массив объектов {title,path_type:"critical|optional",responsible,estimate_hours,completion_criteria,external_dependency,deadline_type:"external|internal",failure_cost,checkpoint:{metric,threshold,date:"YYYY-MM-DD"}}.`,
+        `${strategyContext(n)}
+
+ОТДЕЛЬНЫЙ БРИФ ВЫБРАННОГО ЭЛЕМЕНТА:
+${decompositionBrief}
+
+Декомпозируй именно этот элемент. Не создавай общие шаблонные пункты, которые нельзя проверить по KPI или критерию готовности. Верни только массив.`, 1400);
       const items: any[] = Array.isArray(arr) ? arr : arr.items || [];
       const parentStart=n.start_date||scToday();
       const parentDue=n.due_date||scAddDays(parentStart,60);
