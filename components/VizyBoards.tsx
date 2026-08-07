@@ -53,8 +53,31 @@ const C = {
   pink:     { l: ["#C7477F", "#FCEBF2", "#F8D5E4", "#6C1F41"], d: ["#E67FAC", "#291620", "#371D2B", "#F7CCDE"] },
 };
 const CKEYS = Object.keys(C);
-const col = (key, i, dark) => (C[key] || C.graphite)[dark ? "d" : "l"][i];
 const STROKE = 0, FILL = 1, STICKY = 2, ONCOLOR = 3;
+
+const isRawColor = (v) => typeof v === "string" && (
+  /^#[0-9a-f]{3,8}$/i.test(v.trim()) ||
+  /^rgba?\(/i.test(v.trim()) ||
+  /^hsla?\(/i.test(v.trim())
+);
+const hex6 = (v) => {
+  if (typeof v !== "string") return null;
+  let s = v.trim();
+  if (/^#[0-9a-f]{3}$/i.test(s)) s = "#" + s.slice(1).split("").map((x) => x + x).join("");
+  return /^#[0-9a-f]{6}$/i.test(s) ? s.toUpperCase() : null;
+};
+const contrastFor = (v, dark) => {
+  const h = hex6(v);
+  if (!h) return dark ? "#F7F7F8" : "#15171A";
+  const r = parseInt(h.slice(1,3),16), g = parseInt(h.slice(3,5),16), b = parseInt(h.slice(5,7),16);
+  const lum = (.299*r + .587*g + .114*b) / 255;
+  return lum > .63 ? "#15171A" : "#FFFFFF";
+};
+const col = (key, i, dark) => {
+  if (C[key]) return C[key][dark ? "d" : "l"][i];
+  if (isRawColor(key)) return i === ONCOLOR ? contrastFor(key, dark) : key;
+  return C.graphite[dark ? "d" : "l"][i];
+};
 
 const FONTS = {
   inter:      { label: "Inter",      css: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif", w: 500 },
@@ -563,7 +586,9 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
     verRef.current = b.version;
     hist.current = { p: [], f: [] };
     setActive(id); setSel([]); setSelC([]); setEdit(null);
-    setDoc({ items: b.items, connectors: b.connectors });
+    const loadedDoc={ items: b.items, connectors: b.connectors };
+    R.current.doc=loadedDoc;
+    setDoc(loadedDoc);
     setCam(b.cam);
     setBoards(list || boards);
     Boards.setLast(userId, id);
@@ -623,16 +648,66 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
     return () => { supabase.removeChannel(channel); };
   }, [ready, userId, active]);
 
-  /* ── history ── */
-  const tx = () => { snap.current = R.current.doc; };
-  const commit = () => {
-    if (!snap.current || snap.current === R.current.doc) { snap.current = null; return; }
-    hist.current.p.push(snap.current); if (hist.current.p.length > 90) hist.current.p.shift();
-    hist.current.f.length = 0; snap.current = null; setTick((n) => n + 1);
+  /* ── history + reliable document updates ── */
+  const setDocSync = (nextOrFn) => {
+    const prev = R.current.doc;
+    const next = typeof nextOrFn === "function" ? nextOrFn(prev) : nextOrFn;
+    if (!next || next === prev) return prev;
+    R.current.doc = next;
+    setDoc(next);
+    return next;
   };
-  const act = (fn) => { tx(); setDoc((d) => fn(d)); queueMicrotask(commit); };
-  const undo = () => { const h = hist.current; if (!h.p.length) return; h.f.push(R.current.doc); setDoc(h.p.pop()); setSel([]); setSelC([]); setTick((n) => n + 1); };
-  const redo = () => { const h = hist.current; if (!h.f.length) return; h.p.push(R.current.doc); setDoc(h.f.pop()); setSel([]); setSelC([]); setTick((n) => n + 1); };
+  const tx = () => {
+    if (!snap.current) snap.current = R.current.doc;
+  };
+  const commit = () => {
+    const before = snap.current;
+    const after = R.current.doc;
+    snap.current = null;
+    if (!before || before === after) return;
+    hist.current.p.push(before);
+    if (hist.current.p.length > 90) hist.current.p.shift();
+    hist.current.f.length = 0;
+    setTick((n) => n + 1);
+  };
+  const act = (fn) => {
+    const before = R.current.doc;
+    const next = fn(before);
+    if (!next || next === before) return;
+    hist.current.p.push(before);
+    if (hist.current.p.length > 90) hist.current.p.shift();
+    hist.current.f.length = 0;
+    setDocSync(next);
+    setTick((n) => n + 1);
+  };
+  const liveItemPatch = (id, patch) => {
+    setDocSync((d) => ({
+      ...d,
+      items: d.items.map((i) => i.id === id ? { ...i, ...patch } : i),
+    }));
+  };
+  const finishEdit = () => {
+    commit();
+    setEdit(null);
+  };
+  const undo = () => {
+    const h = hist.current;
+    if (!h.p.length) return;
+    h.f.push(R.current.doc);
+    const next = h.p.pop();
+    setDocSync(next);
+    setSel([]); setSelC([]); setEdit(null); snap.current = null;
+    setTick((n) => n + 1);
+  };
+  const redo = () => {
+    const h = hist.current;
+    if (!h.f.length) return;
+    h.p.push(R.current.doc);
+    const next = h.f.pop();
+    setDocSync(next);
+    setSel([]); setSelC([]); setEdit(null); snap.current = null;
+    setTick((n) => n + 1);
+  };
 
   /* ── coords ── */
   const rect = () => vp.current?.getBoundingClientRect() || { left: 0, top: 0, width: 800, height: 600 };
@@ -670,6 +745,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
     const w = toWorld(e.clientX, e.clientY);
     if (panning) { drag.current = { m: "pan", sx: e.clientX, sy: e.clientY, c: { ...R.current.cam } }; return; }
     if (T === "select") {
+      if (R.current.edit) finishEdit();
       if (!e.shiftKey) { setSel([]); setSelC([]); }
       setEdit(null);
       drag.current = { m: "marq", sx: e.clientX, sy: e.clientY, add: e.shiftKey, base: e.shiftKey ? R.current.sel : [] };
@@ -695,6 +771,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
     let next = R.current.sel;
     if (e.shiftKey) next = next.includes(it.id) ? next.filter((x) => x !== it.id) : [...next, it.id];
     else if (!next.includes(it.id)) next = [it.id];
+    if (R.current.edit && R.current.edit!==it.id) finishEdit();
     setSel(next); setSelC([]); setEdit(null);
     tx();
     drag.current = { m: "move", sx: e.clientX, sy: e.clientY, snap: R.current.doc.items.filter((i) => next.includes(i.id) && !i.locked).map((i) => ({ id: i.id, x: i.x, y: i.y })) };
@@ -735,7 +812,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
       if (d.m === "move") {
         const z = R.current.cam.z, dx = (e.clientX - d.sx) / z, dy = (e.clientY - d.sy) / z;
         const g = e.altKey ? 1 : 8;
-        setDoc((doc) => ({ ...doc, items: doc.items.map((i) => { const s = d.snap.find((q) => q.id === i.id); return s ? { ...i, x: Math.round((s.x + dx) / g) * g, y: Math.round((s.y + dy) / g) * g } : i; }) }));
+        setDocSync((doc) => ({ ...doc, items: doc.items.map((i) => { const s = d.snap.find((q) => q.id === i.id); return s ? { ...i, x: Math.round((s.x + dx) / g) * g, y: Math.round((s.y + dy) / g) * g } : i; }) }));
         return;
       }
       if (d.m === "size") {
@@ -748,7 +825,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
         if (i.includes("s")) { nh = Math.max(20, w.y - b.y); }
         if (e.shiftKey && i.length === 2) { const k = Math.max(nw / b.w, nh / b.h); nw = b.w * k; nh = b.h * k; if (i.includes("w")) nx = b.x + b.w - nw; if (i.includes("n")) ny = b.y + b.h - nh; }
         const kx = nw / (b.w || 1), ky = nh / (b.h || 1);
-        setDoc((doc) => ({ ...doc, items: doc.items.map((it) => { const s = d.snap.find((q) => q.id === it.id); if (!s) return it; return { ...it, x: nx + (s.x - b.x) * kx, y: ny + (s.y - b.y) * ky, w: Math.max(16, s.w * kx), h: Math.max(16, s.h * ky) }; }) }));
+        setDocSync((doc) => ({ ...doc, items: doc.items.map((it) => { const s = d.snap.find((q) => q.id === it.id); if (!s) return it; return { ...it, x: nx + (s.x - b.x) * kx, y: ny + (s.y - b.y) * ky, w: Math.max(16, s.w * kx), h: Math.max(16, s.h * ky) }; }) }));
         return;
       }
       if (d.m === "conn" || d.m === "cend") {
@@ -757,7 +834,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
         const target = over ? { id: over.id, side: "auto" } : { x: w.x, y: w.y };
         setHover(over ? over.id : null);
         if (d.m === "conn") setDraw({ from: d.from, to: w, target });
-        else setDoc((doc) => ({ ...doc, connectors: doc.connectors.map((c) => (c.id === d.id ? { ...c, [d.which]: target } : c)) }));
+        else setDocSync((doc) => ({ ...doc, connectors: doc.connectors.map((c) => (c.id === d.id ? { ...c, [d.which]: target } : c)) }));
         return;
       }
       if (d.m === "new") {
@@ -836,7 +913,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
     const typing = () => { const a = document.activeElement; return a && (a.isContentEditable || /input|textarea/i.test(a.tagName)); };
     const kd = (e) => {
       if (e.code === "Space" && !typing()) { setSpace(true); e.preventDefault(); }
-      if (typing() || R.current.edit) { if (e.key === "Escape") { setEdit(null); document.activeElement?.blur?.(); } return; }
+      if (typing() || R.current.edit) { if (e.key === "Escape") { document.activeElement?.blur?.(); } return; }
       const m = e.metaKey || e.ctrlKey;
       if (m && e.key.toLowerCase() === "z") { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
       if (m && e.key.toLowerCase() === "y") { e.preventDefault(); redo(); return; }
@@ -847,7 +924,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
       if (m && e.key === "-") { e.preventDefault(); zoomBy(1 / 1.2); return; }
       if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); del(); return; }
       if (e.key === "Escape") { setSel([]); setSelC([]); setTool("select"); setPop(null); setModal(null); return; }
-      if (e.key === "Enter" && R.current.sel.length === 1) { e.preventDefault(); setEdit(R.current.sel[0]); return; }
+      if (e.key === "Enter" && R.current.sel.length === 1) { e.preventDefault(); tx(); setEdit(R.current.sel[0]); return; }
       const k = { v: "select", h: "hand", s: "shape", n: "sticky", t: "text", l: "link", c: "conn", i: "image" }[e.key.toLowerCase()];
       if (k && !m) { setTool(k); if (k === "image") fileIn.current?.click(); }
     };
@@ -857,8 +934,16 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
   }, []);
 
   /* ── ops ── */
-  const patch = (fn) => act((d) => ({ ...d, items: d.items.map((i) => (R.current.sel.includes(i.id) ? { ...i, ...fn(i) } : i)) }));
-  const patchC = (fn) => act((d) => ({ ...d, connectors: d.connectors.map((c) => (R.current.selC.includes(c.id) ? { ...c, ...fn(c) } : c)) }));
+  const patch = (fn) => {
+    const ids=new Set(sel);
+    if(!ids.size)return;
+    act((d) => ({ ...d, items: d.items.map((i) => ids.has(i.id) ? { ...i, ...fn(i) } : i) }));
+  };
+  const patchC = (fn) => {
+    const ids=new Set(selC);
+    if(!ids.size)return;
+    act((d) => ({ ...d, connectors: d.connectors.map((c) => ids.has(c.id) ? { ...c, ...fn(c) } : c) }));
+  };
   const del = () => {
     const s = R.current.sel, sc = R.current.selC;
     if (!s.length && !sc.length) return;
@@ -1049,7 +1134,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
                 <g key={c.id}>
                   {on && <path d={cp.d} fill="none" stroke={t.sel} strokeWidth={(c.w || 2) + 7 / cam.z} strokeOpacity={.16} strokeLinecap="round" />}
                   <path d={cp.d} fill="none" stroke="transparent" strokeWidth={Math.max(16, 16 / cam.z)} style={{ pointerEvents: "stroke", cursor: "pointer" }}
-                    onPointerDown={(e) => { e.stopPropagation(); if (R.current.tool !== "select") return; setSelC(e.shiftKey ? [...selC, c.id] : [c.id]); setSel([]); setEdit(null); }}
+                    onPointerDown={(e) => { e.stopPropagation(); if (R.current.tool !== "select") return; if(R.current.edit)finishEdit(); setSelC(e.shiftKey ? [...selC, c.id] : [c.id]); setSel([]); setEdit(null); }}
                     onDoubleClick={(e) => { e.stopPropagation(); setModal({ kind: "clabel", id: c.id, v: c.label || "" }); }} />
                   <path d={cp.d} fill="none" stroke={stroke} strokeWidth={c.w || 2} strokeLinecap="round" strokeLinejoin="round"
                     strokeDasharray={c.dash === "dashed" ? "10 8" : c.dash === "dotted" ? "0.1 6" : undefined} />
@@ -1083,9 +1168,9 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
             <ItemView key={it.id} it={it} t={t} dark={dark} z={cam.z} img={imgs.current[it.id]}
               sel={sel.includes(it.id)} hot={hover === it.id} editing={edit === it.id} tool={tool}
               onDown={(e) => itemDown(e, it)} onPort={(e, s) => portDown(e, it, s)}
-              onEdit={() => setEdit(it.id)}
-              onText={(v) => { act((d) => ({ ...d, items: d.items.map((i) => (i.id === it.id ? { ...i, text: v } : i)) })); }}
-              onDoneEdit={() => setEdit(null)} />
+              onEdit={() => { tx(); setEdit(it.id); }}
+              onText={(v) => liveItemPatch(it.id,{text:v})}
+              onDoneEdit={finishEdit} />
           ))}
 
           {/* draft shape */}
@@ -1178,7 +1263,10 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
           box={selBox} pop={pop} setPop={setPop}
           patch={patch} patchC={patchC} onDel={del} onDup={dup} onLayer={layer}
           onShape={(k) => { setKind(k); patch(() => ({ shape: k })); }}
-          onLabel={(c) => setModal({ kind: "clabel", id: c.id, v: c.label || "" })} />
+          onLabel={(c) => {
+            if(c?.__itemText){ tx(); setEdit(c.id); setPop(null); }
+            else setModal({ kind: "clabel", id: c.id, v: c.label || "" });
+          }} />
       )}
 
       {/* ── toolbar ── */}
@@ -1287,7 +1375,7 @@ function ItemView({ it, t, dark, z, img, sel, hot, editing, tool, onDown, onPort
   const textStyle = {
     fontFamily: f.css, fontWeight: it.bold ? 700 : f.w, fontStyle: it.italic ? "italic" : "normal",
     fontSize: it.fs, lineHeight: 1.32, textAlign: it.halign || "center",
-    color: it.type === "text" ? col(it.color || "graphite", STROKE, dark) : col(it.color || "graphite", ONCOLOR, dark),
+    color: it.type === "text" ? col(it.color || "graphite", STROKE, dark) : col(it.color || (it.type==="sticky"?"amber":"graphite"), ONCOLOR, dark),
     width: "100%", wordBreak: "break-word", whiteSpace: "pre-wrap",
   };
 
@@ -1299,9 +1387,11 @@ function ItemView({ it, t, dark, z, img, sel, hot, editing, tool, onDown, onPort
     }}>
       {editing ? (
         <div ref={ref} contentEditable suppressContentEditableWarning
+          onPointerDown={(e) => e.stopPropagation()}
+          onInput={(e) => onText(e.currentTarget.innerText)}
           onBlur={(e) => { onText(e.currentTarget.innerText); onDoneEdit(); }}
-          onKeyDown={(e) => { e.stopPropagation(); if (e.key === "Escape") { e.currentTarget.blur(); } }}
-          style={{ ...textStyle, cursor: "text", minHeight: it.fs }}>{it.text}</div>
+          onKeyDown={(e) => { e.stopPropagation(); if (e.key === "Escape") e.currentTarget.blur(); }}
+          style={{ ...textStyle, cursor: "text", minHeight: it.fs, outline:"none" }}>{it.text}</div>
       ) : it.text ? <div style={textStyle}>{it.text}</div> : it.type === "text" ? <div style={{ ...textStyle, color: t.ink3 }}>Текст</div> : null}
     </div>
   );
@@ -1387,6 +1477,15 @@ function StylePanel({ t, dark, one, many, conns, oneC, box, pop, setPop, patch, 
             }} />
         ))}
       </div>
+      <div style={{height:1,background:t.line,margin:"10px -2px 9px"}}/>
+      <label style={{display:"flex",alignItems:"center",gap:9,cursor:"pointer"}}>
+        <input type="color"
+          value={hex6(isRawColor(value)?value:(mode==="stroke"?col(value||"graphite",STROKE,dark):mode==="sticky"?col(value||"amber",STICKY,dark):col(value||"graphite",FILL,dark)))||"#6B7280"}
+          onChange={(e)=>onPick(e.target.value.toUpperCase())}
+          style={{width:34,height:28,padding:2,border:`1px solid ${t.line2}`,borderRadius:7,background:t.bg,cursor:"pointer"}}/>
+        <span style={{fontSize:11.5,color:t.ink2}}>Свой цвет</span>
+        {isRawColor(value)&&<span style={{marginLeft:"auto",fontSize:10.5,color:t.ink3,fontFamily:"ui-monospace,monospace"}}>{String(value).toUpperCase()}</span>}
+      </label>
     </Panel>
   );
 
@@ -1491,6 +1590,14 @@ function StylePanel({ t, dark, one, many, conns, oneC, box, pop, setPop, patch, 
                         </button>
                       ))}
                     </div>
+                    <div style={{height:1,background:t.line,margin:"10px 0 8px"}}/>
+                    <label style={{display:"flex",alignItems:"center",gap:9,cursor:"pointer"}}>
+                      <input type="color"
+                        value={hex6(isRawColor(one?.stroke)?one.stroke:col(one?.stroke||"graphite",STROKE,dark))||"#6B7280"}
+                        onChange={(e)=>patch(()=>({stroke:e.target.value.toUpperCase()}))}
+                        style={{width:34,height:28,padding:2,border:`1px solid ${t.line2}`,borderRadius:7,background:t.bg,cursor:"pointer"}}/>
+                      <span style={{fontSize:11.5,color:t.ink2}}>Свой цвет контура</span>
+                    </label>
                   </Panel>
                 }>
                   <span style={{ width: 15, height: 15, borderRadius: 5, border: `2px solid ${col(one?.stroke || "graphite", STROKE, dark)}` }} />
@@ -1517,6 +1624,10 @@ function StylePanel({ t, dark, one, many, conns, oneC, box, pop, setPop, patch, 
             {many.some((i) => ["shape", "sticky", "text"].includes(i.type)) && (
               <>
                 <Sep t={t} />
+                {many.length===1&&<Btn t={t} wide title="Редактировать текст" onClick={()=>{
+                  const el=many[0];
+                  if(el){ onLabel?.({__itemText:true,id:el.id}); }
+                }}><TypeIcon size={14}/>Текст</Btn>}
                 <Grp id="font" label="Шрифт" content={<Menu value={one?.font} onPick={(v) => { patch(() => ({ font: v })); setPop(null); }}
                   items={Object.entries(FONTS).map(([k, v]) => ({ v: k, l: v.label, font: v.css }))} />}>
                   <span style={{ fontFamily: (FONTS[one?.font] || FONTS.inter).css, fontSize: 13 }}>Aa</span>
