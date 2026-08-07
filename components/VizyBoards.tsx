@@ -575,7 +575,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
       if (alive) { setReady(true); setSaveState("saved"); }
     })().catch((e) => {
       console.error(e);
-      if (alive) { setReady(true); setSaveState("error"); say("Не удалось загрузить Vizy Boards"); }
+      if (alive) { setReady(true); setSaveState("error"); say("Не удалось загрузить Maps"); }
     });
     return () => { alive = false; };
   }, [userId]);
@@ -1211,7 +1211,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
       {/* ── top left: board switcher ── */}
       <div style={{ position: "absolute", left: 16, top: 16, zIndex: 40 }}>
         <Panel t={t} style={{ display: "flex", alignItems: "center", padding: 5, gap: 2 }} onPointerDown={(e) => e.stopPropagation()}>
-          <span style={{padding:"0 8px",fontSize:9.5,fontWeight:600,letterSpacing:1.2,color:t.ink3,whiteSpace:"nowrap"}}>VIZY BOARDS</span>
+          <span style={{padding:"0 8px",fontSize:9.5,fontWeight:600,letterSpacing:1.2,color:t.ink3,whiteSpace:"nowrap"}}>MAPS</span>
           <Sep t={t} />
           <button onClick={() => setModal(modal?.kind === "boards" ? null : { kind: "boards" })}
             style={{ display: "flex", alignItems: "center", gap: 9, height: 32, padding: "0 10px 0 8px", border: "none", background: "transparent", cursor: "pointer", borderRadius: 9, color: t.ink }}>
@@ -1364,7 +1364,12 @@ function ItemView({ it, t, dark, z, img, sel, hot, editing, tool, onDown, onPort
   const [ports, setPorts] = useState(false);
   useEffect(() => {
     if (!editing || !ref.current) return;
-    const el = ref.current; el.focus();
+    const el = ref.current;
+    // Keep the contentEditable DOM uncontrolled while typing. React used to
+    // reconcile {it.text} after every onInput update, which reset the caret
+    // and made each next character appear before the previous one.
+    el.innerText = it.text || "";
+    el.focus();
     const r = document.createRange(); r.selectNodeContents(el);
     const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
   }, [editing]);
@@ -1391,7 +1396,7 @@ function ItemView({ it, t, dark, z, img, sel, hot, editing, tool, onDown, onPort
           onInput={(e) => onText(e.currentTarget.innerText)}
           onBlur={(e) => { onText(e.currentTarget.innerText); onDoneEdit(); }}
           onKeyDown={(e) => { e.stopPropagation(); if (e.key === "Escape") e.currentTarget.blur(); }}
-          style={{ ...textStyle, cursor: "text", minHeight: it.fs, outline:"none" }}>{it.text}</div>
+          style={{ ...textStyle, cursor: "text", minHeight: it.fs, outline:"none" }} />
       ) : it.text ? <div style={textStyle}>{it.text}</div> : it.type === "text" ? <div style={{ ...textStyle, color: t.ink3 }}>Текст</div> : null}
     </div>
   );
