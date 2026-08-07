@@ -875,7 +875,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v8.6"; // v136 reliable Vizy Boards editing, colors and persistence
+  const APP_VERSION="v8.7"; // v137 permanent manual goal creation in Scaling
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker","defects"];
 
   // Clear stale localStorage on version change
@@ -25489,8 +25489,18 @@ ${decompositionBrief}
       <div style={{fontSize:17,fontWeight:600,color:C.t1}}>Создай первую стратегическую цель</div>
       <div style={{fontSize:12.5,color:C.t2,marginTop:7,lineHeight:1.55}}>Пройди AI-интервью или добавь цель вручную, затем разбей её на проекты и этапы.</div>
       <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:14,flexWrap:"wrap"}}>
-        <button style={btn(true)} onClick={()=>setInterview(true)}>Создать через AI</button>
-        <button style={btn(false)} onClick={()=>addChild(null)}>Добавить вручную</button>
+        <button style={btn(true)} onClick={()=>setInterview(true)}>+ Новая цель (AI)</button>
+        <button
+          style={{
+            ...btn(false),
+            background:"#FFFFFF",
+            color:"#111827",
+            border:"1px solid #E5E7EB",
+            boxShadow:"0 1px 2px rgba(0,0,0,.04)"
+          }}
+          onClick={()=>addChild(null,"Новая цель")}>
+          + Новая цель (вручную)
+        </button>
       </div>
     </div>}
 
@@ -25513,6 +25523,17 @@ ${decompositionBrief}
       </div>
       <div style={{ flex: 1 }} />
       <button style={btn(true)} onClick={() => setInterview(true)}>+ Новая цель (AI)</button>
+      <button
+        style={{
+          ...btn(false),
+          background:"#FFFFFF",
+          color:"#111827",
+          border:"1px solid #E5E7EB",
+          boxShadow:"0 1px 2px rgba(0,0,0,.04)"
+        }}
+        onClick={()=>addChild(null,"Новая цель")}>
+        + Новая цель (вручную)
+      </button>
       <button style={btn(false)} onClick={async()=>{
         const ok=await flushOutbox();
         if(ok)flash("Все изменения синхронизированы с облаком");
