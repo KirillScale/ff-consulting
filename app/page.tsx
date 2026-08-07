@@ -875,7 +875,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v8.7"; // v137 permanent manual goal creation in Scaling
+  const APP_VERSION="v8.9"; // v139 AI card autofill and two-pass critical-path decomposition
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker","defects"];
 
   // Clear stale localStorage on version change
@@ -24136,6 +24136,114 @@ const SC_CRITICAL_PATH_PROMPT=`Ты собираешь план достижен
 
 Нельзя создавать задачи вида: «проработать», «заняться», «улучшить», «подготовить всё», «запустить проект» без конкретизации физического действия и критерия готовности.`;
 
+const SC_DECOMPOSITION_MASTER_PROMPT=`Ты — операционный стратег уровня Chief Strategy Officer + Chief Operating Officer.
+Твоя задача — не придумать список дел, а спроектировать минимально достаточный маршрут, который максимально повышает вероятность достижения конкретной цели.
+
+ПРИНЦИП
+Каждый создаваемый подэлемент обязан причинно вести к результату родителя.
+Если элемент можно удалить и вероятность достижения цели почти не изменится — он не critical.
+Никаких универсальных шаблонов, "проработать", "заняться", "сделать маркетинг", "улучшить продажи" и подобных пустых формулировок.
+
+ПЕРЕД ОТВЕТОМ ВНУТРЕННЕ ВЫПОЛНИ 8 ПРОХОДОВ. НЕ ВЫВОДИ ХОД РАССУЖДЕНИЙ:
+1. RESULT STATE — сформулируй, что физически и измеримо должно существовать в момент достижения цели.
+2. REVERSE ENGINEERING — двигайся от результата назад: что обязано быть истинно непосредственно перед ним, затем ещё шаг назад, пока не дойдёшь до управляемых действий.
+3. CAUSAL LEVERS — найди рычаги, которые реально двигают KPI родителя. Не путай активность с причинным фактором.
+4. CRITICAL PATH — оставь минимальный набор обязательных этапов. Optional допускаются только если заметно увеличивают вероятность результата.
+5. DEPENDENCIES — выстрой порядок. Укажи, что разблокирует каждый этап. Зависимый этап не может идти раньше блокирующего.
+6. BOTTLENECK — найди самое узкое место и поставь его проверку как можно раньше, чтобы провал обнаруживался дешёво.
+7. EXECUTION TEST — каждый этап должен иметь конкретный наблюдаемый результат, KPI/порог, владельца, реалистичную оценку времени и критерий готовности.
+8. RED TEAM — представь, что этот план принёс консультант за 1 000 000 ₽. Найди шаблонность, пропущенные условия, ложные предпосылки, слишком крупные этапы, слабые метрики и нереалистичные оценки. Исправь до выдачи.
+
+ОБЯЗАТЕЛЬНЫЕ ПРАВИЛА:
+— Сначала прочитай название, описание, KPI и критерий готовности родителя. Это главные источники истины.
+— Используй общий контекст стратегии, документы, комментарии и связанные задачи War Room.
+— Если данных достаточно — не задавай вопросы и не пиши "уточнить"; сделай лучший рабочий вывод.
+— Если критически важного факта нет и его нельзя безопасно вывести — пометь допущение в description конкретного элемента.
+— Не создавай больше элементов, чем реально нужно. Обычно 4–8.
+— Формулируй название с глагола действия или как конкретный управляемый результат.
+— Этап должен отвечать: "что изменится после его завершения и почему это приблизит KPI родителя?"
+— Для каждого critical-элемента должен существовать ранний сигнал провала.
+— Оценка времени должна включать работу, согласования и правки.
+— Даты должны находиться внутри срока родителя.
+— Не имитируй точность: если ответственный неизвестен, верни "требует уточнения".
+— Никаких новых стратегических направлений, не связанных с целью родителя.
+
+ВЫХОД:
+Верни только JSON:
+{
+  "bottleneck":{"title":"...","reason":"..."},
+  "coverage_check":"одно предложение: почему набор достаточен для результата",
+  "items":[
+    {
+      "title":"...",
+      "description":"что конкретно делаем, какой причинный вклад в цель и какое допущение используется, если оно есть",
+      "kpi":"одна измеримая метрика этого этапа",
+      "path_type":"critical|optional",
+      "responsible":"...",
+      "estimate_hours":0,
+      "completion_criteria":"наблюдаемый критерий, после которого этап действительно закрыт",
+      "external_dependency":"нет или конкретная зависимость",
+      "deadline_type":"external|internal",
+      "failure_cost":"что произойдёт с целью, если этап сорван",
+      "unlocks":"что именно этот этап разблокирует дальше",
+      "first_action":"первое физическое действие, которое можно начать без дополнительного планирования",
+      "checkpoint":{
+        "metric":"...",
+        "threshold":"...",
+        "date":"YYYY-MM-DD",
+        "failure_signal":"...",
+        "corrective_action":"..."
+      }
+    }
+  ]
+}`;
+
+const SC_CARD_FILL_PROMPT=`Ты — операционный стратег. Пользователь уже создал цель, но карточка заполнена частично.
+Твоя задача — превратить название и доступный контекст в управляемую карточку цели.
+
+НЕ ПИШИ МОТИВАЦИОННЫЙ ТЕКСТ. Заполняй поля как систему управления исполнением.
+
+Сначала внутренне проверь:
+1. Как выглядит измеримый конечный результат.
+2. Какой KPI лучше всего доказывает достижение цели.
+3. Какой критерий готовности не позволяет "почти закончить".
+4. Что является главным риском/ценой срыва.
+5. Есть ли внешняя зависимость.
+6. Какой контрольный сигнал должен показать отклонение ДО дедлайна.
+7. Реалистична ли оценка времени.
+8. Какие данные невозможно вывести без выдумки.
+
+Правила:
+— Не меняй название цели.
+— Сохраняй уже заполненное поле, если оно конкретное и не противоречит цели.
+— Улучшай пустые, расплывчатые или непроверяемые поля.
+— Не выдумывай человека: если ответственный неизвестен — "требует уточнения".
+— Не выдумывай внешний факт.
+— KPI должен содержать число/событие/порог, когда это возможно из цели.
+— Критерий готовности должен быть бинарно проверяемым.
+— Контрольная точка должна быть раньше дедлайна, если дедлайн известен.
+— failure_cost описывает реальное последствие срыва для родительской цели.
+— description должна объяснять конечное состояние, границы результата и важное допущение, но без воды.
+
+Верни только JSON:
+{
+  "description":"...",
+  "kpi":"...",
+  "responsible":"...",
+  "priority":"low|medium|high",
+  "path_type":"critical|optional",
+  "estimate_hours":0,
+  "completion_criteria":"...",
+  "external_dependency":"...",
+  "deadline_type":"external|internal",
+  "failure_cost":"...",
+  "checkpoint_metric":"...",
+  "checkpoint_threshold":"...",
+  "checkpoint_date":"YYYY-MM-DD|null",
+  "start_date":"YYYY-MM-DD|null",
+  "due_date":"YYYY-MM-DD|null"
+}`;
+
 
 const scLoadScript=(src:string,ready:()=>boolean)=>new Promise<void>((resolve,reject)=>{
   if(ready()){resolve();return;}
@@ -24413,6 +24521,9 @@ function ScalingModule({ userId }: { userId: string }) {
   const[dbAvailable,setDbAvailable]=useState(true);
   const plannerTasks=useTable("planner_tasks",userId);
   const persistTimers=useRef<Record<string,ReturnType<typeof setTimeout>>>({});
+  const dirtyNodeIds=useRef<Set<string>>(new Set());
+  const nodeEditRevision=useRef<Record<string,number>>({});
+  const persistInFlight=useRef<Set<string>>(new Set());
 
   useEffect(()=>{
     let alive=true;
@@ -24436,7 +24547,14 @@ function ScalingModule({ userId }: { userId: string }) {
         const outbox=scReadOutbox(userId);
         const pendingDeletes=new Set(outbox.filter(x=>x.op==="delete").map(x=>x.id));
         const pendingUpserts=outbox.filter(x=>x.op==="upsert"&&x.node).map(x=>x.node!) as SCNode[];
-        const pendingById=new Map(pendingUpserts.map(n=>[n.id,n]));
+
+        // Черновик в локальном state/cache всегда важнее облачной копии.
+        // Это защищает текст, который пользователь ещё печатает во время reconnect/reload.
+        const cachedDrafts=scReadCachedNodes(userId)
+          .filter(n=>dirtyNodeIds.current.has(n.id)||Boolean(persistTimers.current[n.id])||persistInFlight.current.has(n.id));
+        const pendingById=new Map<string,SCNode>();
+        pendingUpserts.forEach(n=>pendingById.set(n.id,n));
+        cachedDrafts.forEach(n=>pendingById.set(n.id,n));
 
         const merged=cloud
           .filter(n=>!pendingDeletes.has(n.id))
@@ -24527,10 +24645,26 @@ function ScalingModule({ userId }: { userId: string }) {
     return flushOutbox();
   };
 
-  const schedulePersist=(n:SCNode)=>{
-    if(persistTimers.current[n.id])clearTimeout(persistTimers.current[n.id]);
-    setSyncState(navigator.onLine?"syncing":"offline");
-    persistTimers.current[n.id]=setTimeout(()=>{persist(n);},500);
+  const schedulePersist=(n:SCNode,revision?:number)=>{
+    const id=n.id;
+    if(persistTimers.current[id])clearTimeout(persistTimers.current[id]);
+    dirtyNodeIds.current.add(id);
+    const scheduledRevision=revision??nodeEditRevision.current[id]??0;
+
+    // Не отправляем запрос на каждый символ. Сохраняем после спокойной паузы.
+    persistTimers.current[id]=setTimeout(async()=>{
+      delete persistTimers.current[id];
+      persistInFlight.current.add(id);
+      setSyncState(navigator.onLine?"syncing":"offline");
+      try{
+        const ok=await persist(n);
+        if(ok&&(nodeEditRevision.current[id]??0)===scheduledRevision){
+          dirtyNodeIds.current.delete(id);
+        }
+      }finally{
+        persistInFlight.current.delete(id);
+      }
+    },1200);
   };
 
   const persistDel=async(id:string)=>{
@@ -24551,7 +24685,8 @@ function ScalingModule({ userId }: { userId: string }) {
           const id=String(payload.old?.id||"");
           if(!id)return;
           const pending=scReadOutbox(userId).some(x=>x.id===id);
-          if(pending)return;
+          const localDraft=dirtyNodeIds.current.has(id)||Boolean(persistTimers.current[id])||persistInFlight.current.has(id);
+          if(pending||localDraft)return;
           setNodes(prev=>{
             const next=prev.filter(n=>n.id!==id);
             scWriteCachedNodes(userId,next);
@@ -24560,11 +24695,26 @@ function ScalingModule({ userId }: { userId: string }) {
         }else{
           const incoming=payload.new as SCNode;
           if(!incoming?.id)return;
-          const pending=scReadOutbox(userId).some(x=>x.id===incoming.id);
-          if(pending)return;
+          const id=incoming.id;
+          const pending=scReadOutbox(userId).some(x=>x.id===id);
+          const localDraft=
+            dirtyNodeIds.current.has(id)||
+            Boolean(persistTimers.current[id])||
+            persistInFlight.current.has(id);
+
+          // Главное правило: облачный echo никогда не имеет права стереть то,
+          // что пользователь сейчас печатает локально.
+          if(pending||localDraft)return;
+
           setNodes(prev=>{
-            const exists=prev.some(n=>n.id===incoming.id);
-            const next=exists?prev.map(n=>n.id===incoming.id?incoming:n):[...prev,incoming];
+            const local=prev.find(n=>n.id===id);
+            if(local){
+              const localTime=Date.parse(local.updated_at||"")||0;
+              const incomingTime=Date.parse(incoming.updated_at||"")||0;
+              if(localTime>incomingTime)return prev;
+            }
+            const exists=prev.some(n=>n.id===id);
+            const next=exists?prev.map(n=>n.id===id?incoming:n):[...prev,incoming];
             scWriteCachedNodes(userId,next);
             return next;
           });
@@ -24584,13 +24734,19 @@ function ScalingModule({ userId }: { userId: string }) {
   },[userId]);
 
   // ── операции над деревом ──
-  const patch=(id:string,up:Partial<SCNode>,save=true)=>setNodes((prev:SCNode[])=>{
-    const next=prev.map(n=>n.id===id?{...n,...up}:n);
-    scWriteCachedNodes(userId,next);
-    const target=next.find(n=>n.id===id);
-    if(target&&save)schedulePersist(target);
-    return next;
-  });
+  const patch=(id:string,up:Partial<SCNode>,save=true)=>{
+    const revision=(nodeEditRevision.current[id]||0)+1;
+    nodeEditRevision.current[id]=revision;
+    if(save)dirtyNodeIds.current.add(id);
+    setNodes((prev:SCNode[])=>{
+      const updatedAt=new Date().toISOString();
+      const next=prev.map(n=>n.id===id?{...n,...up,updated_at:updatedAt}:n);
+      scWriteCachedNodes(userId,next);
+      const target=next.find(n=>n.id===id);
+      if(target&&save)schedulePersist(target,revision);
+      return next;
+    });
+  };
   const addChild = (parent: string | null, title = "Новый элемент") => {
     const sib = nodes.filter((n: SCNode) => n.parent_id === parent);
     const t = scToday();
@@ -24651,6 +24807,7 @@ function ScalingModule({ userId }: { userId: string }) {
   const wrTransferLocks=useRef<Set<string>>(new Set());
   const[planRepairBusy,setPlanRepairBusy]=useState(false);
   const[planRepairText,setPlanRepairText]=useState("");
+  const[fillingCard,setFillingCard]=useState<string|null>(null);
   const [decomposing, setDecomposing] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 3000); };
@@ -24713,6 +24870,62 @@ function ScalingModule({ userId }: { userId: string }) {
     flash("Положение элемента сохранено");
   };
 
+  const reparentNode=(id:string,newParent:string|null)=>{
+    const current=nodes.find(n=>n.id===id);
+    if(!current||current.parent_id===newParent)return;
+
+    const descendants=new Set<string>();
+    const collect=(nodeId:string)=>{
+      nodes.filter(n=>n.parent_id===nodeId).forEach(child=>{
+        descendants.add(child.id);
+        collect(child.id);
+      });
+    };
+    collect(id);
+
+    if(newParent===id||Boolean(newParent&&descendants.has(newParent))){
+      flash("Нельзя сделать подэлемент дочерней цели родителем");
+      return;
+    }
+
+    const oldParent=current.parent_id;
+    const newSiblings=nodes
+      .filter(n=>n.parent_id===newParent&&n.id!==id)
+      .sort((a,b)=>a.sort_order-b.sort_order);
+    const oldSiblings=nodes
+      .filter(n=>n.parent_id===oldParent&&n.id!==id)
+      .sort((a,b)=>a.sort_order-b.sort_order);
+
+    const newOrder=new Map(newSiblings.map((n,i)=>[n.id,i]));
+    const oldOrder=new Map(oldSiblings.map((n,i)=>[n.id,i]));
+    const now=new Date().toISOString();
+
+    const next=nodes.map(n=>{
+      if(n.id===id)return{...n,parent_id:newParent,sort_order:newSiblings.length,updated_at:now};
+      if(oldParent!==newParent&&n.parent_id===oldParent&&oldOrder.has(n.id))return{...n,sort_order:oldOrder.get(n.id)!,updated_at:now};
+      if(n.parent_id===newParent&&newOrder.has(n.id))return{...n,sort_order:newOrder.get(n.id)!,updated_at:now};
+      return n;
+    });
+
+    setNodes(next);
+    scWriteCachedNodes(userId,next);
+
+    const affected=next.filter(n=>
+      n.id===id||
+      (oldParent!==newParent&&n.parent_id===oldParent)||
+      n.parent_id===newParent
+    );
+    affected.forEach(n=>{
+      const revision=(nodeEditRevision.current[n.id]||0)+1;
+      nodeEditRevision.current[n.id]=revision;
+      dirtyNodeIds.current.add(n.id);
+      schedulePersist(n,revision);
+    });
+
+    if(newParent)setCollapsed(prev=>{const s=new Set(prev);s.delete(newParent);return s;});
+    flash(newParent?"Элемент перенесён в выбранную цель":"Элемент стал самостоятельной целью");
+  };
+
   // ── плоский видимый список (учёт сворачивания) ──
   const flat = useMemo(() => {
     const out: { node: SCNode; depth: number }[] = [];
@@ -24724,6 +24937,23 @@ function ScalingModule({ userId }: { userId: string }) {
     };
     walk(null, 0); return out;
   }, [nodes, collapsed]);
+
+  const validParentsFor=(node:SCNode)=>{
+    const descendants=new Set<string>();
+    const walk=(id:string)=>{
+      nodes.filter(n=>n.parent_id===id).forEach(child=>{
+        descendants.add(child.id);
+        walk(child.id);
+      });
+    };
+    walk(node.id);
+    return nodes
+      .filter(n=>n.id!==node.id&&!descendants.has(n.id))
+      .sort((a,b)=>{
+        const da=depthOf(a.id),db=depthOf(b.id);
+        return da-db||a.sort_order-b.sort_order||a.title.localeCompare(b.title,"ru");
+      });
+  };
 
   // ── аналитика ──
   const A = useMemo(() => {
@@ -25104,7 +25334,89 @@ ${taskLines||"Нет задач"}`;
 
 
   // ── AI: декомпозиция ──
+  const fillCardWithAi=async(n:SCNode)=>{
+    if(fillingCard||decomposing)return;
+    setFillingCard(n.id);
+    try{
+      const parent=n.parent_id?nodes.find(x=>x.id===n.parent_id):null;
+      const children=nodes.filter(x=>x.parent_id===n.id);
+      const result=await scAskJson(
+        SC_STRATEGIST_SYSTEM_PROMPT+"\n\n"+SC_CARD_FILL_PROMPT,
+        `ТЕКУЩАЯ ДАТА: ${scToday()}
+
+КАРТОЧКА, КОТОРУЮ НУЖНО ЗАПОЛНИТЬ:
+Название: ${n.title}
+Описание: ${n.description||"не заполнено"}
+KPI: ${n.kpi||"не заполнен"}
+Критерий готовности: ${n.completion_criteria||"не заполнен"}
+Ответственный: ${n.responsible||"не заполнен"}
+Приоритет: ${n.priority}
+Роль в плане: ${n.path_type||"не задана"}
+Оценка часов: ${n.estimate_hours??"не задана"}
+Начало: ${n.start_date||"не задано"}
+Дедлайн: ${n.due_date||"не задан"}
+Внешняя зависимость: ${n.external_dependency||"не заполнена"}
+Тип дедлайна: ${n.deadline_type||"не задан"}
+Цена срыва: ${n.failure_cost||"не заполнена"}
+Контрольная метрика: ${n.checkpoint_metric||"не заполнена"}
+Порог: ${n.checkpoint_threshold||"не заполнен"}
+Дата контроля: ${n.checkpoint_date||"не задана"}
+
+РОДИТЕЛЬ:
+${parent?`${parent.title}; KPI: ${parent.kpi||"нет"}; дедлайн: ${parent.due_date||"нет"}; критерий: ${parent.completion_criteria||"нет"}`:"Это самостоятельная цель верхнего уровня."}
+
+ТЕКУЩИЕ ДОЧЕРНИЕ ЭЛЕМЕНТЫ:
+${children.length?children.map(x=>`- ${x.title}; KPI ${x.kpi||"нет"}; срок ${x.due_date||"нет"}`).join("\n"):"Нет."}
+
+ОБЩИЙ КОНТЕКСТ СТРАТЕГИИ:
+${strategyContext(n)}
+
+Заполни карточку. Уже конкретные корректные поля сохрани по смыслу; пустые и слабые — усили.`,
+        1800
+      );
+
+      const parentStart=parent?.start_date||null;
+      const parentDue=parent?.due_date||null;
+      const currentStart=n.start_date||null;
+      const currentDue=n.due_date||null;
+
+      let start=/^20\d{2}-\d{2}-\d{2}$/.test(String(result.start_date||""))?String(result.start_date):currentStart;
+      let due=/^20\d{2}-\d{2}-\d{2}$/.test(String(result.due_date||""))?String(result.due_date):currentDue;
+
+      if(start&&parentStart)start=scClampIso(start,parentStart,parentDue||start);
+      if(due&&parentDue)due=scClampIso(due,parentStart||due,parentDue);
+      if(start&&due&&start>due)start=due;
+
+      let checkpoint=/^20\d{2}-\d{2}-\d{2}$/.test(String(result.checkpoint_date||""))?String(result.checkpoint_date):n.checkpoint_date||null;
+      if(checkpoint&&start&&due)checkpoint=scClampIso(checkpoint,start,due);
+
+      patch(n.id,{
+        description:String(result.description||n.description||"").slice(0,1400),
+        kpi:String(result.kpi||n.kpi||"").slice(0,500),
+        responsible:String(result.responsible||n.responsible||"требует уточнения").slice(0,160),
+        priority:["low","medium","high"].includes(String(result.priority))?result.priority:n.priority,
+        path_type:result.path_type==="optional"?"optional":"critical",
+        estimate_hours:Number.isFinite(Number(result.estimate_hours))?Math.max(0,Number(result.estimate_hours)):n.estimate_hours,
+        completion_criteria:String(result.completion_criteria||n.completion_criteria||"").slice(0,1000),
+        external_dependency:String(result.external_dependency||n.external_dependency||"нет").slice(0,700),
+        deadline_type:result.deadline_type==="external"?"external":"internal",
+        failure_cost:String(result.failure_cost||n.failure_cost||"").slice(0,900),
+        checkpoint_metric:String(result.checkpoint_metric||n.checkpoint_metric||"").slice(0,500),
+        checkpoint_threshold:String(result.checkpoint_threshold||n.checkpoint_threshold||"").slice(0,500),
+        checkpoint_date:checkpoint,
+        start_date:start,
+        due_date:due
+      });
+      flash(`AI заполнил карточку «${n.title}»`);
+    }catch(e:any){
+      flash("AI: "+(e?.message||"не удалось заполнить карточку"));
+    }finally{
+      setFillingCard(null);
+    }
+  };
+
   const decompose = async (n: SCNode) => {
+    if(decomposing||fillingCard)return;
     setDecomposing(n.id);
     try {
       const decompositionBrief=`НАЗВАНИЕ ЭЛЕМЕНТА: ${n.title}
@@ -25112,54 +25424,153 @@ ${taskLines||"Нет задач"}`;
 KPI: ${n.kpi?.trim()||"не указан"}
 КРИТЕРИЙ ГОТОВНОСТИ: ${n.completion_criteria?.trim()||"не указан"}
 СРОКИ: ${n.start_date||"не указаны"} — ${n.due_date||"не указаны"}
-ОТВЕТСТВЕННЫЙ: ${n.responsible?.trim()||"не указан"}`;
+ОТВЕТСТВЕННЫЙ: ${n.responsible?.trim()||"не указан"}
+ЦЕНА СРЫВА: ${n.failure_cost?.trim()||"не указана"}
+ВНЕШНЯЯ ЗАВИСИМОСТЬ: ${n.external_dependency?.trim()||"не указана"}`;
 
-      const arr = await scAskJson(
-        SC_STRATEGIST_SYSTEM_PROMPT+"\n\n"+SC_CRITICAL_PATH_PROMPT+`\n\nПеред декомпозицией обязательно прочитай отдельный бриф выбранного элемента. Главные источники смысла: описание, KPI и критерий готовности. Не подменяй их шаблонными этапами. Если заполнены все три поля — каждый подэлемент должен быть логически связан с ними. Если заполнена часть — опирайся на доступные поля. Только если описание, KPI и критерий готовности одновременно отсутствуют, разрешено самостоятельно вывести рабочую логику из названия и общего контекста стратегии.
-
-Разбей выбранный элемент на 3–6 конкретных исполнимых подэлементов. Подэлементы должны вместе приводить к KPI и критерию готовности родителя, а не просто повторять универсальный список действий. Сначала critical, затем optional. Каждый элемент — физическое действие или управляемый этап с проверяемым результатом. Учитывай зависимости, узкое место и сроки родителя.
-
-Формат: массив объектов {title,path_type:"critical|optional",responsible,estimate_hours,completion_criteria,external_dependency,deadline_type:"external|internal",failure_cost,checkpoint:{metric,threshold,date:"YYYY-MM-DD"}}.`,
+      // PASS 1: архитектор строит причинную модель достижения результата.
+      const draft = await scAskJson(
+        SC_STRATEGIST_SYSTEM_PROMPT+"\n\n"+SC_CRITICAL_PATH_PROMPT+"\n\n"+SC_DECOMPOSITION_MASTER_PROMPT,
         `${strategyContext(n)}
 
 ОТДЕЛЬНЫЙ БРИФ ВЫБРАННОГО ЭЛЕМЕНТА:
 ${decompositionBrief}
 
-Декомпозируй именно этот элемент. Не создавай общие шаблонные пункты, которые нельзя проверить по KPI или критерию готовности. Верни только массив.`, 1400);
-      const items: any[] = Array.isArray(arr) ? arr : arr.items || [];
+Сконструируй причинно достаточную декомпозицию ИМЕННО этого элемента.
+Не копируй универсальные фазы проекта. Начинай от результата и иди назад.
+Верни только JSON по схеме из системной инструкции.`,
+        2600
+      );
+
+      // PASS 2: отдельный Red Team не добавляет красоты — он ищет, где план реально сломается.
+      const reviewed = await scAskJson(
+        `Ты — Red Team операционного плана. Перед тобой черновик декомпозиции цели.
+Твоя задача — сделать план существенно сильнее, а не переписать другими словами.
+
+Проверь:
+1. Покрывает ли набор ВСЕ необходимые условия KPI и критерия готовности родителя.
+2. Есть ли декоративные или шаблонные пункты без причинной связи с результатом.
+3. Нет ли пропущенного узкого места, из-за которого выполнение всех пунктов всё равно не даст результат.
+4. Правильный ли порядок зависимостей.
+5. Можно ли раньше проверить самую рискованную гипотезу.
+6. Измеримы ли KPI и критерии готовности.
+7. Реалистичны ли часы и сроки.
+8. Есть ли у каждого critical-пункта ранний сигнал провала и понятная цена срыва.
+9. Не является ли какой-либо пункт слишком крупным и неуправляемым.
+10. Если выполнить все пункты, действительно ли вероятность достижения родителя максимально возможна при данном контексте.
+
+Исправь найденное. Не добавляй новые направления бизнеса. Не раздувай список: оставь 4–8 минимально достаточных элементов.
+Верни только JSON той же структуры:
+{"bottleneck":{"title":"...","reason":"..."},"coverage_check":"...","items":[{"title":"...","description":"...","kpi":"...","path_type":"critical|optional","responsible":"...","estimate_hours":0,"completion_criteria":"...","external_dependency":"...","deadline_type":"external|internal","failure_cost":"...","unlocks":"...","first_action":"...","checkpoint":{"metric":"...","threshold":"...","date":"YYYY-MM-DD","failure_signal":"...","corrective_action":"..."}}]}`,
+        `ЦЕЛЬ РОДИТЕЛЯ:
+${decompositionBrief}
+
+КОНТЕКСТ:
+${strategyContext(n)}
+
+ЧЕРНОВИК АРХИТЕКТОРА:
+${JSON.stringify(draft)}
+
+Проведи жёсткий аудит и верни исправленную финальную декомпозицию.`,
+        2800
+      );
+
+      const source=reviewed?.items?.length?reviewed:draft;
+      const items:any[]=Array.isArray(source)?source:(source.items||[]);
+      if(!items.length)throw new Error("AI не сформировал подэлементы");
+
       const parentStart=n.start_date||scToday();
       const parentDue=n.due_date||scAddDays(parentStart,60);
-      const count=Math.max(1,Math.min(6,items.slice(0,6).length));
-      const slot=Math.max(1,Math.floor(Math.max(1,scDiff(parentStart,parentDue))/count));
-      const created:SCNode[]=items.slice(0,6).map((it:any,i:number)=>{
-        const start=scClampIso(scAddDays(parentStart,i*slot),parentStart,parentDue);
-        const due=scClampIso(scAddDays(start,Math.max(1,slot-1)),start,parentDue);
+      const finalItems=items.slice(0,8);
+      const count=Math.max(1,finalItems.length);
+      const totalDays=Math.max(1,scDiff(parentStart,parentDue));
+
+      // Раскладываем по критическому пути. Последний элемент получает остаток периода.
+      const weights=finalItems.map((it:any)=>Math.max(.5,Number(it.estimate_hours)||1));
+      const totalWeight=weights.reduce((a:number,b:number)=>a+b,0);
+      let cursorDay=0;
+
+      const created:SCNode[]=finalItems.map((it:any,i:number)=>{
+        const remaining=Math.max(1,totalDays-cursorDay);
+        const proportional=i===finalItems.length-1
+          ?remaining
+          :Math.max(1,Math.round(totalDays*(weights[i]/Math.max(totalWeight,1))));
+        const start=scClampIso(scAddDays(parentStart,Math.min(cursorDay,totalDays-1)),parentStart,parentDue);
+        const due=scClampIso(
+          i===finalItems.length-1?parentDue:scAddDays(start,Math.max(1,proportional)),
+          start,
+          parentDue
+        );
+        cursorDay=Math.min(totalDays,cursorDay+Math.max(1,proportional));
+
+        const firstAction=String(it.first_action||"").trim();
+        const unlocks=String(it.unlocks||"").trim();
+        const failureSignal=String(it.checkpoint?.failure_signal||"").trim();
+        const corrective=String(it.checkpoint?.corrective_action||"").trim();
+        const baseDescription=String(it.description||"").trim();
+        const details=[
+          baseDescription,
+          firstAction?`Первое действие: ${firstAction}`:"",
+          unlocks?`Разблокирует: ${unlocks}`:"",
+          failureSignal?`Сигнал провала: ${failureSignal}`:"",
+          corrective?`Если сигнал сработал: ${corrective}`:""
+        ].filter(Boolean).join("\n\n");
+
         return{
-          id:scUid(),parent_id:n.id,title:String(it.title||it).slice(0,120),status:"planned",color:n.color,
-          priority:it.path_type==="critical"?"high":"medium",start_date:start,due_date:due,sort_order:i,
-          depends_on:i>0?["__PREVIOUS__"]:[],manual_progress:null,
+          id:scUid(),
+          parent_id:n.id,
+          title:String(it.title||"Подэлемент").slice(0,140),
+          description:details.slice(0,1800),
+          kpi:String(it.kpi||it.checkpoint?.metric||"").slice(0,500),
+          status:"planned",
+          color:n.color,
+          priority:it.path_type==="critical"?"high":"medium",
+          start_date:start,
+          due_date:due,
+          sort_order:i,
+          depends_on:i>0?["__PREVIOUS__"]:[],
+          manual_progress:null,
           path_type:it.path_type==="optional"?"optional":"critical",
-          responsible:String(it.responsible||"").slice(0,120),
+          responsible:String(it.responsible||n.responsible||"требует уточнения").slice(0,160),
           estimate_hours:Math.max(0,Number(it.estimate_hours)||0),
-          completion_criteria:String(it.completion_criteria||"").slice(0,500),
-          external_dependency:String(it.external_dependency||"").slice(0,500),
+          completion_criteria:String(it.completion_criteria||"").slice(0,1000),
+          external_dependency:String(it.external_dependency||"нет").slice(0,700),
           deadline_type:it.deadline_type==="external"?"external":"internal",
-          failure_cost:String(it.failure_cost||"").slice(0,500),
-          checkpoint_metric:String(it.checkpoint?.metric||"").slice(0,300),
-          checkpoint_threshold:String(it.checkpoint?.threshold||"").slice(0,300),
-          checkpoint_date:/^20\d{2}-\d{2}-\d{2}$/.test(String(it.checkpoint?.date||""))?scClampIso(String(it.checkpoint.date),start,parentDue):null
+          failure_cost:String(it.failure_cost||"").slice(0,900),
+          checkpoint_metric:String(it.checkpoint?.metric||it.kpi||"").slice(0,500),
+          checkpoint_threshold:String(it.checkpoint?.threshold||"").slice(0,500),
+          checkpoint_date:/^20\d{2}-\d{2}-\d{2}$/.test(String(it.checkpoint?.date||""))
+            ?scClampIso(String(it.checkpoint.date),start,parentDue)
+            :null
         };
       });
+
       const linkedCreated=created.map((item,index)=>({
         ...item,
-        depends_on:(item.depends_on||[]).map(dep=>dep==="__PREVIOUS__"&&index>0?created[index-1].id:dep).filter(dep=>dep!=="__PREVIOUS__")
+        depends_on:(item.depends_on||[])
+          .map(dep=>dep==="__PREVIOUS__"&&index>0?created[index-1].id:dep)
+          .filter(dep=>dep!=="__PREVIOUS__")
       }));
-      setNodes((prev:SCNode[])=>{const next=[...prev,...linkedCreated];scWriteCachedNodes(userId,next);return next;});
+
+      setNodes((prev:SCNode[])=>{
+        const next=[...prev,...linkedCreated];
+        scWriteCachedNodes(userId,next);
+        return next;
+      });
       linkedCreated.forEach(persist);
-      setCollapsed((prev: Set<string>) => { const s = new Set(prev); s.delete(n.id); return s; });
-      flash(`AI создал ${linkedCreated.length} элементов критического пути для «${n.title}»`);
-    } catch (e: any) { flash("AI: " + (e.message || "ошибка декомпозиции")); }
-    setDecomposing(null);
+      setCollapsed((prev:Set<string>)=>{const s=new Set(prev);s.delete(n.id);return s;});
+
+      const bottleneck=String(source?.bottleneck?.title||"").trim();
+      flash(
+        bottleneck
+          ?`AI создал ${linkedCreated.length} сильных подэлементов. Узкое место: ${bottleneck}`
+          :`AI создал ${linkedCreated.length} подэлементов после двухэтапной проверки`
+      );
+    } catch (e:any) {
+      flash("AI: "+(e?.message||"ошибка декомпозиции"));
+    } finally {
+      setDecomposing(null);
+    }
   };
 
   // ── AI: стратегический аудит ──
@@ -25787,11 +26198,45 @@ ${decompositionBrief}
           </div>
         </div>
 
+        <div style={{marginBottom:12,padding:"10px 11px",border:"1px solid "+C.bd,borderRadius:10,background:C.ib}}>
+          <div style={{fontSize:10.5,fontWeight:700,color:C.t2,textTransform:"uppercase",letterSpacing:".05em",marginBottom:7}}>Положение в структуре</div>
+          <select
+            value={selNode.parent_id||"__root__"}
+            onChange={(e:any)=>reparentNode(selNode.id,e.target.value==="__root__"?null:e.target.value)}
+            style={{...inp,height:38,fontSize:11.5}}>
+            <option value="__root__">Самостоятельная цель</option>
+            {validParentsFor(selNode).map((parent:SCNode)=>{
+              const depth=depthOf(parent.id);
+              return <option key={parent.id} value={parent.id}>
+                {`${"— ".repeat(Math.min(depth,4))}Подэлемент цели: ${parent.title}`}
+              </option>;
+            })}
+          </select>
+          <div style={{fontSize:10.5,color:C.t2,marginTop:6,lineHeight:1.4}}>
+            {selNode.parent_id
+              ?`Сейчас: подэлемент цели «${nodes.find(n=>n.id===selNode.parent_id)?.title||"неизвестная цель"}».`
+              :"Сейчас: самостоятельная цель верхнего уровня."}
+          </div>
+        </div>
+
         <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
           <button style={btn(true)} onClick={() => addChild(selNode.id)}>+ Подэлемент</button>
-          <button style={btn(false)} onClick={() => decompose(selNode)} disabled={decomposing === selNode.id}>
-            {decomposing === selNode.id ? <span className="sc-spin" /> : "Разбить с помощью AI"}
+          <button
+            style={{...btn(false),borderColor:dark?"rgba(99,102,241,.38)":"rgba(79,70,229,.22)"}}
+            onClick={()=>fillCardWithAi(selNode)}
+            disabled={fillingCard===selNode.id||decomposing===selNode.id}>
+            {fillingCard===selNode.id?<><span className="sc-spin"/> Заполняю…</>:"Заполнить карточку"}
           </button>
+          <button
+            style={btn(false)}
+            onClick={() => decompose(selNode)}
+            disabled={decomposing === selNode.id||fillingCard===selNode.id}>
+            {decomposing === selNode.id ? <><span className="sc-spin"/> Проектирую…</> : "Разбить на подзадачи через AI"}
+          </button>
+        </div>
+
+        <div style={{fontSize:10.5,color:C.t2,lineHeight:1.45,margin:"-4px 0 12px"}}>
+          «Заполнить карточку» усиливает KPI, критерии и контроль. «Разбить на подзадачи» строит критический путь и проверяет его вторым AI-проходом.
         </div>
 
         {/* прогресс */}
