@@ -875,7 +875,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v9.1"; // v141 AI Map Generator for Maps
+  const APP_VERSION="v9.2"; // v142 Content card ordering + easier Maps rename
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker","defects"];
 
   // Clear stale localStorage on version change
@@ -10410,7 +10410,7 @@ ${fields}${vocab}
 
 function ContentPage({userId}:{userId:string}){
   const isMobile=useIsMobile();
-  const{data:items,add,update,remove,reload:reloadContent}=useTable("content",userId);
+  const{data:items,add,update,remove,reload:reloadContent,setData:setContentItems}=useTable("content",userId);
   const{data:contentTemplates,add:addTemplate,update:updateTemplate,remove:removeTemplate}=useTable("content_templates",userId);
   const{data:youtubeChannels,add:addYoutubeChannel,remove:removeYoutubeChannel}=useTable("youtube_channels",userId);
   const{data:contentTasks,add:addContentTask,update:updateContentTask,remove:removeContentTask}=useTable("planner_tasks",userId);
@@ -11044,15 +11044,56 @@ ${existingScenario}`;
   ];
   const[kanbanDrag,setKanbanDrag]=useState<string|null>(null);
   const[kanbanOver,setKanbanOver]=useState<string|null>(null);
+  const[kanbanInsert,setKanbanInsert]=useState<{id:string;after:boolean}|null>(null);
 
   const onKanbanDragStart=(id:string)=>setKanbanDrag(id);
-  const onKanbanDragEnd=()=>{setKanbanDrag(null);setKanbanOver(null);};
-  const onKanbanDragOver=(stageId:string,e:React.DragEvent)=>{e.preventDefault();setKanbanOver(stageId);};
-  const onKanbanDrop=async(stageId:string)=>{
-    if(kanbanDrag&&kanbanDrag!==stageId){
-      await update(kanbanDrag,{status:stageId});
+  const onKanbanDragEnd=()=>{setKanbanDrag(null);setKanbanOver(null);setKanbanInsert(null);};
+  const onKanbanDragOver=(stageId:string,e:React.DragEvent)=>{e.preventDefault();e.dataTransfer.dropEffect="move";setKanbanOver(stageId);setKanbanInsert(null);};
+  const contentOrder=(x:any)=>x?.sort_order!==null&&x?.sort_order!==undefined&&Number.isFinite(Number(x.sort_order))?Number(x.sort_order):Number.MAX_SAFE_INTEGER;
+  const sortKanbanItems=(rows:any[])=>[...rows].sort((a:any,b:any)=>{
+    const byOrder=contentOrder(a)-contentOrder(b);
+    if(Number.isFinite(byOrder)&&byOrder!==0)return byOrder;
+    return String(b.created_at||"").localeCompare(String(a.created_at||""));
+  });
+  const onKanbanDrop=async(stageId:string,targetId?:string,after=false)=>{
+    const dragId=kanbanDrag;
+    if(!dragId){onKanbanDragEnd();return;}
+    if(targetId===dragId){onKanbanDragEnd();return;}
+    const dragged=items.find((x:any)=>x.id===dragId);
+    if(!dragged){onKanbanDragEnd();return;}
+
+    const targetStageRows=sortKanbanItems(monthItems.filter((x:any)=>x.status===stageId&&x.id!==dragId));
+    let insertAt=targetStageRows.length;
+    if(targetId){
+      const targetIndex=targetStageRows.findIndex((x:any)=>x.id===targetId);
+      if(targetIndex>=0)insertAt=targetIndex+(after?1:0);
     }
-    setKanbanDrag(null);setKanbanOver(null);
+    const targetRows=[...targetStageRows];
+    targetRows.splice(insertAt,0,{...dragged,status:stageId});
+
+    const changed=new Map<string,any>();
+    targetRows.forEach((x:any,index:number)=>changed.set(x.id,{status:stageId,sort_order:(index+1)*1000}));
+    if(dragged.status!==stageId){
+      const sourceRows=sortKanbanItems(monthItems.filter((x:any)=>x.status===dragged.status&&x.id!==dragId));
+      sourceRows.forEach((x:any,index:number)=>changed.set(x.id,{status:dragged.status,sort_order:(index+1)*1000}));
+    }
+
+    const before=items;
+    setContentItems((prev:any[])=>prev.map((row:any)=>changed.has(row.id)?{...row,...changed.get(row.id)}:row));
+    onKanbanDragEnd();
+    try{
+      const results=await Promise.all([...changed.entries()].map(([id,patch])=>
+        supabase.from("content").update(patch).eq("id",id).eq("user_id",userId)
+      ));
+      const failed=results.find((r:any)=>r.error);
+      if(failed?.error)throw failed.error;
+      window.dispatchEvent(new CustomEvent("ks-refresh",{detail:{table:"content"}}));
+    }catch(e:any){
+      console.error("Не удалось сохранить порядок контента",e);
+      setContentItems(before);
+      await reloadContent();
+      alert("Не удалось сохранить новый порядок карточек. Проверь SQL-миграцию sort_order и попробуй ещё раз.");
+    }
   };
 
   const calDays=useMemo(()=>{
@@ -11284,7 +11325,7 @@ ${existingScenario}`;
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
         <div>
           <div style={{fontSize:18,fontWeight:500,color:C.t1}}>Контент-план · {contentMonthLabel}</div>
-          <div style={{fontSize:12,color:C.t2,marginTop:3}}>Перетаскивай карточки между этапами. На доске только выбранный месяц.</div>
+          <div style={{fontSize:12,color:C.t2,marginTop:3}}>Перетаскивай карточки между этапами и меняй их порядок внутри каждого процесса.</div>
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
           <button onClick={()=>{setBulkAiOpen(true);setBulkAiResult("");}}
@@ -11599,12 +11640,11 @@ ${existingScenario}`;
       {/* KANBAN BOARD */}
       <div style={{display:"flex",gap:14,alignItems:"stretch",paddingBottom:16,width:"100%",overflowX:"auto",scrollSnapType:isMobile?"x mandatory":"none"}}>
         {CONTENT_STAGES.map(stage=>{
-          const stageItems=filteredItems.filter((x:any)=>x.status===stage.id);
+          const stageItems=sortKanbanItems(filteredItems.filter((x:any)=>x.status===stage.id));
           const isOver=kanbanOver===stage.id;
           return<div key={stage.id}
             onDragOver={e=>onKanbanDragOver(stage.id,e)}
-            onDrop={()=>onKanbanDrop(stage.id)}
-            onDragLeave={()=>setKanbanOver(null)}
+            onDrop={(e)=>{e.preventDefault();void onKanbanDrop(stage.id);}}
             style={{
               flex:isMobile?"0 0 86vw":1,minWidth:isMobile?260:220,scrollSnapAlign:isMobile?"start":"none",
               background:isOver?(C.t1+"08"):C.ib,
@@ -11640,9 +11680,22 @@ ${existingScenario}`;
               {stageItems.map((x:any)=>(
                 <div key={x.id}
                   draggable
-                  onDragStart={()=>onKanbanDragStart(x.id)}
+                  onDragStart={(e)=>{onKanbanDragStart(x.id);e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",x.id);}}
+                  onDragOver={(e)=>{
+                    e.preventDefault();e.stopPropagation();
+                    e.dataTransfer.dropEffect="move";
+                    const rect=e.currentTarget.getBoundingClientRect();
+                    setKanbanOver(stage.id);
+                    setKanbanInsert({id:x.id,after:e.clientY>rect.top+rect.height/2});
+                  }}
+                  onDrop={(e)=>{
+                    e.preventDefault();e.stopPropagation();
+                    const place=kanbanInsert!==null&&kanbanInsert.id===x.id?kanbanInsert.after:false;
+                    void onKanbanDrop(stage.id,x.id,place);
+                  }}
                   onDragEnd={onKanbanDragEnd}
                   style={{
+                    position:"relative",
                     background:contentPlatformSurface(x.platform).bg,
                     borderRadius:8,
                     padding:"12px 12px",
@@ -11663,6 +11716,13 @@ ${existingScenario}`;
                     (e.currentTarget as HTMLElement).style.borderColor=contentPlatformSurface(x.platform).border;
                     (e.currentTarget as HTMLElement).style.borderLeftColor=contentPlatformSurface(x.platform).accent;
                   }}>
+
+                  {kanbanDrag&&kanbanDrag!==x.id&&kanbanInsert?.id===x.id&&<div style={{
+                    position:"absolute",left:5,right:5,height:3,borderRadius:3,background:"#2F6BFF",zIndex:3,
+                    top:kanbanInsert?.after?"calc(100% + 3px)":-5,
+                    boxShadow:"0 0 0 2px "+C.ib,
+                    pointerEvents:"none"
+                  }}/>} 
 
                   {/* Card top: platform + type */}
                   <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:7}}>

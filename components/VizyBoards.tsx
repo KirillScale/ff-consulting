@@ -6,7 +6,7 @@ import {
   Spline, Undo2, Redo2, Plus, Minus, Sun, Moon, FileDown, Trash2, Copy,
   ChevronDown, X, Check, ArrowUp, ArrowDown, Maximize, Bold, Italic,
   AlignLeft, AlignCenter, AlignRight, Layers, Lock, Unlock, Download, Search,
-  Sparkles
+  Sparkles, Pencil
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1643,6 +1643,10 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
             </span>
             <ChevronDown size={14} style={{ color: t.ink3, transform: modal?.kind === "boards" ? "rotate(180deg)" : "none", transition: "transform .16s" }} />
           </button>
+          <Btn t={t} title="Переименовать карту" onClick={() => {
+            const board=boards.find((b) => b.id === active);
+            if(board)setModal({kind:"renameBoard",id:board.id,v:board.name||""});
+          }}><Pencil size={13} /></Btn>
           <Sep t={t} />
           <Btn t={t} title="Отменить  ⌘Z" onClick={undo} disabled={!hist.current.p.length}><Undo2 size={15} /></Btn>
           <Btn t={t} title="Вернуть  ⇧⌘Z" onClick={redo} disabled={!hist.current.f.length}><Redo2 size={15} /></Btn>
@@ -1756,6 +1760,17 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
         <Prompt t={t} title="Подпись связи" placeholder="например: приводит к" value={modal.v} cta="Сохранить"
           onChange={(v) => setModal({ ...modal, v })}
           onOk={() => { act((d) => ({ ...d, connectors: d.connectors.map((c) => (c.id === modal.id ? { ...c, label: modal.v } : c)) })); setModal(null); }}
+          onClose={() => setModal(null)} />
+      )}
+      {modal?.kind === "renameBoard" && (
+        <Prompt t={t} title="Переименовать карту" placeholder="Название карты" value={modal.v} cta="Сохранить"
+          onChange={(v) => setModal({ ...modal, v })}
+          onOk={async() => {
+            const name=String(modal.v||"").trim();
+            if(!name)return;
+            await renameBoard(modal.id,name);
+            setModal(null);
+          }}
           onClose={() => setModal(null)} />
       )}
       {ai.open && (
