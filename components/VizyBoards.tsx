@@ -5,7 +5,8 @@ import {
   MousePointer2, Hand, StickyNote, Type as TypeIcon, Image as ImageIcon, Link2,
   Spline, Undo2, Redo2, Plus, Minus, Sun, Moon, FileDown, Trash2, Copy,
   ChevronDown, X, Check, ArrowUp, ArrowDown, Maximize, Bold, Italic,
-  AlignLeft, AlignCenter, AlignRight, Layers, Lock, Unlock, Download, Search
+  AlignLeft, AlignCenter, AlignRight, Layers, Lock, Unlock, Download, Search,
+  Sparkles
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -246,6 +247,347 @@ function capShape(p, dir, kind, w) {
   if (kind === "circle") { const q = 3 + w * 1.3; const c = { x: p.x + ux * q, y: p.y + uy * q }; return { d: `M${r2(c.x - q)} ${r2(c.y)}a${r2(q)} ${r2(q)} 0 1 0 ${r2(q * 2)} 0a${r2(q)} ${r2(q)} 0 1 0 ${r2(-q * 2)} 0Z`, fill: true }; }
   if (kind === "bar") return { d: `M${r2(p.x + px * s * .6)} ${r2(p.y + py * s * .6)}L${r2(p.x - px * s * .6)} ${r2(p.y - py * s * .6)}`, fill: false };
   return null;
+}
+
+/* ─────────────────────────── AI map generator ─────────────────────────── */
+
+const MAP_AI_NODE_LIMIT = { compact: 15, medium: 30, detailed: 50 };
+const MAP_AI_EDGE_LIMIT = 110;
+const MAP_AI_INPUT_LIMIT = 50000;
+const MAP_AI_GROUP_COLORS = ["blue", "violet", "teal", "green", "amber", "orange", "pink", "indigo"];
+const MAP_AI_LAYOUTS = new Set(["process", "mind", "system", "hierarchy", "funnel"]);
+const MAP_AI_KINDS = new Set(["root", "process", "decision", "entity", "note", "milestone"]);
+
+const MAP_AI_SYSTEM = `Ты — information architect, business process architect и diagram designer внутри Vizzy Maps.
+Твоя задача — превратить исходный материал пользователя в полезную редактируемую карту, а не пересказать текст.
+
+ПРИОРИТЕТЫ:
+1. Точность относительно исходного материала.
+2. Правильные причинные, процессные и иерархические связи.
+3. Понятная структура без чтения исходника.
+4. Минимально достаточное количество узлов — не дроби каждое предложение в отдельный блок.
+5. Сохраняй существенные детали, убирай повторы и словесный шум.
+
+ПРАВИЛА:
+— Сначала восстанови логическую модель, даже если пользователь изложил мысли хаотично.
+— Не выдумывай факты, которых нет в исходнике. Допустимо только структурировать и кратко переформулировать.
+— Для процессов показывай реальный порядок, развилки, циклы и возвраты.
+— Для систем выделяй смысловые группы и связи между ними.
+— Для иерархий отражай подчинённость, для mind map — центральную идею и ветви, для funnel — стадии движения.
+— Решения/развилки помечай kind="decision".
+— Центральный узел или конечную цель помечай importance="primary" и при необходимости kind="root".
+— description — только если она добавляет важный смысл; максимум одно короткое предложение.
+— Подпись edge нужна только там, где без неё непонятен смысл ветки (например «Да», «Нет», «Подходит»).
+— Не создавай лишние связи «на всякий случай». В среднем связей должно быть не больше примерно 2–2.5 на узел.
+— Никогда не возвращай x/y, размеры, JSX, HTML, markdown или пояснения вне JSON. Координаты рассчитывает Maps.
+
+Верни ТОЛЬКО валидный JSON-объект строго такой формы:
+{
+  "title":"короткое название карты",
+  "layout":"process|mind|system|hierarchy|funnel",
+  "groups":[{"id":"short_id","title":"Название группы"}],
+  "nodes":[
+    {"id":"n1","title":"Название узла","description":"краткое уточнение или пустая строка","kind":"root|process|decision|entity|note|milestone","group":"short_id","importance":"primary|secondary|support"}
+  ],
+  "edges":[
+    {"from":"n1","to":"n2","label":"короткая подпись или пустая строка","relation":"flow|dependency|feedback"}
+  ]
+}`;
+
+const mapAiText = (value, max = 180) => String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
+const mapAiLongText = (value, max = 280) => String(value ?? "")
+  .replace(/\u0000/g, " ").replace(/\r/g, "").replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim().slice(0, max);
+
+function mapAiParseJSON(raw) {
+  let s = String(raw || "").replace(/```json/gi, "").replace(/```/g, "").trim();
+  const a = s.indexOf("{"), b = s.lastIndexOf("}");
+  if (a >= 0 && b > a) s = s.slice(a, b + 1);
+  return JSON.parse(s);
+}
+
+function normalizeAiMap(raw, requestedType, detail) {
+  const src = raw?.map && typeof raw.map === "object" ? raw.map : raw;
+  if (!src || !Array.isArray(src.nodes)) throw new Error("AI не вернул структуру карты.");
+
+  const maxNodes = MAP_AI_NODE_LIMIT[detail] || MAP_AI_NODE_LIMIT.medium;
+  const used = new Set();
+  const nodes = [];
+  for (let i = 0; i < src.nodes.length && nodes.length < maxNodes; i++) {
+    const n = src.nodes[i] || {};
+    const title = mapAiText(n.title || n.name, 120);
+    if (!title) continue;
+    let id = mapAiText(n.id, 70) || `n${i + 1}`;
+    if (used.has(id)) continue;
+    used.add(id);
+    const rawKind = mapAiText(n.kind || n.type, 24).toLowerCase();
+    const kind = MAP_AI_KINDS.has(rawKind) ? rawKind : "process";
+    const importance = ["primary", "secondary", "support"].includes(String(n.importance)) ? String(n.importance) : "secondary";
+    nodes.push({
+      id, title,
+      description: mapAiLongText(n.description, 170),
+      kind,
+      group: mapAiText(n.group, 70) || "main",
+      importance,
+    });
+  }
+  if (!nodes.length) throw new Error("AI не нашёл объектов для карты.");
+
+  const byTitle = new Map(nodes.map((n) => [n.title.toLowerCase(), n.id]));
+  const resolveId = (v) => {
+    const s = mapAiText(v, 120);
+    if (used.has(s)) return s;
+    return byTitle.get(s.toLowerCase()) || null;
+  };
+  const edgeSeen = new Set();
+  const edgeCap = Math.min(MAP_AI_EDGE_LIMIT, Math.max(12, Math.ceil(nodes.length * 2.5)));
+  const edges = [];
+  for (const e of Array.isArray(src.edges) ? src.edges : []) {
+    if (edges.length >= edgeCap) break;
+    const from = resolveId(e?.from), to = resolveId(e?.to);
+    if (!from || !to || from === to) continue;
+    const sig = `${from}>${to}>${mapAiText(e?.label, 60)}`;
+    if (edgeSeen.has(sig)) continue;
+    edgeSeen.add(sig);
+    const relation = ["flow", "dependency", "feedback"].includes(String(e?.relation)) ? String(e.relation) : "flow";
+    edges.push({ from, to, label: mapAiText(e?.label, 54), relation });
+  }
+
+  const groupRows = Array.isArray(src.groups) ? src.groups : [];
+  const groupTitle = new Map();
+  for (const g of groupRows) {
+    if (typeof g === "string") groupTitle.set(mapAiText(g, 70), mapAiText(g, 80));
+    else if (g) groupTitle.set(mapAiText(g.id, 70), mapAiText(g.title || g.name || g.id, 80));
+  }
+  const groupIds = [...new Set(nodes.map((n) => n.group || "main"))];
+  const groups = groupIds.map((id, i) => ({ id, title: groupTitle.get(id) || (id === "main" ? "Основное" : id), color: MAP_AI_GROUP_COLORS[i % MAP_AI_GROUP_COLORS.length] }));
+
+  const forced = requestedType && requestedType !== "auto" ? requestedType : null;
+  let layout = forced || mapAiText(src.layout, 20).toLowerCase();
+  if (layout === "flow" || layout === "flowchart") layout = "process";
+  if (!MAP_AI_LAYOUTS.has(layout)) layout = "system";
+
+  return { title: mapAiText(src.title, 100) || "AI-карта", layout, nodes, edges, groups };
+}
+
+async function generateAiMapStructure(input, requestedType, detail, signal) {
+  const key = process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY;
+  if (!key) throw new Error("Не задан ключ AI (NEXT_PUBLIC_DEEPSEEK_API_KEY).");
+  const limits = MAP_AI_NODE_LIMIT[detail] || MAP_AI_NODE_LIMIT.medium;
+  const typeLabel = requestedType === "auto" ? "автоматически выбери лучший тип карты" : `используй тип ${requestedType}`;
+  const detailLabel = detail === "compact" ? "кратко" : detail === "detailed" ? "подробно" : "средне";
+  const prompt = `Режим: ${typeLabel}.\nДетализация: ${detailLabel}.\nЖёсткий максимум смысловых узлов: ${limits}. Если материал проще — создай меньше.\n\nИСХОДНЫЙ МАТЕРИАЛ:\n${String(input || "").trim().slice(0, MAP_AI_INPUT_LIMIT)}`;
+  const maxTokens = detail === "compact" ? 2800 : detail === "detailed" ? 6800 : 4800;
+
+  let res;
+  try {
+    res = await fetch("https://api.deepseek.com/v1/chat/completions", {
+      method: "POST", signal,
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+      body: JSON.stringify({
+        model: "deepseek-chat", max_tokens: maxTokens, temperature: 0.28,
+        messages: [{ role: "system", content: MAP_AI_SYSTEM }, { role: "user", content: prompt }],
+      }),
+    });
+  } catch (e) {
+    if (e?.name === "AbortError") throw e;
+    throw new Error("Нет связи с AI. Проверь интернет и попробуй ещё раз.");
+  }
+  let data = null;
+  try { data = await res.json(); } catch {}
+  if (!res.ok) {
+    if (res.status === 401) throw new Error("Ключ AI не принят.");
+    if (res.status === 402) throw new Error("Закончился баланс AI-сервиса.");
+    if (res.status === 429) throw new Error("AI сейчас перегружен. Попробуй ещё раз через несколько секунд.");
+    throw new Error(data?.error?.message || `AI вернул ошибку ${res.status}.`);
+  }
+  const raw = data?.choices?.[0]?.message?.content || "";
+  if (!String(raw).trim()) throw new Error("AI вернул пустой ответ.");
+  try { return normalizeAiMap(mapAiParseJSON(raw), requestedType, detail); }
+  catch (e) { throw new Error(e?.message?.startsWith("AI ") ? e.message : "AI вернул неполную структуру. Попробуй ещё раз."); }
+}
+
+function aiNodeSize(n) {
+  const title = n.title?.length || 0, desc = n.description?.length || 0;
+  if (n.kind === "decision") return { w: 228, h: desc ? 154 : 132 };
+  if (n.kind === "note") return { w: 224, h: clamp(132 + Math.ceil(desc / 75) * 18, 132, 186) };
+  if (n.kind === "root") return { w: 252, h: desc ? 126 : 104 };
+  const w = title > 52 || desc > 90 ? 250 : 224;
+  return { w, h: clamp(94 + Math.ceil((title + desc) / 78) * 20, 104, 164) };
+}
+
+function aiGraphLevels(nodes, edges) {
+  const ids = new Set(nodes.map((n) => n.id));
+  const incoming = new Map(nodes.map((n) => [n.id, 0]));
+  const outgoing = new Map(nodes.map((n) => [n.id, []]));
+  for (const e of edges) if (ids.has(e.from) && ids.has(e.to)) {
+    incoming.set(e.to, (incoming.get(e.to) || 0) + 1);
+    outgoing.get(e.from).push(e.to);
+  }
+  let roots = nodes.filter((n) => (incoming.get(n.id) || 0) === 0);
+  if (!roots.length) roots = [nodes.find((n) => n.importance === "primary") || nodes[0]];
+  roots.sort((a, b) => (a.importance === "primary" ? -1 : 0) - (b.importance === "primary" ? -1 : 0));
+  const depth = new Map(), visited = new Set(), q = [];
+  const enqueueRoot = (id) => { if (!visited.has(id)) { visited.add(id); depth.set(id, 0); q.push(id); } };
+  roots.forEach((n) => enqueueRoot(n.id));
+  let qi = 0;
+  while (qi < q.length) {
+    const id = q[qi++], d = depth.get(id) || 0;
+    for (const to of outgoing.get(id) || []) if (!visited.has(to)) {
+      visited.add(to); depth.set(to, d + 1); q.push(to);
+    }
+  }
+  for (const n of nodes) if (!visited.has(n.id)) {
+    enqueueRoot(n.id);
+    while (qi < q.length) {
+      const id = q[qi++], d = depth.get(id) || 0;
+      for (const to of outgoing.get(id) || []) if (!visited.has(to)) { visited.add(to); depth.set(to, d + 1); q.push(to); }
+    }
+  }
+  const levels = [];
+  for (const n of nodes) {
+    const d = depth.get(n.id) || 0;
+    if (!levels[d]) levels[d] = [];
+    levels[d].push(n);
+  }
+  const nodeIndex = new Map(nodes.map((n, i) => [n.id, i]));
+  levels.forEach((arr) => arr.sort((a, b) => {
+    if (a.group !== b.group) return String(a.group).localeCompare(String(b.group), "ru");
+    return (nodeIndex.get(a.id) || 0) - (nodeIndex.get(b.id) || 0);
+  }));
+  return { levels, depth, incoming, outgoing };
+}
+
+function layoutLayered(ai, vertical = false) {
+  const { levels, depth } = aiGraphLevels(ai.nodes, ai.edges);
+  const pos = new Map();
+  const mainGap = vertical ? 210 : 360, crossGap = vertical ? 42 : 46;
+  levels.forEach((level, d) => {
+    const sizes = level.map(aiNodeSize);
+    const total = sizes.reduce((sum, s) => sum + (vertical ? s.w : s.h), 0) + Math.max(0, level.length - 1) * crossGap;
+    let cursor = -total / 2;
+    level.forEach((n, i) => {
+      const s = sizes[i];
+      if (vertical) { pos.set(n.id, { x: cursor, y: d * mainGap, ...s }); cursor += s.w + crossGap; }
+      else { pos.set(n.id, { x: d * mainGap, y: cursor, ...s }); cursor += s.h + crossGap; }
+    });
+  });
+  return { pos, depth, groupBoxes: [] };
+}
+
+function layoutMind(ai) {
+  const { incoming, outgoing } = aiGraphLevels(ai.nodes, ai.edges);
+  const root = ai.nodes.find((n) => n.kind === "root" || n.importance === "primary")
+    || ai.nodes.slice().sort((a, b) => (incoming.get(a.id) || 0) - (incoming.get(b.id) || 0))[0];
+  const depth = new Map([[root.id, 0]]), branch = new Map([[root.id, -1]]), seen = new Set([root.id]), q = [root.id];
+  const rootChildren = (outgoing.get(root.id) || []).filter((id) => id !== root.id);
+  rootChildren.forEach((id, i) => { if (!seen.has(id)) { seen.add(id); depth.set(id, 1); branch.set(id, i); q.push(id); } });
+  let qi = 1;
+  while (qi < q.length) {
+    const id = q[qi++];
+    for (const to of outgoing.get(id) || []) if (!seen.has(to)) {
+      seen.add(to); depth.set(to, (depth.get(id) || 0) + 1); branch.set(to, branch.get(id) ?? 0); q.push(to);
+    }
+  }
+  let extraBranch = rootChildren.length;
+  for (const n of ai.nodes) if (!seen.has(n.id)) { seen.add(n.id); depth.set(n.id, 1); branch.set(n.id, extraBranch++); }
+
+  const pos = new Map();
+  const rs = aiNodeSize(root); pos.set(root.id, { x: -rs.w / 2, y: -rs.h / 2, ...rs });
+  const maxDepth = Math.max(1, ...depth.values());
+  for (let d = 1; d <= maxDepth; d++) {
+    const row = ai.nodes.filter((n) => depth.get(n.id) === d).sort((a, b) => (branch.get(a.id) || 0) - (branch.get(b.id) || 0));
+    const left = row.filter((n) => (branch.get(n.id) || 0) % 2 === 1), right = row.filter((n) => (branch.get(n.id) || 0) % 2 === 0);
+    for (const [side, list] of [[-1, left], [1, right]]) {
+      list.forEach((n, i) => {
+        const s = aiNodeSize(n), cy = (i - (list.length - 1) / 2) * 176;
+        pos.set(n.id, { x: side * d * 350 - s.w / 2, y: cy - s.h / 2, ...s });
+      });
+    }
+  }
+  return { pos, depth, groupBoxes: [] };
+}
+
+function layoutSystem(ai) {
+  const groups = ai.groups.length ? ai.groups : [{ id: "main", title: "Основное", color: "blue" }];
+  const layouts = groups.map((g) => {
+    const nodes = ai.nodes.filter((n) => n.group === g.id);
+    const cols = nodes.length > 4 ? 2 : 1;
+    const colW = 278, gapY = 34, padX = 34, padTop = 62, padBottom = 34;
+    const colRows = Array.from({ length: cols }, () => []);
+    nodes.forEach((n, i) => colRows[i % cols].push(n));
+    const colHeights = colRows.map((arr) => arr.reduce((sum, n) => sum + aiNodeSize(n).h + gapY, 0));
+    const h = Math.max(260, padTop + Math.max(0, ...colHeights) - (nodes.length ? gapY : 0) + padBottom);
+    const w = padX * 2 + cols * colW;
+    return { g, nodes, cols, colRows, w, h, padX, padTop, colW, gapY };
+  });
+  const cols = layouts.length <= 2 ? layouts.length || 1 : layouts.length <= 6 ? 2 : 3;
+  const colWidths = Array.from({ length: cols }, (_, c) => Math.max(620, ...layouts.filter((_, i) => i % cols === c).map((x) => x.w)));
+  const rowCount = Math.ceil(layouts.length / cols);
+  const rowHeights = Array.from({ length: rowCount }, (_, r) => Math.max(300, ...layouts.slice(r * cols, r * cols + cols).map((x) => x.h)));
+  const gapX = 90, gapY = 90;
+  const xStarts = [], yStarts = [];
+  let x = 0; for (const w of colWidths) { xStarts.push(x); x += w + gapX; }
+  let y = 0; for (const h of rowHeights) { yStarts.push(y); y += h + gapY; }
+  const totalW = colWidths.reduce((s, w) => s + w, 0) + gapX * Math.max(0, cols - 1);
+  const totalH = rowHeights.reduce((s, h) => s + h, 0) + gapY * Math.max(0, rowCount - 1);
+
+  const pos = new Map(), groupBoxes = [];
+  layouts.forEach((L, i) => {
+    const c = i % cols, r = Math.floor(i / cols), ox = xStarts[c] - totalW / 2, oy = yStarts[r] - totalH / 2;
+    groupBoxes.push({ id: L.g.id, title: L.g.title, color: L.g.color, x: ox, y: oy, w: colWidths[c], h: rowHeights[r] });
+    L.colRows.forEach((arr, ci) => {
+      let yy = oy + L.padTop;
+      arr.forEach((n) => { const s = aiNodeSize(n); pos.set(n.id, { x: ox + L.padX + ci * L.colW, y: yy, ...s }); yy += s.h + L.gapY; });
+    });
+  });
+  return { pos, depth: new Map(), groupBoxes };
+}
+
+function buildNativeAiMap(ai) {
+  const layout = ai.layout === "mind" ? layoutMind(ai)
+    : ai.layout === "system" ? layoutSystem(ai)
+    : layoutLayered(ai, ai.layout === "hierarchy" || ai.layout === "funnel");
+  const groupColor = new Map(ai.groups.map((g) => [g.id, g.color]));
+  const nativeIds = new Map(ai.nodes.map((n) => [n.id, uid("a")]));
+  const items = [];
+  let z = 1;
+
+  for (const b of layout.groupBoxes || []) {
+    items.push({ id: uid("g"), type: "shape", shape: "round", x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.w), h: Math.round(b.h), z: z++, text: "", font: "inter", fs: 14, halign: "left", bold: false, italic: false, fill: "none", stroke: b.color, sw: 1, sstyle: "dashed", color: b.color, locked: false });
+    items.push({ id: uid("t"), type: "text", x: Math.round(b.x + 24), y: Math.round(b.y + 18), w: Math.round(Math.max(180, b.w - 48)), h: 28, z: z++, text: b.title, font: "montserrat", fs: 14, halign: "left", align: "top", bold: true, italic: false, color: b.color });
+  }
+
+  const nodeItems = [];
+  for (const n of ai.nodes) {
+    const p = layout.pos.get(n.id); if (!p) continue;
+    const color = n.kind === "decision" ? "amber" : n.kind === "root" ? "indigo" : (groupColor.get(n.group) || "blue");
+    const text = n.description ? `${n.title}\n${n.description}` : n.title;
+    let it;
+    if (n.kind === "note") {
+      it = { id: nativeIds.get(n.id), type: "sticky", x: Math.round(p.x), y: Math.round(p.y), w: Math.round(p.w), h: Math.round(p.h), z: z++, color, text, font: "inter", fs: n.description ? 14 : 17, halign: "center", bold: n.importance === "primary", italic: false };
+    } else {
+      const shape = n.kind === "decision" ? "diamond" : n.kind === "root" ? "round" : n.kind === "milestone" ? "pill" : n.kind === "entity" ? "rect" : "round";
+      it = { id: nativeIds.get(n.id), type: "shape", shape, x: Math.round(p.x), y: Math.round(p.y), w: Math.round(p.w), h: Math.round(p.h), z: z++, text, font: "inter", fs: n.description ? 14 : (n.kind === "root" ? 18 : 16), halign: "center", bold: n.kind === "root" || n.importance === "primary", italic: false, fill: color, stroke: color, sw: n.importance === "primary" ? 2.5 : 1.7, sstyle: "solid", color };
+    }
+    items.push(it); nodeItems.push(it);
+  }
+
+  const contentBox = bbox(items) || { x: 0, y: 0, w: 400, h: 200 };
+  const titleItem = { id: uid("t"), type: "text", x: Math.round(contentBox.x), y: Math.round(contentBox.y - 94), w: Math.round(Math.max(420, Math.min(760, contentBox.w))), h: 56, z: z++, color: "graphite", text: ai.title, font: "montserrat", fs: 30, halign: "left", align: "top", bold: true, italic: false };
+  items.push(titleItem);
+
+  const connectors = ai.edges.map((e) => {
+    const feedback = e.relation === "feedback";
+    const fromDepth = layout.depth?.get?.(e.from), toDepth = layout.depth?.get?.(e.to);
+    const backwards = Number.isFinite(fromDepth) && Number.isFinite(toDepth) && toDepth <= fromDepth;
+    return {
+      id: uid("c"), from: { id: nativeIds.get(e.from), side: "auto" }, to: { id: nativeIds.get(e.to), side: "auto" },
+      style: ai.layout === "mind" || feedback || backwards ? "curved" : "elbow",
+      cap0: "none", cap1: "arrow", dash: feedback ? "dashed" : "solid", color: "graphite", w: feedback ? 1 : 2, label: e.label || "",
+    };
+  }).filter((c) => c.from.id && c.to.id);
+
+  return { items, connectors, nodeItems, title: ai.title };
 }
 
 /* ─────────────────────────── storage ───────────────────────────
@@ -534,10 +876,15 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
   const [tick, setTick] = useState(0);
   const [space, setSpace] = useState(false);
   const [saveState, setSaveState] = useState("loading");
+  const [ai, setAi] = useState({
+    open: false, input: "", type: "auto", detail: "medium", merge: "add",
+    status: "idle", phase: 0, error: "", confirmReplace: false,
+  });
 
   const vp = useRef(null), fileIn = useRef(null), hist = useRef({ p: [], f: [] }), snap = useRef(null), imgs = useRef({});
   const verRef = useRef(null);
   const savingRef = useRef(false);
+  const aiAbortRef = useRef(null), aiTimersRef = useRef([]);
   const R = useRef({});
   R.current = { doc, cam, sel, selC, tool, kind, dark, edit, active, space };
 
@@ -581,6 +928,9 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
   }, [userId]);
 
   const open = async (id, list) => {
+    aiAbortRef.current?.abort?.();
+    aiTimersRef.current.forEach(clearTimeout); aiTimersRef.current = [];
+    setAi((a) => ({ ...a, open: false, status: "idle", phase: 0, error: "", confirmReplace: false }));
     setSaveState("loading");
     const b = await Boards.load(userId, id);
     verRef.current = b.version;
@@ -977,6 +1327,77 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
     setCam({ z, x: r.width / 2 - (b.x + b.w / 2) * z, y: r.height / 2 - (b.y + b.h / 2) * z });
   };
 
+  /* ── AI map generation ── */
+  const clearAiTimers = () => { aiTimersRef.current.forEach(clearTimeout); aiTimersRef.current = []; };
+  const openAi = () => {
+    setPop(null); setModal(null);
+    setAi((a) => ({ ...a, open: true, merge: R.current.doc.items.length ? "add" : "replace", status: "idle", phase: 0, error: "", confirmReplace: false }));
+  };
+  const cancelAi = () => {
+    aiAbortRef.current?.abort?.(); aiAbortRef.current = null; clearAiTimers();
+    setAi((a) => ({ ...a, open: false, status: "idle", phase: 0, error: "", confirmReplace: false }));
+  };
+  const patchAi = (patch) => setAi((a) => ({ ...a, ...patch, error: patch.error ?? "", confirmReplace: patch.confirmReplace ?? false }));
+  const runAi = async () => {
+    const input = ai.input.trim();
+    if (ai.status === "loading" || aiAbortRef.current) return;
+    if (input.length < 12) { setAi((a) => ({ ...a, error: "Добавь чуть больше исходного материала — хотя бы одно содержательное предложение." })); return; }
+    if (R.current.doc.items.length && ai.merge === "replace" && !ai.confirmReplace) {
+      setAi((a) => ({ ...a, confirmReplace: true, error: "" }));
+      return;
+    }
+
+    const controller = new AbortController();
+    aiAbortRef.current = controller;
+    let timedOut = false;
+    clearAiTimers();
+    setAi((a) => ({ ...a, status: "loading", phase: 0, error: "", confirmReplace: false }));
+    const runTimers = [
+      setTimeout(() => setAi((a) => a.status === "loading" ? { ...a, phase: Math.max(a.phase, 1) } : a), 2600),
+      setTimeout(() => setAi((a) => a.status === "loading" ? { ...a, phase: Math.max(a.phase, 2) } : a), 7200),
+      setTimeout(() => { timedOut = true; controller.abort(); }, 75000),
+    ];
+    aiTimersRef.current = runTimers;
+
+    try {
+      const structure = await generateAiMapStructure(input, ai.type, ai.detail, controller.signal);
+      setAi((a) => ({ ...a, phase: 2 }));
+      const generated = buildNativeAiMap(structure);
+      if (!generated.nodeItems.length) throw new Error("Не удалось разместить объекты карты.");
+
+      const current = R.current.doc;
+      const existingBox = bbox(current.items), genBox = bbox(generated.items);
+      let dx = 0, dy = 0;
+      if (ai.merge === "add" && existingBox && genBox) {
+        dx = existingBox.x + existingBox.w + 320 - genBox.x;
+        dy = existingBox.y + existingBox.h / 2 - (genBox.y + genBox.h / 2);
+      } else if (genBox) {
+        dx = -(genBox.x + genBox.w / 2);
+        dy = -(genBox.y + genBox.h / 2);
+      }
+      const zBase = ai.merge === "add" && current.items.length ? Math.max(...current.items.map((i) => Number(i.z) || 0)) : 0;
+      const placedItems = generated.items.map((it) => ({ ...it, x: Math.round(it.x + dx), y: Math.round(it.y + dy), z: (Number(it.z) || 1) + zBase }));
+      const nextGenerated = { items: placedItems, connectors: generated.connectors };
+
+      // Apply only after AI output is parsed + laid out successfully. A failed request never touches the board.
+      if (ai.merge === "add") act((d) => ({ items: [...d.items, ...nextGenerated.items], connectors: [...d.connectors, ...nextGenerated.connectors] }));
+      else act(() => nextGenerated);
+      setSel([]); setSelC([]); setEdit(null); setTool("select"); setPop(null); setModal(null);
+      setAi((a) => ({ ...a, open: false, status: "idle", phase: 0, error: "", confirmReplace: false }));
+      setTimeout(() => fit(placedItems), 70);
+      say(`AI-карта готова · ${structure.nodes.length} блоков · ${generated.connectors.length} связей`);
+    } catch (e) {
+      if (e?.name === "AbortError" && !timedOut) return;
+      const message = timedOut ? "Генерация заняла больше 75 секунд. Попробуй ещё раз или выбери меньшую детализацию." : (e?.message || "Не удалось создать карту. Попробуй ещё раз.");
+      setAi((a) => ({ ...a, status: "error", phase: 0, error: message }));
+    } finally {
+      runTimers.forEach(clearTimeout);
+      if (aiAbortRef.current === controller) { aiAbortRef.current = null; aiTimersRef.current = []; }
+    }
+  };
+
+  useEffect(() => () => { aiAbortRef.current?.abort?.(); clearAiTimers(); }, []);
+
   /* ── files ── */
   const onFile = async (e) => {
     const files = [...(e.target.files || [])]; e.target.value = "";
@@ -1108,7 +1529,8 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
         .vizy-boards-root ::-webkit-scrollbar-thumb{background:${t.line2};border-radius:8px}
         .vizy-boards-root ::-webkit-scrollbar-track{background:transparent}
         .vizy-boards-root [contenteditable]{outline:none}
-        .vizy-boards-root input{font-family:inherit}
+        .vizy-boards-root input,.vizy-boards-root textarea,.vizy-boards-root select{font-family:inherit}
+        @keyframes vzyAiSpin{to{transform:rotate(360deg)}}
         @media (prefers-reduced-motion: reduce){.vizy-boards-root *{transition:none!important;animation:none!important}}
       `}</style>
 
@@ -1245,6 +1667,8 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
       {/* ── top right ── */}
       <div style={{ position: "absolute", right: 16, top: 16, zIndex: 40 }}>
         <Panel t={t} style={{ display: "flex", alignItems: "center", padding: 5, gap: 2 }} onPointerDown={(e) => e.stopPropagation()}>
+          <Btn t={t} wide title="Создать редактируемую карту по тексту" onClick={openAi}><Sparkles size={14} />Создать с AI</Btn>
+          <Sep t={t} />
           <Btn t={t} wide title="Сохранить в PDF" onClick={() => exportAs("pdf")}><FileDown size={15} />PDF</Btn>
           <Btn t={t} title="Сохранить в PNG" onClick={() => exportAs("png")}><Download size={15} /></Btn>
           <Sep t={t} />
@@ -1334,6 +1758,10 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
           onOk={() => { act((d) => ({ ...d, connectors: d.connectors.map((c) => (c.id === modal.id ? { ...c, label: modal.v } : c)) })); setModal(null); }}
           onClose={() => setModal(null)} />
       )}
+      {ai.open && (
+        <AIMapModal t={t} dark={dark} ai={ai} hasContent={doc.items.length > 0}
+          onPatch={patchAi} onSubmit={runAi} onClose={cancelAi} />
+      )}
 
       {/* ── toast ── */}
       {toast && (
@@ -1349,7 +1777,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
         <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", pointerEvents: "none" }}>
           <div style={{ textAlign: "center" }}>
             <div style={{ fontFamily: FONTS.marker.css, fontSize: 34, color: t.ink3, marginBottom: 10 }}>пустая доска</div>
-            <div style={{ fontSize: 13, color: t.ink3 }}>Возьмите инструмент внизу или нажмите S, N, T</div>
+            <div style={{ fontSize: 13, color: t.ink3 }}>Возьмите инструмент внизу или создайте карту с AI</div>
           </div>
         </div>
       )}
@@ -1759,6 +2187,118 @@ function Prompt({ t, title, placeholder, value, cta, onChange, onOk, onClose }) 
           style={{ width: "100%", height: 38, marginTop: 12, borderRadius: 10, border: "none", cursor: "pointer", background: t.ink, color: t.bg, fontSize: 13, fontWeight: 600, fontFamily: FONTS.inter.css }}>
           {cta}
         </button>
+      </Panel>
+    </div>
+  );
+}
+
+/* ─────────────────────────── AI map modal ─────────────────────────── */
+
+function AIMapModal({ t, dark, ai, hasContent, onPatch, onSubmit, onClose }) {
+  const busy = ai.status === "loading";
+  const phaseLabels = ["Анализирую структуру...", "Определяю связи...", "Собираю карту..."];
+  const typeOptions = [
+    ["auto", "Автоматически"], ["process", "Процесс"], ["mind", "Mind Map"],
+    ["system", "Система"], ["hierarchy", "Иерархия"], ["funnel", "Воронка"],
+  ];
+  const detailOptions = [["compact", "Кратко"], ["medium", "Средне"], ["detailed", "Подробно"]];
+  const seg = (on) => ({
+    flex: 1, height: 36, border: `1px solid ${on ? t.line2 : "transparent"}`, borderRadius: 9,
+    background: on ? t.solid : "transparent", color: on ? t.ink : t.ink2, cursor: busy ? "default" : "pointer",
+    fontSize: 12, fontWeight: on ? 600 : 500, boxShadow: on ? "0 1px 3px rgba(0,0,0,.08)" : "none",
+  });
+
+  return (
+    <div onPointerDown={() => onClose()} onKeyDown={(e) => e.stopPropagation()}
+      style={{ position: "absolute", inset: 0, zIndex: 80, background: "rgba(0,0,0,.32)", display: "grid", placeItems: "center", padding: 16, backdropFilter: "blur(5px)", userSelect: "none" }}>
+      <Panel t={t} onPointerDown={(e) => e.stopPropagation()}
+        style={{ width: "min(690px,calc(100vw - 32px))", maxHeight: "calc(100vh - 32px)", overflow: "auto", padding: 22, background: t.solid, borderRadius: 18 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 18 }}>
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <div style={{ width: 38, height: 38, borderRadius: 11, display: "grid", placeItems: "center", color: dark ? "#DCDCF9" : "#3D3DA8", background: dark ? "#22233A" : "#EEEEFC", border: `1px solid ${dark ? "#37385A" : "#DCDCF9"}`, flex: "0 0 auto" }}>
+              <Sparkles size={18} />
+            </div>
+            <div>
+              <div style={{ fontFamily: FONTS.montserrat.css, fontWeight: 650, fontSize: 17, letterSpacing: "-.02em", color: t.ink }}>Создать карту с AI</div>
+              <div style={{ fontSize: 11.5, color: t.ink3, marginTop: 3 }}>AI строит структуру и связи, Maps автоматически раскладывает их на холсте.</div>
+            </div>
+          </div>
+          <button onClick={onClose} title={busy ? "Отменить генерацию" : "Закрыть"}
+            style={{ border: "none", background: "transparent", color: t.ink3, cursor: "pointer", padding: 4, borderRadius: 8, flex: "0 0 auto" }}><X size={17} /></button>
+        </div>
+
+        {busy ? (
+          <div style={{ padding: "32px 8px 24px", textAlign: "center" }}>
+            <div style={{ width: 34, height: 34, margin: "0 auto 16px", borderRadius: "50%", border: `2px solid ${t.line2}`, borderTopColor: dark ? "#8C8CEE" : "#5757CE", animation: "vzyAiSpin .8s linear infinite" }} />
+            <div style={{ fontFamily: FONTS.montserrat.css, fontSize: 15, fontWeight: 600, color: t.ink }}>{phaseLabels[Math.min(ai.phase, 2)]}</div>
+            <div style={{ fontSize: 11.5, color: t.ink3, marginTop: 7 }}>Обычно это занимает 10–40 секунд. Текущая доска пока не меняется.</div>
+            <div style={{ display: "flex", gap: 6, maxWidth: 300, margin: "18px auto 0" }}>
+              {[0, 1, 2].map((n) => <div key={n} style={{ height: 3, flex: 1, borderRadius: 4, background: n <= ai.phase ? (dark ? "#8C8CEE" : "#5757CE") : t.line, transition: "background .25s" }} />)}
+            </div>
+            <button onClick={onClose} style={{ marginTop: 22, border: "none", background: "transparent", color: t.ink2, fontSize: 12, cursor: "pointer" }}>Отменить</button>
+          </div>
+        ) : (
+          <>
+            <div style={{ marginBottom: 15 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, marginBottom: 7 }}>
+                <label style={{ fontSize: 11.5, fontWeight: 600, color: t.ink2 }}>Исходный текст или промпт</label>
+                <span style={{ fontSize: 10.5, color: t.ink3, fontVariantNumeric: "tabular-nums" }}>{ai.input.length.toLocaleString("ru-RU")} / {MAP_AI_INPUT_LIMIT.toLocaleString("ru-RU")}</span>
+              </div>
+              <textarea autoFocus value={ai.input} maxLength={MAP_AI_INPUT_LIMIT}
+                placeholder="Вставьте заметки или подробно опишите систему. Например: как устроена воронка продаж, кто куда переходит, где ветвления, что происходит после созвона..."
+                onChange={(e) => onPatch({ input: e.target.value })}
+                style={{ width: "100%", minHeight: 220, resize: "vertical", padding: "13px 14px", borderRadius: 12, border: `1px solid ${t.line2}`, outline: "none", background: t.bg, color: t.ink, fontSize: 13.5, lineHeight: 1.5, userSelect: "text" }} />
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 12, marginBottom: 12 }}>
+              <div>
+                <div style={{ fontSize: 11.5, fontWeight: 600, color: t.ink2, marginBottom: 7 }}>Тип карты</div>
+                <select value={ai.type} onChange={(e) => onPatch({ type: e.target.value })}
+                  style={{ width: "100%", height: 38, borderRadius: 10, border: `1px solid ${t.line2}`, background: t.bg, color: t.ink, padding: "0 10px", outline: "none", fontSize: 12.5, cursor: "pointer" }}>
+                  {typeOptions.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={{ fontSize: 11.5, fontWeight: 600, color: t.ink2, marginBottom: 7 }}>Детализация</div>
+                <div style={{ display: "flex", gap: 3, padding: 3, borderRadius: 11, background: t.hov, border: `1px solid ${t.line}` }}>
+                  {detailOptions.map(([v, l]) => <button key={v} onClick={() => onPatch({ detail: v })} style={seg(ai.detail === v)}>{l}</button>)}
+                </div>
+              </div>
+            </div>
+
+            {hasContent && (
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 11.5, fontWeight: 600, color: t.ink2, marginBottom: 7 }}>Что сделать с текущей картой</div>
+                <div style={{ display: "flex", gap: 3, padding: 3, borderRadius: 11, background: t.hov, border: `1px solid ${t.line}` }}>
+                  <button onClick={() => onPatch({ merge: "add" })} style={seg(ai.merge === "add")}>Добавить рядом</button>
+                  <button onClick={() => onPatch({ merge: "replace" })} style={seg(ai.merge === "replace")}>Заменить содержимое</button>
+                </div>
+              </div>
+            )}
+
+            {ai.confirmReplace && hasContent && ai.merge === "replace" && (
+              <div style={{ marginBottom: 12, padding: "10px 12px", borderRadius: 10, border: `1px solid ${dark ? "rgba(238,136,128,.35)" : "rgba(210,69,60,.28)"}`, background: dark ? "rgba(238,136,128,.08)" : "rgba(210,69,60,.06)", color: dark ? "#F6CBC6" : "#7E241E", fontSize: 11.5, lineHeight: 1.45 }}>
+                Текущие объекты будут заменены только после того, как новая карта успешно сгенерируется. Нажми ещё раз для подтверждения.
+              </div>
+            )}
+
+            {ai.error && (
+              <div style={{ marginBottom: 12, padding: "10px 12px", borderRadius: 10, border: `1px solid ${dark ? "rgba(238,136,128,.35)" : "rgba(210,69,60,.28)"}`, background: dark ? "rgba(238,136,128,.08)" : "rgba(210,69,60,.06)", color: dark ? "#F6CBC6" : "#7E241E", fontSize: 11.5, lineHeight: 1.45 }}>
+                {ai.error}
+              </div>
+            )}
+
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, paddingTop: 2 }}>
+              <div style={{ fontSize: 10.5, color: t.ink3, lineHeight: 1.4 }}>
+                До {MAP_AI_NODE_LIMIT[ai.detail] || 30} смысловых блоков · все элементы останутся редактируемыми
+              </div>
+              <button onClick={onSubmit} disabled={ai.input.trim().length < 12}
+                style={{ height: 40, padding: "0 17px", borderRadius: 10, border: "none", display: "flex", alignItems: "center", gap: 8, flex: "0 0 auto", cursor: ai.input.trim().length < 12 ? "default" : "pointer", background: ai.input.trim().length < 12 ? t.act : (dark ? "#EDEFF2" : "#111318"), color: ai.input.trim().length < 12 ? t.ink3 : (dark ? "#111318" : "#FFFFFF"), fontSize: 12.5, fontWeight: 650 }}>
+                <Sparkles size={14} />{ai.confirmReplace && ai.merge === "replace" ? "Подтвердить и создать" : "Создать карту"}
+              </button>
+            </div>
+          </>
+        )}
       </Panel>
     </div>
   );
