@@ -884,7 +884,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v9.3"; // v143 FF Consulting client hub
+  const APP_VERSION="v9.4"; // v144 rich Content editor and branded PDF export
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","boards","forms","offer","consulting","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker","defects"];
 
   // Clear stale localStorage on version change
@@ -10272,6 +10272,120 @@ function shrinkShot(file:File):Promise<{data:string,media:string}>{
   });
 }
 
+const richEsc=(value:any)=>String(value??"")
+  .replace(/&/g,"&amp;")
+  .replace(/</g,"&lt;")
+  .replace(/>/g,"&gt;")
+  .replace(/"/g,"&quot;")
+  .replace(/'/g,"&#039;");
+
+const richLooksLikeHtml=(value:string)=>/<\/?(?:p|div|br|strong|b|em|i|u|s|strike|h[1-6]|ul|ol|li|blockquote)\b/i.test(value);
+
+const richPlainToHtml=(value:string)=>{
+  const clean=String(value||"").replace(/\r\n?/g,"\n").trim();
+  if(!clean)return"";
+  return clean.split(/\n{2,}/).map(block=>`<p>${richEsc(block).replace(/\n/g,"<br>")}</p>`).join("");
+};
+
+const sanitizeRichHtml=(value:string)=>{
+  if(typeof document==="undefined")return richLooksLikeHtml(value)?value:richPlainToHtml(value);
+  const source=richLooksLikeHtml(value)?String(value||""):richPlainToHtml(value);
+  const parsed=new DOMParser().parseFromString(`<div>${source}</div>`,"text/html");
+  const output=document.implementation.createHTMLDocument("");
+  const allowed=new Set(["P","BR","STRONG","B","EM","I","U","S","STRIKE","H2","H3","UL","OL","LI","BLOCKQUOTE"]);
+  const cleanNode=(node:Node):Node|null=>{
+    if(node.nodeType===Node.TEXT_NODE)return output.createTextNode(node.textContent||"");
+    if(node.nodeType!==Node.ELEMENT_NODE)return null;
+    const sourceElement=node as HTMLElement;
+    const originalTag=sourceElement.tagName.toUpperCase();
+    if(originalTag==="SCRIPT"||originalTag==="STYLE")return null;
+    const normalizedTag=originalTag==="DIV"?"P":originalTag==="B"?"STRONG":originalTag==="I"?"EM":originalTag==="STRIKE"?"S":originalTag;
+    if(!allowed.has(normalizedTag)){
+      const fragment=output.createDocumentFragment();
+      Array.from(sourceElement.childNodes).forEach(child=>{const safe=cleanNode(child);if(safe)fragment.appendChild(safe);});
+      return fragment;
+    }
+    const element=output.createElement(normalizedTag.toLowerCase());
+    Array.from(sourceElement.childNodes).forEach(child=>{const safe=cleanNode(child);if(safe)element.appendChild(safe);});
+    return element;
+  };
+  const root=output.createElement("div");
+  Array.from(parsed.body.firstElementChild?.childNodes||[]).forEach(node=>{const safe=cleanNode(node);if(safe)root.appendChild(safe);});
+  return root.innerHTML;
+};
+
+const richTextPlain=(value:string)=>{
+  const source=String(value||"");
+  if(!richLooksLikeHtml(source))return source;
+  if(typeof document!=="undefined"){
+    const tmp=document.createElement("div");
+    tmp.innerHTML=sanitizeRichHtml(source);
+    return tmp.innerText||tmp.textContent||"";
+  }
+  return source.replace(/<br\s*\/?>/gi,"\n").replace(/<\/p>|<\/div>|<\/li>|<\/h[1-6]>|<\/blockquote>/gi,"\n").replace(/<[^>]+>/g,"").replace(/&nbsp;/g," ");
+};
+
+type RichTextEditorProps={value:string;onChange:(value:string)=>void;placeholder?:string;minHeight?:number};
+
+function RichTextEditor({value,onChange,placeholder="Введите текст…",minHeight=300}:RichTextEditorProps){
+  const editorRef=useRef<HTMLDivElement>(null);
+  const run=(command:string,arg?:string)=>{
+    editorRef.current?.focus();
+    document.execCommand(command,false,arg);
+    if(editorRef.current)onChange(sanitizeRichHtml(editorRef.current.innerHTML));
+  };
+  useEffect(()=>{
+    const editor=editorRef.current;
+    if(!editor||document.activeElement===editor)return;
+    const next=sanitizeRichHtml(value||"");
+    if(editor.innerHTML!==next)editor.innerHTML=next;
+  },[value]);
+  const toolButton=(label:string,title:string,command:string,arg?:string,style?:React.CSSProperties)=><button
+    type="button"
+    title={title}
+    aria-label={title}
+    onMouseDown={e=>{e.preventDefault();run(command,arg);}}
+    style={{height:30,minWidth:30,padding:"0 8px",border:"1px solid "+C.bd,borderRadius:6,background:C.w,color:C.t1,fontSize:12,cursor:"pointer",fontFamily:"'Inter',sans-serif",...style}}
+  >{label}</button>;
+  return <div style={{border:"1px solid "+C.bd,borderRadius:9,overflow:"hidden",background:C.ib}}>
+    <div style={{display:"flex",alignItems:"center",gap:5,padding:"8px",borderBottom:"1px solid "+C.bd,background:C.w,flexWrap:"wrap"}}>
+      {toolButton("B","Жирный","bold",undefined,{fontWeight:800})}
+      {toolButton("I","Курсив","italic",undefined,{fontStyle:"italic"})}
+      {toolButton("U","Подчёркнутый","underline",undefined,{textDecoration:"underline"})}
+      {toolButton("S","Зачёркнутый","strikeThrough",undefined,{textDecoration:"line-through"})}
+      <span style={{width:1,height:22,background:C.bd,margin:"0 2px"}}/>
+      {toolButton("Текст","Обычный текст","formatBlock","p")}
+      {toolButton("H2","Заголовок","formatBlock","h2",{fontWeight:750})}
+      {toolButton("• Список","Маркированный список","insertUnorderedList")}
+      {toolButton("1. Список","Нумерованный список","insertOrderedList")}
+      {toolButton("“ ”","Цитата","formatBlock","blockquote",{fontWeight:650})}
+      <span style={{width:1,height:22,background:C.bd,margin:"0 2px"}}/>
+      {toolButton("↶","Отменить","undo",undefined,{fontSize:16})}
+      {toolButton("↷","Повторить","redo",undefined,{fontSize:16})}
+      {toolButton("Очистить","Убрать форматирование","removeFormat")}
+    </div>
+    <div
+      ref={editorRef}
+      contentEditable
+      suppressContentEditableWarning
+      role="textbox"
+      aria-multiline="true"
+      data-placeholder={placeholder}
+      onInput={e=>onChange(sanitizeRichHtml(e.currentTarget.innerHTML))}
+      onBlur={e=>{const safe=sanitizeRichHtml(e.currentTarget.innerHTML);e.currentTarget.innerHTML=safe;onChange(safe);}}
+      onPaste={e=>{
+        e.preventDefault();
+        const html=e.clipboardData.getData("text/html");
+        const text=e.clipboardData.getData("text/plain");
+        document.execCommand("insertHTML",false,html?sanitizeRichHtml(html):richPlainToHtml(text));
+        requestAnimationFrame(()=>{if(editorRef.current)onChange(sanitizeRichHtml(editorRef.current.innerHTML));});
+      }}
+      style={{minHeight,padding:"15px 16px",fontSize:15,lineHeight:1.72,color:C.t1,outline:"none",fontFamily:"'Inter',sans-serif",whiteSpace:"normal",overflowWrap:"anywhere"}}
+    />
+    <style>{`[contenteditable][data-placeholder]:empty:before{content:attr(data-placeholder);color:${C.t2};opacity:.72;pointer-events:none} [contenteditable] h2{font-size:21px;line-height:1.3;margin:20px 0 8px} [contenteditable] h3{font-size:17px;line-height:1.35;margin:16px 0 7px} [contenteditable] p{margin:0 0 11px} [contenteditable] ul,[contenteditable] ol{padding-left:24px;margin:8px 0 14px} [contenteditable] blockquote{margin:14px 0;padding:10px 14px;border-left:3px solid #2F6BFF;background:rgba(47,107,255,.07);border-radius:0 7px 7px 0}`}</style>
+  </div>;
+}
+
 function ContentAnalytics({type,value,onChange}:{type:string,value:any,onChange:(v:any)=>void}){
   const metrics=metricsForType(type);
   const a=value||{};
@@ -10635,8 +10749,8 @@ ${bulkAiText}`,
     setAiBusy(mode);
     try{
       const format=f.content_format||f.type;
-      const existingScenario=f.scenario||"";
-      const existingBroadcast=f.broadcast_text||"";
+      const existingScenario=richTextPlain(f.scenario||"");
+      const existingBroadcast=richTextPlain(f.broadcast_text||"");
       const system=`Ты — редактор контента для бизнеса. Пиши строго, конкретно, без эмодзи и без воды. Платформа: ${f.platform}. Формат: ${format}. Сохраняй уже заполненный пользователем смысл и не переписывай его без необходимости.`;
       let instruction="";
       if(mode==="script"){
@@ -10654,8 +10768,9 @@ ${existingScenario}`;
       }
       const result=await dsMessages([{role:"system",content:system},{role:"user",content:instruction}],1800,0.7);
       if(result){
-        if(f.platform==="telegram"&&format==="Рассылка в боте")sF((prev:any)=>({...prev,broadcast_text:result}));
-        else sF((prev:any)=>({...prev,scenario:result}));
+        const formattedResult=richPlainToHtml(result);
+        if(f.platform==="telegram"&&format==="Рассылка в боте")sF((prev:any)=>({...prev,broadcast_text:formattedResult}));
+        else sF((prev:any)=>({...prev,scenario:formattedResult}));
       }
     }catch(e){console.error(e);alert("Не удалось выполнить запрос к ИИ. Попробуй ещё раз.");}
     finally{setAiBusy(null);}
@@ -10911,24 +11026,57 @@ ${existingScenario}`;
 
   const downloadPDF=(item:any)=>{
     const win=window.open("","_blank");
-    if(!win)return;
-    const escapedScenario=(item.scenario||"").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-    win.document.write("<!DOCTYPE html><html><head><meta charset='utf-8'><title>"+item.topic+"</title>"
-      +"<style>body{font-family:Arial,sans-serif;max-width:800px;margin:40px auto;padding:0 24px;color:#1a1a2e;line-height:1.6;}"
-      +"h1{font-size:26px;font-weight:800;margin-bottom:8px;}"
-      +".meta{font-size:13px;color:#666;margin-bottom:24px;}"
-      +".badge{background:#f0f4ff;color:#606060;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:600;margin-right:8px;}"
-      +".content{background:#f8f9fa;border-radius:8px;padding:16px;font-size:14px;white-space:pre-wrap;line-height:1.8;}"
-      +"img{max-width:100%;border-radius:8px;margin-bottom:16px;max-height:360px;object-fit:cover;width:100%;}"
-      +"</style></head><body>"
-      +(item.cover_url?"<img src='"+item.cover_url+"'/>":"")
-      +"<h1>"+item.topic+"</h1>"
-      +"<div class='meta'><span class='badge'>"+item.platform+"</span><span class='badge'>"+item.type+"</span>"+(item.date?" · "+item.date:"")+"</div>"
-      +(item.scenario?"<div style='font-size:11px;font-weight:700;color:#888;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px'>ТЕКСТ / СЦЕНАРИЙ</div><div class='content'>"+escapedScenario+"</div>":"")
-      +(item.content_url?"<p style='margin-top:16px'><a href='"+item.content_url+"'>"+item.content_url+"</a></p>":"")
-      +"<script>window.onload=function(){window.print();}<\/script>"
-      +"</body></html>");
+    if(!win){alert("Разреши всплывающие окна, чтобы сохранить сценарий в PDF.");return;}
+    const title=String(item.topic||"Сценарий").trim()||"Сценарий";
+    const format=item.content_format||item.type||"Контент";
+    const platform=pLbl(String(item.platform||"other"));
+    const dateValue=item.publish_date||item.date||"";
+    const dateLabel=dateValue?new Date(`${dateValue}T12:00:00`).toLocaleDateString("ru-RU",{day:"numeric",month:"long",year:"numeric"}):"";
+    const source=item.scenario||item.broadcast_text||"";
+    const safeContent=sanitizeRichHtml(source)||"<p>Сценарий пока не заполнен.</p>";
+    const logoUrl=new URL("/logo.png",window.location.origin).href;
+    const html=`<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><title>${richEsc(title)}</title>
+      <style>
+        @page{size:A4;margin:23mm 19mm 20mm}
+        *{box-sizing:border-box}
+        html,body{margin:0;padding:0;background:#fff;color:#111827}
+        body{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+        .page-brand{position:fixed;top:-15mm;left:0;right:0;height:10mm;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #E6ECF8;padding-bottom:3mm}
+        .brand-left{display:flex;align-items:center;gap:8px;color:#2F6BFF;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}
+        .brand-left img{width:25px;height:25px;object-fit:cover;border-radius:7px}
+        .brand-kind{color:#94A3B8;font-size:9px;font-weight:650;letter-spacing:.12em;text-transform:uppercase}
+        .page-foot{position:fixed;bottom:-13mm;left:0;right:0;border-top:1px solid #E6ECF8;padding-top:3mm;color:#94A3B8;font-size:9px;letter-spacing:.08em;text-transform:uppercase}
+        .page-foot:after{content:"Vizzy · Content Script  /  " counter(page)}
+        .hero{padding:9mm 0 10mm;border-bottom:2px solid #2F6BFF;margin-bottom:11mm}
+        .eyebrow{font-size:10px;line-height:1.2;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#2F6BFF;margin-bottom:5mm}
+        h1{font-size:40px;line-height:1.07;letter-spacing:-.035em;margin:0;color:#0F172A;font-weight:800;overflow-wrap:anywhere}
+        .meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:6mm}
+        .badge{display:inline-flex;align-items:center;padding:5px 10px;border-radius:999px;background:#EFF5FF;color:#2459D3;font-size:10px;font-weight:750}
+        .date{font-size:10.5px;color:#64748B;margin-left:2px}
+        .script-label{font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#94A3B8;margin:0 0 6mm}
+        .content{font-size:17px;line-height:1.72;color:#1E293B;overflow-wrap:anywhere}
+        .content p{margin:0 0 5mm;orphans:3;widows:3}
+        .content h2{font-size:24px;line-height:1.25;letter-spacing:-.015em;color:#0F172A;margin:9mm 0 4mm;break-after:avoid-page}
+        .content h3{font-size:20px;line-height:1.3;color:#0F172A;margin:7mm 0 3mm;break-after:avoid-page}
+        .content ul,.content ol{padding-left:7mm;margin:0 0 6mm}
+        .content li{padding-left:2mm;margin-bottom:2.5mm;break-inside:avoid-page}
+        .content blockquote{margin:7mm 0;padding:5mm 6mm;border-left:3px solid #2F6BFF;background:#F5F8FF;color:#243B66;border-radius:0 8px 8px 0;break-inside:avoid-page}
+        .content strong{font-weight:800;color:#0F172A}.content em{font-style:italic}.content u{text-underline-offset:3px}
+        @media screen{body{max-width:794px;margin:0 auto;padding:70px 72px 80px;box-shadow:0 12px 50px rgba(15,23,42,.14)}.page-brand{top:20px;left:72px;right:72px}.page-foot{bottom:24px;left:72px;right:72px}}
+      </style></head><body>
+        <div class="page-brand"><div class="brand-left"><img src="${logoUrl}" alt="Vizzy"><span>Vizzy</span></div><div class="brand-kind">Content</div></div>
+        <div class="page-foot"></div>
+        <main>
+          <section class="hero"><div class="eyebrow">Сценарий контента</div><h1>${richEsc(title)}</h1><div class="meta"><span class="badge">${richEsc(platform)}</span><span class="badge">${richEsc(format)}</span>${dateLabel?`<span class="date">${richEsc(dateLabel)}</span>`:""}</div></section>
+          <div class="script-label">Текст сценария</div><article class="content">${safeContent}</article>
+        </main>
+      </body></html>`;
+    win.document.open();
+    win.document.write(html);
     win.document.close();
+    const print=()=>{try{win.focus();win.print();}catch(e){console.error("PDF print failed",e);}};
+    if(win.document.readyState==="complete")setTimeout(print,450);
+    else win.addEventListener("load",()=>setTimeout(print,250),{once:true});
   };
 
   const sub=async()=>{
@@ -11507,16 +11655,20 @@ ${existingScenario}`;
                 </section>
 
                 <section style={{background:C.w,border:"1px solid "+C.bd,borderRadius:11,padding:16}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginBottom:10}}>
-                    <div><div style={{fontSize:13,fontWeight:500,color:C.t1}}>{f.platform==="telegram"&&f.content_format==="Рассылка в боте"?"Текст рассылки":"Сценарий или текст"}</div><div style={{fontSize:10.5,color:C.t2,marginTop:3}}>Отдельный раздел сценариев больше не нужен.</div></div>
-                    <div style={{display:"flex",gap:7}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginBottom:10,flexWrap:"wrap"}}>
+                    <div><div style={{fontSize:13,fontWeight:500,color:C.t1}}>{f.platform==="telegram"&&f.content_format==="Рассылка в боте"?"Текст рассылки":"Сценарий или текст"}</div><div style={{fontSize:10.5,color:C.t2,marginTop:3}}>Форматирование сохранится в карточке и фирменном PDF.</div></div>
+                    <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
                       <button onClick={()=>runContentAi("script")} disabled={!!aiBusy} style={{height:34,padding:"0 11px",borderRadius:8,border:"none",background:C.t1,color:C.bg,fontSize:11.5,cursor:aiBusy?"default":"pointer"}}>{aiBusy==="script"?"Создание...":"Создать с ИИ"}</button>
                       <button onClick={()=>runContentAi("improve")} disabled={!!aiBusy||!(f.scenario||f.broadcast_text)} style={{height:34,padding:"0 11px",borderRadius:8,border:"1px solid "+C.bd,background:"transparent",color:C.t1,fontSize:11.5,cursor:aiBusy?"default":"pointer",opacity:(f.scenario||f.broadcast_text)?1:.45}}>{aiBusy==="improve"?"Доработка...":"Доработать с ИИ"}</button>
+                      <button onClick={()=>downloadPDF({...f,type:f.content_format||f.type,date:f.publish_date||f.date})} disabled={!(f.scenario||f.broadcast_text)} style={{height:34,padding:"0 11px",borderRadius:8,border:"1px solid #2F6BFF55",background:"#2F6BFF10",color:"#2F6BFF",fontSize:11.5,fontWeight:650,cursor:(f.scenario||f.broadcast_text)?"pointer":"default",opacity:(f.scenario||f.broadcast_text)?1:.45,display:"flex",alignItems:"center",gap:6}}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 11v6m-3-3 3 3 3-3"/></svg>
+                        Скачать PDF
+                      </button>
                     </div>
                   </div>
                   {f.platform==="telegram"&&f.content_format==="Рассылка в боте"
-                    ?<textarea value={f.broadcast_text||""} onChange={e=>sF({...f,broadcast_text:e.target.value})} rows={13} placeholder="Заголовок, основной текст и призыв к действию." style={{...iS(),resize:"vertical",lineHeight:1.65,fontFamily:"'Inter',sans-serif"}}/>
-                    :<textarea value={f.scenario||""} onChange={e=>sF({...f,scenario:e.target.value})} rows={13} placeholder="Структура, хук, основная часть, вывод и призыв к действию." style={{...iS(),resize:"vertical",lineHeight:1.65,fontFamily:"'Inter',sans-serif"}}/>}
+                    ?<RichTextEditor value={f.broadcast_text||""} onChange={value=>sF((prev:any)=>({...prev,broadcast_text:value}))} placeholder="Заголовок, основной текст и призыв к действию." minHeight={310}/>
+                    :<RichTextEditor value={f.scenario||""} onChange={value=>sF((prev:any)=>({...prev,scenario:value}))} placeholder="Структура, хук, основная часть, вывод и призыв к действию." minHeight={310}/>}
                 </section>
               </div>
 
@@ -11751,7 +11903,7 @@ ${existingScenario}`;
                   </div>
 
                   {/* Scenario preview */}
-                  {x.scenario&&<div style={{fontSize:11,color:C.t2,lineHeight:1.4,marginBottom:8,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical" as any}}>{x.scenario}</div>}
+                  {(x.scenario||x.broadcast_text)&&<div style={{fontSize:11,color:C.t2,lineHeight:1.4,marginBottom:8,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical" as any}}>{richTextPlain(x.scenario||x.broadcast_text)}</div>}
 
                   {/* Date + actions */}
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:6}}>
@@ -11762,7 +11914,7 @@ ${existingScenario}`;
                         onClick={e=>e.stopPropagation()}>
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={C.a} strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                       </a>}
-                      {x.scenario&&<button onClick={e=>{e.stopPropagation();downloadPDF(x);}}
+                      {(x.scenario||x.broadcast_text)&&<button onClick={e=>{e.stopPropagation();downloadPDF(x);}}
                         title="Скачать PDF"
                         style={{width:24,height:24,borderRadius:6,border:"none",background:"#16A34A12",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#6F6F6F" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
