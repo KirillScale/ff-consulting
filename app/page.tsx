@@ -1,8 +1,11 @@
 "use client";
 // v2.5 — rebuilt Vizzy Slides Pro
 import React, { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } from "react";
+import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabase";
 import VizyBoards from "@/components/VizyBoards";
+
+const FFConsulting=dynamic(()=>import("@/components/FFConsulting"),{ssr:false});
 
 /* ============ THEME SYSTEM ============ */
 const ThemeCtx=createContext<{dark:boolean;toggle:()=>void}>({dark:true,toggle:()=>{}});
@@ -67,6 +70,12 @@ const NAV_GROUPS=[
       {id:"tracker",label:"Link Tracker",accent:"#2F6BFF",ic:"M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71 M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"},
       {id:"forms",label:"Vizzy Form",accent:"#2F6BFF",ic:"M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"},
       {id:"offer",label:"ETS",accent:"#A7A7A7",ic:"M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"},
+    ]
+  },
+  {
+    label:"CONSULTING",
+    items:[
+      {id:"consulting",label:"FF Consulting",accent:"#5B7CFA",ic:"M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5z M8 8h8 M8 12h8 M8 16h5"},
     ]
   },
   {
@@ -875,8 +884,8 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v9.2"; // v142 Content card ordering + easier Maps rename
-  const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","forms","offer","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker","defects"];
+  const APP_VERSION="v9.3"; // v143 FF Consulting client hub
+  const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","boards","forms","offer","consulting","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker","defects"];
 
   // Clear stale localStorage on version change
   useEffect(()=>{
@@ -1018,6 +1027,7 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
     {page==="crm"&&<SafePage name="CRM"><CrmPage userId={user.id}/></SafePage>}
     {page==="cashflow"&&<SafePage name="Cash Flow"><CashFlowPage userId={user.id}/></SafePage>}
     {page==="offer"&&<SafePage name="ETS"><ETSPage userId={user.id}/></SafePage>}
+    {page==="consulting"&&<SafePage name="FF Consulting"><FFConsulting userId={user.id} dark={dark}/></SafePage>}
     {page==="calls"&&<SafePage name="Созвоны"><CallsPage userId={user.id}/></SafePage>}
     {page==="defects"&&<SafePage name="Контроль замечаний"><DefectsControlPage userId={user.id}/></SafePage>}
     {page==="mailings"&&<SafePage name="Рассылки"><MailingsPage userId={user.id}/></SafePage>}
@@ -1043,7 +1053,7 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
     {page==="icp"&&<SafePage name="ICP & IVP"><Placeholder title="ICP & IVP" ic="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></SafePage>}
     {page==="bizstrategy"&&<SafePage name="Strategy"><Placeholder title="Strategy" ic="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></SafePage>}
     {page==="team"&&<SafePage name="Team"><Placeholder title="Team" ic="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></SafePage>}
-    {!["dashboard","strategy","crm","cashflow","calls","forms","tracker","posts","slides","mailings","content","boards","pnl","media","ads","calc","tools","links","profile","files","ai","script","product","stories","design","offer","prices","icp","bizstrategy","team"].includes(page)&&nav&&<Placeholder title={nav.label} ic={nav.ic}/>}
+    {!["dashboard","strategy","crm","cashflow","calls","forms","tracker","posts","slides","mailings","content","boards","pnl","media","ads","calc","tools","links","profile","files","ai","script","product","stories","design","offer","consulting","prices","icp","bizstrategy","team"].includes(page)&&nav&&<Placeholder title={nav.label} ic={nav.ic}/>}
   </>;
 
   return (
