@@ -884,7 +884,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v9.4"; // v144 rich Content editor and branded PDF export
+  const APP_VERSION="v9.5"; // v145 Content card autosave and safe close
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","boards","forms","offer","consulting","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker","defects"];
 
   // Clear stale localStorage on version change
@@ -10574,6 +10574,13 @@ function ContentPage({userId}:{userId:string}){
     analytics:null as any
   });
   const[f,sF]=useState<any>(emptyF());
+  const[autoSaveStatus,setAutoSaveStatus]=useState<"idle"|"dirty"|"saving"|"saved"|"error">("idle");
+  const autoSaveTimerRef=useRef<ReturnType<typeof setTimeout>|null>(null);
+  const autoSaveQueueRef=useRef<Promise<void>>(Promise.resolve());
+  const lastSavedFingerprintRef=useRef("");
+  const formRef=useRef<any>(f);
+  const editIdRef=useRef<string|null>(null);
+  const editorSessionRef=useRef(0);
   const[calMonth,setCalMonth]=useState(()=>{const d=new Date();return{y:d.getFullYear(),m:d.getMonth()};});
 
   const PLATFORM_FORMATS:Record<string,string[]>={
@@ -10821,39 +10828,109 @@ ${existingScenario}`;
     return ds(d);
   };
 
-  const ensureCurrentContentSaved=async()=>{
-    if(!f.topic?.trim())throw new Error("Сначала укажи тему контента");
-    const payload:any={
-      platform:f.platform||"instagram",
-      type:f.content_format||f.type||"Публикация",
-      content_format:f.content_format||f.type||"Публикация",
-      youtube_channel_id:f.platform==="youtube"?(f.youtube_channel_id||null):null,
-      template_id:f.template_id||null,
-      icp:f.icp||"",
-      checklist:Array.isArray(f.checklist)?f.checklist:[],
-      broadcast_text:f.broadcast_text||"",
-      topic:f.topic.trim(),
-      status:editId?(f.status||"idea"):"idea",
-      date:f.publish_date||f.date||null,
-      publish_date:f.publish_date||f.date||null,
-      scenario:f.scenario||"",
-      cover_url:f.cover_url||"",
-      content_url:f.content_url||f.link||"",
-      link:f.content_url||f.link||"",
-      analytics:f.analytics||null,
+  const contentPayload=(snapshot:any)=>({
+    platform:snapshot.platform||"instagram",
+    type:snapshot.content_format||snapshot.type||"Публикация",
+    content_format:snapshot.content_format||snapshot.type||"Публикация",
+    youtube_channel_id:snapshot.platform==="youtube"?(snapshot.youtube_channel_id||null):null,
+    template_id:snapshot.template_id||null,
+    icp:snapshot.icp||"",
+    checklist:Array.isArray(snapshot.checklist)?snapshot.checklist:[],
+    broadcast_text:snapshot.broadcast_text||"",
+    topic:String(snapshot.topic||"").trim(),
+    status:snapshot.status||"idea",
+    date:snapshot.publish_date||snapshot.date||null,
+    publish_date:snapshot.publish_date||snapshot.date||null,
+    scenario:snapshot.scenario||"",
+    cover_url:snapshot.cover_url||"",
+    content_url:snapshot.content_url||snapshot.link||"",
+    link:snapshot.content_url||snapshot.link||"",
+    analytics:snapshot.analytics||null,
+  });
+  const contentFingerprint=(snapshot:any)=>JSON.stringify(contentPayload(snapshot));
+
+  useEffect(()=>{formRef.current=f;},[f]);
+  useEffect(()=>{editIdRef.current=editId;},[editId]);
+  useEffect(()=>()=>{
+    if(autoSaveTimerRef.current)clearTimeout(autoSaveTimerRef.current);
+  },[]);
+
+  const persistContentSnapshot=(snapshot:any)=>{
+    const session=editorSessionRef.current;
+    const fingerprint=contentFingerprint(snapshot);
+    const run=async()=>{
+      if(session===editorSessionRef.current)setAutoSaveStatus("saving");
+      try{
+        const currentId=editIdRef.current;
+        const payload=contentPayload(snapshot);
+        let saved:any=null;
+        if(currentId){
+          const{data,error}=await supabase.from("content").update(payload).eq("id",currentId).eq("user_id",userId).select("*").single();
+          if(error)throw error;
+          saved=data;
+        }else{
+          const{data,error}=await supabase.from("content").insert({...payload,user_id:userId}).select("*").single();
+          if(error)throw error;
+          saved=data;
+          if(!saved?.id)throw new Error("База не вернула ID карточки");
+          editIdRef.current=saved.id;
+          if(session===editorSessionRef.current)setEditId(saved.id);
+        }
+        if(!saved?.id)throw new Error("База не вернула сохранённую карточку");
+        lastSavedFingerprintRef.current=contentFingerprint(snapshot);
+        setContentItems((prev:any[])=>{
+          const exists=prev.some((row:any)=>row.id===saved.id);
+          return exists?prev.map((row:any)=>row.id===saved.id?{...row,...saved}:row):[saved,...prev];
+        });
+        window.dispatchEvent(new CustomEvent("ks-refresh",{detail:{table:"content"}}));
+        if(session===editorSessionRef.current){
+          const currentFingerprint=contentFingerprint(formRef.current);
+          setAutoSaveStatus(currentFingerprint===lastSavedFingerprintRef.current?"saved":"dirty");
+        }
+      }catch(error){
+        if(session===editorSessionRef.current)setAutoSaveStatus("error");
+        throw error;
+      }
     };
-    if(editId){
-      const{error}=await supabase.from("content").update(payload).eq("id",editId).eq("user_id",userId);
-      if(error)throw error;
-      await reloadContent();
-      return editId;
+    const queued=autoSaveQueueRef.current.then(run,run);
+    autoSaveQueueRef.current=queued.then(()=>undefined,()=>undefined);
+    return queued;
+  };
+
+  const flushContentAutoSave=async(snapshot=formRef.current)=>{
+    if(autoSaveTimerRef.current){clearTimeout(autoSaveTimerRef.current);autoSaveTimerRef.current=null;}
+    await autoSaveQueueRef.current;
+    if(!editIdRef.current&&!String(snapshot.topic||"").trim())return;
+    const fingerprint=contentFingerprint(snapshot);
+    if(fingerprint!==lastSavedFingerprintRef.current)await persistContentSnapshot(snapshot);
+  };
+
+  useEffect(()=>{
+    if(!show)return;
+    if(autoSaveTimerRef.current)clearTimeout(autoSaveTimerRef.current);
+    if(!editIdRef.current&&!String(f.topic||"").trim()){
+      setAutoSaveStatus("idle");
+      return;
     }
-    const{data:row,error}=await supabase.from("content").insert({...payload,user_id:userId}).select("id").single();
-    if(error)throw error;
-    if(!row?.id)throw new Error("Не удалось получить ID карточки");
-    setEditId(row.id);
-    await reloadContent();
-    return row.id as string;
+    const fingerprint=contentFingerprint(f);
+    if(fingerprint===lastSavedFingerprintRef.current){
+      setAutoSaveStatus("saved");
+      return;
+    }
+    setAutoSaveStatus("dirty");
+    const snapshot=f;
+    autoSaveTimerRef.current=setTimeout(()=>{
+      autoSaveTimerRef.current=null;
+      persistContentSnapshot(snapshot).catch(error=>console.error("Content autosave failed",error));
+    },900);
+    return()=>{if(autoSaveTimerRef.current){clearTimeout(autoSaveTimerRef.current);autoSaveTimerRef.current=null;}};
+  },[f,show,editId]);
+
+  const ensureCurrentContentSaved=async()=>{
+    if(!formRef.current.topic?.trim())throw new Error("Сначала укажи тему контента");
+    await flushContentAutoSave(formRef.current);
+    if(!editIdRef.current)throw new Error("Не удалось получить ID карточки");
+    return editIdRef.current;
   };
 
   const defaultProductionSteps=(platform:string,format:string)=>{
@@ -11079,72 +11156,84 @@ ${existingScenario}`;
     else win.addEventListener("load",()=>setTimeout(print,250),{once:true});
   };
 
+  const contentSaveErrorMessage=(error:any)=>{
+    const raw=String(error?.message||"неизвестная ошибка");
+    return raw.includes("broadcast_text")
+      ?"Карточка не сохранена: в Supabase отсутствует поле broadcast_text. Запусти SQL-файл для Content, затем повтори сохранение."
+      :`Карточка не сохранена: ${raw}`;
+  };
+
+  const finishContentEditorClose=()=>{
+    if(autoSaveTimerRef.current){clearTimeout(autoSaveTimerRef.current);autoSaveTimerRef.current=null;}
+    editorSessionRef.current+=1;
+    editIdRef.current=null;
+    lastSavedFingerprintRef.current="";
+    setAutoSaveStatus("idle");
+    setEditId(null);
+    setChecklistDraft("");
+    sF(emptyF());
+    setShow(false);
+    setTemplatePanel(false);
+  };
+
+  const closeContentEditor=async()=>{
+    if(savingContent)return;
+    setSavingContent(true);
+    try{
+      await flushContentAutoSave(formRef.current);
+      finishContentEditorClose();
+    }catch(error){
+      console.error("Content save before close failed",error);
+      alert(contentSaveErrorMessage(error)+" Окно оставлено открытым, чтобы изменения не потерялись.");
+    }finally{
+      setSavingContent(false);
+    }
+  };
+
   const sub=async()=>{
     if(savingContent)return;
-    if(!f.topic?.trim()){alert("Укажи тему контента.");return;}
+    if(!formRef.current.topic?.trim()){alert("Укажи тему контента.");return;}
     setSavingContent(true);
-    const payload:any={
-      platform:f.platform||"instagram",
-      type:f.content_format||f.type||"Публикация",
-      content_format:f.content_format||f.type||"Публикация",
-      youtube_channel_id:f.platform==="youtube"?(f.youtube_channel_id||null):null,
-      template_id:f.template_id||null,
-      icp:f.icp||"",
-      checklist:Array.isArray(f.checklist)?f.checklist:[],
-      broadcast_text:f.broadcast_text||"",
-      topic:f.topic.trim(),
-      status:editId?(f.status||"idea"):"idea",
-      date:f.publish_date||f.date||null,
-      publish_date:f.publish_date||f.date||null,
-      link:f.content_url||f.link||"",
-      content_url:f.content_url||f.link||"",
-      scenario:f.scenario||"",
-      cover_url:f.cover_url||"",
-      analytics:f.analytics||null,
-    };
     try{
-      let saved:any=null;
-      if(editId){
-        const{data,error}=await supabase.from("content").update(payload).eq("id",editId).eq("user_id",userId).select("*").single();
-        if(error)throw error;
-        saved=data;
-      }else{
-        const{data,error}=await supabase.from("content").insert({...payload,user_id:userId}).select("*").single();
-        if(error)throw error;
-        saved=data;
-      }
-      if(!saved?.id)throw new Error("База не вернула сохранённую карточку");
+      const snapshot=formRef.current;
+      await flushContentAutoSave(snapshot);
       await reloadContent();
-      window.dispatchEvent(new CustomEvent("ks-refresh",{detail:{table:"content"}}));
-      const savedDate=saved.publish_date||saved.date;
+      const savedDate=snapshot.publish_date||snapshot.date;
       if(savedDate){
         const d=new Date(`${savedDate}T12:00:00`);
         setCalMonth({y:d.getFullYear(),m:d.getMonth()});
         setContentCalAnchor(d);
       }
-      setEditId(null);
-      setChecklistDraft("");
-      sF(emptyF());
-      setShow(false);
-      setTemplatePanel(false);
-      alert(editId?"Карточка обновлена":"Карточка сохранена в «Идеи»");
-    }catch(e:any){
-      console.error("Content save failed",e);
-      const raw=String(e?.message||"неизвестная ошибка");
-      const message=raw.includes("broadcast_text")
-        ?"Карточка не сохранена: в Supabase отсутствует поле broadcast_text. Запусти SQL-файл для Content, затем повтори сохранение."
-        :`Карточка не сохранена: ${raw}`;
-      alert(message);
+      finishContentEditorClose();
+      alert("Карточка сохранена");
+    }catch(error){
+      console.error("Content save failed",error);
+      alert(contentSaveErrorMessage(error));
     }finally{
       setSavingContent(false);
     }
+  };
+
+  const startNewContent=(dateValue:string)=>{
+    if(autoSaveTimerRef.current){clearTimeout(autoSaveTimerRef.current);autoSaveTimerRef.current=null;}
+    editorSessionRef.current+=1;
+    editIdRef.current=null;
+    const base=emptyF();
+    const next={...base,date:dateValue,publish_date:dateValue,checklist:normalizeChecklist([],base.platform,base.content_format)};
+    formRef.current=next;
+    lastSavedFingerprintRef.current=contentFingerprint(next);
+    setAutoSaveStatus("idle");
+    setChecklistDraft("");
+    setEditId(null);
+    sF(next);
+    setShow(true);
   };
 
   const startEdit=(item:any)=>{
     const publishDate=item.publish_date||item.date||"";
     const platform=item.platform||"instagram";
     const format=item.content_format||item.type||formatOptions(platform)[0];
-    sF({
+    const next={
       platform,
       type:format,
       content_format:format,
@@ -11162,7 +11251,14 @@ ${existingScenario}`;
       youtube_channel_id:item.youtube_channel_id||"",
       template_id:item.template_id||"",
       analytics:item.analytics||null
-    });
+    };
+    if(autoSaveTimerRef.current){clearTimeout(autoSaveTimerRef.current);autoSaveTimerRef.current=null;}
+    editorSessionRef.current+=1;
+    editIdRef.current=item.id;
+    formRef.current=next;
+    lastSavedFingerprintRef.current=contentFingerprint(next);
+    setAutoSaveStatus("saved");
+    sF(next);
     setChecklistDraft("");
     setEditId(item.id);setShow(true);
   };
@@ -11490,7 +11586,7 @@ ${existingScenario}`;
             style={{padding:"9px 14px",background:C.ib,color:C.t1,border:"1px solid "+C.bd,borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer"}}>
             AI контент-план
           </button>
-          <button onClick={()=>{setShow(!show);setEditId(null);const d=selectedMonthDefaultDate();const base=emptyF();sF({...base,date:d,publish_date:d,checklist:normalizeChecklist([],base.platform,base.content_format)});}}
+          <button onClick={()=>startNewContent(selectedMonthDefaultDate())}
             style={{padding:"9px 18px",background:C.t1,color:C.bg,border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,boxShadow:"none"}}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Контент
@@ -11551,18 +11647,24 @@ ${existingScenario}`;
       </div>}
 
       {/* Full content card editor */}
-      {show&&<div onClick={()=>{setShow(false);setEditId(null);sF(emptyF());setTemplatePanel(false);}}
+      {show&&<div onClick={closeContentEditor}
         style={{position:"fixed",inset:0,zIndex:520,background:"rgba(0,0,0,.68)",backdropFilter:"blur(5px)",display:"flex",alignItems:"stretch",justifyContent:"center",padding:isMobile?0:18}}>
         <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:1240,height:isMobile?"100%":"calc(100vh - 36px)",background:C.bg,border:isMobile?"none":"1px solid "+C.bd,borderRadius:isMobile?0:14,display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 24px 80px rgba(0,0,0,.36)"}}>
           <div style={{height:68,padding:isMobile?"0 16px":"0 24px",borderBottom:"1px solid "+C.bd,display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,flexShrink:0}}>
             <div style={{minWidth:0}}>
               <div style={{fontSize:16,fontWeight:500,color:C.t1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{editId?"Редактирование карточки":"Новая карточка контента"}</div>
-              <div style={{fontSize:11.5,color:C.t2,marginTop:4}}>Планирование, текст, сценарий и шаблон в одном окне</div>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginTop:4,flexWrap:"wrap"}}>
+                <span style={{fontSize:11.5,color:C.t2}}>Планирование, текст, сценарий и шаблон в одном окне</span>
+                <span style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:10.5,color:autoSaveStatus==="error"?"#DC2626":autoSaveStatus==="saved"?"#16A34A":C.t2}}>
+                  <span style={{width:6,height:6,borderRadius:"50%",background:autoSaveStatus==="error"?"#DC2626":autoSaveStatus==="saved"?"#16A34A":autoSaveStatus==="saving"?"#2F6BFF":C.t2,opacity:autoSaveStatus==="idle"?.55:1}}/>
+                  {autoSaveStatus==="saving"?"Сохраняем…":autoSaveStatus==="dirty"?"Есть несохранённые изменения":autoSaveStatus==="saved"?"Сохранено":autoSaveStatus==="error"?"Ошибка автосохранения":"Автосохранение включено"}
+                </span>
+              </div>
             </div>
             <div style={{display:"flex",gap:8,alignItems:"center"}}>
               <button onClick={()=>setTemplatePanel(v=>!v)} style={{height:36,padding:"0 13px",borderRadius:8,border:"1px solid "+C.bd,background:templatePanel?C.ib:"transparent",color:C.t1,fontSize:12,cursor:"pointer"}}>Шаблоны</button>
               <button onClick={sub} disabled={!f.topic?.trim()||savingContent} style={{height:36,padding:"0 16px",borderRadius:8,border:"none",background:C.t1,color:C.bg,fontSize:12.5,fontWeight:500,cursor:f.topic?.trim()&&!savingContent?"pointer":"default",opacity:f.topic?.trim()&&!savingContent?1:.45}}>{savingContent?"Сохранение...":"Сохранить"}</button>
-              <button onClick={()=>{setShow(false);setEditId(null);sF(emptyF());setTemplatePanel(false);}} style={{width:36,height:36,borderRadius:8,border:"1px solid "+C.bd,background:"transparent",color:C.t2,cursor:"pointer",fontSize:18}}>×</button>
+              <button onClick={closeContentEditor} disabled={savingContent} style={{width:36,height:36,borderRadius:8,border:"1px solid "+C.bd,background:"transparent",color:C.t2,cursor:savingContent?"wait":"pointer",fontSize:18,opacity:savingContent?.55:1}}>×</button>
             </div>
           </div>
 
@@ -11796,7 +11898,7 @@ ${existingScenario}`;
       {monthItems.length===0&&<div style={{padding:"34px 20px",marginBottom:14,border:"1px solid "+C.bd,borderRadius:11,background:C.w,textAlign:"center"}}>
         <div style={{fontSize:14,fontWeight:500,color:C.t1}}>На {contentMonthLabel.toLowerCase()} пока ничего не запланировано</div>
         <div style={{fontSize:12,color:C.t2,marginTop:6}}>Создай первую карточку — она автоматически попадёт в выбранный месяц.</div>
-        <button onClick={()=>{setShow(true);setEditId(null);const d=selectedMonthDefaultDate();const base=emptyF();sF({...base,date:d,publish_date:d,checklist:normalizeChecklist([],base.platform,base.content_format)});}} style={{marginTop:14,padding:"9px 15px",borderRadius:8,border:"none",background:C.t1,color:C.bg,fontSize:12.5,fontWeight:500,cursor:"pointer"}}>+ Создать первую карточку</button>
+        <button onClick={()=>startNewContent(selectedMonthDefaultDate())} style={{marginTop:14,padding:"9px 15px",borderRadius:8,border:"none",background:C.t1,color:C.bg,fontSize:12.5,fontWeight:500,cursor:"pointer"}}>+ Создать первую карточку</button>
       </div>}
 
       {/* KANBAN BOARD */}
@@ -11982,7 +12084,7 @@ ${existingScenario}`;
           <button onClick={()=>moveContentCalendar(-1)} style={{width:34,height:34,borderRadius:8,border:"1px solid "+C.bd,background:C.w,color:C.t1,cursor:"pointer"}}>‹</button>
           <button onClick={resetContentCalendar} style={{height:34,padding:"0 11px",borderRadius:8,border:"1px solid "+C.bd,background:C.w,color:C.t1,fontSize:11.5,cursor:"pointer"}}>Сегодня</button>
           <button onClick={()=>moveContentCalendar(1)} style={{width:34,height:34,borderRadius:8,border:"1px solid "+C.bd,background:C.w,color:C.t1,cursor:"pointer"}}>›</button>
-          <button onClick={()=>{const d=contentCalView==="month"?selectedMonthDefaultDate():ds(contentCalAnchor);const base=emptyF();sF({...base,date:d,publish_date:d,checklist:normalizeChecklist([],base.platform,base.content_format)});setEditId(null);setShow(true);}}
+          <button onClick={()=>startNewContent(contentCalView==="month"?selectedMonthDefaultDate():ds(contentCalAnchor))}
             style={{height:34,padding:"0 13px",borderRadius:8,border:"none",background:C.t1,color:C.bg,fontSize:12,fontWeight:500,cursor:"pointer"}}>+ Публикация</button>
         </div>
       </div>
@@ -12010,7 +12112,7 @@ ${existingScenario}`;
                   setCalDragOver(null);
                 }
               }}
-              onClick={()=>{if(d&&!calDragId){sF({...emptyF(),publish_date:dateStr,date:dateStr});setEditId(null);setShow(true);}}}
+              onClick={()=>{if(d&&!calDragId)startNewContent(dateStr);}}
               style={{
                 minHeight:124,padding:"7px",
                 borderRight:i%(contentCalView==="3day"?3:7)!==(contentCalView==="3day"?2:6)?"1px solid "+C.bd+"66":"none",
