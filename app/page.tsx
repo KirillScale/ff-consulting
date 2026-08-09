@@ -883,7 +883,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v9.7"; // v147 unified Content plan and publication calendar
+  const APP_VERSION="v9.8"; // v148 strict Content PDF and fully clickable Content cards
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","boards","forms","offer","consulting","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
 
   // Clear stale localStorage on version change
@@ -10532,6 +10532,7 @@ ${fields}${vocab}
 
 function ContentPage({userId}:{userId:string}){
   const isMobile=useIsMobile();
+  const{dark}=useTheme();
   const{data:items,add,update,remove,reload:reloadContent,setData:setContentItems}=useTable("content",userId);
   const{data:contentTemplates,add:addTemplate,update:updateTemplate,remove:removeTemplate}=useTable("content_templates",userId);
   const{data:youtubeChannels,add:addYoutubeChannel,remove:removeYoutubeChannel}=useTable("youtube_channels",userId);
@@ -11122,46 +11123,57 @@ ${existingScenario}`;
     const logoUrl=new URL("/logo.png",window.location.origin).href;
     const html=`<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><title>${richEsc(title)}</title>
       <style>
-        @page{size:A4;margin:23mm 19mm 20mm}
+        @page{size:A4;margin:18mm 17mm 17mm}
         *{box-sizing:border-box}
         html,body{margin:0;padding:0;background:#fff;color:#111827}
-        body{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-        .page-brand{position:fixed;top:-15mm;left:0;right:0;height:10mm;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #E6ECF8;padding-bottom:3mm}
-        .brand-left{display:flex;align-items:center;gap:8px;color:#2F6BFF;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}
-        .brand-left img{width:25px;height:25px;object-fit:cover;border-radius:7px}
-        .brand-kind{color:#94A3B8;font-size:9px;font-weight:650;letter-spacing:.12em;text-transform:uppercase}
-        .page-foot{position:fixed;bottom:-13mm;left:0;right:0;border-top:1px solid #E6ECF8;padding-top:3mm;color:#94A3B8;font-size:9px;letter-spacing:.08em;text-transform:uppercase}
-        .page-foot:after{content:"Vizzy · Content Script  /  " counter(page)}
-        .hero{padding:9mm 0 10mm;border-bottom:2px solid #2F6BFF;margin-bottom:11mm}
-        .eyebrow{font-size:10px;line-height:1.2;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#2F6BFF;margin-bottom:5mm}
-        h1{font-size:40px;line-height:1.07;letter-spacing:-.035em;margin:0;color:#0F172A;font-weight:800;overflow-wrap:anywhere}
-        .meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:6mm}
-        .badge{display:inline-flex;align-items:center;padding:5px 10px;border-radius:999px;background:#EFF5FF;color:#2459D3;font-size:10px;font-weight:750}
-        .date{font-size:10.5px;color:#64748B;margin-left:2px}
-        .script-label{font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#94A3B8;margin:0 0 6mm}
-        .content{font-size:17px;line-height:1.72;color:#1E293B;overflow-wrap:anywhere}
-        .content p{margin:0 0 5mm;orphans:3;widows:3}
-        .content h2{font-size:24px;line-height:1.25;letter-spacing:-.015em;color:#0F172A;margin:9mm 0 4mm;break-after:avoid-page}
-        .content h3{font-size:20px;line-height:1.3;color:#0F172A;margin:7mm 0 3mm;break-after:avoid-page}
-        .content ul,.content ol{padding-left:7mm;margin:0 0 6mm}
-        .content li{padding-left:2mm;margin-bottom:2.5mm;break-inside:avoid-page}
-        .content blockquote{margin:7mm 0;padding:5mm 6mm;border-left:3px solid #2F6BFF;background:#F5F8FF;color:#243B66;border-radius:0 8px 8px 0;break-inside:avoid-page}
-        .content strong{font-weight:800;color:#0F172A}.content em{font-style:italic}.content u{text-underline-offset:3px}
-        @media screen{body{max-width:794px;margin:0 auto;padding:70px 72px 80px;box-shadow:0 12px 50px rgba(15,23,42,.14)}.page-brand{top:20px;left:72px;right:72px}.page-foot{bottom:24px;left:72px;right:72px}}
+        body{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;text-rendering:optimizeLegibility}
+        .page-brand{position:fixed;top:-12.5mm;left:0;right:0;height:8mm;display:flex;align-items:center;justify-content:space-between;border-bottom:.35mm solid #E5EAF2;padding-bottom:2.2mm}
+        .brand-left{display:flex;align-items:center;gap:7px;color:#172033}
+        .brand-logo{width:21px;height:21px;display:block;object-fit:cover;border-radius:5px}
+        .brand-name{font-size:9.5px;font-weight:350;letter-spacing:.15em;text-transform:uppercase}
+        .brand-kind{color:#7E8999;font-size:8.5px;font-weight:350;letter-spacing:.14em;text-transform:uppercase}
+        .page-foot{position:fixed;bottom:-10.8mm;left:0;right:0;border-top:.35mm solid #E5EAF2;padding-top:2.2mm;color:#8993A2;font-size:8px;font-weight:350;letter-spacing:.11em;text-transform:uppercase}
+        .page-foot:after{content:"Vizzy / Content"}
+        .hero{padding:2.5mm 0 5.5mm;border-bottom:.55mm solid #2F6BFF;margin:0 0 6.5mm;break-inside:avoid-page}
+        .eyebrow{font-size:8.5px;line-height:1.2;font-weight:400;letter-spacing:.17em;text-transform:uppercase;color:#2F6BFF;margin-bottom:3.2mm}
+        h1{font-size:30px;line-height:1.12;letter-spacing:-.026em;margin:0;color:#111827;font-weight:500;overflow-wrap:anywhere}
+        .meta{display:flex;align-items:center;flex-wrap:wrap;margin-top:4mm;color:#5F6B7A;font-size:9.5px;font-weight:400;letter-spacing:.015em}
+        .meta-item{display:inline-flex;align-items:center;white-space:nowrap}
+        .meta-item+.meta-item:before{content:"";width:3px;height:3px;border-radius:50%;background:#A8B1BE;margin:0 8px}
+        .script-label{font-size:8.5px;font-weight:400;letter-spacing:.17em;text-transform:uppercase;color:#7E8999;margin:0 0 4mm}
+        .content{font-size:15.5px;line-height:1.58;font-weight:500;letter-spacing:-.003em;color:#151B26;overflow-wrap:anywhere}
+        .content p{margin:0 0 3.6mm;orphans:3;widows:3}
+        .content h2{font-size:19px;line-height:1.28;font-weight:600;letter-spacing:-.012em;color:#0F172A;margin:6.5mm 0 2.8mm;break-after:avoid-page}
+        .content h3{font-size:16.5px;line-height:1.32;font-weight:600;color:#0F172A;margin:5mm 0 2.4mm;break-after:avoid-page}
+        .content ul,.content ol{padding-left:6mm;margin:0 0 4.2mm}
+        .content li{padding-left:1.2mm;margin-bottom:1.7mm;break-inside:avoid-page}
+        .content blockquote{margin:4.8mm 0;padding:3.5mm 4.5mm;border-left:2px solid #2F6BFF;background:#F5F7FB;color:#1D2A40;break-inside:avoid-page}
+        .content strong{font-weight:700;color:#0B1220}.content em{font-style:italic}.content u{text-underline-offset:3px}.content s{color:#596579}
+        .content> :first-child{margin-top:0}.content> :last-child{margin-bottom:0}
+        @media screen{body{max-width:794px;margin:0 auto;padding:58px 64px 68px;box-shadow:0 12px 50px rgba(15,23,42,.14)}.page-brand{top:17px;left:64px;right:64px}.page-foot{bottom:20px;left:64px;right:64px}}
       </style></head><body>
-        <div class="page-brand"><div class="brand-left"><img src="${logoUrl}" alt="Vizzy"><span>Vizzy</span></div><div class="brand-kind">Content</div></div>
+        <div class="page-brand"><div class="brand-left"><img class="brand-logo" src="${logoUrl}" alt="Vizzy"><span class="brand-name">Vizzy</span></div><div class="brand-kind">Content document</div></div>
         <div class="page-foot"></div>
         <main>
-          <section class="hero"><div class="eyebrow">Сценарий контента</div><h1>${richEsc(title)}</h1><div class="meta"><span class="badge">${richEsc(platform)}</span><span class="badge">${richEsc(format)}</span>${dateLabel?`<span class="date">${richEsc(dateLabel)}</span>`:""}</div></section>
+          <section class="hero"><div class="eyebrow">Сценарий контента</div><h1>${richEsc(title)}</h1><div class="meta"><span class="meta-item">${richEsc(platform)}</span><span class="meta-item">${richEsc(format)}</span>${dateLabel?`<span class="meta-item">${richEsc(dateLabel)}</span>`:""}</div></section>
           <div class="script-label">Текст сценария</div><article class="content">${safeContent}</article>
         </main>
       </body></html>`;
     win.document.open();
     win.document.write(html);
     win.document.close();
-    const print=()=>{try{win.focus();win.print();}catch(e){console.error("PDF print failed",e);}};
-    if(win.document.readyState==="complete")setTimeout(print,450);
-    else win.addEventListener("load",()=>setTimeout(print,250),{once:true});
+    const print=async()=>{
+      try{
+        const fonts=(win.document as any).fonts;
+        if(fonts?.ready)await fonts.ready;
+        const logo=win.document.querySelector(".brand-logo") as HTMLImageElement|null;
+        if(logo&&!logo.complete)await new Promise<void>(resolve=>{logo.addEventListener("load",()=>resolve(),{once:true});logo.addEventListener("error",()=>resolve(),{once:true});});
+        win.focus();
+        win.print();
+      }catch(e){console.error("PDF print failed",e);}
+    };
+    if(win.document.readyState==="complete")setTimeout(()=>void print(),120);
+    else win.addEventListener("load",()=>setTimeout(()=>void print(),120),{once:true});
   };
 
   const contentSaveErrorMessage=(error:any)=>{
@@ -11311,9 +11323,10 @@ ${existingScenario}`;
   const[kanbanDrag,setKanbanDrag]=useState<string|null>(null);
   const[kanbanOver,setKanbanOver]=useState<string|null>(null);
   const[kanbanInsert,setKanbanInsert]=useState<{id:string;after:boolean}|null>(null);
+  const lastKanbanDragAtRef=useRef(0);
 
-  const onKanbanDragStart=(id:string)=>setKanbanDrag(id);
-  const onKanbanDragEnd=()=>{setKanbanDrag(null);setKanbanOver(null);setKanbanInsert(null);};
+  const onKanbanDragStart=(id:string)=>{lastKanbanDragAtRef.current=Date.now();setKanbanDrag(id);};
+  const onKanbanDragEnd=()=>{lastKanbanDragAtRef.current=Date.now();setKanbanDrag(null);setKanbanOver(null);setKanbanInsert(null);};
   const onKanbanDragOver=(stageId:string,e:React.DragEvent)=>{e.preventDefault();e.dataTransfer.dropEffect="move";setKanbanOver(stageId);setKanbanInsert(null);};
   const contentOrder=(x:any)=>x?.sort_order!==null&&x?.sort_order!==undefined&&Number.isFinite(Number(x.sort_order))?Number(x.sort_order):Number.MAX_SAFE_INTEGER;
   const sortKanbanItems=(rows:any[])=>[...rows].sort((a:any,b:any)=>{
@@ -11971,6 +11984,9 @@ ${existingScenario}`;
               {stageItems.map((x:any)=>(
                 <div key={x.id}
                   draggable
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Открыть карточку контента: ${x.topic||"Без названия"}`}
                   onDragStart={(e)=>{onKanbanDragStart(x.id);e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",x.id);}}
                   onDragOver={(e)=>{
                     e.preventDefault();e.stopPropagation();
@@ -11985,6 +12001,13 @@ ${existingScenario}`;
                     void onKanbanDrop(stage.id,x.id,place);
                   }}
                   onDragEnd={onKanbanDragEnd}
+                  onClick={()=>{if(Date.now()-lastKanbanDragAtRef.current>250)startEdit(x);}}
+                  onKeyDown={e=>{
+                    if(e.target===e.currentTarget&&(e.key==="Enter"||e.key===" ")){
+                      e.preventDefault();
+                      startEdit(x);
+                    }
+                  }}
                   style={{
                     position:"relative",
                     background:contentPlatformSurface(x.platform).bg,
@@ -11992,7 +12015,7 @@ ${existingScenario}`;
                     padding:"12px 12px",
                     border:"1px solid "+contentPlatformSurface(x.platform).border,
                     borderLeft:"4px solid "+contentPlatformSurface(x.platform).accent,
-                    cursor:"grab",
+                    cursor:kanbanDrag===x.id?"grabbing":"pointer",
                     opacity:kanbanDrag===x.id?0.4:1,
                     transition:"all 0.15s",
                     boxShadow:"0 1px 4px rgba(0,0,0,0.06)",
@@ -12049,8 +12072,10 @@ ${existingScenario}`;
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#6F6F6F" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
                       </button>}
                       <button onClick={e=>{e.stopPropagation();startEdit(x);}}
-                        style={{width:24,height:24,borderRadius:6,border:"none",background:C.ib,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={C.a} strokeWidth="2"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        title="Редактировать"
+                        aria-label="Редактировать карточку"
+                        style={{width:24,height:24,borderRadius:6,border:"none",background:dark?"rgba(255,255,255,0.12)":C.ib,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={dark?"#FFFFFF":"#111827"} strokeWidth="2.25"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                       </button>
                       <button onClick={e=>{e.stopPropagation();remove(x.id);}}
                         style={{width:24,height:24,borderRadius:6,border:"none",background:C.ib,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
