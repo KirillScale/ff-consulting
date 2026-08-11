@@ -883,7 +883,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v9.8"; // v148 strict Content PDF and fully clickable Content cards
+  const APP_VERSION="v9.9"; // v149 Maps image drop and detached floating tool panels
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","boards","forms","offer","consulting","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
 
   // Clear stale localStorage on version change

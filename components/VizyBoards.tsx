@@ -1,5 +1,6 @@
 // @ts-nocheck
-import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
 import {
   MousePointer2, Hand, StickyNote, Type as TypeIcon, Image as ImageIcon, Link2,
@@ -852,6 +853,68 @@ const Panel = ({ t, style, children, onPointerDown }) => (
   }}>{children}</div>
 );
 
+const FloatingPopover = ({ anchorRef, open, placement = "bottom-start", children }) => {
+  const layerRef = useRef(null);
+  const [pos, setPos] = useState({ left: 0, top: 0, ready: false });
+
+  useLayoutEffect(() => {
+    if (!open || !anchorRef.current || !layerRef.current) return;
+    const update = () => {
+      const anchor = anchorRef.current?.getBoundingClientRect();
+      const layer = layerRef.current;
+      const content = layer?.firstElementChild;
+      if (!anchor || !content) return;
+      const popup = content.getBoundingClientRect();
+      const margin = 10, gap = 8;
+      let left = placement.endsWith("end") ? anchor.right - popup.width : anchor.left;
+      let top = placement.startsWith("top") ? anchor.top - popup.height - gap : anchor.bottom + gap;
+
+      if (placement.startsWith("top") && top < margin) top = anchor.bottom + gap;
+      if (!placement.startsWith("top") && top + popup.height > window.innerHeight - margin) top = anchor.top - popup.height - gap;
+      left = clamp(left, margin, Math.max(margin, window.innerWidth - popup.width - margin));
+      top = clamp(top, margin, Math.max(margin, window.innerHeight - popup.height - margin));
+      setPos((p) => p.left === Math.round(left) && p.top === Math.round(top) && p.ready
+        ? p
+        : { left: Math.round(left), top: Math.round(top), ready: true });
+    };
+
+    const frame = requestAnimationFrame(update);
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(update) : null;
+    observer?.observe(layerRef.current.firstElementChild);
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer?.disconnect();
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [open, placement, anchorRef]);
+
+  if (!open || typeof document === "undefined") return null;
+  return createPortal(
+    <div ref={layerRef} className="vizy-floating-popover"
+      onPointerDown={(e) => e.stopPropagation()}
+      style={{ position: "fixed", left: pos.left, top: pos.top, zIndex: 1000, visibility: pos.ready ? "visible" : "hidden", pointerEvents: "auto", fontFamily: FONTS.inter.css, WebkitFontSmoothing: "antialiased" }}>
+      {children}
+    </div>,
+    document.body
+  );
+};
+
+const FloatingGroup = ({ t, id, label, pop, setPop, children, content }) => {
+  const anchorRef = useRef(null);
+  const open = pop === id;
+  return (
+    <div ref={anchorRef} style={{ position: "relative" }}>
+      <Btn t={t} wide active={open} title={label} onClick={() => setPop(open ? null : id)}>
+        {children}<ChevronDown size={11} style={{ opacity: .5 }} />
+      </Btn>
+      <FloatingPopover anchorRef={anchorRef} open={open}>{content}</FloatingPopover>
+    </div>
+  );
+};
+
 /* ═══════════════════════════ MAIN ═══════════════════════════ */
 
 export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
@@ -875,13 +938,16 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
   const [ready, setReady] = useState(false);
   const [tick, setTick] = useState(0);
   const [space, setSpace] = useState(false);
+  const [dropActive, setDropActive] = useState(false);
+  const [dropUploading, setDropUploading] = useState(false);
   const [saveState, setSaveState] = useState("loading");
   const [ai, setAi] = useState({
     open: false, input: "", type: "auto", detail: "medium", merge: "add",
     status: "idle", phase: 0, error: "", confirmReplace: false,
   });
 
-  const vp = useRef(null), fileIn = useRef(null), hist = useRef({ p: [], f: [] }), snap = useRef(null), imgs = useRef({});
+  const vp = useRef(null), fileIn = useRef(null), shapePickerRef = useRef(null), hist = useRef({ p: [], f: [] }), snap = useRef(null), imgs = useRef({});
+  const fileDragDepth = useRef(0);
   const verRef = useRef(null);
   const savingRef = useRef(false);
   const aiAbortRef = useRef(null), aiTimersRef = useRef([]);
@@ -1399,24 +1465,72 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
   useEffect(() => () => { aiAbortRef.current?.abort?.(); clearAiTimers(); }, []);
 
   /* ── files ── */
-  const onFile = async (e) => {
-    const files = [...(e.target.files || [])]; e.target.value = "";
-    let c = center(), z = topZ();
-    for (const f of files) {
-      if (!f.type.startsWith("image/")) continue;
+  const insertImageFiles = async (files, at) => {
+    const images = [...files].filter((f) => f.type?.startsWith("image/"));
+    if (!images.length) { say("Перенесите файл изображения"); return 0; }
+    let c = at || center(), z = topZ();
+    const added = [];
+    for (const f of images) {
       try {
         const { blob, w, h } = await downscale(f);
         const url = await Boards.uploadImage(userId, blob);
         const k = Math.min(1, 460 / Math.max(w, h));
         const it = make("image", Math.round(c.x - (w * k) / 2), Math.round(c.y - (h * k) / 2), Math.round(w * k), Math.round(h * k), { src: url, z: z++ });
         imgs.current[it.id] = loadCors(url);
-        act((d) => ({ ...d, items: [...d.items, it] }));
-        setSel([it.id]);
+        added.push(it);
         c = { x: c.x + 30, y: c.y + 30 };
       } catch (err) {
         console.error(err);
         say("Не удалось загрузить изображение");
       }
+    }
+    if (added.length) {
+      act((d) => ({ ...d, items: [...d.items, ...added] }));
+      setSel(added.map((it) => it.id)); setSelC([]); setTool("select"); setPop(null);
+    }
+    return added.length;
+  };
+
+  const onFile = async (e) => {
+    const files = [...(e.target.files || [])]; e.target.value = "";
+    await insertImageFiles(files, center());
+  };
+
+  const isImageTransfer = (dataTransfer) => {
+    const items = [...(dataTransfer?.items || [])];
+    if (items.some((item) => item.kind === "file" && (!item.type || item.type.startsWith("image/")))) return true;
+    return [...(dataTransfer?.files || [])].some((file) => file.type?.startsWith("image/"));
+  };
+
+  const onBoardDragEnter = (e) => {
+    if (!isImageTransfer(e.dataTransfer)) return;
+    e.preventDefault();
+    fileDragDepth.current += 1;
+    setDropActive(true);
+  };
+  const onBoardDragOver = (e) => {
+    if (!isImageTransfer(e.dataTransfer)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    if (!dropActive) setDropActive(true);
+  };
+  const onBoardDragLeave = (e) => {
+    if (!dropActive) return;
+    e.preventDefault();
+    fileDragDepth.current = Math.max(0, fileDragDepth.current - 1);
+    if (!fileDragDepth.current) setDropActive(false);
+  };
+  const onBoardDrop = async (e) => {
+    if (!isImageTransfer(e.dataTransfer)) return;
+    e.preventDefault(); e.stopPropagation();
+    const files = [...(e.dataTransfer.files || [])];
+    const at = toWorld(e.clientX, e.clientY);
+    fileDragDepth.current = 0; setDropActive(false); setDropUploading(true);
+    try {
+      const count = await insertImageFiles(files, at);
+      if (count) say(count === 1 ? "Изображение добавлено" : `Добавлено изображений: ${count}`);
+    } finally {
+      setDropUploading(false);
     }
   };
 
@@ -1522,7 +1636,9 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
   const cursor = space || tool === "hand" ? "grab" : tool === "select" ? "default" : tool === "text" ? "text" : "crosshair";
 
   return (
-    <div className="vizy-boards-root" style={{ position: "relative", width:"100%", height:"100%", minHeight:520, background: t.bg, color: t.ink, fontFamily: FONTS.inter.css, overflow: "hidden", userSelect: "none", WebkitFontSmoothing: "antialiased" }}>
+    <div className="vizy-boards-root"
+      onDragEnter={onBoardDragEnter} onDragOver={onBoardDragOver} onDragLeave={onBoardDragLeave} onDrop={onBoardDrop}
+      style={{ position: "relative", width:"100%", height:"100%", minHeight:520, background: t.bg, color: t.ink, fontFamily: FONTS.inter.css, overflow: "hidden", userSelect: "none", WebkitFontSmoothing: "antialiased" }}>
       <style>{`
         .vizy-boards-root,.vizy-boards-root *{box-sizing:border-box}
         .vizy-boards-root ::-webkit-scrollbar{width:8px;height:8px}
@@ -1530,6 +1646,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
         .vizy-boards-root ::-webkit-scrollbar-track{background:transparent}
         .vizy-boards-root [contenteditable]{outline:none}
         .vizy-boards-root input,.vizy-boards-root textarea,.vizy-boards-root select{font-family:inherit}
+        .vizy-floating-popover>div{position:relative!important;left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;max-height:calc(100vh - 20px);overflow-x:hidden!important;overflow-y:auto!important}
         @keyframes vzyAiSpin{to{transform:rotate(360deg)}}
         @media (prefers-reduced-motion: reduce){.vizy-boards-root *{transition:none!important;animation:none!important}}
       `}</style>
@@ -1628,6 +1745,20 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
         ); })()}
       </div>
 
+      {(dropActive || dropUploading) && (
+        <div style={{ position: "absolute", inset: 10, zIndex: 58, borderRadius: 18, border: `2px dashed ${dark ? "rgba(200,217,247,.72)" : "rgba(46,103,206,.68)"}`, background: dark ? "rgba(11,12,14,.70)" : "rgba(255,255,255,.76)", backdropFilter: "blur(7px)", WebkitBackdropFilter: "blur(7px)", display: "grid", placeItems: "center", pointerEvents: "none" }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: "18px 24px", borderRadius: 16, background: t.solid, border: `1px solid ${t.line}`, boxShadow: t.sh }}>
+            <div style={{ width: 42, height: 42, borderRadius: 13, display: "grid", placeItems: "center", background: dark ? "rgba(110,155,238,.14)" : "rgba(46,103,206,.09)", color: col("blue", STROKE, dark) }}>
+              <ImageIcon size={21} />
+            </div>
+            <div style={{ fontFamily: FONTS.montserrat.css, fontSize: 14, fontWeight: 600, color: t.ink }}>
+              {dropUploading ? "Загружаю изображение…" : "Отпустите изображение на доске"}
+            </div>
+            {!dropUploading && <div style={{ fontSize: 11.5, color: t.ink3 }}>Оно появится именно в этой точке</div>}
+          </div>
+        </div>
+      )}
+
       <input ref={fileIn} type="file" accept="image/*" multiple onChange={onFile} style={{ display: "none" }} />
 
       {/* ── top left: board switcher ── */}
@@ -1703,7 +1834,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
           <Btn t={t} active={tool === "select"} title="Выбор  V" onClick={() => setTool("select")}><MousePointer2 size={16} /></Btn>
           <Btn t={t} active={tool === "hand"} title="Рука  H  (или Space)" onClick={() => setTool("hand")}><Hand size={16} /></Btn>
           <Sep t={t} />
-          <div style={{ position: "relative", display: "flex" }}>
+          <div ref={shapePickerRef} style={{ position: "relative", display: "flex" }}>
             <Btn t={t} active={tool === "shape"} title={`Фигура  S — ${SHAPES[kind].name}`} onClick={() => { setTool("shape"); }}>
               <svg width={16} height={16} viewBox="0 0 16 16"><path d={SHAPES[kind].d(15, 15)} transform="translate(0.5,0.5)" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinejoin="round" /></svg>
             </Btn>
@@ -1711,7 +1842,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
               style={{ border: "none", background: pop === "shapes" ? t.act : "transparent", cursor: "pointer", borderRadius: 9, width: 18, height: 32, color: t.ink3, padding: 0 }}>
               <ChevronDown size={12} />
             </button>
-            {pop === "shapes" && (
+            <FloatingPopover anchorRef={shapePickerRef} open={pop === "shapes"} placement="top-start">
               <Panel t={t} style={{ position: "absolute", bottom: 42, left: -6, padding: 10, width: 268 }}>
                 <div style={{ fontSize: 10.5, color: t.ink3, letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 8, paddingLeft: 2 }}>Фигуры</div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 3 }}>
@@ -1727,7 +1858,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
                   ))}
                 </div>
               </Panel>
-            )}
+            </FloatingPopover>
           </div>
           <Btn t={t} active={tool === "conn"} title="Связь  C" onClick={() => setTool("conn")}><Spline size={16} /></Btn>
           <Btn t={t} active={tool === "sticky"} title="Стикер  N" onClick={() => setTool("sticky")}><StickyNote size={16} /></Btn>
@@ -1952,13 +2083,6 @@ function StylePanel({ t, dark, one, many, conns, oneC, box, pop, setPop, patch, 
     </Panel>
   );
 
-  const Grp = ({ id, label, children, content }) => (
-    <div style={{ position: "relative" }}>
-      <Btn t={t} wide active={pop === id} title={label} onClick={() => setPop(pop === id ? null : id)}>{children}<ChevronDown size={11} style={{ opacity: .5 }} /></Btn>
-      {pop === id && content}
-    </div>
-  );
-
   const capOpts = [
     { v: "none", l: "Без наконечника" }, { v: "arrow", l: "Стрелка" }, { v: "triangle", l: "Треугольник" },
     { v: "circle", l: "Круг" }, { v: "diamond", l: "Ромб" }, { v: "bar", l: "Черта" },
@@ -1970,27 +2094,27 @@ function StylePanel({ t, dark, one, many, conns, oneC, box, pop, setPop, patch, 
       <Panel t={t} style={{ display: "flex", alignItems: "center", padding: 5, gap: 2, maxWidth: "min(94vw,720px)", overflowX: "auto" }}>
         {isConn ? (
           <>
-            <Grp id="ccolor" label="Цвет" content={<Swatches mode="stroke" value={oneC?.color} onPick={(v) => { patchC(() => ({ color: v })); setPop(null); }} />}>
+            <FloatingGroup t={t} pop={pop} setPop={setPop} id="ccolor" label="Цвет" content={<Swatches mode="stroke" value={oneC?.color} onPick={(v) => { patchC(() => ({ color: v })); setPop(null); }} />}>
               <span style={{ width: 15, height: 15, borderRadius: 5, background: col(oneC?.color || "graphite", STROKE, dark), border: `1px solid ${t.line2}` }} />
-            </Grp>
-            <Grp id="cstyle" label="Тип линии" content={<Menu value={oneC?.style} onPick={(v) => { patchC(() => ({ style: v })); setPop(null); }}
+            </FloatingGroup>
+            <FloatingGroup t={t} pop={pop} setPop={setPop} id="cstyle" label="Тип линии" content={<Menu value={oneC?.style} onPick={(v) => { patchC(() => ({ style: v })); setPop(null); }}
               items={[{ v: "straight", l: "Прямая" }, { v: "curved", l: "Кривая" }, { v: "elbow", l: "Уступами" }]} />}>
               <Spline size={15} />
-            </Grp>
-            <Grp id="cdash" label="Штрих" content={<Menu value={oneC?.dash} onPick={(v) => { patchC(() => ({ dash: v })); setPop(null); }}
+            </FloatingGroup>
+            <FloatingGroup t={t} pop={pop} setPop={setPop} id="cdash" label="Штрих" content={<Menu value={oneC?.dash} onPick={(v) => { patchC(() => ({ dash: v })); setPop(null); }}
               items={[{ v: "solid", l: "Сплошная" }, { v: "dashed", l: "Пунктир" }, { v: "dotted", l: "Точки" }]} />}>
               <svg width={16} height={16} viewBox="0 0 16 16"><path d="M1 8h14" stroke="currentColor" strokeWidth={1.6} strokeDasharray={oneC?.dash === "dashed" ? "4 3" : oneC?.dash === "dotted" ? "0.1 3" : ""} strokeLinecap="round" /></svg>
-            </Grp>
-            <Grp id="cap0" label="Начало" content={<Menu value={oneC?.cap0} onPick={(v) => { patchC(() => ({ cap0: v })); setPop(null); }} items={capOpts} w={190} />}>
+            </FloatingGroup>
+            <FloatingGroup t={t} pop={pop} setPop={setPop} id="cap0" label="Начало" content={<Menu value={oneC?.cap0} onPick={(v) => { patchC(() => ({ cap0: v })); setPop(null); }} items={capOpts} w={190} />}>
               <svg width={16} height={16} viewBox="0 0 16 16"><path d="M6 4L2 8l4 4M2 8h12" stroke="currentColor" strokeWidth={1.5} fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            </Grp>
-            <Grp id="cap1" label="Конец" content={<Menu value={oneC?.cap1} onPick={(v) => { patchC(() => ({ cap1: v })); setPop(null); }} items={capOpts} w={190} />}>
+            </FloatingGroup>
+            <FloatingGroup t={t} pop={pop} setPop={setPop} id="cap1" label="Конец" content={<Menu value={oneC?.cap1} onPick={(v) => { patchC(() => ({ cap1: v })); setPop(null); }} items={capOpts} w={190} />}>
               <svg width={16} height={16} viewBox="0 0 16 16"><path d="M10 4l4 4-4 4M14 8H2" stroke="currentColor" strokeWidth={1.5} fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            </Grp>
-            <Grp id="cw" label="Толщина" content={<Menu value={oneC?.w} onPick={(v) => { patchC(() => ({ w: v })); setPop(null); }}
+            </FloatingGroup>
+            <FloatingGroup t={t} pop={pop} setPop={setPop} id="cw" label="Толщина" content={<Menu value={oneC?.w} onPick={(v) => { patchC(() => ({ w: v })); setPop(null); }}
               items={[{ v: 1, l: "Тонкая" }, { v: 2, l: "Обычная" }, { v: 3, l: "Средняя" }, { v: 5, l: "Жирная" }]} />}>
               <Layers size={15} />
-            </Grp>
+            </FloatingGroup>
             <Sep t={t} />
             <Btn t={t} wide title="Подпись" onClick={() => oneC && onLabel(oneC)}><TypeIcon size={14} />Подпись</Btn>
             <Btn t={t} title="Удалить  ⌫" danger onClick={onDel}><Trash2 size={15} /></Btn>
@@ -1999,7 +2123,7 @@ function StylePanel({ t, dark, one, many, conns, oneC, box, pop, setPop, patch, 
           <>
             {many.some((i) => i.type === "shape") && (
               <>
-                <Grp id="shape" label="Фигура" content={
+                <FloatingGroup t={t} pop={pop} setPop={setPop} id="shape" label="Фигура" content={
                   <Panel t={t} style={{ position: "absolute", top: 44, left: 0, padding: 10, width: 268 }}>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 3 }}>
                       {SHAPE_KEYS.map((k) => (
@@ -2012,11 +2136,11 @@ function StylePanel({ t, dark, one, many, conns, oneC, box, pop, setPop, patch, 
                   </Panel>
                 }>
                   <svg width={16} height={16} viewBox="0 0 16 16"><path d={SHAPES[one?.shape || "round"].d(15, 15)} transform="translate(0.5,0.5)" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinejoin="round" /></svg>
-                </Grp>
-                <Grp id="fill" label="Заливка" content={<Swatches allowNone value={one?.fill} onPick={(v) => { patch(() => ({ fill: v })); setPop(null); }} />}>
+                </FloatingGroup>
+                <FloatingGroup t={t} pop={pop} setPop={setPop} id="fill" label="Заливка" content={<Swatches allowNone value={one?.fill} onPick={(v) => { patch(() => ({ fill: v })); setPop(null); }} />}>
                   <span style={{ width: 15, height: 15, borderRadius: 5, background: one?.fill === "none" ? "transparent" : col(one?.fill || "graphite", FILL, dark), border: `1.5px solid ${col(one?.stroke || "graphite", STROKE, dark)}` }} />
-                </Grp>
-                <Grp id="stroke" label="Контур" content={
+                </FloatingGroup>
+                <FloatingGroup t={t} pop={pop} setPop={setPop} id="stroke" label="Контур" content={
                   <Panel t={t} style={{ position: "absolute", top: 44, left: 0, padding: 10, width: 216 }}>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 6, marginBottom: 10 }}>
                       {CKEYS.map((k) => (
@@ -2049,24 +2173,24 @@ function StylePanel({ t, dark, one, many, conns, oneC, box, pop, setPop, patch, 
                   </Panel>
                 }>
                   <span style={{ width: 15, height: 15, borderRadius: 5, border: `2px solid ${col(one?.stroke || "graphite", STROKE, dark)}` }} />
-                </Grp>
+                </FloatingGroup>
               </>
             )}
 
             {many.some((i) => i.type === "sticky") && (
-              <Grp id="sticky" label="Цвет стикера" content={<Swatches mode="sticky" value={one?.color} onPick={(v) => { patch(() => ({ color: v })); setPop(null); }} />}>
+              <FloatingGroup t={t} pop={pop} setPop={setPop} id="sticky" label="Цвет стикера" content={<Swatches mode="sticky" value={one?.color} onPick={(v) => { patch(() => ({ color: v })); setPop(null); }} />}>
                 <span style={{ width: 15, height: 15, borderRadius: 4, background: col(one?.color || "amber", STICKY, dark), border: `1px solid ${t.line2}` }} />
-              </Grp>
+              </FloatingGroup>
             )}
             {many.some((i) => i.type === "text") && (
-              <Grp id="tcolor" label="Цвет текста" content={<Swatches mode="stroke" value={one?.color} onPick={(v) => { patch(() => ({ color: v })); setPop(null); }} />}>
+              <FloatingGroup t={t} pop={pop} setPop={setPop} id="tcolor" label="Цвет текста" content={<Swatches mode="stroke" value={one?.color} onPick={(v) => { patch(() => ({ color: v })); setPop(null); }} />}>
                 <span style={{ width: 15, height: 15, borderRadius: 5, background: col(one?.color || "graphite", STROKE, dark) }} />
-              </Grp>
+              </FloatingGroup>
             )}
             {many.some((i) => i.type === "link") && (
-              <Grp id="lcolor" label="Акцент" content={<Swatches mode="stroke" value={one?.color} onPick={(v) => { patch(() => ({ color: v })); setPop(null); }} />}>
+              <FloatingGroup t={t} pop={pop} setPop={setPop} id="lcolor" label="Акцент" content={<Swatches mode="stroke" value={one?.color} onPick={(v) => { patch(() => ({ color: v })); setPop(null); }} />}>
                 <span style={{ width: 15, height: 15, borderRadius: 5, background: col(one?.color || "blue", STROKE, dark) }} />
-              </Grp>
+              </FloatingGroup>
             )}
 
             {many.some((i) => ["shape", "sticky", "text"].includes(i.type)) && (
@@ -2076,14 +2200,14 @@ function StylePanel({ t, dark, one, many, conns, oneC, box, pop, setPop, patch, 
                   const el=many[0];
                   if(el){ onLabel?.({__itemText:true,id:el.id}); }
                 }}><TypeIcon size={14}/>Текст</Btn>}
-                <Grp id="font" label="Шрифт" content={<Menu value={one?.font} onPick={(v) => { patch(() => ({ font: v })); setPop(null); }}
+                <FloatingGroup t={t} pop={pop} setPop={setPop} id="font" label="Шрифт" content={<Menu value={one?.font} onPick={(v) => { patch(() => ({ font: v })); setPop(null); }}
                   items={Object.entries(FONTS).map(([k, v]) => ({ v: k, l: v.label, font: v.css }))} />}>
                   <span style={{ fontFamily: (FONTS[one?.font] || FONTS.inter).css, fontSize: 13 }}>Aa</span>
-                </Grp>
-                <Grp id="size" label="Размер" content={<Menu value={one?.fs} w={130} onPick={(v) => { patch(() => ({ fs: v })); setPop(null); }}
+                </FloatingGroup>
+                <FloatingGroup t={t} pop={pop} setPop={setPop} id="size" label="Размер" content={<Menu value={one?.fs} w={130} onPick={(v) => { patch(() => ({ fs: v })); setPop(null); }}
                   items={[12, 14, 16, 18, 22, 28, 36, 48, 64].map((n) => ({ v: n, l: `${n} px` }))} />}>
                   <span style={{ fontSize: 12, fontVariantNumeric: "tabular-nums" }}>{one?.fs ?? 16}</span>
-                </Grp>
+                </FloatingGroup>
                 <Btn t={t} active={one?.bold} title="Жирный" onClick={() => patch((i) => ({ bold: !i.bold }))}><Bold size={14} /></Btn>
                 <Btn t={t} active={one?.italic} title="Курсив" onClick={() => patch((i) => ({ italic: !i.italic }))}><Italic size={14} /></Btn>
                 <Btn t={t} title="Выравнивание" onClick={() => patch((i) => ({ halign: i.halign === "left" ? "center" : i.halign === "center" ? "right" : "left" }))}>
