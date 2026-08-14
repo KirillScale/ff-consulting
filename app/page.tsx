@@ -885,7 +885,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v10.2"; // v152 CRM funnels, AI profile fill and lead analytics
+  const APP_VERSION="v10.3"; // v153 persistent CRM touchpoints and daily follow-up agenda
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","boards","forms","offer","consulting","prices","icp","bizstrategy","team","edu","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
 
   // Clear stale localStorage on version change
@@ -8636,6 +8636,9 @@ function CrmPage({userId}:{userId:string}){
   // All leads across all funnels
   const allLeads=useTable("leads",userId);
 
+  // Future follow-ups are cloud-synced so they stay available on every device.
+  const touchpoints=useTable("crm_touchpoints",userId);
+
   // Active funnel state — persisted in localStorage
   const[activeFunnelId,setActiveFunnelId]=useState<string|null>(()=>{
     try{return localStorage.getItem("ff_active_funnel_"+userId)||null;}catch{return null;}
@@ -8679,17 +8682,49 @@ function CrmPage({userId}:{userId:string}){
   const[f,sF]=useState<any>(emptyLead);
   const[avatarUpl,setAvatarUpl]=useState<string|null>(null); // uploading lead id or "new"
 
-  // Touch templates / follow-up messages (stored locally per user)
-  const touchStorageKey=`ff_crm_touchpoints_${userId}`;
+  // Planned messages and follow-ups
   const[touchModalLeadId,setTouchModalLeadId]=useState<string|null>(null);
   const[openTouchItemId,setOpenTouchItemId]=useState<string|null>(null);
   const[touchSavedLeadId,setTouchSavedLeadId]=useState<string|null>(null);
-  const[touchesByLead,setTouchesByLead]=useState<Record<string,any[]>>(()=>{
-    try{return JSON.parse(localStorage.getItem(touchStorageKey)||"{}");}catch{return {};}
-  });
+  const[touchDraftRows,setTouchDraftRows]=useState<any[]>([]);
+  const[removedTouchIds,setRemovedTouchIds]=useState<string[]>([]);
+  const[touchSaving,setTouchSaving]=useState(false);
+  const[touchValidation,setTouchValidation]=useState("");
+  const[touchAgendaExpanded,setTouchAgendaExpanded]=useState(false);
+  const touchMigrationRef=useRef(false);
+
+  // One-time, non-destructive migration from the v152 browser-only draft store.
   useEffect(()=>{
-    try{localStorage.setItem(touchStorageKey,JSON.stringify(touchesByLead));}catch{}
-  },[touchStorageKey,touchesByLead]);
+    if(touchpoints.loading||touchMigrationRef.current)return;
+    const migrationKey=`ff_crm_touchpoints_cloud_v1_${userId}`;
+    try{if(localStorage.getItem(migrationKey)==="done")return;}catch{}
+    touchMigrationRef.current=true;
+    (async()=>{
+      try{
+        let legacy:Record<string,any[]>={};
+        try{legacy=JSON.parse(localStorage.getItem(`ff_crm_touchpoints_${userId}`)||"{}");}catch{}
+        const existing=new Set(touchpoints.data.map((touch:any)=>`${touch.lead_id}|${touch.scheduled_date}|${String(touch.scheduled_time||"").slice(0,5)}|${String(touch.message||"").trim()}`));
+        let success=true;
+        for(const[leadId,rows]of Object.entries(legacy)){
+          for(let index=0;index<(Array.isArray(rows)?rows:[]).length;index++){
+            const row=(rows as any[])[index];
+            const message=String(row?.message||"").trim();
+            const date=String(row?.date||"");
+            if(!message||!date)continue;
+            const time=String(row?.time||"").slice(0,5);
+            const signature=`${leadId}|${date}|${time}|${message}`;
+            if(existing.has(signature))continue;
+            const inserted=await touchpoints.add({lead_id:leadId,message,scheduled_date:date,scheduled_time:time||null,status:row.sent?"completed":"scheduled",completed_at:row.sent?new Date().toISOString():null,sort_order:index});
+            if(!inserted){success=false;break;}
+            existing.add(signature);
+          }
+          if(!success)break;
+        }
+        if(success)try{localStorage.setItem(migrationKey,"done");}catch{}
+        else touchMigrationRef.current=false;
+      }catch(e){touchMigrationRef.current=false;console.error("CRM touchpoint migration",e);}
+    })();
+  },[touchpoints.loading,userId]);
 
   const uploadLeadAvatar=async(file:File,leadId:string|"new")=>{
     setAvatarUpl(leadId);
@@ -8844,71 +8879,165 @@ function CrmPage({userId}:{userId:string}){
     return new Date(d.getTime()-tz).toISOString().slice(0,10);
   };
 
-  const createDefaultTouchRows=()=>[1,2,3].map(i=>({
-    id:`touch_${Date.now()}_${i}_${Math.random().toString(36).slice(2,6)}`,
-    message:"",date:"",time:"",sent:false
-  }));
-
-  const ensureTouchRows=(leadId:string)=>{
-    const current=touchesByLead[leadId]||[];
-    if(current.length>0)return current;
-    const base=createDefaultTouchRows();
-    setTouchesByLead(prev=>({...prev,[leadId]:base}));
-    return base;
+  const touchDateIn=(months=0,days=0)=>{
+    const d=new Date();
+    if(months){
+      const originalDay=d.getDate();
+      d.setDate(1);d.setMonth(d.getMonth()+months);
+      const lastDay=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+      d.setDate(Math.min(originalDay,lastDay));
+    }
+    if(days)d.setDate(d.getDate()+days);
+    return localIsoDate(d);
   };
 
+  const[touchToday,setTouchToday]=useState(()=>localIsoDate());
+  useEffect(()=>{
+    const timer=window.setInterval(()=>setTouchToday(localIsoDate()),60_000);
+    return()=>window.clearInterval(timer);
+  },[]);
+
+  const createTouchDraft=(leadId:string)=>({
+    id:`draft_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+    lead_id:leadId,message:"",date:"",time:"",sent:false,status:"scheduled"
+  });
+
+  const touchToDraft=(touch:any)=>({
+    ...touch,
+    date:touch.scheduled_date||touch.date||"",
+    time:String(touch.scheduled_time||touch.time||"").slice(0,5),
+    sent:touch.status==="completed"||touch.sent===true,
+  });
+
   const openTouchModal=(leadId:string)=>{
-    const rows=ensureTouchRows(leadId);
+    const rows=touchpoints.data
+      .filter((touch:any)=>touch.lead_id===leadId&&touch.status!=="cancelled")
+      .sort((a:any,b:any)=>{
+        const aDone=a.status==="completed",bDone=b.status==="completed";
+        if(aDone!==bDone)return aDone?1:-1;
+        const ak=`${a.scheduled_date||"9999-12-31"} ${a.scheduled_time||"99:99"}`;
+        const bk=`${b.scheduled_date||"9999-12-31"} ${b.scheduled_time||"99:99"}`;
+        return aDone?bk.localeCompare(ak):ak.localeCompare(bk);
+      })
+      .map(touchToDraft);
+    const drafts=rows.length?rows:[createTouchDraft(leadId)];
+    setTouchDraftRows(drafts);
+    setRemovedTouchIds([]);
+    setTouchValidation("");
     setTouchModalLeadId(leadId);
-    setOpenTouchItemId(rows[0]?.id||null);
+    setOpenTouchItemId(drafts[0]?.id||null);
   };
 
   const closeTouchModal=()=>{
     setTouchModalLeadId(null);
     setOpenTouchItemId(null);
+    setTouchDraftRows([]);
+    setRemovedTouchIds([]);
+    setTouchValidation("");
   };
 
-  const updateTouch=(leadId:string,touchId:string,patch:any)=>{
-    setTouchesByLead(prev=>({
-      ...prev,
-      [leadId]:(prev[leadId]||[]).map((item:any)=>item.id===touchId?{...item,...patch}:item)
-    }));
+  const updateTouch=(_leadId:string,touchId:string,patch:any)=>{
+    setTouchDraftRows(prev=>prev.map((item:any)=>item.id===touchId?{...item,...patch}:item));
+    setTouchValidation("");
   };
 
   const addTouchRow=(leadId:string)=>{
-    setTouchesByLead(prev=>({
-      ...prev,
-      [leadId]:[...(prev[leadId]||[]),{id:`touch_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,message:"",date:"",time:"",sent:false}]
-    }));
+    const draft=createTouchDraft(leadId);
+    setTouchDraftRows(prev=>[...prev,draft]);
+    setOpenTouchItemId(draft.id);
+    setTouchValidation("");
   };
 
-  const removeTouchRow=(leadId:string,touchId:string)=>{
-    setTouchesByLead(prev=>({
-      ...prev,
-      [leadId]:(prev[leadId]||[]).filter((item:any)=>item.id!==touchId)
-    }));
+  const removeTouchRow=(_leadId:string,touchId:string)=>{
+    if(!touchId.startsWith("draft_"))setRemovedTouchIds(prev=>prev.includes(touchId)?prev:[...prev,touchId]);
+    setTouchDraftRows(prev=>prev.filter((item:any)=>item.id!==touchId));
+    setOpenTouchItemId(prev=>prev===touchId?null:prev);
+    setTouchValidation("");
   };
 
-  const saveTouchRows=(leadId:string)=>{
-    setTouchSavedLeadId(leadId);
-    window.setTimeout(()=>setTouchSavedLeadId(prev=>prev===leadId?null:prev),1500);
+  const saveTouchRows=async(leadId:string)=>{
+    if(touchSaving)return;
+    const meaningful=touchDraftRows.filter((touch:any)=>String(touch.message||"").trim()||touch.date||touch.time);
+    const incomplete=meaningful.find((touch:any)=>!String(touch.message||"").trim()||!touch.date);
+    if(incomplete){
+      setOpenTouchItemId(incomplete.id);
+      setTouchValidation("Для каждого касания укажи текст сообщения и дату отправки.");
+      return;
+    }
+    if(!meaningful.length&&!removedTouchIds.length){
+      setTouchValidation("Добавь хотя бы одно касание: сообщение и дату отправки.");
+      return;
+    }
+    setTouchSaving(true);setTouchValidation("");
+    try{
+      for(const id of removedTouchIds){
+        const{error}=await supabase.from("crm_touchpoints").delete().eq("id",id).eq("user_id",userId);
+        if(error)throw error;
+      }
+      const persisted:any[]=[];
+      for(let index=0;index<meaningful.length;index++){
+        const touch=meaningful[index];
+        const status=touch.sent?"completed":"scheduled";
+        const payload={
+          lead_id:leadId,
+          message:String(touch.message||"").trim(),
+          scheduled_date:touch.date,
+          scheduled_time:touch.time||null,
+          status,
+          completed_at:touch.sent?(touch.completed_at||new Date().toISOString()):null,
+          sort_order:index,
+        };
+        if(String(touch.id).startsWith("draft_")){
+          const{data:inserted,error}=await supabase.from("crm_touchpoints").insert({...payload,user_id:userId}).select().single();
+          if(error)throw error;
+          if(inserted)persisted.push(touchToDraft(inserted));
+        }else{
+          const{error}=await supabase.from("crm_touchpoints").update(payload).eq("id",touch.id).eq("user_id",userId);
+          if(error)throw error;
+          persisted.push(touchToDraft({...touch,...payload}));
+        }
+      }
+      await touchpoints.reload();
+      setTouchDraftRows(persisted.length?persisted:[createTouchDraft(leadId)]);
+      setRemovedTouchIds([]);
+      setTouchSavedLeadId(leadId);
+      showCrmToast("План касаний сохранён");
+      window.setTimeout(()=>setTouchSavedLeadId(prev=>prev===leadId?null:prev),1800);
+    }catch(e){
+      console.error("CRM touchpoints",e);
+      setTouchValidation("Не удалось сохранить касания. Проверь подключение и попробуй ещё раз.");
+    }finally{setTouchSaving(false);}
   };
 
   const todayTouchAgenda=useMemo(()=>{
-    const today=localIsoDate();
-    return leads.flatMap((lead:any)=>((touchesByLead[lead.id]||[]) as any[])
-      .filter((touch:any)=>String(touch.message||"").trim() && touch.date && !touch.sent && touch.date<=today)
-      .map((touch:any,idx:number)=>({
-        lead,
-        touch,
-        touchIndex: idx+1,
-        overdue: touch.date<today
-      })))
-      .sort((a:any,b:any)=>`${a.touch.date||""} ${a.touch.time||"99:99"}`.localeCompare(`${b.touch.date||""} ${b.touch.time||"99:99"}`));
-  },[leads,touchesByLead]);
+    return touchpoints.data
+      .filter((touch:any)=>touch.status==="scheduled"&&touch.scheduled_date&&touch.scheduled_date<=touchToday)
+      .map((touch:any)=>{
+        const lead=allLeads.data.find((item:any)=>item.id===touch.lead_id);
+        return lead?{lead,touch,overdue:touch.scheduled_date<touchToday}:null;
+      })
+      .filter(Boolean)
+      .sort((a:any,b:any)=>`${a.touch.scheduled_date||""} ${a.touch.scheduled_time||"99:99"}`.localeCompare(`${b.touch.scheduled_date||""} ${b.touch.scheduled_time||"99:99"}`));
+  },[touchpoints.data,allLeads.data,touchToday]);
 
-  const touchModalLead=useMemo(()=>leads.find((lead:any)=>lead.id===touchModalLeadId)||null,[leads,touchModalLeadId]);
-  const touchModalRows=touchModalLeadId?(touchesByLead[touchModalLeadId]||[]):[];
+  const todayTouchCount=todayTouchAgenda.filter((item:any)=>!item.overdue).length;
+  const overdueTouchCount=todayTouchAgenda.filter((item:any)=>item.overdue).length;
+
+  const completeTouchpoint=async(touch:any,leadName:string)=>{
+    const{error}=await supabase.from("crm_touchpoints").update({status:"completed",completed_at:new Date().toISOString()}).eq("id",touch.id).eq("user_id",userId);
+    if(error){showCrmToast("Не удалось отметить касание. Попробуй ещё раз.");return;}
+    await touchpoints.reload();
+    showCrmToast(`Касание с ${leadName||"лидом"} отмечено выполненным`);
+  };
+
+  const touchDateLabel=(date:string)=>{
+    if(!date)return "Без даты";
+    try{return new Intl.DateTimeFormat("ru-RU",{day:"numeric",month:"short"}).format(new Date(date+"T12:00:00")).replace(" г.","");}
+    catch{return date;}
+  };
+
+  const touchModalLead=useMemo(()=>allLeads.data.find((lead:any)=>lead.id===touchModalLeadId)||null,[allLeads.data,touchModalLeadId]);
+  const touchModalRows=touchModalLeadId?touchDraftRows:[];
 
   const openFunnel=(id:string)=>{
     setActiveFunnelId(id);
@@ -8985,6 +9114,12 @@ function CrmPage({userId}:{userId:string}){
     setAiFillLeadStatus("");
     setEditLeadData({name:l.name||"",contact:l.contact||"",phone:l.phone||"",email:l.email||"",note:l.note||"",deal:l.deal||"",source:l.source||"Instagram",avatar_url:l.avatar_url||"",pains:l.pains||"",desires:l.desires||"",objections:l.objections||"",leverage:l.leverage||"",next_step:l.next_step||"",ai_report:l.ai_report||""});
   };
+
+  const editLeadUpcomingTouches=editLeadId
+    ?touchpoints.data
+      .filter((touch:any)=>touch.lead_id===editLeadId&&touch.status==="scheduled")
+      .sort((a:any,b:any)=>`${a.scheduled_date||"9999-12-31"} ${a.scheduled_time||"99:99"}`.localeCompare(`${b.scheduled_date||"9999-12-31"} ${b.scheduled_time||"99:99"}`))
+    :[];
 
   const[aiReportLoading,setAiReportLoading]=useState<string|null>(null);
   const[crmToast,setCrmToast]=useState<string|null>(null);
@@ -9193,6 +9328,11 @@ ${description}`;
       const dealSum=all.filter(isWon).reduce((sum:number,l:any)=>sum+(Number(l.deal)||0),0);
       const sourceCounts:Record<string,number>={};
       all.forEach((l:any)=>{const key=l.source||"Не указан";sourceCounts[key]=(sourceCounts[key]||0)+1;});
+      const nextTouchByLead=new Map<string,any>();
+      touchpoints.data
+        .filter((touch:any)=>touch.status==="scheduled"&&touch.scheduled_date)
+        .sort((a:any,b:any)=>`${a.scheduled_date} ${a.scheduled_time||"99:99"}`.localeCompare(`${b.scheduled_date} ${b.scheduled_time||"99:99"}`))
+        .forEach((touch:any)=>{if(!nextTouchByLead.has(touch.lead_id))nextTouchByLead.set(touch.lead_id,touch);});
       const summary=[
         `Всего лидов: ${all.length}`,
         `Необработанные (первый этап своей воронки): ${newCount}`,
@@ -9203,15 +9343,19 @@ ${description}`;
         `Сумма закрытых сделок: ${dealSum} ₽`,
         `Конверсия в успешное закрытие: ${all.length?Math.round(wonCount/all.length*100):0}%`,
         `Доля отказов: ${all.length?Math.round(lostCount/all.length*100):0}%`,
+        `Касания на сегодня: ${todayTouchCount}`,
+        `Просроченные касания: ${overdueTouchCount}`,
         `Источники: ${Object.entries(sourceCounts).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${k} — ${v}`).join("; ")||"нет данных"}`,
       ].join("\n");
       const rows=all.slice(0,180).map((l:any,i:number)=>{
         const stage=stageFor(l);
+        const nextTouch=nextTouchByLead.get(l.id);
         const compact=(v:any,n=220)=>String(v||"").replace(/\s+/g," ").trim().slice(0,n)||"—";
-        return `${i+1}. ${compact(l.name,70)} | воронка: ${funnelNameById.get(l.funnel_id)||"Без воронки"} | этап: ${stage.label} | источник: ${l.source||"—"} | сделка: ${l.deal||0} ₽ | следующий шаг: ${compact(l.next_step,120)} | описание: ${compact(l.note)} | боли: ${compact(l.pains,140)} | желания: ${compact(l.desires,140)} | возражения: ${compact(l.objections,140)}`;
+        const touchInfo=nextTouch?`${nextTouch.scheduled_date}${nextTouch.scheduled_time?" "+String(nextTouch.scheduled_time).slice(0,5):""}: ${compact(nextTouch.message,120)}`:"—";
+        return `${i+1}. ${compact(l.name,70)} | воронка: ${funnelNameById.get(l.funnel_id)||"Без воронки"} | этап: ${stage.label} | источник: ${l.source||"—"} | сделка: ${l.deal||0} ₽ | следующий шаг: ${compact(l.next_step,120)} | ближайшее касание: ${touchInfo} | описание: ${compact(l.note)} | боли: ${compact(l.pains,140)} | желания: ${compact(l.desires,140)} | возражения: ${compact(l.objections,140)}`;
       }).join("\n");
       const history=prior.slice(-8).map(m=>`${m.role==="user"?"Пользователь":"Ассистент"}: ${m.text}`).join("\n");
-      const system=`Ты — ИИ-ассистент по лидам внутри CRM Vizzy. Ты работаешь строго в режиме чтения и отвечаешь только по вопросам лидов и работы с ними: количество и статусы, источники, воронки, конверсия, отказы, необработанные лиды, приоритеты, следующие шаги, риски и рекомендации по конкретным лидам.
+      const system=`Ты — ИИ-ассистент по лидам внутри CRM Vizzy. Ты работаешь строго в режиме чтения и отвечаешь только по вопросам лидов и работы с ними: количество и статусы, источники, воронки, конверсия, отказы, необработанные лиды, приоритеты, следующие шаги, запланированные и просроченные касания, риски и рекомендации по конкретным лидам.
 
 ЖЁСТКОЕ ОГРАНИЧЕНИЕ:
 - Если запрос не относится к лидам или работе CRM с лидами, ответь ровно одной фразой: «Я общаюсь строго по вопросам лидов, так как предназначен именно для этого.»
@@ -9242,6 +9386,9 @@ ${q}`;
     const isOpen=openLead===l.id;
     const isEditing=editLeadId===l.id;
     const isAiHighlighted=aiHighlightId===l.id;
+    const nextTouch=touchpoints.data
+      .filter((touch:any)=>touch.lead_id===l.id&&touch.status==="scheduled")
+      .sort((a:any,b:any)=>`${a.scheduled_date||"9999-12-31"} ${a.scheduled_time||"99:99"}`.localeCompare(`${b.scheduled_date||"9999-12-31"} ${b.scheduled_time||"99:99"}`))[0];
 
     return <div key={l.id}>
       {/* ── Edit modal is rendered globally so it also works from List view */}
@@ -9368,12 +9515,22 @@ ${q}`;
           {l.deal&&<div style={{fontSize:11,fontWeight:500,color:C.g,flexShrink:0,whiteSpace:"nowrap"}}>{fmt$(l.deal)}₽</div>}
         </div>
 
+        {nextTouch&&<div style={{marginTop:8,display:"flex",alignItems:"center",gap:6,padding:"6px 8px",borderRadius:7,background:nextTouch.scheduled_date<localIsoDate()?"rgba(220,38,38,.07)":"rgba(47,107,255,.07)",border:"1px solid "+(nextTouch.scheduled_date<localIsoDate()?"rgba(220,38,38,.18)":"rgba(47,107,255,.16)"),position:"relative"}}>
+          <span style={{width:6,height:6,borderRadius:"50%",background:nextTouch.scheduled_date<localIsoDate()?"#DC2626":"#2F6BFF",flexShrink:0}}/>
+          <span style={{fontSize:10.5,fontWeight:600,color:nextTouch.scheduled_date<localIsoDate()?"#DC2626":"#2F6BFF",whiteSpace:"nowrap"}}>{nextTouch.scheduled_date<localIsoDate()?"Просрочено":touchDateLabel(nextTouch.scheduled_date)}{nextTouch.scheduled_time?` · ${String(nextTouch.scheduled_time).slice(0,5)}`:""}</span>
+          <span style={{fontSize:10.5,color:C.t2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0}}>{nextTouch.message}</span>
+        </div>}
+
         {isOpen&&<div style={{marginTop:10,paddingTop:10,borderTop:"1px solid "+C.bd,position:"relative"}}>
           <div style={{display:"flex",gap:8,alignItems:"stretch"}} onClick={e=>e.stopPropagation()}>
             <button onClick={()=>openEditLead(l)} title="Редактировать"
               style={{flex:1,padding:"9px 10px",background:C.ib,color:C.t1,border:"1px solid "+C.bd,borderRadius:8,fontSize:12,fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:7}}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
               Редактировать
+            </button>
+            <button onClick={()=>openTouchModal(l.id)} title="План касаний"
+              style={{flex:1,padding:"9px 10px",background:"rgba(47,107,255,.08)",color:"#2F6BFF",border:"1px solid rgba(47,107,255,.20)",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:7}}>
+              Касания
             </button>
             <button onClick={()=>setDeleteConfirmId(l.id)} title="Удалить"
               style={{padding:"9px 14px",background:"#DC2626",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -9444,7 +9601,7 @@ ${q}`;
             </a>}
             <button onClick={()=>{openTouchModal(l.id);}}
               style={{flex:1,padding:"9px 12px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:8,fontSize:12,fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-              История касаний
+              План касаний
             </button>
           </div>
         </div>
@@ -9579,9 +9736,71 @@ ${q}`;
       </div>
     </div>;
   };
+
+  const openAgendaTouch=(lead:any)=>{
+    if(lead?.funnel_id){
+      setActiveFunnelId(lead.funnel_id);
+      try{localStorage.setItem("ff_active_funnel_"+userId,lead.funnel_id);}catch{}
+    }
+    setScreen("funnel");
+    openTouchModal(lead.id);
+  };
+
+  const TouchAgendaBanner=()=> <div style={{borderRadius:14,padding:isMobile?16:20,marginBottom:18,background:"linear-gradient(135deg,#0B2F78 0%,#1557D8 58%,#2F6BFF 100%)",border:"1px solid rgba(255,255,255,.14)",color:"#fff",overflow:"hidden",position:"relative"}}>
+    <div style={{position:"absolute",width:260,height:260,borderRadius:"50%",right:-90,top:-150,background:"rgba(255,255,255,.09)",pointerEvents:"none"}}/>
+    <div style={{position:"relative"}}>
+      <div style={{display:"flex",alignItems:isMobile?"flex-start":"center",justifyContent:"space-between",gap:14,flexDirection:isMobile?"column":"row",marginBottom:todayTouchAgenda.length?16:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <div style={{width:42,height:42,borderRadius:11,background:"rgba(255,255,255,.14)",border:"1px solid rgba(255,255,255,.16)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 8A6 6 0 006 8c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/><path d="M9 3h6"/></svg>
+          </div>
+          <div>
+            <div style={{fontSize:isMobile?18:20,fontWeight:650,letterSpacing:"-.02em"}}>Касания на сегодня</div>
+            <div style={{fontSize:12,color:"rgba(255,255,255,.72)",marginTop:3}}>Все воронки CRM · договорённости, которые требуют действия</div>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
+          <span style={{padding:"7px 10px",borderRadius:999,background:"rgba(255,255,255,.14)",border:"1px solid rgba(255,255,255,.16)",fontSize:11.5,fontWeight:650}}>{todayTouchCount} сегодня</span>
+          {overdueTouchCount>0&&<span style={{padding:"7px 10px",borderRadius:999,background:"#DC2626",border:"1px solid rgba(255,255,255,.18)",fontSize:11.5,fontWeight:650}}>{overdueTouchCount} просрочено</span>}
+        </div>
+      </div>
+
+      {todayTouchAgenda.length===0
+        ?<div style={{marginTop:14,padding:"15px 16px",borderRadius:11,background:"rgba(255,255,255,.10)",border:"1px solid rgba(255,255,255,.13)",display:"flex",alignItems:"center",gap:10}}>
+          <span style={{width:24,height:24,borderRadius:"50%",background:"rgba(255,255,255,.16)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0}}>✓</span>
+          <div><div style={{fontSize:13,fontWeight:600}}>На сегодня всё закрыто</div><div style={{fontSize:11.5,color:"rgba(255,255,255,.70)",marginTop:2}}>Новые запланированные сообщения появятся здесь автоматически.</div></div>
+        </div>
+        :<>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(2,minmax(0,1fr))",gap:9}}>
+            {todayTouchAgenda.slice(0,touchAgendaExpanded?todayTouchAgenda.length:4).map((item:any)=>{
+              const writeUrl=getWriteUrl(item.lead);
+              const funnelName=funnels.data.find((fu:any)=>fu.id===item.lead.funnel_id)?.name||"Без воронки";
+              return <div key={item.touch.id} style={{padding:12,borderRadius:11,background:"rgba(4,15,40,.26)",border:"1px solid rgba(255,255,255,.13)",display:"flex",flexDirection:"column",gap:10,minWidth:0}}>
+                <div style={{display:"flex",alignItems:"flex-start",gap:10,minWidth:0}}>
+                  <div style={{width:34,height:34,borderRadius:"50%",overflow:"hidden",background:"rgba(255,255,255,.15)",border:"1px solid rgba(255,255,255,.18)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,flexShrink:0}}>{item.lead.avatar_url?<img src={item.lead.avatar_url} alt={item.lead.name||"Лид"} style={{width:"100%",height:"100%",objectFit:"cover"}}/>:(item.lead.name||"?")[0].toUpperCase()}</div>
+                  <div style={{minWidth:0,flex:1}}>
+                    <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap"}}><span style={{fontSize:13,fontWeight:650}}>{item.lead.name||"Лид"}</span>{item.overdue&&<span style={{fontSize:9.5,fontWeight:700,color:"#FCA5A5",textTransform:"uppercase",letterSpacing:.35}}>Просрочено</span>}</div>
+                    <div style={{fontSize:10.5,color:"rgba(255,255,255,.62)",marginTop:2}}>{funnelName} · {item.overdue?touchDateLabel(item.touch.scheduled_date):"Сегодня"}{item.touch.scheduled_time?` в ${String(item.touch.scheduled_time).slice(0,5)}`:" · в течение дня"}</div>
+                  </div>
+                </div>
+                <div style={{fontSize:12.5,lineHeight:1.55,color:"rgba(255,255,255,.94)",whiteSpace:"pre-wrap",wordBreak:"break-word",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{item.touch.message}</div>
+                <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
+                  {writeUrl&&<a href={writeUrl} target="_blank" rel="noreferrer" style={{padding:"7px 10px",borderRadius:8,background:"#fff",color:"#1749A8",textDecoration:"none",fontSize:11,fontWeight:700}}>Написать</a>}
+                  <button onClick={()=>openAgendaTouch(item.lead)} style={{padding:"7px 10px",borderRadius:8,background:"rgba(255,255,255,.10)",color:"#fff",border:"1px solid rgba(255,255,255,.18)",fontSize:11,fontWeight:600,cursor:"pointer"}}>Открыть план</button>
+                  <button onClick={()=>completeTouchpoint(item.touch,item.lead.name)} style={{padding:"7px 10px",borderRadius:8,background:"rgba(34,197,94,.18)",color:"#DCFCE7",border:"1px solid rgba(134,239,172,.28)",fontSize:11,fontWeight:650,cursor:"pointer",marginLeft:isMobile?0:"auto"}}>✓ Выполнено</button>
+                </div>
+              </div>;
+            })}
+          </div>
+          {todayTouchAgenda.length>4&&<button onClick={()=>setTouchAgendaExpanded(v=>!v)} style={{marginTop:11,padding:"8px 0",background:"transparent",border:"none",color:"rgba(255,255,255,.82)",fontSize:11.5,fontWeight:600,cursor:"pointer"}}>{touchAgendaExpanded?"Свернуть":`Показать все касания (${todayTouchAgenda.length})`}</button>}
+        </>}
+    </div>
+  </div>;
+
   // ── SCREEN: FUNNEL LIST ──────────────────────────────────────────
   if(screen==="list"){
     return <>
+      {crmToast&&<div style={{position:"fixed",bottom:28,right:28,background:"#16A34A",color:"#fff",padding:"13px 20px",borderRadius:10,fontSize:13,fontWeight:600,zIndex:600,boxShadow:"0 8px 28px rgba(22,163,74,.24)",maxWidth:340,lineHeight:1.5}}>✓ {crmToast}</div>}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24}}>
         <div>
           <h1 style={{margin:0,fontSize:24,fontWeight:500,color:C.t1}}>CRM</h1>
@@ -9593,6 +9812,8 @@ ${q}`;
           Новая воронка
         </button>
       </div>
+
+      <TouchAgendaBanner/>
 
       {funnels.loading
         ?<div style={{textAlign:"center",padding:60,color:C.t2}}>Загрузка...</div>
@@ -9827,15 +10048,15 @@ ${q}`;
     {touchModalLead&&touchModalLeadId&&(
       <div style={{position:"fixed",inset:0,background:"rgba(5,8,15,0.62)",zIndex:320,display:"flex",alignItems:"center",justifyContent:"center",padding:isMobile?12:24,backdropFilter:"blur(8px)"}} onClick={closeTouchModal}>
         <div style={{width:"100%",maxWidth:860,maxHeight:"88dvh",background:C.w,border:"1px solid "+C.bd,borderRadius:12,boxShadow:"0 28px 80px rgba(0,0,0,0.36)",overflow:"hidden",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
-          <div style={{padding:isMobile?18:24,borderBottom:"1px solid "+C.bd,background:"linear-gradient(135deg, rgba(91,91,91,0.10), rgba(98,98,98,0.08), transparent)",position:"relative"}}>
+          <div style={{padding:isMobile?18:24,borderBottom:"1px solid "+C.bd,background:"linear-gradient(135deg, rgba(47,107,255,0.14), rgba(47,107,255,0.05), transparent)",position:"relative"}}>
             <button onClick={closeTouchModal} style={{position:"absolute",right:16,top:16,width:34,height:34,borderRadius:8,border:"1px solid "+C.bd,background:C.w,color:C.t2,cursor:"pointer",fontSize:18,lineHeight:1}}>×</button>
             <div style={{display:"flex",alignItems:"center",gap:14,paddingRight:42}}>
-              <div style={{width:48,height:48,borderRadius:10,background:C.ib,display:"flex",alignItems:"center",justifyContent:"center",color:C.t2}}>
+              <div style={{width:48,height:48,borderRadius:10,background:"rgba(47,107,255,.12)",display:"flex",alignItems:"center",justifyContent:"center",color:"#2F6BFF"}}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
               </div>
               <div style={{minWidth:0}}>
-                <div style={{fontSize:isMobile?20:24,fontWeight:500,color:C.t1,lineHeight:1.15}}>Касания</div>
-                <div style={{fontSize:13,color:C.t2,marginTop:5,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{touchModalLead.name||"Лид"} · {activeFunnel?.name||"CRM"}</div>
+                <div style={{fontSize:isMobile?20:24,fontWeight:600,color:C.t1,lineHeight:1.15}}>План касаний</div>
+                <div style={{fontSize:13,color:C.t2,marginTop:5,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{touchModalLead.name||"Лид"} · {funnels.data.find((fu:any)=>fu.id===touchModalLead.funnel_id)?.name||"CRM"}</div>
               </div>
             </div>
           </div>
@@ -9843,26 +10064,28 @@ ${q}`;
           <div style={{padding:isMobile?14:22,overflowY:"auto",display:"grid",gap:12,background:C.ib}}>
             <div style={{background:C.w,border:"1px solid "+C.bd,borderRadius:12,padding:isMobile?14:16,display:"flex",alignItems:isMobile?"stretch":"center",justifyContent:"space-between",gap:12,flexDirection:isMobile?"column":"row"}}>
               <div>
-                <div style={{fontSize:14,fontWeight:500,color:C.t1}}>План касаний по лиду</div>
-                <div style={{fontSize:12,color:C.t2,marginTop:4,lineHeight:1.5}}>Открывай нужное касание, прописывай сообщение, дату и время отправки. Все касания не раскрываются сразу, чтобы карточка оставалась чистой.</div>
+                <div style={{fontSize:14,fontWeight:600,color:C.t1}}>Будущие сообщения и договорённости</div>
+                <div style={{fontSize:12,color:C.t2,marginTop:4,lineHeight:1.5}}>Запиши готовый текст, дату и время. В нужный день касание появится в верхней панели CRM, пока ты не отметишь его выполненным.</div>
               </div>
-              {touchSavedLeadId===touchModalLeadId&&<div style={{fontSize:12,fontWeight:500,color:"#6F6F6F",padding:"8px 12px",borderRadius:999,background:"#22C55E10",border:"1px solid #22C55E25",whiteSpace:"nowrap"}}>Сохранено</div>}
+              {touchSavedLeadId===touchModalLeadId&&<div style={{fontSize:12,fontWeight:600,color:"#16A34A",padding:"8px 12px",borderRadius:999,background:"#22C55E10",border:"1px solid #22C55E28",whiteSpace:"nowrap"}}>Сохранено в CRM</div>}
             </div>
+
+            {!touchModalRows.length&&<div style={{padding:24,textAlign:"center",background:C.w,border:"1px dashed "+C.bd,borderRadius:12,color:C.t2,fontSize:13}}>Касаний пока нет. Добавь первое сообщение ниже.</div>}
 
             {touchModalRows.map((touch:any,index:number)=>{
               const isOpen=openTouchItemId===touch.id;
               const isFilled=String(touch.message||"").trim().length>0;
-              return <div key={touch.id} style={{background:C.w,border:"1px solid "+(isOpen?"rgba(98,98,98,0.36)":C.bd),borderRadius:12,overflow:"hidden",boxShadow:isOpen?"0 14px 36px rgba(98,98,98,0.10)":"none"}}>
-                <button onClick={()=>setOpenTouchItemId(isOpen?null:touch.id)} style={{width:"100%",padding:isMobile?14:16,background:isOpen?"linear-gradient(135deg, rgba(91,91,91,0.08), rgba(98,98,98,0.06))":"transparent",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,textAlign:"left"}}>
+              return <div key={touch.id} style={{background:C.w,border:"1px solid "+(isOpen?"rgba(47,107,255,0.34)":C.bd),borderRadius:12,overflow:"hidden"}}>
+                <button onClick={()=>setOpenTouchItemId(isOpen?null:touch.id)} style={{width:"100%",padding:isMobile?14:16,background:isOpen?"rgba(47,107,255,.055)":"transparent",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,textAlign:"left"}}>
                   <div style={{display:"flex",alignItems:"center",gap:12,minWidth:0}}>
-                    <div style={{width:34,height:34,borderRadius:8,background:isFilled?"linear-gradient(135deg,#5B5B5B,#626262)":"rgba(98,98,98,0.10)",color:isFilled?"#fff":"#676767",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:500,flexShrink:0}}>{index+1}</div>
+                    <div style={{width:34,height:34,borderRadius:8,background:isFilled?"#2F6BFF":"rgba(47,107,255,0.10)",color:isFilled?"#fff":"#2F6BFF",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:600,flexShrink:0}}>{index+1}</div>
                     <div style={{minWidth:0}}>
                       <div style={{fontSize:14,fontWeight:500,color:C.t1}}>{`Касание ${index+1}`}</div>
                       <div style={{fontSize:12,color:C.t2,marginTop:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:isMobile?220:520}}>{isFilled?touch.message:"Сообщение ещё не заполнено"}</div>
                     </div>
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-                    {(touch.date||touch.time)&&<span style={{fontSize:11,fontWeight:500,color:touch.sent?"#6F6F6F":"#676767",padding:"6px 9px",borderRadius:999,background:touch.sent?"#22C55E10":"rgba(98,98,98,0.08)",border:"1px solid "+(touch.sent?"#22C55E25":"rgba(98,98,98,0.16)"),display:isMobile?"none":"inline-block"}}>{touch.sent?"Отправлено":"Запланировано"}</span>}
+                    {(touch.date||touch.time)&&<span style={{fontSize:11,fontWeight:600,color:touch.sent?"#16A34A":"#2F6BFF",padding:"6px 9px",borderRadius:999,background:touch.sent?"#22C55E10":"rgba(47,107,255,0.08)",border:"1px solid "+(touch.sent?"#22C55E25":"rgba(47,107,255,0.20)"),display:isMobile?"none":"inline-block"}}>{touch.sent?"Отправлено":`${touch.date?touchDateLabel(touch.date):"Без даты"}${touch.time?" · "+touch.time:""}`}</span>}
                     <span style={{fontSize:18,color:C.t2,transform:isOpen?"rotate(180deg)":"rotate(0deg)",transition:"transform 0.15s"}}>⌄</span>
                   </div>
                 </button>
@@ -9877,6 +10100,14 @@ ${q}`;
                     <div>
                       <label style={{display:"block",fontSize:12,fontWeight:500,color:C.t2,marginBottom:7}}>Дата отправки</label>
                       <input type="date" value={touch.date||""} onChange={e=>updateTouch(touchModalLeadId!,touch.id,{date:e.target.value,sent:false})} style={{width:"100%",padding:"12px 13px",border:"1px solid "+C.bd,borderRadius:10,fontSize:14,outline:"none",background:C.ib,color:C.t1,boxSizing:"border-box" as const,fontFamily:"Inter, sans-serif"}}/>
+                      <div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:7}}>
+                        {[
+                          {label:"Сегодня",date:touchDateIn()},
+                          {label:"+7 дней",date:touchDateIn(0,7)},
+                          {label:"+1 месяц",date:touchDateIn(1)},
+                          {label:"+3 месяца",date:touchDateIn(3)},
+                        ].map(option=><button key={option.label} onClick={()=>updateTouch(touchModalLeadId!,touch.id,{date:option.date,sent:false})} style={{padding:"5px 7px",borderRadius:7,border:"1px solid "+(touch.date===option.date?"rgba(47,107,255,.32)":C.bd),background:touch.date===option.date?"rgba(47,107,255,.08)":C.w,color:touch.date===option.date?"#2F6BFF":C.t2,fontSize:9.5,fontWeight:600,cursor:"pointer"}}>{option.label}</button>)}
+                      </div>
                     </div>
                     <div>
                       <label style={{display:"block",fontSize:12,fontWeight:500,color:C.t2,marginBottom:7}}>Время отправки</label>
@@ -9886,23 +10117,24 @@ ${q}`;
 
                   {isFilled&&<div style={{display:"grid",gap:8}}>
                     <div style={{fontSize:12,fontWeight:500,color:C.t2}}>Предпросмотр</div>
-                    <div style={{maxWidth:"100%",padding:"12px 15px",borderRadius:"18px 18px 18px 6px",background:"linear-gradient(135deg,#5B5B5B,#626262)",color:"#fff",fontSize:14,lineHeight:1.55,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",whiteSpace:"pre-wrap",wordBreak:"break-word",opacity:touch.sent?0.72:1,boxSizing:"border-box" as const}}>{touch.message}</div>
+                    <div style={{maxWidth:"100%",padding:"12px 15px",borderRadius:"18px 18px 18px 6px",background:"#2F6BFF",color:"#fff",fontSize:14,lineHeight:1.55,whiteSpace:"pre-wrap",wordBreak:"break-word",opacity:touch.sent?0.72:1,boxSizing:"border-box" as const}}>{touch.message}</div>
                   </div>}
 
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
-                    <button onClick={()=>updateTouch(touchModalLeadId!,touch.id,{sent:!touch.sent})} style={{padding:"10px 13px",borderRadius:8,border:"1px solid "+(touch.sent?"#22C55E35":"rgba(98,98,98,0.20)"),background:touch.sent?"#22C55E10":"rgba(98,98,98,0.08)",color:touch.sent?"#6F6F6F":"#676767",fontSize:12,fontWeight:500,cursor:"pointer"}}>{touch.sent?"✓ Отправлено":"Отметить отправленным"}</button>
-                    {touchModalRows.length>1&&<button onClick={()=>removeTouchRow(touchModalLeadId!,touch.id)} style={{padding:"10px 13px",borderRadius:8,border:"1px solid rgba(119,119,119,0.22)",background:"rgba(119,119,119,0.08)",color:"#777777",fontSize:12,fontWeight:500,cursor:"pointer"}}>Удалить касание</button>}
+                    <button onClick={()=>updateTouch(touchModalLeadId!,touch.id,{sent:!touch.sent})} style={{padding:"10px 13px",borderRadius:8,border:"1px solid "+(touch.sent?"#22C55E35":"rgba(47,107,255,0.24)"),background:touch.sent?"#22C55E10":"rgba(47,107,255,0.08)",color:touch.sent?"#16A34A":"#2F6BFF",fontSize:12,fontWeight:600,cursor:"pointer"}}>{touch.sent?"✓ Отправлено":"Отметить выполненным"}</button>
+                    <button onClick={()=>removeTouchRow(touchModalLeadId!,touch.id)} style={{padding:"10px 13px",borderRadius:8,border:"1px solid rgba(220,38,38,0.22)",background:"rgba(220,38,38,0.06)",color:"#DC2626",fontSize:12,fontWeight:500,cursor:"pointer"}}>Удалить касание</button>
                   </div>
                 </div>}
               </div>
             })}
+            {touchValidation&&<div style={{padding:"11px 13px",borderRadius:9,background:"rgba(220,38,38,.08)",border:"1px solid rgba(220,38,38,.22)",color:"#DC2626",fontSize:12.5,lineHeight:1.5}}>{touchValidation}</div>}
           </div>
 
           <div style={{padding:isMobile?14:18,borderTop:"1px solid "+C.bd,background:C.w,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
-            <button onClick={()=>{const newTouch={id:`touch_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,message:"",date:"",time:"",sent:false};setTouchesByLead(prev=>({...prev,[touchModalLeadId!]:[...(prev[touchModalLeadId!]||[]),newTouch]}));setOpenTouchItemId(newTouch.id);}} style={{padding:"11px 14px",background:"transparent",color:"#676767",border:"1px dashed rgba(98,98,98,0.30)",borderRadius:10,fontSize:13,fontWeight:500,cursor:"pointer"}}>+ Добавить касание</button>
+            <button onClick={()=>addTouchRow(touchModalLeadId!)} style={{padding:"11px 14px",background:"transparent",color:"#2F6BFF",border:"1px dashed rgba(47,107,255,0.38)",borderRadius:10,fontSize:13,fontWeight:600,cursor:"pointer"}}>+ Добавить касание</button>
             <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
               <button onClick={closeTouchModal} style={{padding:"11px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:10,fontSize:13,fontWeight:500,cursor:"pointer"}}>Закрыть</button>
-              <button onClick={()=>saveTouchRows(touchModalLeadId!)} style={{padding:"11px 18px",background:"linear-gradient(135deg,#5B5B5B,#626262)",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:500,cursor:"pointer",boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)"}}>Сохранить касания</button>
+              <button onClick={()=>saveTouchRows(touchModalLeadId!)} disabled={touchSaving} style={{padding:"11px 18px",background:touchSaving?"#2557D6":"#2F6BFF",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:touchSaving?"default":"pointer"}}>{touchSaving?"Сохраняю…":"Сохранить касания"}</button>
             </div>
           </div>
         </div>
@@ -9995,6 +10227,28 @@ ${q}`;
               ))}
             </div>
           </div>
+
+          {/* Future follow-ups live inside the lead card and are synced through Supabase. */}
+          <div style={{marginBottom:18,padding:14,borderRadius:11,border:"1px solid rgba(47,107,255,.22)",background:"rgba(47,107,255,.045)"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:editLeadUpcomingTouches.length?10:6}}>
+              <div>
+                <div style={{fontSize:12.5,fontWeight:600,color:C.t1}}>Будущие касания</div>
+                <div style={{fontSize:10.5,color:C.t2,marginTop:2}}>Сообщения, которые нужно отправить этому лиду позже</div>
+              </div>
+              {editLeadUpcomingTouches.length>0&&<span style={{padding:"4px 8px",borderRadius:999,background:"rgba(47,107,255,.11)",color:"#2F6BFF",fontSize:10.5,fontWeight:700,whiteSpace:"nowrap"}}>{editLeadUpcomingTouches.length} запланировано</span>}
+            </div>
+            {editLeadUpcomingTouches.length>0
+              ?<div style={{display:"grid",gap:7,marginBottom:10}}>{editLeadUpcomingTouches.slice(0,2).map((touch:any)=><div key={touch.id} style={{display:"flex",alignItems:"flex-start",gap:9,padding:"9px 10px",borderRadius:9,background:C.w,border:"1px solid "+C.bd}}>
+                <div style={{width:7,height:7,borderRadius:"50%",background:touch.scheduled_date<localIsoDate()?"#EF4444":"#2F6BFF",marginTop:5,flexShrink:0}}/>
+                <div style={{minWidth:0,flex:1}}>
+                  <div style={{fontSize:11.5,fontWeight:600,color:C.t1}}>{touchDateLabel(touch.scheduled_date)}{touch.scheduled_time?` · ${String(touch.scheduled_time).slice(0,5)}`:""}</div>
+                  <div style={{fontSize:10.5,color:C.t2,marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{touch.message}</div>
+                </div>
+              </div>)}</div>
+              :<div style={{fontSize:11.5,color:C.t2,lineHeight:1.5,marginBottom:10}}>Пока ничего не запланировано.</div>}
+            <button onClick={()=>editLeadId&&openTouchModal(editLeadId)} style={{width:"100%",padding:"10px 12px",borderRadius:9,border:"none",background:"#2F6BFF",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer"}}>{editLeadUpcomingTouches.length?"Открыть план касаний":"+ Запланировать касание"}</button>
+          </div>
+
           <div style={{display:"flex",gap:10,justifyContent:"flex-end",flexWrap:"wrap"}}>
             <button onClick={()=>setEditLeadId(null)} style={{padding:"10px 16px",background:C.ib,color:C.t2,border:"1px solid "+C.bd,borderRadius:8,fontSize:13,cursor:"pointer",fontWeight:500}}>Отмена</button>
             <button onClick={saveEditLead} disabled={!String(editLeadData.name||"").trim()} style={{padding:"10px 20px",background:String(editLeadData.name||"").trim()?"#2F6BFF":C.bd,color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:String(editLeadData.name||"").trim()?"pointer":"default"}}>Сохранить</button>
@@ -10048,6 +10302,8 @@ ${q}`;
         </div>
       ))}
     </div>
+
+    <TouchAgendaBanner/>
 
     {/* Быстрое создание и обновление карточек через естественный язык */}
     <div style={{background:C.w,borderRadius:12,padding:isMobile?16:18,border:"1px solid "+C.bd,marginBottom:18,position:"relative",overflow:"hidden"}}>
@@ -10440,6 +10696,7 @@ ${q}`;
                   onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="transparent";(e.currentTarget as HTMLElement).style.color=C.t2;}}>
                   Написать
                 </a>}
+                <button onClick={()=>openTouchModal(l.id)} style={{padding:"5px 10px",background:"rgba(47,107,255,.08)",color:"#2F6BFF",border:"1px solid rgba(47,107,255,.20)",borderRadius:8,fontSize:11,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>Касания</button>
                 {/* Edit */}
                 <button onClick={()=>openEditLead(l)} style={{width:28,height:28,borderRadius:7,border:"1px solid "+C.bd,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.15s"}}
                   onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.a+"10";(e.currentTarget as HTMLElement).style.borderColor=C.a+"40";}}
