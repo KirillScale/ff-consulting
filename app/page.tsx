@@ -885,7 +885,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v10.4"; // v154 responsive CRM cards, lead PDF and AI touch generation
+  const APP_VERSION="v10.5"; // v155 collapsible Content plan/calendar, 2-week view and refreshed YouTube icon
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","boards","forms","offer","consulting","prices","icp","bizstrategy","team","edu","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
 
   // Clear stale localStorage on version change
@@ -1223,17 +1223,6 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
         }
       `}</style>
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
-
-      {/* Kirill Scales AI — global tab visible on all MY BUSINESS pages */}
-      {!isMobile&&["dashboard","strategy","crm","content","calls","offer","prices"].includes(page)&&(
-        <div onClick={()=>setPage("ai")} title="Kirill Scales AI"
-          style={{position:"fixed",right:0,top:"40%",transform:"translateY(-50%)",background:"linear-gradient(180deg,#4F4F4F 0%,#858585 100%)",width:32,height:130,borderRadius:"12px 0 0 12px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:7,boxShadow:"0 1px 2px rgba(0,0,0,0.06),0 8px 20px rgba(0,0,0,0.10)",zIndex:200,transition:"box-shadow 0.2s"}}
-          onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow="-6px 0 32px rgba(133,133,133,0.55)";}}
-          onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="-4px 0 24px rgba(133,133,133,0.35)";}}>
-          <img src="/icon-ai.png" width={18} height={18} style={{borderRadius:4,objectFit:"cover" as const}} alt=""/>
-          <div style={{writingMode:"vertical-rl" as const,textOrientation:"mixed" as const,transform:"rotate(180deg)",fontSize:10,fontWeight:700,color:"#fff",letterSpacing:1.5}}>KS AI</div>
-        </div>
-      )}
 
       {isMobile ? <>
         <MobileNav active={page} onNav={setPage} onLogout={logout}/>
@@ -10940,7 +10929,7 @@ ${q}`;
 // Platform SVG icons for content
 const PlatformIcon=({pid,size=16}:{pid:string,size?:number})=>{
   if(pid==="instagram") return <svg width={size} height={size} viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5" stroke="url(#igG)" strokeWidth="2"/><circle cx="12" cy="12" r="5" stroke="url(#igG)" strokeWidth="2"/><circle cx="17.5" cy="6.5" r="1.2" fill="#E1306C"/><defs><linearGradient id="igG" x1="2" y1="22" x2="22" y2="2" gradientUnits="userSpaceOnUse"><stop stopColor="#F58529"/><stop offset="0.5" stopColor="#DD2A7B"/><stop offset="1" stopColor="#8134AF"/></linearGradient></defs></svg>;
-  if(pid==="youtube") return <svg width={size} height={size} viewBox="0 0 24 24"><rect width="24" height="24" rx="5" fill="#FF0000"/><path d="M19.59 7.35A2.5 2.5 0 0017.83 5.6C16.37 5.2 12 5.2 12 5.2s-4.37 0-5.83.4A2.5 2.5 0 004.41 7.35 26 26 0 004 12a26 26 0 00.41 4.65A2.5 2.5 0 006.17 18.4c1.46.4 5.83.4 5.83.4s4.37 0 5.83-.4a2.5 2.5 0 001.76-1.75A26 26 0 0020 12a26 26 0 00-.41-4.65z" fill="white"/><path d="M10 15.2l5.2-3.2-5.2-3.2v6.4z" fill="#FF0000"/></svg>;
+  if(pid==="youtube") return <img src="/vizzy-youtube-icon.png" width={size} height={size} alt="YouTube" style={{display:"block",objectFit:"contain",flexShrink:0}}/>;
   if(pid==="telegram") return <svg width={size} height={size} viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#29B6F6"/><path d="M5.5 11.8l11.5-4.4c.5-.2 1 .1.8.9l-2 9.2c-.1.6-.5.7-.9.5l-2.5-1.8-1.2 1.1c-.1.1-.3.2-.6.2l.2-2.6 4.8-4.3c.2-.2 0-.3-.3-.1L7.8 13.4 5.3 12.7c-.6-.2-.6-.6.2-.9z" fill="white"/></svg>;
   if(pid==="tiktok") return <svg width={size} height={size} viewBox="0 0 24 24"><rect width="24" height="24" rx="5" fill="#010101"/><path d="M17 7.6a4.3 4.3 0 01-2.6-.9v5.9a3.9 3.9 0 11-3.9-3.9c.2 0 .4 0 .6.1v2a1.9 1.9 0 00-.6-.1 1.9 1.9 0 101.9 1.9V4h1.9a4.3 4.3 0 002.7 3.1z" fill="#25F4EE" opacity="0.9" transform="translate(-0.6 0.6)"/><path d="M17 7.6a4.3 4.3 0 01-2.6-.9v5.9a3.9 3.9 0 11-3.9-3.9c.2 0 .4 0 .6.1v2a1.9 1.9 0 00-.6-.1 1.9 1.9 0 101.9 1.9V4h1.9a4.3 4.3 0 002.7 3.1z" fill="#FE2C55" opacity="0.9" transform="translate(0.6 -0.2)"/><path d="M17 7.6a4.3 4.3 0 01-2.6-.9v5.9a3.9 3.9 0 11-3.9-3.9c.2 0 .4 0 .6.1v2a1.9 1.9 0 00-.6-.1 1.9 1.9 0 101.9 1.9V4h1.9a4.3 4.3 0 002.7 3.1z" fill="#fff"/></svg>;
   if(pid==="vk") return <svg width={size} height={size} viewBox="0 0 24 24"><rect width="24" height="24" rx="5" fill="#4C75A3"/><path d="M13.1 16.3h1.2s.4 0 .5-.3c.1-.2 0-.5 0-.5s-.1-1.3.6-1.5c.7-.2 1.5 1.3 2.4 1.8.7.4 1.2.3 1.2.3l2.4-.1s1.2-.1.7-.9c0-.1-.3-.6-1.4-1.6-1.2-1.1-1-1 .4-2.9.9-1.2 1.2-2 1.1-2.3-.1-.3-1.1-.2-1.1-.2h-2.7s-.2 0-.3.1c-.1.1-.2.3-.2.3s-.4 1.1-.9 2c-1.1 1.8-1.5 1.9-1.7 1.8-.4-.3-.3-1-.3-1.6V9.4c0-1.3-.3-1.8-1.1-1.8H10c-.5 0-.8.3-.8.3s-.3.3.2.3c.6.1.7.5.7.5V12c0 1.5-.3 1.7-.7 1.7-.7 0-1.6-1.3-2.3-2.8-.3-.7-.6-1.5-.6-1.5s-.1-.2-.2-.3c-.2-.1-.4-.1-.4-.1H3.5s-.5 0-.5.3c0 .3.2.9.9 2.1C5.1 13.9 6.8 16.4 9.1 16.4c1.3 0 1.3-.2 1.3-.2l1.2-.3s.1-.2.3-.1c.2.1.1.3.1.3l-.1.5s-.1.3.1.5c.1.1.3.1.3.1h2.1" fill="white"/></svg>;
@@ -11329,6 +11318,28 @@ function ContentPage({userId}:{userId:string}){
   const editIdRef=useRef<string|null>(null);
   const editorSessionRef=useRef(0);
   const[calMonth,setCalMonth]=useState(()=>{const d=new Date();return{y:d.getFullYear(),m:d.getMonth()};});
+  const[contentPlanExpanded,setContentPlanExpanded]=useState(true);
+  const[contentCalendarExpanded,setContentCalendarExpanded]=useState(true);
+
+  useEffect(()=>{
+    try{
+      const planValue=localStorage.getItem(`ff_content_plan_expanded_${userId}`);
+      const calendarValue=localStorage.getItem(`ff_content_calendar_expanded_${userId}`);
+      if(planValue!==null)setContentPlanExpanded(planValue!=="false");
+      if(calendarValue!==null)setContentCalendarExpanded(calendarValue!=="false");
+    }catch{}
+  },[userId]);
+
+  const toggleContentPlan=()=>setContentPlanExpanded(prev=>{
+    const next=!prev;
+    try{localStorage.setItem(`ff_content_plan_expanded_${userId}`,String(next));}catch{}
+    return next;
+  });
+  const toggleContentCalendar=()=>setContentCalendarExpanded(prev=>{
+    const next=!prev;
+    try{localStorage.setItem(`ff_content_calendar_expanded_${userId}`,String(next));}catch{}
+    return next;
+  });
 
   const PLATFORM_FORMATS:Record<string,string[]>={
     instagram:["Reels","Публикация","История"],
@@ -12031,7 +12042,7 @@ ${existingScenario}`;
     setEditId(item.id);setShow(true);
   };
 
-  const[contentCalView,setContentCalView]=useState<"month"|"week"|"3day">("week");
+  const[contentCalView,setContentCalView]=useState<"month"|"2week"|"week"|"3day">("week");
   const[contentCalAnchor,setContentCalAnchor]=useState<Date>(()=>new Date());
   const[calDragId,setCalDragId]=useState<string|null>(null);
   const[calDragOver,setCalDragOver]=useState<string|null>(null); // dateStr
@@ -12136,17 +12147,19 @@ ${existingScenario}`;
     }
     const anchor=new Date(contentCalAnchor);
     anchor.setHours(12,0,0,0);
-    if(contentCalView==="week"){
+    if(contentCalView==="week"||contentCalView==="2week"){
       const monday=new Date(anchor);
       monday.setDate(anchor.getDate()-((anchor.getDay()+6)%7));
-      return Array.from({length:7},(_,i)=>new Date(monday.getFullYear(),monday.getMonth(),monday.getDate()+i));
+      const length=contentCalView==="2week"?14:7;
+      return Array.from({length},(_,i)=>new Date(monday.getFullYear(),monday.getMonth(),monday.getDate()+i));
     }
     return Array.from({length:3},(_,i)=>new Date(anchor.getFullYear(),anchor.getMonth(),anchor.getDate()+i));
   },[calMonth,contentCalView,contentCalAnchor]);
 
   const moveContentCalendar=(delta:number)=>{
     if(contentCalView==="month"){moveContentMonth(delta);return;}
-    setContentCalAnchor(prev=>new Date(prev.getFullYear(),prev.getMonth(),prev.getDate()+delta*(contentCalView==="week"?7:3)));
+    const step=contentCalView==="2week"?14:contentCalView==="week"?7:3;
+    setContentCalAnchor(prev=>new Date(prev.getFullYear(),prev.getMonth(),prev.getDate()+delta*step));
   };
   const resetContentCalendar=()=>{
     const now=new Date();
@@ -12239,7 +12252,7 @@ ${existingScenario}`;
     return items.filter((x:any)=>(x.platform||"").toLowerCase()===platformFilter);
   },[items,platformFilter,groupMode]);
 
-  // Week and 3-day navigation also moves the Kanban to the same month.
+  // Two-week, week and 3-day navigation also move the Kanban to the same month.
   // This keeps both surfaces focused on one publication period.
   useEffect(()=>{
     if(contentCalView==="month")return;
@@ -12364,12 +12377,17 @@ ${existingScenario}`;
     {/* ── KANBAN TAB ── */}
     <>
       {/* Header */}
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
-        <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:isMobile?"stretch":"center",marginBottom:contentPlanExpanded?20:10,gap:12,flexDirection:isMobile?"column":"row"}}>
+        <div style={{minWidth:0}}>
           <div style={{fontSize:18,fontWeight:500,color:C.t1}}>Контент-план · {contentMonthLabel}</div>
-          <div style={{fontSize:12,color:C.t2,marginTop:3}}>Перетаскивай карточки между этапами и меняй их порядок внутри каждого процесса.</div>
+          <div style={{fontSize:12,color:C.t2,marginTop:3}}>{contentPlanExpanded?"Перетаскивай карточки между этапами и меняй их порядок внутри каждого процесса.":`${filteredItems.length} карточек · доска свёрнута`}</div>
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+          <button onClick={toggleContentPlan} aria-expanded={contentPlanExpanded}
+            style={{height:36,padding:"0 13px",background:"rgba(47,107,255,.08)",color:"#2F6BFF",border:"1px solid rgba(47,107,255,.22)",borderRadius:8,fontSize:12,fontWeight:650,cursor:"pointer",display:"flex",alignItems:"center",gap:7}}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{transform:contentPlanExpanded?"rotate(180deg)":"rotate(0deg)",transition:"transform .18s"}}><polyline points="6 9 12 15 18 9"/></svg>
+            {contentPlanExpanded?"Свернуть":"Развернуть"}
+          </button>
           <button onClick={()=>{setBulkAiOpen(true);setBulkAiResult("");}}
             style={{padding:"9px 14px",background:C.ib,color:C.t1,border:"1px solid "+C.bd,borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer"}}>
             AI контент-план
@@ -12683,6 +12701,18 @@ ${existingScenario}`;
         </div>
       </div>}
 
+      {!contentPlanExpanded&&<div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",padding:"11px 13px",marginBottom:16,border:"1px solid "+C.bd,borderRadius:10,background:C.w}}>
+        {CONTENT_STAGES.map(stage=>{
+          const count=filteredItems.filter((item:any)=>item.status===stage.id).length;
+          return <div key={stage.id} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 9px",borderRadius:8,background:C.ib,border:"1px solid "+C.bd}}>
+            <span style={{width:6,height:6,borderRadius:"50%",background:stage.color,flexShrink:0}}/>
+            <span style={{fontSize:11,color:C.t2}}>{stage.label}</span>
+            <b style={{fontSize:11,color:C.t1,fontWeight:700}}>{count}</b>
+          </div>;
+        })}
+      </div>}
+
+      {contentPlanExpanded&&<>
       {monthItems.length===0&&<div style={{padding:"34px 20px",marginBottom:14,border:"1px solid "+C.bd,borderRadius:11,background:C.w,textAlign:"center"}}>
         <div style={{fontSize:14,fontWeight:500,color:C.t1}}>На {contentMonthLabel.toLowerCase()} пока ничего не запланировано</div>
         <div style={{fontSize:12,color:C.t2,marginTop:6}}>Создай первую карточку — она автоматически попадёт в выбранный месяц.</div>
@@ -12869,16 +12899,23 @@ ${existingScenario}`;
           </div>;
         })}
       </div>
+      </>}
 
 
-      <div style={{display:"flex",alignItems:isMobile?"flex-start":"center",justifyContent:"space-between",marginBottom:14,marginTop:30,flexWrap:"wrap",gap:12}}>
-        <div>
+      <div style={{display:"flex",alignItems:isMobile?"stretch":"center",justifyContent:"space-between",marginBottom:14,marginTop:contentPlanExpanded?30:14,flexWrap:"wrap",gap:12,flexDirection:isMobile?"column":"row"}}>
+        <div style={{minWidth:0}}>
           <div style={{fontSize:18,fontWeight:500,color:C.t1}}>Календарь публикаций</div>
-          <div style={{fontSize:12,color:C.t2,marginTop:4}}>{calendarRangeLabel()} · перетаскивание меняет дату карточки.</div>
+          <div style={{fontSize:12,color:C.t2,marginTop:4}}>{calendarRangeLabel()} · {calDays.reduce((total,date)=>total+(date?itemsForDay(date).length:0),0)} публикаций{contentCalendarExpanded?" · перетаскивание меняет дату карточки":" · календарь свёрнут"}</div>
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+          <button onClick={toggleContentCalendar} aria-expanded={contentCalendarExpanded}
+            style={{height:36,padding:"0 13px",background:"rgba(47,107,255,.08)",color:"#2F6BFF",border:"1px solid rgba(47,107,255,.22)",borderRadius:8,fontSize:12,fontWeight:650,cursor:"pointer",display:"flex",alignItems:"center",gap:7}}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{transform:contentCalendarExpanded?"rotate(180deg)":"rotate(0deg)",transition:"transform .18s"}}><polyline points="6 9 12 15 18 9"/></svg>
+            {contentCalendarExpanded?"Свернуть":"Развернуть"}
+          </button>
+          {contentCalendarExpanded&&<>
           <div style={{display:"flex",padding:3,borderRadius:9,border:"1px solid "+C.bd,background:C.ib}}>
-            {([["month","Месяц"],["week","Неделя"],["3day","3 дня"]] as const).map(([id,label])=><button key={id} onClick={()=>setContentCalView(id)}
+            {([["month","Месяц"],["2week","2 недели"],["week","Неделя"],["3day","3 дня"]] as const).map(([id,label])=><button key={id} onClick={()=>setContentCalView(id)}
               style={{height:30,padding:"0 11px",border:0,borderRadius:7,background:contentCalView===id?C.w:"transparent",color:contentCalView===id?C.t1:C.t2,fontSize:11.5,cursor:"pointer"}}>{label}</button>)}
           </div>
           <button onClick={()=>moveContentCalendar(-1)} style={{width:34,height:34,borderRadius:8,border:"1px solid "+C.bd,background:C.w,color:C.t1,cursor:"pointer"}}>‹</button>
@@ -12886,10 +12923,11 @@ ${existingScenario}`;
           <button onClick={()=>moveContentCalendar(1)} style={{width:34,height:34,borderRadius:8,border:"1px solid "+C.bd,background:C.w,color:C.t1,cursor:"pointer"}}>›</button>
           <button onClick={()=>startNewContent(contentCalView==="month"?selectedMonthDefaultDate():ds(contentCalAnchor))}
             style={{height:34,padding:"0 13px",borderRadius:8,border:"none",background:C.t1,color:C.bg,fontSize:12,fontWeight:500,cursor:"pointer"}}>+ Публикация</button>
+          </>}
         </div>
       </div>
 
-      <Card style={{padding:0,overflowX:"auto",overflowY:"hidden"}}>
+      {contentCalendarExpanded&&<Card style={{padding:0,overflowX:"auto",overflowY:"hidden"}}>
         <div style={{display:"grid",gridTemplateColumns:`repeat(${contentCalView==="3day"?3:7},minmax(118px,1fr))`,borderBottom:"1px solid "+C.bd,background:C.ib,minWidth:isMobile?(contentCalView==="3day"?420:826):0}}>
           {(contentCalView==="3day"?(calDays.filter(Boolean) as Date[]).map(d=>["Вс","Пн","Вт","Ср","Чт","Пт","Сб"][d.getDay()]):["Пн","Вт","Ср","Чт","Пт","Сб","Вс"]).map(d=>(
             <div key={d} style={{padding:"10px",textAlign:"center",fontSize:11,fontWeight:700,color:C.t2,letterSpacing:0.5}}>{d}</div>
@@ -12976,7 +13014,7 @@ ${existingScenario}`;
             </div>;
           })}
         </div>
-      </Card>
+      </Card>}
     
     </>
 
