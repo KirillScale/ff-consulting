@@ -885,7 +885,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v10.5"; // v155 collapsible Content plan/calendar, 2-week view and refreshed YouTube icon
+  const APP_VERSION="v10.6"; // v156 Content cards save entirely through autosave and close
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","boards","forms","offer","consulting","prices","icp","bizstrategy","team","edu","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
 
   // Clear stale localStorage on version change
@@ -11604,7 +11604,7 @@ ${existingScenario}`;
       icp:snapshot.icp||"",
       checklist:Array.isArray(snapshot.checklist)?snapshot.checklist:[],
       broadcast_text:snapshot.broadcast_text||"",
-      topic:String(snapshot.topic||"").trim(),
+      topic:String(snapshot.topic||"").trim()||"Без названия",
       status:snapshot.status||"idea",
       date:publicationDate,
       publish_date:publicationDate,
@@ -11668,19 +11668,19 @@ ${existingScenario}`;
   const flushContentAutoSave=async(snapshot=formRef.current)=>{
     if(autoSaveTimerRef.current){clearTimeout(autoSaveTimerRef.current);autoSaveTimerRef.current=null;}
     await autoSaveQueueRef.current;
-    if(!editIdRef.current&&!String(snapshot.topic||"").trim())return;
     const fingerprint=contentFingerprint(snapshot);
+    if(!editIdRef.current&&fingerprint===lastSavedFingerprintRef.current)return;
     if(fingerprint!==lastSavedFingerprintRef.current)await persistContentSnapshot(snapshot);
   };
 
   useEffect(()=>{
     if(!show)return;
     if(autoSaveTimerRef.current)clearTimeout(autoSaveTimerRef.current);
-    if(!editIdRef.current&&!String(f.topic||"").trim()){
+    const fingerprint=contentFingerprint(f);
+    if(!editIdRef.current&&fingerprint===lastSavedFingerprintRef.current){
       setAutoSaveStatus("idle");
       return;
     }
-    const fingerprint=contentFingerprint(f);
     if(fingerprint===lastSavedFingerprintRef.current){
       setAutoSaveStatus("saved");
       return;
@@ -11964,30 +11964,6 @@ ${existingScenario}`;
     }catch(error){
       console.error("Content save before close failed",error);
       alert(contentSaveErrorMessage(error)+" Окно оставлено открытым, чтобы изменения не потерялись.");
-    }finally{
-      setSavingContent(false);
-    }
-  };
-
-  const sub=async()=>{
-    if(savingContent)return;
-    if(!formRef.current.topic?.trim()){alert("Укажи тему контента.");return;}
-    setSavingContent(true);
-    try{
-      const snapshot=formRef.current;
-      await flushContentAutoSave(snapshot);
-      await reloadContent();
-      const savedDate=contentPublicationDate(snapshot);
-      if(savedDate){
-        const d=new Date(`${savedDate}T12:00:00`);
-        setCalMonth({y:d.getFullYear(),m:d.getMonth()});
-        setContentCalAnchor(d);
-      }
-      finishContentEditorClose();
-      alert("Карточка сохранена");
-    }catch(error){
-      console.error("Content save failed",error);
-      alert(contentSaveErrorMessage(error));
     }finally{
       setSavingContent(false);
     }
@@ -12469,8 +12445,10 @@ ${existingScenario}`;
             </div>
             <div style={{display:"flex",gap:8,alignItems:"center"}}>
               <button onClick={()=>setTemplatePanel(v=>!v)} style={{height:36,padding:"0 13px",borderRadius:8,border:"1px solid "+C.bd,background:templatePanel?C.ib:"transparent",color:C.t1,fontSize:12,cursor:"pointer"}}>Шаблоны</button>
-              <button onClick={sub} disabled={!f.topic?.trim()||savingContent} style={{height:36,padding:"0 16px",borderRadius:8,border:"none",background:C.t1,color:C.bg,fontSize:12.5,fontWeight:500,cursor:f.topic?.trim()&&!savingContent?"pointer":"default",opacity:f.topic?.trim()&&!savingContent?1:.45}}>{savingContent?"Сохранение...":"Сохранить"}</button>
-              <button onClick={closeContentEditor} disabled={savingContent} style={{width:36,height:36,borderRadius:8,border:"1px solid "+C.bd,background:"transparent",color:C.t2,cursor:savingContent?"wait":"pointer",fontSize:18,opacity:savingContent?.55:1}}>×</button>
+              <button onClick={closeContentEditor} disabled={savingContent}
+                style={{height:36,minWidth:92,padding:"0 16px",borderRadius:8,border:"1px solid "+C.bd,background:C.ib,color:C.t1,cursor:savingContent?"wait":"pointer",fontSize:12.5,fontWeight:600,opacity:savingContent?.65:1}}>
+                {savingContent?"Сохраняем…":"Закрыть"}
+              </button>
             </div>
           </div>
 
