@@ -2,6 +2,7 @@
 // v2.5 — rebuilt Vizzy Slides Pro
 import React, { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } from "react";
 import dynamic from "next/dynamic";
+import NextImage from "next/image";
 import { supabase } from "@/lib/supabase";
 import VizyBoards from "@/components/VizyBoards";
 
@@ -91,6 +92,7 @@ const NAV_GROUPS=[
   {
     label:"OTHER",
     items:[
+      {id:"edu",label:"Vizzy Edu",accent:"#2F6BFF",ic:"M4 19.5A2.5 2.5 0 016.5 17H20 M4 19.5A2.5 2.5 0 006.5 22H20V5H6.5A2.5 2.5 0 004 7.5v12z M8 9h8 M8 13h6"},
       {id:"links",label:"Links",accent:"#A1A1A1",ic:"M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"},
       {id:"profile",label:"Settings",accent:"#A1A1A1",ic:"M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2 M12 11a4 4 0 100-8 4 4 0 000 8z"},
     ]
@@ -883,8 +885,8 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v10.0"; // v150 mobile Maps view-only mode
-  const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","boards","forms","offer","consulting","prices","icp","bizstrategy","team","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
+  const APP_VERSION="v10.1"; // v151 strengthened Dashboard + Vizzy Edu
+  const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","boards","forms","offer","consulting","prices","icp","bizstrategy","team","edu","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
 
   // Clear stale localStorage on version change
   useEffect(()=>{
@@ -1021,7 +1023,7 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
   const sideW=sideCollapsed?64:248;
 
   const pageContent=<>
-    {page==="dashboard"&&<SafePage name="Dashboard"><DashPage userId={user.id} name={userName} avatar={userAvatar} onNav={setPage} onAvatarChange={async(url:string)=>{setUserAvatar(url);const{error}=await supabase.from("profiles").upsert({id:user.id,name:userName||user.email||"Пользователь",avatar_url:url},{onConflict:"id"});if(error){console.error("Не удалось сохранить аватар в profiles:",error.message,error);throw error;}}}/></SafePage>}
+    {page==="dashboard"&&<SafePage name="Dashboard"><DashPage userId={user.id} name={userName||String(user.email||"").split("@")[0]||"Пользователь"} avatar={userAvatar} onNav={setPage} onAvatarChange={async(url:string)=>{setUserAvatar(url);const{error}=await supabase.from("profiles").upsert({id:user.id,name:userName||user.email||"Пользователь",avatar_url:url},{onConflict:"id"});if(error){console.error("Не удалось сохранить аватар в profiles:",error.message,error);throw error;}}}/></SafePage>}
     {page==="strategy"&&<SafePage name="War Room"><StrategyPage userId={user.id} onNav={setPage}/></SafePage>}
     {page==="crm"&&<SafePage name="CRM"><CrmPage userId={user.id}/></SafePage>}
     {page==="cashflow"&&<SafePage name="Cash Flow"><CashFlowPage userId={user.id}/></SafePage>}
@@ -1036,6 +1038,7 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
     {page==="ads"&&<SafePage name="Реклама"><AdsPage userId={user.id}/></SafePage>}
     {page==="calc"&&<SafePage name="Калькулятор"><CalcPage/></SafePage>}
     {page==="tools"&&<SafePage name="Инструменты"><ToolsPage/></SafePage>}
+    {page==="edu"&&<SafePage name="Vizzy Edu"><VizzyEduPage onNav={setPage}/></SafePage>}
     {page==="links"&&<SafePage name="База ссылок"><LinksPage userId={user.id}/></SafePage>}
     {page==="profile"&&<SafePage name="Настройки профиля"><ProfilePage user={user} name={userName} avatar={userAvatar} setName={setUserName} setAvatar={setUserAvatar}/></SafePage>}
     {page==="tracker"&&<SafePage name="Link Tracker"><LinkTrackerPage userId={user.id}/></SafePage>}
@@ -1051,7 +1054,7 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
     {page==="icp"&&<SafePage name="ICP & IVP"><Placeholder title="ICP & IVP" ic="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></SafePage>}
     {page==="bizstrategy"&&<SafePage name="Strategy"><Placeholder title="Strategy" ic="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></SafePage>}
     {page==="team"&&<SafePage name="Team"><Placeholder title="Team" ic="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></SafePage>}
-    {!["dashboard","strategy","crm","cashflow","calls","forms","tracker","posts","slides","mailings","content","boards","pnl","media","ads","calc","tools","links","profile","files","ai","script","product","stories","design","offer","consulting","prices","icp","bizstrategy","team"].includes(page)&&nav&&<Placeholder title={nav.label} ic={nav.ic}/>}
+    {!["dashboard","strategy","crm","cashflow","calls","forms","tracker","posts","slides","mailings","content","boards","pnl","media","ads","calc","tools","edu","links","profile","files","ai","script","product","stories","design","offer","consulting","prices","icp","bizstrategy","team"].includes(page)&&nav&&<Placeholder title={nav.label} ic={nav.ic}/>}
   </>;
 
   return (
@@ -1247,6 +1250,105 @@ function AppLayout({user,page,setPage,userName,setUserName,userAvatar,setUserAva
       </>}
     </div>
   );
+}
+
+/* ============ VIZZY EDU ============ */
+const VIZZY_EDU_SECTIONS=[
+    {
+      id:"business",eyebrow:"01",title:"Управление бизнесом",description:"Основной контур Vizzy: цели, продажи, деньги, контент и ежедневное исполнение собраны в одной системе.",
+      modules:[
+        {page:"dashboard",title:"Dashboard",desc:"Главный экран для быстрой оценки бизнеса и текущего дня. Здесь в одном месте видны задачи, лиды, переходы, прибыль, публикации и ближайшие созвоны.",use:"Открывай в начале рабочего дня и перед вечерним подведением итогов.",result:"За минуту понимаешь, где всё идёт по плану, а где требуется внимание."},
+        {page:"strategy",title:"War Room",desc:"Центр стратегии и исполнения: задачи, календарь, годовая карта целей и блок масштабирования связывают большую цель с конкретными действиями.",use:"Планируй неделю, раскладывай цели на этапы и контролируй выполнение.",result:"Стратегия перестаёт быть документом и превращается в ежедневную систему действий."},
+        {page:"crm",title:"CRM",desc:"Единая база лидов и сделок с этапами воронки, контактами, заметками, болями, возражениями и следующими шагами.",use:"Заноси каждого потенциального клиента сразу после первого контакта.",result:"Ни один лид не теряется, а каждая продажа получает понятный следующий шаг."},
+        {page:"cashflow",title:"Cash Flow",desc:"Финансовый центр с доходами, расходами, счетами, планом продаж, движением денег и ключевыми показателями прибыли.",use:"Фиксируй операции и еженедельно сверяй план с фактом.",result:"Видишь не только выручку, но и реальную финансовую устойчивость бизнеса."},
+        {page:"content",title:"Content",desc:"Контент-план в формате Kanban с календарём публикаций, сценариями, статусами, платформами и сохранением материалов в PDF.",use:"Веди идею от замысла до публикации в одной карточке.",result:"Контент выпускается системно, а не остаётся набором разрозненных заметок."},
+        {page:"boards",title:"Maps",desc:"Визуальные доски для интеллект-карт, схем, связей, изображений и совместной упаковки сложных идей.",use:"Строй продуктовые карты, воронки, структуры бренда и процессы.",result:"Сложные системы становятся наглядными и проще обсуждаются с командой или клиентом."},
+        {page:"calls",title:"Calls",desc:"Раздел для планирования созвонов, фиксации контекста, целей разговора и связанных действий после встречи.",use:"Создавай карточку до звонка и закрывай её конкретным следующим шагом.",result:"Созвоны перестают заканчиваться без решения и ответственного действия."},
+        {page:"tracker",title:"Link Tracker",desc:"Управление отслеживаемыми ссылками и аналитикой переходов по каналам, кампаниям и отдельным точкам контакта.",use:"Создавай отдельную ссылку под каждый источник трафика и предложение.",result:"Понимаешь, откуда реально приходит внимание и какие размещения работают."},
+        {page:"forms",title:"Vizzy Form",desc:"Конструктор форм и записи на встречи с вопросами, файлами, календарём и просмотром полученных ответов.",use:"Собирай брифы, квалифицируй лидов и открывай слоты для записи.",result:"Входящие обращения сразу приходят структурированными и готовыми к работе."},
+        {page:"offer",title:"ETS",desc:"Expert Trust System помогает последовательно собрать позиционирование, доказательства, оффер, продуктовую логику и систему доверия.",use:"Проходи блоки по порядку при создании или перепаковке экспертного продукта.",result:"Получаешь целостную основу бренда и предложения вместо отдельных маркетинговых элементов."},
+      ],
+    },
+    {
+      id:"consulting",eyebrow:"02",title:"Консалтинг",description:"Отдельное рабочее пространство для прохождения программы и внедрения решений вместе с Kirill Scales.",
+      modules:[
+        {page:"consulting",title:"FF Consulting",desc:"Структурированный маршрут консалтинга: материалы, этапы, задания и прогресс по внедрению собраны в одном месте.",use:"Используй как основное пространство во время совместной работы и между созвонами.",result:"Всегда понятно, что уже сделано, что внедряется сейчас и какой этап следующий."},
+      ],
+    },
+    {
+      id:"ai",eyebrow:"03",title:"AI-инструменты",description:"Специализированные AI-модули решают конкретные бизнес-задачи и используют правильный контекст вместо универсального пустого чата.",
+      modules:[
+        {page:"ai",title:"Kirill Scales AI",desc:"Стратегический AI-ассистент для анализа бизнеса, решений, приоритетов и поиска следующего сильного действия.",use:"Передавай факты, ограничения и желаемый результат, когда нужен взгляд со стороны.",result:"Получаешь прикладной разбор, привязанный к текущей бизнес-ситуации."},
+        {page:"product",title:"Vizzy Product AI",desc:"Инструмент для разработки продукта, структуры программы, ценности модулей и логики клиентского результата.",use:"Применяй при создании нового оффера или усилении существующей услуги.",result:"Продукт становится конкретнее, логичнее и проще для продажи."},
+        {page:"script",title:"Vizzy Copy AI",desc:"AI для сценариев и продающего текста: от идеи и хука до последовательной аргументации и призыва к действию.",use:"Создавай первый драфт, затем усиливай его своим голосом и фактами.",result:"Быстрее переходишь от мысли к готовому тексту без потери структуры."},
+        {page:"stories",title:"Vizzy Stories AI",desc:"Конструктор серий Stories с драматургией, вовлечением, прогревом и естественным переходом к следующему действию.",use:"Задай контекст дня, мысль и коммерческую цель серии.",result:"Stories работают как связная история, а не случайный набор экранов."},
+        {page:"posts",title:"Vizzy Posts AI",desc:"Инструмент для разработки постов под разные платформы, задачи и уровни готовности аудитории.",use:"Используй для экспертных разборов, кейсов, мнений и продающих публикаций.",result:"Получаешь текст с ясной мыслью, ритмом и ролью в общей воронке."},
+        {page:"slides",title:"Vizzy Slides AI",desc:"Создание структуры презентации, текста слайдов и визуальной подачи материала с дальнейшим профессиональным редактированием.",use:"Собирай карусели, обучающие презентации, VSL-слайды и клиентские материалы.",result:"Идея превращается в последовательную презентацию без ручной сборки с нуля."},
+      ],
+    },
+    {
+      id:"service",eyebrow:"04",title:"Сервисные разделы",description:"Пространство для полезных ресурсов и персональных настроек приложения.",
+      modules:[
+        {page:"links",title:"Links",desc:"Персональная база важных ссылок на сервисы, документы, материалы и рабочие пространства.",use:"Сохраняй здесь то, что регулярно требуется в работе.",result:"Нужные ресурсы открываются из одного места без поиска по вкладкам и чатам."},
+        {page:"profile",title:"Settings",desc:"Настройки имени, аватара и других персональных данных, которые используются в интерфейсе Vizzy.",use:"Заполни профиль при первом входе и обновляй при необходимости.",result:"Приложение остаётся персональным и корректно отображает данные пользователя."},
+      ],
+    },
+];
+
+function VizzyEduPage({onNav}:{onNav:(page:string)=>void}){
+  const{dark}=useTheme();
+  const isMobile=useIsMobile();
+  const bd=C.bd;
+  const sections=VIZZY_EDU_SECTIONS;
+
+  const scrollTo=(id:string)=>document.getElementById(`vizzy-edu-${id}`)?.scrollIntoView({behavior:"smooth",block:"start"});
+
+  return <div style={{maxWidth:1180,margin:"0 auto",paddingBottom:isMobile?36:64}}>
+    <section style={{position:"relative",overflow:"hidden",borderRadius:isMobile?18:24,padding:isMobile?"28px 22px":"48px 52px",background:"linear-gradient(125deg,#071B49 0%,#0B3EA9 52%,#397CFF 100%)",border:"1px solid rgba(135,183,255,.28)",boxShadow:dark?"0 22px 60px rgba(21,70,164,.2)":"0 22px 60px rgba(47,107,255,.2)",marginBottom:isMobile?18:24}}>
+      <div style={{position:"absolute",inset:0,background:"radial-gradient(circle at 82% 12%,rgba(158,207,255,.35),transparent 32%),radial-gradient(circle at 12% 100%,rgba(77,139,255,.28),transparent 36%)"}}/>
+      <div style={{position:"relative",maxWidth:820}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}><Logo s={34}/><span style={{fontSize:11,fontWeight:600,letterSpacing:".18em",color:"rgba(255,255,255,.68)"}}>VIZZY EDU</span></div>
+        <h1 style={{fontSize:isMobile?31:52,fontWeight:500,letterSpacing:"-.05em",lineHeight:1.02,color:"#fff",margin:"0 0 16px"}}>Вся система Vizzy — простым языком</h1>
+        <p style={{fontSize:isMobile?14:17,fontWeight:300,lineHeight:1.7,color:"rgba(255,255,255,.76)",margin:0,maxWidth:720}}>Это руководство объясняет роль каждого раздела, когда его использовать и какой результат он должен давать. Vizzy работает сильнее всего, когда модули связаны между собой: стратегия создаёт действия, действия приводят лидов, контент и продажи, а Dashboard показывает общую картину.</p>
+      </div>
+    </section>
+
+    <section style={{background:dark?"rgba(255,255,255,.025)":"#fff",border:"1px solid "+bd,borderRadius:16,padding:isMobile?16:20,marginBottom:isMobile?26:38}}>
+      <div style={{fontSize:11,fontWeight:600,letterSpacing:".13em",color:C.t2,marginBottom:12}}>БЫСТРАЯ НАВИГАЦИЯ</div>
+      <div style={{display:"flex",gap:8,overflowX:"auto",scrollbarWidth:"none",paddingBottom:1}}>
+        {sections.map(s=><button key={s.id} onClick={()=>scrollTo(s.id)} style={{flexShrink:0,padding:"9px 13px",borderRadius:9,border:"1px solid "+bd,background:"transparent",color:C.t1,fontSize:12.5,fontWeight:500,cursor:"pointer"}}>{s.eyebrow} · {s.title}</button>)}
+      </div>
+    </section>
+
+    {sections.map(section=><section id={`vizzy-edu-${section.id}`} key={section.id} style={{scrollMarginTop:90,marginBottom:isMobile?34:52}}>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"110px minmax(0,1fr)",gap:isMobile?8:24,alignItems:"start",marginBottom:isMobile?18:24}}>
+        <span style={{fontSize:12,fontWeight:600,letterSpacing:".16em",color:"#2F6BFF",paddingTop:isMobile?0:7}}>{section.eyebrow}</span>
+        <div><h2 style={{fontSize:isMobile?25:34,fontWeight:500,letterSpacing:"-.035em",color:C.t1,margin:"0 0 8px"}}>{section.title}</h2><p style={{fontSize:14,lineHeight:1.65,color:C.t2,margin:0,maxWidth:760}}>{section.description}</p></div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(2,minmax(0,1fr))",gap:12,marginLeft:isMobile?0:134}}>
+        {section.modules.map((module:any)=>{
+          const navItem=NAV.find(n=>n.id===module.page);
+          return <article key={module.page} style={{display:"flex",flexDirection:"column",minHeight:isMobile?0:330,background:dark?"rgba(255,255,255,.025)":"#fff",border:"1px solid "+bd,borderRadius:15,padding:isMobile?18:22,boxShadow:dark?"0 10px 30px rgba(0,0,0,.18)":"0 10px 30px rgba(27,45,87,.045)"}}>
+            <div style={{display:"flex",alignItems:"center",gap:11,marginBottom:14}}>
+              <span style={{width:38,height:38,borderRadius:10,background:"rgba(47,107,255,.11)",color:"#2F6BFF",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{navItem?.ic&&<I path={navItem.ic} size={19} color="#2F6BFF" sw={1.55}/>}</span>
+              <h3 style={{fontSize:18,fontWeight:600,letterSpacing:"-.02em",color:C.t1,margin:0}}>{module.title}</h3>
+            </div>
+            <p style={{fontSize:13.5,lineHeight:1.68,color:C.t2,margin:"0 0 18px"}}>{module.desc}</p>
+            <div style={{display:"grid",gap:10,marginBottom:18}}>
+              <div style={{padding:"11px 12px",borderRadius:10,background:C.ib,border:"1px solid "+bd}}><div style={{fontSize:9.5,fontWeight:700,letterSpacing:".12em",color:C.t2,marginBottom:5}}>КОГДА ИСПОЛЬЗОВАТЬ</div><div style={{fontSize:12.5,lineHeight:1.55,color:C.t1}}>{module.use}</div></div>
+              <div style={{padding:"11px 12px",borderRadius:10,background:"rgba(47,107,255,.075)",border:"1px solid rgba(47,107,255,.14)"}}><div style={{fontSize:9.5,fontWeight:700,letterSpacing:".12em",color:"#2F6BFF",marginBottom:5}}>РЕЗУЛЬТАТ</div><div style={{fontSize:12.5,lineHeight:1.55,color:C.t1}}>{module.result}</div></div>
+            </div>
+            <button onClick={()=>onNav(module.page)} style={{marginTop:"auto",alignSelf:"flex-start",display:"flex",alignItems:"center",gap:8,padding:"9px 13px",borderRadius:9,border:"1px solid "+bd,background:"transparent",color:C.t1,fontSize:12.5,fontWeight:500,cursor:"pointer"}}>Открыть раздел <span aria-hidden="true">→</span></button>
+          </article>;
+        })}
+      </div>
+    </section>)}
+
+    <section style={{display:"flex",flexDirection:isMobile?"column":"row",alignItems:isMobile?"stretch":"center",justifyContent:"space-between",gap:18,padding:isMobile?20:26,borderRadius:16,background:dark?"#151515":"#F4F7FF",border:"1px solid "+bd}}>
+      <div><div style={{fontSize:19,fontWeight:600,color:C.t1,letterSpacing:"-.02em",marginBottom:5}}>Начни с общей картины</div><div style={{fontSize:13.5,color:C.t2,lineHeight:1.55}}>Вернись на Dashboard и выбери один показатель, который сильнее всего требует внимания сегодня.</div></div>
+      <button onClick={()=>onNav("dashboard")} style={{flexShrink:0,padding:"11px 18px",borderRadius:10,border:"none",background:"#2F6BFF",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer"}}>Перейти на Dashboard</button>
+    </section>
+  </div>;
 }
 
 
@@ -1646,43 +1748,40 @@ function DashPage({userId,name,avatar,onNav,onAvatarChange}:{userId:string,name:
   return <>
     <style>{`.dash-card{animation:dashFadeIn 0.22s ease-out both;} @keyframes dashFadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}} .dash-card:hover{border-color:#2F6BFF55 !important;}`}</style>
 
-    {/* ── Шапка ── */}
-    <div style={{display:"flex",alignItems:isMobile?"flex-start":"center",justifyContent:"space-between",gap:16,marginBottom:20,flexWrap:"wrap" as const}}>
-      <div>
-        <div style={{fontSize:isMobile?19:24,fontWeight:600,color:C.t1,letterSpacing:"-0.02em"}}>{getGreeting()}{name?`, ${name}`:""}.</div>
-        <div style={{fontSize:13,color:C.t2,marginTop:3}}>Сегодня {WD[dow].toLowerCase()}, {new Date().getDate()} {MR[new Date().getMonth()]}</div>
-        <div style={{fontSize:12.5,color:C.t2,marginTop:8}}>{daySummary}</div>
-      </div>
-      <div style={{display:"flex",alignItems:"center",gap:14,flexWrap:"wrap" as const}}>
-        <div style={{display:"flex",gap:6,flexWrap:"wrap" as const}}>
-          {[{l:"Задача",p:"strategy"},{l:"Лид",p:"crm"},{l:"Контент",p:"content"},{l:"Созвон",p:"calls"}].map(a=>(
-            <button key={a.p} onClick={()=>onNav(a.p)}
-              style={{padding:"7px 12px",borderRadius:9,border:"1px solid "+bd,background:"transparent",color:C.t1,fontSize:12,fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              {a.l}
-            </button>
-          ))}
+    {/* ── Персональное приветствие ── */}
+    <section style={{position:"relative",display:"flex",flexDirection:"column",alignItems:"center",textAlign:"center",padding:isMobile?"8px 0 20px":"12px 0 28px"}}>
+      <label title="Изменить фотографию" style={{position:"relative",display:"block",cursor:"pointer",flexShrink:0,marginBottom:isMobile?14:17}}>
+        <div style={{width:isMobile?92:112,height:isMobile?92:112,borderRadius:"50%",padding:3,background:"linear-gradient(145deg,#7FB2FF 0%,#2F6BFF 48%,#123A94 100%)",boxShadow:dark?"0 16px 44px rgba(47,107,255,.24)":"0 14px 38px rgba(47,107,255,.2)"}}>
+          <div style={{width:"100%",height:"100%",borderRadius:"50%",overflow:"hidden",background:C.ib,border:`3px solid ${dark?"#101010":"#fff"}`,display:"flex",alignItems:"center",justifyContent:"center"}}>
+            {avatarUploading
+              ? <div style={{width:24,height:24,border:"2px solid "+bd,borderTopColor:"#2F6BFF",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+              : avatar
+              ? <img src={avatar} style={{width:"100%",height:"100%",objectFit:"cover"}} alt={`Аватар ${name}`}/>
+              : <span style={{fontSize:isMobile?34:42,fontWeight:500,color:C.t2,textTransform:"uppercase"}}>{(name||"U").slice(0,1)}</span>
+            }
+          </div>
         </div>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <label style={{cursor:"pointer",flexShrink:0}}>
-            <div style={{width:38,height:38,borderRadius:"50%",border:"1px solid "+bd,overflow:"hidden",background:C.ib,display:"flex",alignItems:"center",justifyContent:"center"}}>
-              {avatarUploading
-                ? <div style={{width:14,height:14,border:"2px solid "+bd,borderTopColor:C.t2,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
-                : avatar
-                ? <img src={avatar} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>
-                : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="1.6"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              }
-            </div>
-            <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0])uploadAvatar(e.target.files[0]);}}/>
-          </label>
-          {!isMobile&&<span style={{fontSize:13,fontWeight:500,color:C.t1}}>{name}</span>}
-          <button onClick={()=>onNav("profile")} title="Настройки" style={{width:34,height:34,borderRadius:9,border:"1px solid "+bd,background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        <span style={{position:"absolute",right:1,bottom:4,width:isMobile?28:31,height:isMobile?28:31,borderRadius:"50%",background:dark?"#ECECEC":"#171717",color:dark?"#171717":"#fff",border:`3px solid ${dark?"#0A0A0A":C.bg}`,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 5px 14px rgba(0,0,0,.22)"}}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><path d="M4 7h3l2-3h6l2 3h3v12H4z"/><circle cx="12" cy="13" r="4"/></svg>
+        </span>
+        <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{if(e.target.files?.[0])uploadAvatar(e.target.files[0]);e.currentTarget.value="";}}/>
+      </label>
+      <h1 style={{fontSize:isMobile?25:34,fontWeight:500,color:C.t1,letterSpacing:"-0.035em",lineHeight:1.08,margin:0}}>{getGreeting()}{name?`, ${name}`:""}</h1>
+      <div style={{fontSize:13,color:C.t2,marginTop:8}}>Сегодня {WD[dow].toLowerCase()}, {new Date().getDate()} {MR[new Date().getMonth()]}</div>
+      <div style={{fontSize:12.5,color:C.t2,marginTop:8,maxWidth:720,lineHeight:1.55}}>{daySummary}</div>
+      <div style={{display:"flex",justifyContent:"center",gap:7,flexWrap:"wrap" as const,marginTop:16}}>
+        {[{l:"Задача",p:"strategy"},{l:"Лид",p:"crm"},{l:"Контент",p:"content"},{l:"Созвон",p:"calls"}].map(a=>(
+          <button key={a.p} onClick={()=>onNav(a.p)} style={{padding:isMobile?"8px 11px":"8px 13px",borderRadius:9,border:"1px solid "+bd,background:dark?"rgba(255,255,255,.025)":"#fff",color:C.t1,fontSize:12,fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            {a.l}
           </button>
-        </div>
+        ))}
+        <button onClick={()=>onNav("profile")} title="Настройки профиля" style={{width:34,height:34,borderRadius:9,border:"1px solid "+bd,background:"transparent",color:C.t2,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        </button>
       </div>
-    </div>
-    {avatarErr&&<div style={{fontSize:12,color:"#DC2626",marginTop:-12,marginBottom:16}}>{avatarErr}</div>}
+      {avatarErr&&<div style={{fontSize:12,color:"#EF4444",marginTop:10}}>{avatarErr}</div>}
+    </section>
 
     {/* ── KPI: 4 карточки ── */}
     <div className="dash-card" style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)",gap:isMobile?10:14,marginBottom:14}}>
@@ -1733,6 +1832,21 @@ function DashPage({userId,name,avatar,onNav,onAvatarChange}:{userId:string,name:
         </div>}
       </div>
     </div>
+
+    {/* ── Доска объявлений ── */}
+    <section className="dash-card founder-board" aria-label="Приложение от Kirill Scales" style={{position:"relative",isolation:"isolate",minHeight:isMobile?350:228,borderRadius:isMobile?18:20,overflow:"hidden",marginBottom:14,background:"linear-gradient(112deg,#071C4D 0%,#0B3CA8 43%,#2F6BFF 72%,#6CA5FF 100%)",border:"1px solid rgba(155,197,255,.28)",boxShadow:dark?"0 18px 50px rgba(17,73,183,.25)":"0 18px 42px rgba(47,107,255,.22)"}}>
+      <div style={{position:"absolute",zIndex:-2,right:0,top:0,width:isMobile?"100%":"48%",height:"100%",opacity:isMobile ? .64 : .92}}>
+        <NextImage src="/vizzy-founder-kirill.png" alt="Кирилл, основатель Vizzy" fill priority sizes={isMobile?"100vw":"48vw"} style={{objectFit:"cover",objectPosition:isMobile?"center 24%":"center 38%"}}/>
+      </div>
+      <div style={{position:"absolute",zIndex:-1,inset:0,background:isMobile?"linear-gradient(180deg,rgba(6,25,68,.05) 0%,rgba(7,35,91,.42) 38%,rgba(7,28,77,.98) 82%)":"linear-gradient(90deg,#081E52 0%,rgba(10,57,154,.98) 48%,rgba(20,74,183,.58) 66%,rgba(9,31,78,.08) 100%)"}}/>
+      <div style={{position:"absolute",zIndex:-1,inset:0,background:"radial-gradient(circle at 24% 18%,rgba(126,184,255,.26),transparent 34%)"}}/>
+      <div style={{position:"relative",minHeight:isMobile?350:228,padding:isMobile?"24px 22px":"30px 38px",display:"flex",flexDirection:"column",alignItems:"flex-start",justifyContent:isMobile?"flex-end":"center",maxWidth:isMobile?"100%":"66%"}}>
+        <span style={{fontSize:10,fontWeight:600,letterSpacing:"0.2em",color:"rgba(255,255,255,.66)",marginBottom:9}}>VIZZY EDU</span>
+        <h2 style={{fontSize:isMobile?30:43,fontWeight:500,letterSpacing:"-0.045em",lineHeight:1.02,color:"#fff",margin:0,maxWidth:670}}>Приложение от Kirill Scales</h2>
+        <p style={{fontSize:isMobile?13:15,fontWeight:300,lineHeight:1.55,color:"rgba(255,255,255,.76)",margin:isMobile?"10px 0 17px":"11px 0 19px",maxWidth:520}}>Узнать больше о возможностях данного приложения</p>
+        <button onClick={()=>onNav("edu")} style={{minWidth:116,padding:"11px 22px",borderRadius:10,border:"1px solid rgba(255,255,255,.72)",background:"#fff",color:"#174CA8",fontSize:13,fontWeight:600,cursor:"pointer",boxShadow:"0 8px 20px rgba(3,20,58,.2)"}}>Изучить</button>
+      </div>
+    </section>
 
     {/* ── AI-ассистент по ситуации ── */}
     <div className="dash-card" style={{...dCard,marginBottom:14}}>
