@@ -1,5 +1,5 @@
 // app/f/[slug]/page.tsx
-// Vizzy Form v1.0 — public booking page.
+// Vizzy Form v1.1 / Vizzy v157 — public booking page with 60-minute CRM-linked calls.
 // Flow: 1) time first, 2) all form fields on one page, 3) atomic confirmation.
 
 "use client";
@@ -96,6 +96,7 @@ export default function PublicFormPage({params}:{params:Promise<{slug:string}>})
   const[month,setMonth]=useState(()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth(),1);});
   const[pickedDate,setPickedDate]=useState("");
   const[pickedSlot,setPickedSlot]=useState<Slot|null>(null);
+  const[contact,setContact]=useState({name:"",email:"",phone:""});
   const[answers,setAnswers]=useState<Record<string,any>>({});
   const[touched,setTouched]=useState(false);
   const[submitting,setSubmitting]=useState(false);
@@ -152,7 +153,7 @@ export default function PublicFormPage({params}:{params:Promise<{slug:string}>})
     const ownerTz=cfg.tz||"Europe/Moscow";
     const ownerToday=ymdInZone(new Date(),ownerTz);
     const now=Date.now();const minStart=now+Math.max(0,cfg.lead_hours||0)*3600e3;
-    const duration=Math.max(5,cfg.duration||45);const stepM=Math.max(5,duration+Math.max(0,cfg.buffer||0));
+    const duration=60;const stepM=Math.max(5,duration+Math.max(0,cfg.buffer||0));
     const busyMs=busy.map(b=>{const s=new Date(b.start_at).getTime();let e=new Date(b.end_at).getTime();if(!Number.isFinite(e)||e<=s)e=s+duration*60000;return{s,e,ownerDate:ymdInZone(new Date(s),ownerTz)};});
     const perOwner:Record<string,number>={};busyMs.forEach(b=>{perOwner[b.ownerDate]=(perOwner[b.ownerDate]||0)+1;});
     for(let i=0;i<=Math.max(1,cfg.horizon_days||30);i++){
@@ -179,6 +180,8 @@ export default function PublicFormPage({params}:{params:Promise<{slug:string}>})
   },[month]);
 
   const requiredOk=()=>{
+    if(contact.name.trim().length<2)return false;
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact.email.trim()))return false;
     for(const q of visibleQuestions){if(!q.required)continue;const v=answers[q.id];if(Array.isArray(v)){if(!v.length)return false;}else if(v===null||v===undefined||String(v).trim()==="")return false;}
     return true;
   };
@@ -188,19 +191,9 @@ export default function PublicFormPage({params}:{params:Promise<{slug:string}>})
     if(Array.isArray(value))return value.join(", ");
     return value===null||value===undefined?"":String(value).trim();
   };
-  const contactName=()=>{
-    const q=visibleQuestions.find(q=>/имя|name/i.test(q.label))||visibleQuestions.find(q=>q.type==="text");
-    return answerText(q)||"Новый лид";
-  };
-  const contactEmail=()=>{
-    const q=visibleQuestions.find(q=>q.type==="email"||/e-?mail|почт/i.test(q.label));
-    const value=answerText(q);
-    return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)?value:`${sessionId.replace(/[^a-zA-Z0-9]/g,"")}@form.vizzy.local`;
-  };
-  const contactPhone=()=>{
-    const q=visibleQuestions.find(q=>q.type==="phone"||/телефон|phone/i.test(q.label));
-    return answerText(q);
-  };
+  const contactName=()=>contact.name.trim();
+  const contactEmail=()=>contact.email.trim().toLowerCase();
+  const contactPhone=()=>contact.phone.trim();
   const fieldError=(q:Question)=>{if(!touched||!q.required)return"";const v=answers[q.id];return(Array.isArray(v)?v.length===0:v===null||v===undefined||String(v).trim()==="")?"Заполните обязательное поле":"";};
 
   const chooseSlot=(slot:Slot)=>{
@@ -318,7 +311,7 @@ export default function PublicFormPage({params}:{params:Promise<{slug:string}>})
         <div className="vf-logo" aria-label="Vizzy"><img className="vf-logo-img" src="/logo.png" alt="Vizzy"/></div>
         <h1 style={{fontSize:26,lineHeight:1.18,fontWeight:590,letterSpacing:"-.025em",margin:"0 0 18px"}}>{form.title}</h1>
         {cfg?.enabled&&<div style={{display:"flex",flexDirection:"column",gap:11,marginBottom:20}}>
-          <div style={{display:"flex",alignItems:"center",gap:9,fontSize:13,color:"var(--vf-muted-strong)"}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>{cfg.duration} минут</div>
+          <div style={{display:"flex",alignItems:"center",gap:9,fontSize:13,color:"var(--vf-muted-strong)"}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>60 минут</div>
           <div style={{display:"flex",alignItems:"center",gap:9,fontSize:13,color:"var(--vf-muted-strong)"}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg>{zoneLabel(visitorTz)}</div>
           {pickedSlot&&<div style={{display:"flex",alignItems:"center",gap:9,fontSize:13,color:"var(--vf-muted-strong)"}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>{selectedDateLabel}</div>}
         </div>}
@@ -341,7 +334,7 @@ export default function PublicFormPage({params}:{params:Promise<{slug:string}>})
                 if(!date)return<div key={`e-${i}`}/>;const available=(slotMap[date]||[]).length>0;const selected=pickedDate===date;
                 return<button key={date} disabled={!available} className={`vf-day ${available?"available":""} ${selected?"selected":""}`} onClick={()=>setPickedDate(date)}>{Number(date.slice(8,10))}</button>;
               })}</div>
-              <div className="vf-tz-wrap"><div className="vf-tz-label">Часовой пояс</div><select className="vf-tz-select" value={selectedTz} onChange={e=>changeTimeZone(e.target.value)}>{timeZoneOptions.map(tz=><option key={tz} value={tz}>{zoneLabel(tz)}</option>)}</select><div className="vf-tz-note">Свободное время пересчитывается под выбранный пояс. В системе владельца запись сохраняется в часовом поясе Europe/Moscow.</div></div>
+              <div className="vf-tz-wrap"><div className="vf-tz-label">Часовой пояс</div><select className="vf-tz-select" value={selectedTz} onChange={e=>changeTimeZone(e.target.value)}>{timeZoneOptions.map(tz=><option key={tz} value={tz}>{zoneLabel(tz)}</option>)}</select><div className="vf-tz-note">Свободное время пересчитывается под выбранный пояс. В системе владельца запись сохраняется в часовом поясе {cfg?.tz||"Europe/Moscow"}.</div></div>
             </section>
             <section className="vf-slots">
               <div style={{fontSize:13,fontWeight:550,marginBottom:12,minHeight:20}}>{pickedDate?`${Number(pickedDate.slice(8,10))} ${MONTHS_GEN[Number(pickedDate.slice(5,7))-1]}`:"Выберите доступный день"}</div>
@@ -358,7 +351,10 @@ export default function PublicFormPage({params}:{params:Promise<{slug:string}>})
           </div>
           {pickedSlot&&<div style={{padding:"11px 13px",border:"1px solid var(--vf-border)",borderRadius:8,background:"var(--vf-panel-soft)",fontSize:13,color:"var(--vf-muted-strong)",marginBottom:20}}>Выбрано: <b style={{fontWeight:600,color:"var(--vf-text)"}}>{selectedDateLabel}</b></div>}
           <div className="vf-fields">
-            {visibleQuestions.length===0&&<div className="vf-field full" style={{padding:"18px",border:"1px solid var(--vf-border)",borderRadius:8,color:"var(--vf-muted)",fontSize:13}}>В этой форме пока нет вопросов.</div>}
+            <div className="vf-field full"><label style={labelStyle}>Имя *</label><input style={inputStyle} autoComplete="name" value={contact.name} onChange={e=>setContact(c=>({...c,name:e.target.value}))} placeholder="Как к вам обращаться"/>{touched&&contact.name.trim().length<2&&<div className="vf-error">Введите имя</div>}</div>
+            <div className="vf-field"><label style={labelStyle}>Email *</label><input style={inputStyle} type="email" autoComplete="email" value={contact.email} onChange={e=>setContact(c=>({...c,email:e.target.value}))} placeholder="name@example.com"/>{touched&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact.email.trim())&&<div className="vf-error">Проверьте email</div>}</div>
+            <div className="vf-field"><label style={labelStyle}>Телефон</label><input style={inputStyle} type="tel" autoComplete="tel" value={contact.phone} onChange={e=>setContact(c=>({...c,phone:e.target.value}))} placeholder="+7 999 000-00-00"/></div>
+            {visibleQuestions.length===0&&<div className="vf-field full" style={{padding:"14px",border:"1px solid var(--vf-border)",borderRadius:8,color:"var(--vf-muted)",fontSize:12.5}}>Дополнительных вопросов нет — достаточно контактных данных.</div>}
             {visibleQuestions.map(q=>{
               const error=fieldError(q);const opts=(q.options||[]).filter(Boolean);const cls="vf-field full";
               return<div key={q.id} className={cls}>

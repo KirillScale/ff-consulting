@@ -1,5 +1,5 @@
 "use client";
-// v2.5 — rebuilt Vizzy Slides Pro
+// v157 — Calls + ViziForm + CRM integration
 import React, { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } from "react";
 import dynamic from "next/dynamic";
 import NextImage from "next/image";
@@ -885,7 +885,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v10.6"; // v156 Content cards save entirely through autosave and close
+  const APP_VERSION="v10.7"; // v157 Calls, ViziForm booking and CRM lead integration
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","boards","forms","offer","consulting","prices","icp","bizstrategy","team","edu","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
 
   // Clear stale localStorage on version change
@@ -13962,39 +13962,106 @@ function AdsPage({userId}:{userId:string}){
 /* ============ CALLS ============ */
 function CallsPage({userId}:{userId:string}){
   const isMobile=useIsMobile();
+  const{dark}=useTheme();
   const{data:calls,add,update,remove}=useTable("calls",userId);
+  const{data:crmLeads,update:updateCrmLead}=useTable("leads",userId);
+  const{data:crmFunnels}=useTable("crm_funnels",userId);
   const[calDate,setCalDate]=useState(()=>new Date());
-  const[calView,setCalView]=useState<"1d"|"3d"|"7d"|"month">("1d");
+  const[calView,setCalView]=useState<"1d"|"3d"|"7d"|"month">("7d");
   const[modal,setModal]=useState(false);
   const[editCall,setEditCall]=useState<any|null>(null);
-  const[f,sF]=useState({title:"",date:today(),time_start:"10:00",time_end:"11:00",goal:"Созвон с лидом",custom_goal:"",setter_name:"",responsible_name:"",link:"",description:""});
+  const[scriptBusy,setScriptBusy]=useState(false);
+  const[scriptError,setScriptError]=useState("");
+  const[f,sF]=useState({title:"",date:today(),time_start:"10:00",time_end:"11:00",goal:"Созвон с лидом",custom_goal:"",setter_name:"",responsible_name:"",link:"",description:"",lead_id:"",ai_script:""});
   const td=today();
   const HOURS=Array.from({length:17},(_,i)=>i+7);
   const SLOT_H=64;
-  const COLORS_CALL=[C.a,"#7C7C7C",C.g,C.r,C.y,C.pk];
+  const BLUE="#2F6BFF";
+  const TURQUOISE="#00BFC8";
+
+  const leadFor=(leadId?:string|null)=>crmLeads.find((lead:any)=>lead.id===leadId)||null;
+  const funnelFor=(funnelId?:string|null)=>crmFunnels.find((item:any)=>item.id===funnelId)||null;
+  const callIsDone=(call:any)=>!!call.completed||call.status==="completed";
+  const toggleCallCompleted=async(call:any)=>{
+    const completed=!callIsDone(call);
+    await update(call.id,{completed,status:completed?"completed":"scheduled"});
+    if(editCall?.id===call.id)setEditCall({...editCall,completed,status:completed?"completed":"scheduled"});
+  };
 
   const openCreate=(date:string,hour?:number)=>{
     const ts=hour!==undefined?String(hour).padStart(2,"0")+":00":"10:00";
     const te=hour!==undefined?String(hour+1).padStart(2,"0")+":00":"11:00";
-    sF({title:"",date,time_start:ts,time_end:te,goal:"Созвон с лидом",custom_goal:"",setter_name:"",responsible_name:"",link:"",description:""});
-    setEditCall(null);setModal(true);
+    sF({title:"",date,time_start:ts,time_end:te,goal:"Созвон с лидом",custom_goal:"",setter_name:"",responsible_name:"",link:"",description:"",lead_id:"",ai_script:""});
+    setScriptError("");setEditCall(null);setModal(true);
   };
 
   const openEdit=(c:any)=>{
-    sF({title:c.title||"",date:c.date||today(),time_start:c.time_start||"10:00",time_end:c.time_end||"11:00",goal:c.goal||"Созвон с лидом",custom_goal:c.custom_goal||"",setter_name:c.setter_name||"",responsible_name:c.responsible_name||"",link:c.link||"",description:c.description||""});
-    setEditCall(c);setModal(true);
+    sF({title:c.title||"",date:c.date||today(),time_start:c.time_start||"10:00",time_end:c.time_end||"11:00",goal:c.goal||"Созвон с лидом",custom_goal:c.custom_goal||"",setter_name:c.setter_name||"",responsible_name:c.responsible_name||"",link:c.link||"",description:c.description||"",lead_id:c.lead_id||"",ai_script:c.ai_script||""});
+    setScriptError("");setEditCall(c);setModal(true);
   };
 
   const sub=async()=>{
     if(!f.time_start)return;
-    const payload={...f,custom_goal:f.goal==="Своя цель"?f.custom_goal:""};
+    const[startH,startM]=f.time_start.split(":").map(Number);
+    const[endH,endM]=f.time_end.split(":").map(Number);
+    const duration=Math.max(1,(endH*60+endM)-(startH*60+startM));
+    const payload={...f,lead_id:f.lead_id||null,custom_goal:f.goal==="Своя цель"?f.custom_goal:"",duration_minutes:duration,status:editCall?.status||"scheduled"};
     if(editCall){await update(editCall.id,payload);}
     else{await add(payload);}
-    setModal(false);setEditCall(null);
+    if(f.lead_id){
+      const meetingAt=new Date(`${f.date}T${f.time_start}:00`);
+      await updateCrmLead(f.lead_id,{next_step:`Созвон ${f.date} в ${f.time_start}`,meeting_at:Number.isNaN(meetingAt.getTime())?null:meetingAt.toISOString()});
+    }
+    setScriptError("");setModal(false);setEditCall(null);
+  };
+
+  const generateCallScript=async()=>{
+    if(scriptBusy)return;
+    setScriptBusy(true);setScriptError("");
+    try{
+      const lead=leadFor(f.lead_id);
+      const funnel=lead?funnelFor(lead.funnel_id):null;
+      const leadContext=lead?`
+Лид: ${lead.name||"Без имени"}
+Контакт: ${lead.contact||"—"}; телефон: ${lead.phone||"—"}; email: ${lead.email||"—"}
+Компания/проект: ${lead.company||"—"}; интерес: ${lead.interest||"—"}; потенциальная сделка: ${lead.deal||0}
+Источник: ${lead.source||"—"}; воронка: ${funnel?.name||"—"}; этап: ${lead.status||"—"}
+Описание: ${lead.note||"—"}
+История: ${lead.history||"—"}
+Боли: ${lead.pains||"—"}
+Желания: ${lead.desires||"—"}
+Возражения: ${lead.objections||"—"}
+На что давить: ${lead.leverage||"—"}
+Следующий шаг: ${lead.next_step||"—"}
+AI-анализ карточки: ${lead.ai_report||"—"}
+Ответы ViziForm: ${lead.form_answers?JSON.stringify(lead.form_answers):"—"}`:"Лид к созвону не прикреплён. Используй только контекст самого созвона.";
+      const system=`Ты создаёшь персональный скрипт созвона для Kirill Scales. Твоя задача — помочь провести уверенный, естественный и профессиональный разговор и привести его к одному логичному следующему шагу. Используй только факты из контекста, ничего не выдумывай. Закрой именно указанные боли, желания и возражения. Не пиши канцеляритом и не превращай ответ в длинную лекцию.
+
+Верни только готовый скрипт на русском языке в структуре:
+Цель созвона
+Открытие
+Ключевые вопросы
+Как раскрыть ценность
+Работа с вероятными возражениями
+Фиксация следующего шага
+
+Фразы должны звучать по-человечески. Вопросы — конкретные. Если контекста мало, добавляй диагностические вопросы, но не придумывай факты.`;
+      const user=`Созвон: ${f.title||f.goal}
+Тип: ${f.goal==="Своя цель"?(f.custom_goal||"Своя цель"):f.goal}
+Дата и время: ${f.date}, ${f.time_start}–${f.time_end}
+Комментарий: ${f.description||"—"}
+${leadContext}`;
+      const result=(await paChat(system,user,1800,0.45)).trim();
+      if(!result)throw new Error("empty_script");
+      sF(prev=>({...prev,ai_script:result}));
+    }catch(error){
+      console.error("Call script AI",error);
+      setScriptError("Не удалось создать скрипт. Проверь контекст и попробуй ещё раз.");
+    }finally{setScriptBusy(false);}
   };
 
   const callLabel=(c:any)=>c.title||(c.goal==="Своя цель"?(c.custom_goal||"Созвон"):c.goal);
-  const goalColor=(g:string)=>g==="Созвон с лидом"?C.y:g==="Созвон с клиентом"?C.g:g==="Созвон с командой"?C.a:C.pk;
+  const goalColor=(g:string)=>g==="Созвон с лидом"?BLUE:g==="Созвон с клиентом"?"#16A34A":g==="Созвон с командой"?"#8B5CF6":"#F59E0B";
   const callColor=(c:any)=>goalColor(c.goal);
   const timeToMin=(t:string)=>{const[h,m]=t.split(":").map(Number);return(h-7)*60+m;};
 
@@ -14016,7 +14083,8 @@ function CallsPage({userId}:{userId:string}){
     return days;
   },[calDate,calView]);
 
-  const callsForDay=(d:Date)=>calls.filter((c:any)=>c.date===ds(d)).sort((a:any,b:any)=>(a.time_start||"").localeCompare(b.time_start||""));
+  const activeCalls=useMemo(()=>calls.filter((call:any)=>call.status!=="cancelled"),[calls]);
+  const callsForDay=(d:Date)=>activeCalls.filter((c:any)=>c.date===ds(d)).sort((a:any,b:any)=>(a.time_start||"").localeCompare(b.time_start||""));
 
   const changeDay=(delta:number)=>{
     const d=new Date(calDate);
@@ -14031,21 +14099,26 @@ function CallsPage({userId}:{userId:string}){
     return Math.max(0,(n.getHours()-7)*SLOT_H+(n.getMinutes()/60)*SLOT_H);
   },[]);
 
-  const upcoming5=useMemo(()=>{
-    const nowStr=today()+"T"+new Date().toTimeString().substring(0,5);
-    return calls
-      .filter((c:any)=>!c.completed&&(c.date>td||(c.date===td&&(c.time_start||"00:00")>=new Date().toTimeString().substring(0,5))))
+  const upcoming=useMemo(()=>{
+    const nowTime=new Date().toTimeString().substring(0,5);
+    return activeCalls
+      .filter((c:any)=>!callIsDone(c)&&(c.date>td||(c.date===td&&(c.time_start||"00:00")>=nowTime)))
       .sort((a:any,b:any)=>a.date===b.date?(a.time_start||"").localeCompare(b.time_start||""):a.date.localeCompare(b.date))
-      .slice(0,5);
-  },[calls,td]);
+  },[activeCalls,td]);
+  const upcoming5=upcoming.slice(0,5);
 
-  const stats={total:calls.length,done:calls.filter((c:any)=>c.completed).length,today:calls.filter((c:any)=>c.date===td).length,upcoming:upcoming5.length};
+  const stats={total:activeCalls.length,done:activeCalls.filter(callIsDone).length,today:activeCalls.filter((c:any)=>c.date===td).length,upcoming:upcoming.length};
 
   // header label
   const headerLabel=useMemo(()=>{
     if(calView==="month")return `${MS[calDate.getMonth()]} ${calDate.getFullYear()}`;
-    if(calView==="7d"){const last=viewDays[viewDays.length-1];return `${viewDays[0]?.getDate()} — ${last?.getDate()} ${MS[calDate.getMonth()]}`;};
-    if(calView==="3d")return `${viewDays[0]?.getDate()} — ${viewDays[2]?.getDate()} ${MS[calDate.getMonth()]}`;
+    if(calView==="7d"||calView==="3d"){
+      const first=viewDays[0],last=viewDays[viewDays.length-1];
+      if(!first||!last)return"";
+      return first.getMonth()===last.getMonth()
+        ?`${first.getDate()} — ${last.getDate()} ${MR[last.getMonth()]}`
+        :`${first.getDate()} ${MR[first.getMonth()]} — ${last.getDate()} ${MR[last.getMonth()]}`;
+    }
     return `${calDate.getDate()} ${MR[calDate.getMonth()]} ${calDate.getFullYear()}`;
   },[calDate,calView,viewDays]);
 
@@ -14056,8 +14129,8 @@ function CallsPage({userId}:{userId:string}){
   const renderTimeGrid=()=>{
     const cols=calView==="1d"?1:calView==="3d"?3:7;
     const dayWidth=cols===1?"100%":`${100/cols}%`;
-    return <div style={{overflowY:"auto",maxHeight:"calc(100vh - 320px)"}}>
-      <div style={{display:"flex"}}>
+    return <div style={{overflow:"auto",maxHeight:"calc(100vh - 320px)"}}>
+      <div style={{display:"flex",minWidth:isMobile?(cols===7?760:cols===3?430:0):0}}>
         {/* Time column */}
         <div style={{width:52,flexShrink:0}}>
           <div style={{height:28}}/>
@@ -14072,9 +14145,9 @@ function CallsPage({userId}:{userId:string}){
           const dayCalls=callsForDay(d);
           return <div key={ci} style={{flex:1,borderLeft:"1px solid "+C.bd,minWidth:0}}>
             {/* Day header */}
-            <div style={{height:28,display:"flex",alignItems:"center",justifyContent:"center",gap:6,borderBottom:"1px solid "+C.bd,background:isToday?C.a+"0A":"transparent"}}>
+            <div style={{height:28,display:"flex",alignItems:"center",justifyContent:"center",gap:6,borderBottom:"1px solid "+C.bd,background:isToday?"rgba(47,107,255,.16)":"transparent"}}>
               <span style={{fontSize:11,color:C.t2}}>{WDS_SHORT[(d.getDay()+6)%7]}</span>
-              <span style={{fontSize:13,fontWeight:isToday?700:500,width:22,height:22,borderRadius:"50%",background:isToday?C.a:"transparent",display:"flex",alignItems:"center",justifyContent:"center",color:isToday?"#fff":C.t1}}>{d.getDate()}</span>
+              <span style={{fontSize:13,fontWeight:isToday?700:500,width:22,height:22,borderRadius:"50%",background:isToday?BLUE:"transparent",display:"flex",alignItems:"center",justifyContent:"center",color:isToday?"#fff":C.t1}}>{d.getDate()}</span>
             </div>
             {/* Hour slots */}
             <div style={{position:"relative"}}>
@@ -14084,8 +14157,8 @@ function CallsPage({userId}:{userId:string}){
                 onMouseLeave={e=>(e.currentTarget.style.background="transparent")}
               />)}
               {/* Now line */}
-              {isToday&&<div style={{position:"absolute",left:0,right:0,top:nowY,height:2,background:C.r,zIndex:5}}>
-                <div style={{width:8,height:8,borderRadius:"50%",background:C.r,position:"absolute",left:-4,top:-3}}/>
+              {isToday&&<div style={{position:"absolute",left:0,right:0,top:nowY,height:2,background:BLUE,zIndex:5}}>
+                <div style={{width:8,height:8,borderRadius:"50%",background:BLUE,position:"absolute",left:-4,top:-3}}/>
               </div>}
               {/* Call blocks */}
               {dayCalls.map((c:any)=>{
@@ -14093,7 +14166,8 @@ function CallsPage({userId}:{userId:string}){
                 const bot=c.time_end?timeToMin(c.time_end)*(SLOT_H/60):top+SLOT_H;
                 const h=Math.max(bot-top,24);
                 const cc=callColor(c);
-                const isDone=c.completed;
+                const isDone=callIsDone(c);
+                const linkedLead=leadFor(c.lead_id);
                 return <div key={c.id}
                   onClick={e=>{e.stopPropagation();openEdit(c);}}
                   style={{position:"absolute",left:3,right:3,top,height:h,
@@ -14102,14 +14176,14 @@ function CallsPage({userId}:{userId:string}){
                     borderRadius:8,padding:"4px 8px",boxSizing:"border-box",
                     overflow:"hidden",cursor:"pointer",zIndex:10,
                     opacity:isDone?0.6:1,
-                    boxShadow:isDone?"none":"0 2px 8px "+cc+"28",
+                    boxShadow:"none",
                   }}>
                   <div style={{display:"flex",alignItems:"flex-start",gap:4}}>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:11,fontWeight:700,color:isDone?C.t2:cc,textDecoration:isDone?"line-through":"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{callLabel(c)}</div>
-                      {h>30&&<div style={{fontSize:10,color:C.t2}}>{c.time_start}{c.time_end?" - "+c.time_end:""}{c.responsible_name?" · "+c.responsible_name:""}</div>}
+                      {h>30&&<div style={{fontSize:10,color:C.t2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.time_start}{c.time_end?" - "+c.time_end:""}{linkedLead?" · "+linkedLead.name:c.responsible_name?" · "+c.responsible_name:""}</div>}
                     </div>
-                    <button onClick={e=>{e.stopPropagation();update(c.id,{completed:!c.completed});}}
+                    <button onClick={e=>{e.stopPropagation();toggleCallCompleted(c);}}
                       style={{width:16,height:16,borderRadius:4,border:`1.5px solid ${isDone?C.g:C.bd}`,background:isDone?C.g:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>
                       {isDone&&<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
                     </button>
@@ -14134,13 +14208,13 @@ function CallsPage({userId}:{userId:string}){
         const isToday=dStr===td;
         const isCurrentMonth=d.getMonth()===calDate.getMonth();
         const dayCalls=callsForDay(d);
-        return <div key={i} style={{minHeight:90,padding:"6px 8px",borderRight:i%7!==6?"1px solid "+C.bd:"none",borderBottom:"1px solid "+C.bd,background:isToday?C.a+"05":"transparent",cursor:"pointer"}}
+        return <div key={i} style={{minHeight:90,padding:"6px 8px",borderRight:i%7!==6?"1px solid "+C.bd:"none",borderBottom:"1px solid "+C.bd,background:isToday?"rgba(47,107,255,.13)":"transparent",cursor:"pointer"}}
           onClick={()=>{setCalDate(d);setCalView("1d");}}>
           <div style={{fontSize:13,fontWeight:isToday?700:400,
-            width:22,height:22,borderRadius:"50%",background:isToday?C.a:"transparent",
+            width:22,height:22,borderRadius:"50%",background:isToday?BLUE:"transparent",
             display:"flex",alignItems:"center",justifyContent:"center",color:isToday?"#fff":isCurrentMonth?C.t1:C.t2,
             marginBottom:4}}>{d.getDate()}</div>
-          {dayCalls.slice(0,3).map((c:any)=><div key={c.id} style={{fontSize:10,padding:"2px 5px",borderRadius:4,background:callColor(c)+"18",color:callColor(c),marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:c.completed?"line-through":"none"}}>{callLabel(c)}</div>)}
+          {dayCalls.slice(0,3).map((c:any)=><div key={c.id} style={{fontSize:10,padding:"2px 5px",borderRadius:4,background:callColor(c)+"18",color:callColor(c),marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:callIsDone(c)?"line-through":"none"}}>{callLabel(c)}</div>)}
           {dayCalls.length>3&&<div style={{fontSize:10,color:C.t2}}>+{dayCalls.length-3}</div>}
         </div>;
       })}
@@ -14150,7 +14224,7 @@ function CallsPage({userId}:{userId:string}){
   return <>
     {/* Stats bar */}
     <div style={{display:"grid",gridTemplateColumns:isMobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:isMobile?10:12,marginBottom:isMobile?12:20}}>
-      {[{l:"Всего",v:stats.total,c:C.a},{l:"Сегодня",v:stats.today,c:C.y},{l:"Выполнено",v:stats.done,c:C.g},{l:"Предстоит",v:stats.upcoming,c:"#7C7C7C"}].map((s,i)=><div key={i} style={{background:C.w,borderRadius:10,padding:"14px 18px",boxShadow:C.sh}}>
+      {[{l:"Всего созвонов",v:stats.total,c:BLUE},{l:"Сегодня",v:stats.today,c:BLUE},{l:"Выполнено",v:stats.done,c:"#16A34A"},{l:"Предстоит",v:stats.upcoming,c:dark?"#FFFFFF":C.t1}].map((s,i)=><div key={i} style={{background:C.w,borderRadius:10,padding:"14px 18px",boxShadow:C.sh,border:`1px solid ${C.bd}`,borderTop:`3px solid ${s.c}`}}>
         <div style={{fontSize:22,fontWeight:700,color:s.c}}>{s.v}</div>
         <div style={{fontSize:12,color:C.t2,marginTop:2}}>{s.l}</div>
       </div>)}
@@ -14160,14 +14234,14 @@ function CallsPage({userId}:{userId:string}){
       {/* Main calendar */}
       <div style={{background:C.w,borderRadius:10,boxShadow:C.sh,overflow:"hidden"}}>
         {/* Calendar header */}
-        <div style={{padding:"14px 16px",borderBottom:"1px solid "+C.bd,display:"flex",alignItems:"center",gap:8}}>
+        <div style={{padding:"14px 16px",borderBottom:"1px solid "+C.bd,display:"flex",alignItems:"center",gap:8,flexWrap:isMobile?"wrap":"nowrap"}}>
           <button onClick={()=>changeDay(-1)} style={{width:32,height:32,border:"1px solid "+C.bd,borderRadius:8,background:C.bg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg></button>
           <span style={{flex:1,textAlign:"center",fontSize:14,fontWeight:700}}>{headerLabel}</span>
           <button onClick={()=>changeDay(1)} style={{width:32,height:32,border:"1px solid "+C.bd,borderRadius:8,background:C.bg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.t2} strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg></button>
-          <button onClick={()=>{setCalDate(new Date());}} style={{padding:"6px 12px",fontSize:12,border:"1px solid "+C.bd,borderRadius:8,background:ds(calDate)===td?C.a:C.bg,color:ds(calDate)===td?"#fff":C.t2,cursor:"pointer",fontWeight:500}}>Сегодня</button>
+          <button onClick={()=>{setCalDate(new Date());}} style={{padding:"7px 13px",fontSize:12,border:"none",borderRadius:8,background:BLUE,color:"#fff",cursor:"pointer",fontWeight:650}}>Сегодня</button>
           {/* View switcher */}
-          <div style={{display:"flex",background:"#F2F2F7",borderRadius:8,padding:2,gap:1}}>
-            {(([["1d","1д"],["3d","3д"],["7d","Нед"],["month","Мес"]] as const).filter(([v])=>!isMobile||v==="1d"||v==="month")).map(([v,l])=><button key={v} onClick={()=>setCalView(v)} style={{padding:"5px 10px",border:"none",borderRadius:6,background:calView===v?C.w:"transparent",fontSize:11,fontWeight:calView===v?700:400,color:calView===v?C.a:C.t2,cursor:"pointer",boxShadow:calView===v?"0 1px 3px rgba(0,0,0,0.1)":"none"}}>{l}</button>)}
+          <div style={{display:"flex",background:C.ib,border:`1px solid ${C.bd}`,borderRadius:8,padding:2,gap:1,overflowX:"auto",maxWidth:isMobile?"100%":"none",order:isMobile?3:0,flexBasis:isMobile?"100%":"auto"}}>
+            {(([["1d","1 день"],["3d","3 дня"],["7d","Неделя"],["month","Месяц"]] as const)).map(([v,l])=><button key={v} onClick={()=>setCalView(v)} style={{padding:"6px 10px",border:`1px solid ${calView===v?C.bd:"transparent"}`,borderRadius:6,background:calView===v?C.w:"transparent",fontSize:11,fontWeight:calView===v?700:450,color:calView===v?BLUE:C.t2,cursor:"pointer",boxShadow:calView===v?(dark?"0 2px 8px rgba(0,0,0,.35)":"0 1px 3px rgba(0,0,0,.08)"):"none",whiteSpace:"nowrap",flex:isMobile?1:"initial"}}>{l}</button>)}
           </div>
         </div>
         {/* Grid */}
@@ -14177,59 +14251,72 @@ function CallsPage({userId}:{userId:string}){
       {/* Sidebar */}
       <div style={{display:"flex",flexDirection:"column",gap:12}}>
         {/* Add button */}
-        <button onClick={()=>openCreate(td)} style={{width:"100%",padding:"12px",background:`linear-gradient(135deg,${C.dk},${C.da})`,color:"#fff",border:"none",borderRadius:10,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+        <button onClick={()=>openCreate(td)} style={{width:"100%",padding:"12px",background:BLUE,color:"#fff",border:"none",borderRadius:10,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Новый созвон
+          + Новый созвон
         </button>
 
         {/* Upcoming */}
         <div style={{background:C.w,borderRadius:10,boxShadow:C.sh,padding:"14px 16px"}}>
           <div style={{fontSize:13,fontWeight:700,marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <span>Ближайшие созвоны</span>
-            <span style={{fontSize:11,color:C.t2,fontWeight:400}}>{upcoming5.length} из 5</span>
+            <span style={{fontSize:11,color:C.t2,fontWeight:400}}>{upcoming.length} всего</span>
           </div>
           {upcoming5.length===0
             ? <div style={{fontSize:13,color:C.t2,textAlign:"center",padding:"20px 0"}}>Нет предстоящих</div>
             : upcoming5.map((c:any)=>{
                 const isToday=c.date===td;
                 const cc=callColor(c);
+                const linkedLead=leadFor(c.lead_id);
                 return <div key={c.id} style={{display:"flex",gap:10,padding:"10px 0",borderBottom:"1px solid "+C.bd,cursor:"pointer"}} onClick={()=>openEdit(c)}>
                   <div style={{width:3,borderRadius:2,background:cc,flexShrink:0,alignSelf:"stretch"}}/>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:13,fontWeight:600,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{callLabel(c)}</div>
-                    <div style={{fontSize:11,color:C.t2,marginTop:2}}>{isToday?"Сегодня":c.date} в {c.time_start}{c.responsible_name?" · "+c.responsible_name:""}</div>
+                    <div style={{fontSize:11,color:C.t2,marginTop:2}}>{isToday?"Сегодня":c.date} в {c.time_start}{linkedLead?" · "+linkedLead.name:c.responsible_name?" · "+c.responsible_name:""}</div>
+                    {c.form_id&&<div style={{fontSize:10,color:BLUE,marginTop:3}}>Забронировано через ViziForm</div>}
                   </div>
-                  {isToday&&<div style={{fontSize:10,fontWeight:700,color:C.y,flexShrink:0,alignSelf:"center"}}>!</div>}
+                  {isToday&&<div style={{fontSize:10,fontWeight:700,color:BLUE,flexShrink:0,alignSelf:"center"}}>Сегодня</div>}
                 </div>;
               })
           }
         </div>
 
         {/* Quick stats: conversion */}
-        {calls.length>0&&<div style={{background:C.w,borderRadius:10,boxShadow:C.sh,padding:"14px 16px"}}>
-          <div style={{fontSize:13,fontWeight:700,marginBottom:10}}>Конверсия</div>
-          <div style={{fontSize:24,fontWeight:800,color:C.g,marginBottom:4}}>{calls.length>0?Math.round(stats.done/calls.length*100):0}%</div>
+        {activeCalls.length>0&&<div style={{background:C.w,borderRadius:10,boxShadow:C.sh,padding:"14px 16px",border:`1px solid ${C.bd}`}}>
+          <div style={{fontSize:13,fontWeight:700,marginBottom:10,color:BLUE}}>Конверсия созвонов</div>
+          <div style={{fontSize:24,fontWeight:800,color:"#16A34A",marginBottom:4}}>{activeCalls.length>0?Math.round(stats.done/activeCalls.length*100):0}%</div>
           <div style={{fontSize:12,color:C.t2,marginBottom:10}}>созвонов проведено</div>
           <div style={{height:6,background:C.bg,borderRadius:3,overflow:"hidden"}}>
-            <div style={{height:"100%",width:(calls.length>0?stats.done/calls.length*100:0)+"%",background:C.g,borderRadius:3,transition:"width 0.4s"}}/>
+            <div style={{height:"100%",width:(activeCalls.length>0?stats.done/activeCalls.length*100:0)+"%",background:"linear-gradient(90deg,#2F6BFF,#16A34A)",borderRadius:3,transition:"width 0.4s"}}/>
           </div>
         </div>}
       </div>
     </div>
 
     {/* Modal */}
-    {modal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={e=>{if(e.target===e.currentTarget){setModal(false);setEditCall(null);}}}>
-      <div style={{background:C.w,borderRadius:12,padding:isMobile?"20px 16px 16px":"28px 28px 24px",width:"100%",maxWidth:500,boxShadow:"0 32px 80px rgba(0,0,0,0.22)",maxHeight:"90vh",overflowY:"auto"}}>
+    {modal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={e=>{if(e.target===e.currentTarget){setScriptError("");setModal(false);setEditCall(null);}}}>
+      <div style={{background:C.w,borderRadius:12,padding:isMobile?"20px 16px 16px":"28px 28px 24px",width:"100%",maxWidth:620,boxShadow:"0 32px 80px rgba(0,0,0,0.28)",border:`1px solid ${C.bd}`,maxHeight:"90vh",overflowY:"auto"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:22}}>
           <div style={{fontSize:17,fontWeight:700}}>{editCall?"Редактировать созвон":"Новый созвон"}</div>
           {editCall&&<button onClick={()=>{if(confirm("Удалить созвон?"))remove(editCall.id).then(()=>setModal(false));}} style={{fontSize:12,color:C.r,background:C.r+"10",border:"none",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontWeight:600}}>Удалить</button>}
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          {editCall?.form_id&&<div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",borderRadius:9,background:"rgba(47,107,255,.10)",border:"1px solid rgba(47,107,255,.22)",color:BLUE,fontSize:12,fontWeight:600}}>
+            <span style={{width:7,height:7,borderRadius:"50%",background:BLUE}}/>Созвон создан автоматически через ViziForm
+          </div>}
           <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Название созвона</label><input value={f.title} onChange={e=>sF({...f,title:e.target.value})} placeholder="Разбор воронки с Игнатом..." style={iS()}/></div>
           <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Дата</label><input type="date" value={f.date} onChange={e=>sF({...f,date:e.target.value})} style={iS()}/></div>
           <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12}}>
             <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Начало</label><input type="time" value={f.time_start} onChange={e=>sF({...f,time_start:e.target.value})} style={iS()}/></div>
             <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Конец</label><input type="time" value={f.time_end} onChange={e=>sF({...f,time_end:e.target.value})} style={iS()}/></div>
+          </div>
+          <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Лид из CRM <span style={{fontWeight:400}}>(необязательно)</span></label>
+            <select value={f.lead_id} onChange={e=>sF({...f,lead_id:e.target.value})} style={iS()}>
+              <option value="">Без привязки к лиду</option>
+              {crmFunnels.map((funnel:any)=><optgroup key={funnel.id} label={funnel.name||"Воронка"}>{crmLeads.filter((lead:any)=>lead.funnel_id===funnel.id).map((lead:any)=><option key={lead.id} value={lead.id}>{lead.name||"Без имени"}{lead.contact?` · ${lead.contact}`:""}</option>)}</optgroup>)}
+              {crmLeads.some((lead:any)=>!lead.funnel_id)&&<optgroup label="Без воронки">{crmLeads.filter((lead:any)=>!lead.funnel_id).map((lead:any)=><option key={lead.id} value={lead.id}>{lead.name||"Без имени"}{lead.contact?` · ${lead.contact}`:""}</option>)}</optgroup>}
+            </select>
+            {f.lead_id&&(()=>{const lead=leadFor(f.lead_id);return lead?<div style={{marginTop:8,padding:"10px 12px",borderRadius:8,background:C.bg,border:`1px solid ${C.bd}`}}><div style={{fontSize:12.5,fontWeight:650,color:C.t1}}>{lead.name}</div><div style={{fontSize:11,color:C.t2,marginTop:3,lineHeight:1.45}}>{[lead.pains&&`Боли: ${lead.pains}`,lead.desires&&`Желания: ${lead.desires}`,lead.objections&&`Возражения: ${lead.objections}`].filter(Boolean).join(" · ")||"Контекст лида будет использован при генерации скрипта"}</div></div>:null;})()}
           </div>
           <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12}}>
             <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Сеттер</label><input value={f.setter_name} onChange={e=>sF({...f,setter_name:e.target.value})} placeholder="Кто назначил..." style={iS()}/></div>
@@ -14243,19 +14330,25 @@ function CallsPage({userId}:{userId:string}){
           {f.goal==="Своя цель"&&<div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Название</label><input value={f.custom_goal} onChange={e=>sF({...f,custom_goal:e.target.value})} placeholder="Введи название..." style={iS()}/></div>}
           <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Ссылка на встречу</label><input value={f.link} onChange={e=>sF({...f,link:e.target.value})} placeholder="zoom.us/j/..." style={iS()}/></div>
           <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Комментарий</label><textarea value={f.description} onChange={e=>sF({...f,description:e.target.value})} rows={2} style={{...iS(),resize:"none"}}/></div>
+          <div style={{padding:14,borderRadius:10,border:`1px solid ${C.bd}`,background:C.bg}}>
+            <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,marginBottom:10}}><div><div style={{fontSize:13,fontWeight:700,color:C.t1}}>Скрипт созвона</div><div style={{fontSize:11.5,color:C.t2,marginTop:3,lineHeight:1.45}}>ИИ использует описание созвона и всю заполненную карточку прикреплённого лида</div></div>{f.lead_id&&<span style={{fontSize:10.5,color:TURQUOISE,whiteSpace:"nowrap"}}>CRM-контекст подключён</span>}</div>
+            <button type="button" onClick={generateCallScript} disabled={scriptBusy} style={{width:"100%",height:42,border:0,borderRadius:8,background:"linear-gradient(135deg,#00AFCB,#00C9B7)",color:"#fff",fontSize:12.5,fontWeight:700,cursor:scriptBusy?"wait":"pointer",opacity:scriptBusy?0.72:1,boxShadow:"none",marginBottom:f.ai_script||scriptError?10:0}}>{scriptBusy?"Создаю персональный скрипт…":"Создать скрипт созвона с ИИ"}</button>
+            {scriptError&&<div style={{fontSize:11.5,color:"#EF4444",marginBottom:f.ai_script?8:0}}>{scriptError}</div>}
+            {f.ai_script&&<textarea value={f.ai_script} onChange={e=>sF({...f,ai_script:e.target.value})} rows={10} style={{...iS(),height:220,padding:"12px 13px",resize:"vertical",lineHeight:1.55,fontSize:12.5}}/>}
+          </div>
           {editCall&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:C.bg,borderRadius:8}}>
-            <button onClick={()=>{update(editCall.id,{completed:!editCall.completed});setEditCall({...editCall,completed:!editCall.completed});}} style={{width:22,height:22,borderRadius:6,border:`2px solid ${editCall.completed?C.g:C.bd}`,background:editCall.completed?C.g:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-              {editCall.completed&&<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
+            <button onClick={()=>toggleCallCompleted(editCall)} style={{width:22,height:22,borderRadius:6,border:`2px solid ${callIsDone(editCall)?"#16A34A":C.bd}`,background:callIsDone(editCall)?"#16A34A":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              {callIsDone(editCall)&&<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
             </button>
-            <span style={{fontSize:13,fontWeight:500,color:editCall.completed?C.g:C.t2}}>{editCall.completed?"Созвон проведён":"Отметить как проведённый"}</span>
+            <span style={{fontSize:13,fontWeight:500,color:callIsDone(editCall)?"#16A34A":C.t2}}>{callIsDone(editCall)?"Созвон проведён":"Отметить как проведённый"}</span>
           </div>}
-          {f.link&&<a href={f.link} target="_blank" rel="noreferrer" style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",background:C.a+"0F",borderRadius:8,color:C.a,fontSize:13,fontWeight:600,textDecoration:"none"}}>
+          {f.link&&<a href={f.link} target="_blank" rel="noreferrer" style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",background:"rgba(47,107,255,.10)",borderRadius:8,color:BLUE,fontSize:13,fontWeight:600,textDecoration:"none"}}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
             Открыть ссылку на встречу
           </a>}
         </div>
         <div style={{display:"flex",gap:10,marginTop:20}}>
-          <Btn onClick={sub} style={{flex:1}}>{editCall?"Сохранить":"Создать"}</Btn>
+          <button onClick={sub} style={{flex:1,padding:"10px 20px",background:BLUE,color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:650,cursor:"pointer",boxShadow:"none"}}>{editCall?"Сохранить":"Создать"}</button>
           <Btn primary={false} onClick={()=>{setModal(false);setEditCall(null);}}>Отмена</Btn>
         </div>
       </div>
@@ -21904,11 +21997,13 @@ type Question={
 type BookingCfg={
   enabled:boolean,duration:number,buffer:number,max_per_day:number,days:number[],
   from:string,to:string,lead_hours:number,horizon_days:number,exceptions:string[],tz:string,
+  crm_funnel_id?:string,
 };
 type FormNotifications={internal:boolean,email:boolean,telegram:boolean,sms:boolean,subject:string,message:string};
 const BOOKING_DEFAULT:BookingCfg={
-  enabled:false,duration:45,buffer:15,max_per_day:0,days:[1,2,3,4,5],from:"10:00",to:"19:00",
+  enabled:false,duration:60,buffer:15,max_per_day:0,days:[1,2,3,4,5],from:"10:00",to:"19:00",
   lead_hours:2,horizon_days:30,exceptions:[],tz:typeof Intl!=="undefined"?(Intl.DateTimeFormat().resolvedOptions().timeZone||"Europe/Moscow"):"Europe/Moscow",
+  crm_funnel_id:"",
 };
 const FORM_NOTIFICATION_DEFAULT:FormNotifications={internal:true,email:false,telegram:false,sms:false,subject:"Новая запись через Vizzy Form",message:"Новая запись: {{name}}, {{date}} {{time}}"};
 type FormData={
@@ -21942,6 +22037,7 @@ const VF_TEMPLATES:{id:string;name:string;description:string;questions:Question[
 function FormsPage({userId}:{userId:string}){
   const{dark}=useTheme();
   const isMobile=useIsMobile();
+  const{data:crmFunnels}=useTable("crm_funnels",userId);
   const[tab,setTab]=useState<"list"|"builder"|"analytics"|"bookings">("list");
   const[forms,setForms]=useState<FormData[]>([]);
   const[loading,setLoading]=useState(true);
@@ -22003,7 +22099,7 @@ function FormsPage({userId}:{userId:string}){
 
   const resetBuilder=()=>{
     setEditId(null);setBTitle("");setBDesc("");setBAccent("#2F6BFF");setBQuestions([]);
-    setBBooking({...BOOKING_DEFAULT});setBCompTitle("Запись подтверждена");setBCompSub("");setBCompText("");
+    setBBooking({...BOOKING_DEFAULT,crm_funnel_id:crmFunnels[0]?.id||""});setBCompTitle("Запись подтверждена");setBCompSub("");setBCompText("");
     setBCompUrl("");setBCompBtn("Перейти");setBCompImage("");setBCompVideo("");setBCompVideoName("");setBCompVideoProgress(0);setBCompVideoError("");setBNotifications({...FORM_NOTIFICATION_DEFAULT});
   };
   const openBuilder=(form?:FormData)=>{
@@ -22011,7 +22107,7 @@ function FormsPage({userId}:{userId:string}){
     if(form){
       setEditId(form.id);setBTitle(form.title||"");setBDesc(form.description||"");setBAccent(form.accent_color||"#2F6BFF");
       setBQuestions((form.questions||[]).map(q=>({...q,hidden:!!q.hidden,options:q.options||[]})));
-      setBBooking({...BOOKING_DEFAULT,...(form.booking||{})});setBCompTitle(form.completion_title||"Запись подтверждена");
+      setBBooking({...BOOKING_DEFAULT,...(form.booking||{}),duration:60});setBCompTitle(form.completion_title||"Запись подтверждена");
       setBCompSub(form.completion_subtitle||"");setBCompText(form.completion_text||"");setBCompUrl(form.completion_url||"");
       setBCompBtn(form.completion_btn_label||"Перейти");setBCompImage(form.completion_image_url||"");setBCompVideo(form.completion_video_url||"");setBCompVideoName(form.completion_video_url?"Загруженное видео":"");setBCompVideoProgress(0);setBCompVideoError("");
       setBNotifications({...FORM_NOTIFICATION_DEFAULT,...(form.notification_settings||{})});
@@ -22091,7 +22187,7 @@ function FormsPage({userId}:{userId:string}){
     const payload={
       user_id:userId,title:bTitle.trim(),description:bDesc.trim(),slug,
       questions:bQuestions.map(q=>({...q,label:q.label.trim(),options:(q.options||[]).map(x=>x.trim()).filter(Boolean)})),
-      accent_color:bAccent,is_active:existing?.is_active??true,booking:bBooking,
+      accent_color:bAccent,is_active:existing?.is_active??true,booking:{...bBooking,duration:60},
       completion_title:bCompTitle.trim(),completion_subtitle:bCompSub.trim(),completion_text:bCompText.trim(),
       completion_url:bCompUrl.trim(),completion_btn_label:bCompBtn.trim(),completion_image_url:bCompImage.trim(),completion_video_url:bCompVideo.trim(),
       notification_settings:bNotifications,updated_at:new Date().toISOString(),
@@ -22144,7 +22240,8 @@ function FormsPage({userId}:{userId:string}){
     if(!reschedule||!selectedForm)return;const start=vfZonedToUtc(reschedule.date,reschedule.time,selectedForm.booking?.tz||"Europe/Moscow");
     const{data,error}=await supabase.rpc("reschedule_vizzy_booking",{p_call_id:reschedule.id,p_start_at:start.toISOString()});
     if(error){const m=String(error.message);setErr(m.includes("slot_taken")?"Этот слот занят. Выберите другое время.":"Не удалось перенести запись: "+m);return;}
-    setBookings(p=>p.map(b=>b.id===reschedule.id?{...b,date:data.owner_date,time_start:data.owner_time,start_datetime:data.start_at,status:"scheduled"}:b));setReschedule(null);showToast("Запись перенесена");
+    const[hours,minutes]=String(data.owner_time||reschedule.time).split(":").map(Number);const endMinutes=hours*60+minutes+60;const endTime=`${String(Math.floor(endMinutes/60)%24).padStart(2,"0")}:${String(endMinutes%60).padStart(2,"0")}`;
+    setBookings(p=>p.map(b=>b.id===reschedule.id?{...b,date:data.owner_date,time_start:data.owner_time,time_end:endTime,start_datetime:data.start_at,status:"scheduled",duration_minutes:60}:b));setReschedule(null);showToast("Запись перенесена");
   };
 
   const qStats=useMemo(()=>{
@@ -22210,7 +22307,7 @@ function FormsPage({userId}:{userId:string}){
       {forms.length===0?<div style={panel({padding:"42px 24px",textAlign:"center"})}><div style={{fontSize:17,fontWeight:570,color:C.t1}}>Создайте первую форму</div><div style={{fontSize:13,color:tone.muted,margin:"7px auto 18px",maxWidth:430,lineHeight:1.6}}>Выберите шаблон или начните с чистой формы. Расписание, CRM и аналитика уже связаны между собой.</div><div style={{display:"flex",justifyContent:"center",gap:8,flexWrap:"wrap"}}>{VF_TEMPLATES.map(t=><Btn key={t.id} onClick={()=>{openBuilder();setTimeout(()=>applyTemplate(t.id),0);}}>{t.name}</Btn>)}<Btn primary onClick={()=>openBuilder()}>Чистая форма</Btn></div></div>
       :<div style={{display:"grid",gap:10}}>{forms.map(form=>{const st=counts[form.id]||{responses:0,bookings:0,views:0};const conv=st.views?Math.round(st.responses/st.views*100):0;return<div key={form.id} style={panel({padding:isMobile?16:18})}>
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"minmax(240px,1.4fr) repeat(4,minmax(74px,.42fr)) auto",gap:isMobile?12:18,alignItems:"center"}}>
-          <div style={{minWidth:0}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}><span style={{width:7,height:7,borderRadius:"50%",background:form.is_active?"#16A34A":"#A0A4AC"}}/><span style={{fontSize:14.5,fontWeight:570,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{form.title}</span></div><div style={{fontSize:11.5,color:tone.muted,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{form.booking?.enabled?`${form.booking.duration} мин · ${form.booking.days?.length||0} рабочих дней`:"Форма без записи"} · {form.questions?.filter(q=>!q.hidden).length||0} полей</div></div>
+          <div style={{minWidth:0}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}><span style={{width:7,height:7,borderRadius:"50%",background:form.is_active?"#16A34A":"#A0A4AC"}}/><span style={{fontSize:14.5,fontWeight:570,color:C.t1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{form.title}</span></div><div style={{fontSize:11.5,color:tone.muted,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{form.booking?.enabled?`60 мин · ${form.booking.days?.length||0} рабочих дней`:"Форма без записи"} · {form.questions?.filter(q=>!q.hidden).length||0} полей</div></div>
           {[{l:"Просмотры",v:st.views},{l:"Ответы",v:st.responses},{l:"Записи",v:st.bookings},{l:"Конверсия",v:`${conv}%`}].map(x=><div key={x.l} style={{display:isMobile?"inline-flex":"block",alignItems:"baseline",gap:6}}><div style={{fontSize:16,fontWeight:570,color:C.t1}}>{x.v}</div><div style={{fontSize:10.5,color:tone.muted,marginTop:2}}>{x.l}</div></div>)}
           <div style={{display:"flex",flexDirection:"column",alignItems:isMobile?"stretch":"flex-end",gap:8,minWidth:isMobile?"100%":220}}>
             <button onClick={()=>copyLink(form.slug)}
@@ -22257,8 +22354,9 @@ function FormsPage({userId}:{userId:string}){
           </>}
 
           {builderStep===3&&<>
-            <div style={panel({padding:isMobile?16:22})}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:bBooking.enabled?18:0}}><div><div style={{fontSize:15,fontWeight:570}}>Запись на созвон</div><div style={{fontSize:12,color:tone.muted,marginTop:4}}>Сначала посетитель выбирает время, затем заполняет все поля формы.</div></div><button onClick={()=>setBBooking({...bBooking,enabled:!bBooking.enabled})} style={{width:46,height:26,borderRadius:20,border:0,padding:2,background:bBooking.enabled?"#2F6BFF":tone.border,cursor:"pointer"}}><div style={{width:22,height:22,borderRadius:"50%",background:"#fff",transform:bBooking.enabled?"translateX(20px)":"none",transition:"transform .18s"}}/></button></div>
-              {bBooking.enabled&&<div style={{display:"grid",gap:15}}><div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(3,1fr)",gap:10}}><div><label style={label}>Длительность</label><select style={inp} value={bBooking.duration} onChange={e=>setBBooking({...bBooking,duration:+e.target.value})}>{[15,20,30,45,60,90,120].map(x=><option key={x} value={x}>{x} мин</option>)}</select></div><div><label style={label}>Перерыв</label><select style={inp} value={bBooking.buffer} onChange={e=>setBBooking({...bBooking,buffer:+e.target.value})}>{[0,5,10,15,20,30].map(x=><option key={x} value={x}>{x} мин</option>)}</select></div><div><label style={label}>Максимум в день</label><select style={inp} value={bBooking.max_per_day} onChange={e=>setBBooking({...bBooking,max_per_day:+e.target.value})}><option value={0}>Без лимита</option>{[1,2,3,4,5,6,8,10].map(x=><option key={x} value={x}>{x}</option>)}</select></div></div>
+            <div style={panel({padding:isMobile?16:22})}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:bBooking.enabled?18:0}}><div><div style={{fontSize:15,fontWeight:570}}>Запись на созвон</div><div style={{fontSize:12,color:tone.muted,marginTop:4}}>Сначала посетитель выбирает время, затем заполняет все поля формы. Ответ, лид и часовой созвон создаются вместе.</div></div><button onClick={()=>setBBooking({...bBooking,enabled:!bBooking.enabled,duration:60,crm_funnel_id:bBooking.crm_funnel_id||crmFunnels[0]?.id||""})} style={{width:46,height:26,borderRadius:20,border:0,padding:2,background:bBooking.enabled?"#2F6BFF":tone.border,cursor:"pointer"}}><div style={{width:22,height:22,borderRadius:"50%",background:"#fff",transform:bBooking.enabled?"translateX(20px)":"none",transition:"transform .18s"}}/></button></div>
+              {bBooking.enabled&&<div style={{display:"grid",gap:15}}><div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(3,1fr)",gap:10}}><div><label style={label}>Длительность</label><div style={{...inp,display:"flex",alignItems:"center",gap:8,color:C.t1,fontWeight:550}}><span style={{width:7,height:7,borderRadius:"50%",background:"#2F6BFF"}}/>60 минут</div></div><div><label style={label}>Перерыв</label><select style={inp} value={bBooking.buffer} onChange={e=>setBBooking({...bBooking,buffer:+e.target.value})}>{[0,5,10,15,20,30].map(x=><option key={x} value={x}>{x} мин</option>)}</select></div><div><label style={label}>Максимум в день</label><select style={inp} value={bBooking.max_per_day} onChange={e=>setBBooking({...bBooking,max_per_day:+e.target.value})}><option value={0}>Без лимита</option>{[1,2,3,4,5,6,8,10].map(x=><option key={x} value={x}>{x}</option>)}</select></div></div>
+              <div style={{padding:14,borderRadius:10,border:"1px solid rgba(47,107,255,.24)",background:"rgba(47,107,255,.07)"}}><div style={{fontSize:13,fontWeight:600,color:C.t1,marginBottom:4}}>Автоматическое добавление в CRM</div><div style={{fontSize:11.5,color:tone.muted,lineHeight:1.5,marginBottom:11}}>После подтверждения ViziForm создаст или обновит лида, сохранит ответы и сразу прикрепит его к созвону в Calls.</div><label style={label}>Воронка для новых лидов</label><select style={inp} value={bBooking.crm_funnel_id||""} onChange={e=>setBBooking({...bBooking,crm_funnel_id:e.target.value,duration:60})}><option value="">Без конкретной воронки</option>{crmFunnels.map((funnel:any)=><option key={funnel.id} value={funnel.id}>{funnel.name}</option>)}</select>{crmFunnels.length===0&&<div style={{fontSize:11,color:tone.muted,marginTop:7}}>Воронок пока нет. Лид всё равно появится в CRM без привязки, а воронку можно выбрать позже.</div>}</div>
               <div><label style={label}>Рабочие дни</label><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{[[1,"Пн"],[2,"Вт"],[3,"Ср"],[4,"Чт"],[5,"Пт"],[6,"Сб"],[7,"Вс"]].map(([d,l])=>{const on=bBooking.days.includes(d as number);return<button key={d} onClick={()=>setBBooking({...bBooking,days:on?bBooking.days.filter(x=>x!==d):[...bBooking.days,d as number].sort()})} style={{height:36,minWidth:44,borderRadius:8,border:`1px solid ${on?"#2F6BFF":tone.border}`,background:on?"rgba(47,107,255,.08)":"transparent",color:on?"#2F6BFF":tone.muted,cursor:"pointer",fontSize:12}}>{l}</button>;})}</div></div>
               <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10}}><div><label style={label}>Начало рабочего дня</label><input type="time" style={inp} value={bBooking.from} onChange={e=>setBBooking({...bBooking,from:e.target.value})}/></div><div><label style={label}>Окончание рабочего дня</label><input type="time" style={inp} value={bBooking.to} onChange={e=>setBBooking({...bBooking,to:e.target.value})}/></div></div>
               <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(3,1fr)",gap:10}}><div><label style={label}>Закрывать запись за</label><select style={inp} value={bBooking.lead_hours} onChange={e=>setBBooking({...bBooking,lead_hours:+e.target.value})}>{[0,1,2,4,12,24,48].map(x=><option key={x} value={x}>{x?`${x} ч`:"Без ограничения"}</option>)}</select></div><div><label style={label}>Горизонт записи</label><select style={inp} value={bBooking.horizon_days} onChange={e=>setBBooking({...bBooking,horizon_days:+e.target.value})}>{[7,14,30,60,90,180].map(x=><option key={x} value={x}>{x} дней</option>)}</select></div><div><label style={label}>Часовой пояс владельца</label><select style={inp} value={bBooking.tz} onChange={e=>setBBooking({...bBooking,tz:e.target.value})}>{["Europe/Moscow","Europe/Zurich","Europe/London","Asia/Dubai","Asia/Almaty","Asia/Tbilisi","America/New_York","America/Los_Angeles","UTC"].map(x=><option key={x} value={x}>{x}</option>)}</select></div></div>
