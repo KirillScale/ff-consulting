@@ -920,6 +920,7 @@ const FloatingGroup = ({ t, id, label, pop, setPop, children, content }) => {
 export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
   const t = dark ? UI.dark : UI.light;
 
+  const [mobileView, setMobileView] = useState(false);
   const [boards, setBoards] = useState([]);
   const [active, setActive] = useState(null);
   const [doc, setDoc] = useState({ items: [], connectors: [] });
@@ -949,15 +950,31 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
   const vp = useRef(null), fileIn = useRef(null), shapePickerRef = useRef(null), hist = useRef({ p: [], f: [] }), snap = useRef(null), imgs = useRef({});
   const fileDragDepth = useRef(0);
   const verRef = useRef(null);
+  const persistedCamRef = useRef({ x: 0, y: 0, z: 1 });
   const savingRef = useRef(false);
   const aiAbortRef = useRef(null), aiTimersRef = useRef([]);
   const R = useRef({});
-  R.current = { doc, cam, sel, selC, tool, kind, dark, edit, active, space };
+  R.current = { doc, cam, sel, selC, tool, kind, dark, edit, active, space, mobileView };
 
   const say = (m) => { setToast(m); clearTimeout(say._t); say._t = setTimeout(() => setToast(null), 2200); };
   const map = useMemo(() => { const m = {}; doc.items.forEach((i) => (m[i.id] = i)); return m; }, [doc.items]);
   const selItems = useMemo(() => sel.map((id) => map[id]).filter(Boolean), [sel, map]);
   const selConns = useMemo(() => doc.connectors.filter((c) => selC.includes(c.id)), [selC, doc.connectors]);
+
+  /* Phones and touch-first devices are intentionally view-only. */
+  useEffect(() => {
+    const mq = window.matchMedia("(hover: none) and (pointer: coarse)");
+    const sync = () => setMobileView(mq.matches);
+    sync();
+    mq.addEventListener?.("change", sync);
+    return () => mq.removeEventListener?.("change", sync);
+  }, []);
+
+  useEffect(() => {
+    if (!mobileView) return;
+    setTool("hand");
+    setSel([]); setSelC([]); setEdit(null); setPop(null);
+  }, [mobileView]);
 
   /* ── fonts ── */
   useEffect(() => {
@@ -1005,6 +1022,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
     const loadedDoc={ items: b.items, connectors: b.connectors };
     R.current.doc=loadedDoc;
     setDoc(loadedDoc);
+    persistedCamRef.current = b.cam;
     setCam(b.cam);
     setBoards(list || boards);
     Boards.setLast(userId, id);
@@ -1018,6 +1036,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
   };
 
   const saveT = useRef(null);
+  const camSaveTrigger = mobileView ? null : cam;
   useEffect(() => {
     if (!ready || !active) return;
     clearTimeout(saveT.current);
@@ -1026,13 +1045,15 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
       savingRef.current = true;
       setSaveState("saving");
       try {
-        const r = await Boards.save(userId, active, doc.items, doc.connectors, cam, verRef.current);
+        const camToSave = mobileView ? persistedCamRef.current : cam;
+        const r = await Boards.save(userId, active, doc.items, doc.connectors, camToSave, verRef.current);
         if (r.conflict) {
           setSaveState("conflict");
           say("Доска изменена на другом устройстве — откройте её заново");
           return;
         }
         verRef.current = r.version;
+        if (!mobileView) persistedCamRef.current = cam;
         setBoards((list) => list.map((b) => b.id === active ? { ...b, at: r.updated_at || new Date().toISOString(), version: r.version } : b));
         setSaveState("saved");
       } catch (e) {
@@ -1044,7 +1065,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
       }
     }, 800);
     return () => clearTimeout(saveT.current);
-  }, [doc, cam, active, ready, userId]);
+  }, [doc, camSaveTrigger, active, ready, userId, mobileView]);
 
   useEffect(() => {
     if (!ready || !userId) return;
@@ -1157,6 +1178,10 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
   const onDown = (e) => {
     if (e.button === 2) return;
     if (pop) setPop(null);
+    if (R.current.mobileView) {
+      drag.current = { m: "pan", sx: e.clientX, sy: e.clientY, c: { ...R.current.cam } };
+      return;
+    }
     const T = R.current.tool, panning = e.button === 1 || R.current.space || T === "hand";
     const w = toWorld(e.clientX, e.clientY);
     if (panning) { drag.current = { m: "pan", sx: e.clientX, sy: e.clientY, c: { ...R.current.cam } }; return; }
@@ -1176,6 +1201,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
   };
 
   const itemDown = (e, it) => {
+    if (R.current.mobileView) return;
     if (e.button === 2 || R.current.space || R.current.tool === "hand") return;
     e.stopPropagation();
     if (R.current.tool === "conn") {
@@ -1194,6 +1220,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
   };
 
   const portDown = (e, it, side) => {
+    if (R.current.mobileView) return;
     e.stopPropagation();
     const w = toWorld(e.clientX, e.clientY);
     drag.current = { m: "conn", from: { id: it.id, side } };
@@ -1201,6 +1228,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
   };
 
   const handleDown = (e, i) => {
+    if (R.current.mobileView) return;
     e.stopPropagation();
     const b = bbox(selItems); if (!b) return;
     tx();
@@ -1208,6 +1236,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
   };
 
   const endDown = (e, c, which) => {
+    if (R.current.mobileView) return;
     e.stopPropagation();
     tx();
     drag.current = { m: "cend", id: c.id, which };
@@ -1328,6 +1357,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
   useEffect(() => {
     const typing = () => { const a = document.activeElement; return a && (a.isContentEditable || /input|textarea/i.test(a.tagName)); };
     const kd = (e) => {
+      if (R.current.mobileView) return;
       if (e.code === "Space" && !typing()) { setSpace(true); e.preventDefault(); }
       if (typing() || R.current.edit) { if (e.key === "Escape") { document.activeElement?.blur?.(); } return; }
       const m = e.metaKey || e.ctrlKey;
@@ -1503,12 +1533,14 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
   };
 
   const onBoardDragEnter = (e) => {
+    if (R.current.mobileView) return;
     if (!isImageTransfer(e.dataTransfer)) return;
     e.preventDefault();
     fileDragDepth.current += 1;
     setDropActive(true);
   };
   const onBoardDragOver = (e) => {
+    if (R.current.mobileView) return;
     if (!isImageTransfer(e.dataTransfer)) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "copy";
@@ -1521,6 +1553,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
     if (!fileDragDepth.current) setDropActive(false);
   };
   const onBoardDrop = async (e) => {
+    if (R.current.mobileView) return;
     if (!isImageTransfer(e.dataTransfer)) return;
     e.preventDefault(); e.stopPropagation();
     const files = [...(e.dataTransfer.files || [])];
@@ -1631,9 +1664,9 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
 
   const one = selItems.length === 1 ? selItems[0] : null;
   const oneC = selConns.length === 1 ? selConns[0] : null;
-  const showStyle = (selItems.length > 0 || selConns.length > 0) && !drag.current;
+  const showStyle = !mobileView && (selItems.length > 0 || selConns.length > 0) && !drag.current;
 
-  const cursor = space || tool === "hand" ? "grab" : tool === "select" ? "default" : tool === "text" ? "text" : "crosshair";
+  const cursor = mobileView || space || tool === "hand" ? "grab" : tool === "select" ? "default" : tool === "text" ? "text" : "crosshair";
 
   return (
     <div className="vizy-boards-root"
@@ -1646,6 +1679,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
         .vizy-boards-root ::-webkit-scrollbar-track{background:transparent}
         .vizy-boards-root [contenteditable]{outline:none}
         .vizy-boards-root input,.vizy-boards-root textarea,.vizy-boards-root select{font-family:inherit}
+        .vizy-boards-root{touch-action:none}
         .vizy-floating-popover>div{position:relative!important;left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;max-height:calc(100vh - 20px);overflow-x:hidden!important;overflow-y:auto!important}
         @keyframes vzyAiSpin{to{transform:rotate(360deg)}}
         @media (prefers-reduced-motion: reduce){.vizy-boards-root *{transition:none!important;animation:none!important}}
@@ -1672,9 +1706,9 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
               return (
                 <g key={c.id}>
                   {on && <path d={cp.d} fill="none" stroke={t.sel} strokeWidth={(c.w || 2) + 7 / cam.z} strokeOpacity={.16} strokeLinecap="round" />}
-                  <path d={cp.d} fill="none" stroke="transparent" strokeWidth={Math.max(16, 16 / cam.z)} style={{ pointerEvents: "stroke", cursor: "pointer" }}
-                    onPointerDown={(e) => { e.stopPropagation(); if (R.current.tool !== "select") return; if(R.current.edit)finishEdit(); setSelC(e.shiftKey ? [...selC, c.id] : [c.id]); setSel([]); setEdit(null); }}
-                    onDoubleClick={(e) => { e.stopPropagation(); setModal({ kind: "clabel", id: c.id, v: c.label || "" }); }} />
+                  <path d={cp.d} fill="none" stroke="transparent" strokeWidth={Math.max(16, 16 / cam.z)} style={{ pointerEvents: mobileView ? "none" : "stroke", cursor: mobileView ? "grab" : "pointer" }}
+                    onPointerDown={(e) => { if (R.current.mobileView) return; e.stopPropagation(); if (R.current.tool !== "select") return; if(R.current.edit)finishEdit(); setSelC(e.shiftKey ? [...selC, c.id] : [c.id]); setSel([]); setEdit(null); }}
+                    onDoubleClick={(e) => { if (R.current.mobileView) return; e.stopPropagation(); setModal({ kind: "clabel", id: c.id, v: c.label || "" }); }} />
                   <path d={cp.d} fill="none" stroke={stroke} strokeWidth={c.w || 2} strokeLinecap="round" strokeLinejoin="round"
                     strokeDasharray={c.dash === "dashed" ? "10 8" : c.dash === "dotted" ? "0.1 6" : undefined} />
                   {[[cp.p0, cp.d0, c.cap0], [cp.p1, cp.d1, c.cap1]].map(([p, d, kk], i) => {
@@ -1707,7 +1741,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
             <ItemView key={it.id} it={it} t={t} dark={dark} z={cam.z} img={imgs.current[it.id]}
               sel={sel.includes(it.id)} hot={hover === it.id} editing={edit === it.id} tool={tool}
               onDown={(e) => itemDown(e, it)} onPort={(e, s) => portDown(e, it, s)}
-              onEdit={() => { tx(); setEdit(it.id); }}
+              onEdit={() => { if (R.current.mobileView) return; tx(); setEdit(it.id); }}
               onText={(v) => liveItemPatch(it.id,{text:v})}
               onDoneEdit={finishEdit} />
           ))}
@@ -1722,7 +1756,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
         </div>
 
         {/* selection chrome (screen space) */}
-        {selBox && !edit && (
+        {!mobileView && selBox && !edit && (
           <div style={{ position: "absolute", left: selBox.x, top: selBox.y, width: selBox.w, height: selBox.h, pointerEvents: "none" }}>
             <div style={{ position: "absolute", inset: -1, border: `1.5px solid ${t.sel}`, borderRadius: 3, opacity: .9 }} />
             {["nw", "n", "ne", "e", "se", "s", "sw", "w"].map((h) => {
@@ -1745,7 +1779,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
         ); })()}
       </div>
 
-      {(dropActive || dropUploading) && (
+      {!mobileView && (dropActive || dropUploading) && (
         <div style={{ position: "absolute", inset: 10, zIndex: 58, borderRadius: 18, border: `2px dashed ${dark ? "rgba(200,217,247,.72)" : "rgba(46,103,206,.68)"}`, background: dark ? "rgba(11,12,14,.70)" : "rgba(255,255,255,.76)", backdropFilter: "blur(7px)", WebkitBackdropFilter: "blur(7px)", display: "grid", placeItems: "center", pointerEvents: "none" }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: "18px 24px", borderRadius: 16, background: t.solid, border: `1px solid ${t.line}`, boxShadow: t.sh }}>
             <div style={{ width: 42, height: 42, borderRadius: 13, display: "grid", placeItems: "center", background: dark ? "rgba(110,155,238,.14)" : "rgba(46,103,206,.09)", color: col("blue", STROKE, dark) }}>
@@ -1762,51 +1796,45 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
       <input ref={fileIn} type="file" accept="image/*" multiple onChange={onFile} style={{ display: "none" }} />
 
       {/* ── top left: board switcher ── */}
-      <div style={{ position: "absolute", left: 16, top: 16, zIndex: 40 }}>
+      <div style={{ position: "absolute", left: mobileView ? 10 : 16, top: mobileView ? 10 : 16, zIndex: 40, maxWidth: mobileView ? "calc(100% - 112px)" : undefined }}>
         <Panel t={t} style={{ display: "flex", alignItems: "center", padding: 5, gap: 2 }} onPointerDown={(e) => e.stopPropagation()}>
-          <span style={{padding:"0 8px",fontSize:9.5,fontWeight:600,letterSpacing:1.2,color:t.ink3,whiteSpace:"nowrap"}}>MAPS</span>
-          <Sep t={t} />
+          {!mobileView && <><span style={{padding:"0 8px",fontSize:9.5,fontWeight:600,letterSpacing:1.2,color:t.ink3,whiteSpace:"nowrap"}}>MAPS</span><Sep t={t} /></>}
           <button onClick={() => setModal(modal?.kind === "boards" ? null : { kind: "boards" })}
             style={{ display: "flex", alignItems: "center", gap: 9, height: 32, padding: "0 10px 0 8px", border: "none", background: "transparent", cursor: "pointer", borderRadius: 9, color: t.ink }}>
             <span style={{ fontSize: 15, width: 20, textAlign: "center", lineHeight: 1 }}>{boards.find((b) => b.id === active)?.icon || "◇"}</span>
-            <span style={{ fontFamily: FONTS.montserrat.css, fontWeight: 600, fontSize: 13, letterSpacing: "-0.01em", maxWidth: 190, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <span style={{ fontFamily: FONTS.montserrat.css, fontWeight: 600, fontSize: 13, letterSpacing: "-0.01em", maxWidth: mobileView ? "calc(100vw - 190px)" : 190, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {boards.find((b) => b.id === active)?.name || "Доска"}
             </span>
             <ChevronDown size={14} style={{ color: t.ink3, transform: modal?.kind === "boards" ? "rotate(180deg)" : "none", transition: "transform .16s" }} />
           </button>
-          <Btn t={t} title="Переименовать карту" onClick={() => {
+          {!mobileView && <Btn t={t} title="Переименовать карту" onClick={() => {
             const board=boards.find((b) => b.id === active);
             if(board)setModal({kind:"renameBoard",id:board.id,v:board.name||""});
-          }}><Pencil size={13} /></Btn>
-          <Sep t={t} />
-          <Btn t={t} title="Отменить  ⌘Z" onClick={undo} disabled={!hist.current.p.length}><Undo2 size={15} /></Btn>
-          <Btn t={t} title="Вернуть  ⇧⌘Z" onClick={redo} disabled={!hist.current.f.length}><Redo2 size={15} /></Btn>
+          }}><Pencil size={13} /></Btn>}
+          {!mobileView && <><Sep t={t} /><Btn t={t} title="Отменить  ⌘Z" onClick={undo} disabled={!hist.current.p.length}><Undo2 size={15} /></Btn><Btn t={t} title="Вернуть  ⇧⌘Z" onClick={redo} disabled={!hist.current.f.length}><Redo2 size={15} /></Btn></>}
         </Panel>
 
         {modal?.kind === "boards" && (
           <BoardMenu t={t} boards={boards} active={active} max={MAX_BOARDS}
             onOpen={(id) => { open(id); setModal(null); }} onNew={newBoard} onDrop={dropBoard} onRename={renameBoard}
-            onClose={() => setModal(null)} doc={doc} dark={dark} />
+            onClose={() => setModal(null)} doc={doc} dark={dark} viewOnly={mobileView} />
         )}
       </div>
 
       <div style={{
-        position:"absolute",left:"50%",top:20,transform:"translateX(-50%)",zIndex:39,
+        position:"absolute",left:"50%",top:mobileView?62:20,transform:"translateX(-50%)",zIndex:39,
         padding:"6px 10px",borderRadius:999,border:`1px solid ${t.line}`,
         background:t.glass,backdropFilter:"blur(12px)",fontSize:10.5,color:t.ink3,
         pointerEvents:"none",whiteSpace:"nowrap"
       }}>
-        {saveState==="saving"?"Сохраняется…":saveState==="dirty"?"Есть изменения":saveState==="conflict"?"Конфликт версии":saveState==="remote"?"Обновлено на другом устройстве":saveState==="error"?"Ошибка сохранения":saveState==="loading"?"Загрузка…":"Сохранено в облаке"}
+        {mobileView ? "Только просмотр · редактирование с компьютера" : saveState==="saving"?"Сохраняется…":saveState==="dirty"?"Есть изменения":saveState==="conflict"?"Конфликт версии":saveState==="remote"?"Обновлено на другом устройстве":saveState==="error"?"Ошибка сохранения":saveState==="loading"?"Загрузка…":"Сохранено в облаке"}
       </div>
 
       {/* ── top right ── */}
-      <div style={{ position: "absolute", right: 16, top: 16, zIndex: 40 }}>
+      <div style={{ position: "absolute", right: mobileView ? 10 : 16, top: mobileView ? 10 : 16, zIndex: 40 }}>
         <Panel t={t} style={{ display: "flex", alignItems: "center", padding: 5, gap: 2 }} onPointerDown={(e) => e.stopPropagation()}>
-          <Btn t={t} wide title="Создать редактируемую карту по тексту" onClick={openAi}><Sparkles size={14} />Создать с AI</Btn>
-          <Sep t={t} />
-          <Btn t={t} wide title="Сохранить в PDF" onClick={() => exportAs("pdf")}><FileDown size={15} />PDF</Btn>
-          <Btn t={t} title="Сохранить в PNG" onClick={() => exportAs("png")}><Download size={15} /></Btn>
-          <Sep t={t} />
+          {!mobileView && <><Btn t={t} wide title="Создать редактируемую карту по тексту" onClick={openAi}><Sparkles size={14} />Создать с AI</Btn><Sep t={t} /><Btn t={t} wide title="Сохранить в PDF" onClick={() => exportAs("pdf")}><FileDown size={15} />PDF</Btn><Btn t={t} title="Сохранить в PNG" onClick={() => exportAs("png")}><Download size={15} /></Btn><Sep t={t} /></>}
+          {mobileView && <Btn t={t} title="Сохранить в PDF" onClick={() => exportAs("pdf")}><FileDown size={16} /></Btn>}
           <Btn t={t} title={dark ? "Светлая тема" : "Тёмная тема"} onClick={() => onToggleTheme?.()}>{dark ? <Sun size={15} /> : <Moon size={15} />}</Btn>
         </Panel>
         {(selItems.length > 0 || selConns.length > 0) && (
@@ -1829,7 +1857,7 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
       )}
 
       {/* ── toolbar ── */}
-      <div style={{ position: "absolute", left: "50%", bottom: 20, transform: "translateX(-50%)", zIndex: 40 }}>
+      {!mobileView && <div style={{ position: "absolute", left: "50%", bottom: 20, transform: "translateX(-50%)", zIndex: 40 }}>
         <Panel t={t} style={{ display: "flex", alignItems: "center", padding: 6, gap: 2 }} onPointerDown={(e) => e.stopPropagation()}>
           <Btn t={t} active={tool === "select"} title="Выбор  V" onClick={() => setTool("select")}><MousePointer2 size={16} /></Btn>
           <Btn t={t} active={tool === "hand"} title="Рука  H  (или Space)" onClick={() => setTool("hand")}><Hand size={16} /></Btn>
@@ -1866,10 +1894,10 @@ export default function VizyBoards({ userId, dark = false, onToggleTheme }) {
           <Btn t={t} active={tool === "image"} title="Изображение  I" onClick={() => fileIn.current?.click()}><ImageIcon size={16} /></Btn>
           <Btn t={t} active={tool === "link"} title="Ссылка  L" onClick={() => setModal({ kind: "link", url: "" })}><Link2 size={16} /></Btn>
         </Panel>
-      </div>
+      </div>}
 
       {/* ── zoom ── */}
-      <div style={{ position: "absolute", right: 16, bottom: 20, zIndex: 40 }}>
+      <div style={{ position: "absolute", right: mobileView ? "50%" : 16, bottom: mobileView ? 14 : 20, transform: mobileView ? "translateX(50%)" : undefined, zIndex: 40 }}>
         <Panel t={t} style={{ display: "flex", alignItems: "center", padding: 5, gap: 1 }} onPointerDown={(e) => e.stopPropagation()}>
           <Btn t={t} title="Уменьшить" onClick={() => zoomBy(1 / 1.25)}><Minus size={15} /></Btn>
           <button onClick={() => setCam((c) => ({ ...c, z: 1 }))} style={{ border: "none", background: "transparent", color: t.ink2, fontSize: 11.5, fontWeight: 500, width: 46, cursor: "pointer", fontVariantNumeric: "tabular-nums" }}>
@@ -2232,7 +2260,7 @@ function StylePanel({ t, dark, one, many, conns, oneC, box, pop, setPop, patch, 
 
 const ICONS = ["◇", "◆", "○", "●", "□", "■", "△", "▲", "☾", "✦", "⚑", "⌘", "∞", "⟁", "◈", "☰", "✳", "⊘"];
 
-function BoardMenu({ t, boards, active, max, onOpen, onNew, onDrop, onRename, onClose, doc, dark }) {
+function BoardMenu({ t, boards, active, max, onOpen, onNew, onDrop, onRename, onClose, doc, dark, viewOnly = false }) {
   const [ren, setRen] = useState(null);
   const [ico, setIco] = useState(null);
   const [q, setQ] = useState("");
@@ -2256,7 +2284,7 @@ function BoardMenu({ t, boards, active, max, onOpen, onNew, onDrop, onRename, on
               onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = t.hov; }}
               onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = "transparent"; }}
               onClick={() => { if (ren !== b.id) onOpen(b.id); }}>
-              <button onClick={(e) => { e.stopPropagation(); setIco(ico === b.id ? null : b.id); }}
+              <button onClick={(e) => { if (viewOnly) return; e.stopPropagation(); setIco(ico === b.id ? null : b.id); }}
                 style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${t.line}`, background: t.bg, color: t.ink, cursor: "pointer", fontSize: 14, flex: "0 0 auto", display: "grid", placeItems: "center" }}>
                 {b.icon}
               </button>
@@ -2268,22 +2296,22 @@ function BoardMenu({ t, boards, active, max, onOpen, onNew, onDrop, onRename, on
                     onKeyDown={(e) => { e.stopPropagation(); if (e.key === "Enter") e.currentTarget.blur(); if (e.key === "Escape") setRen(null); }}
                     style={{ width: "100%", border: "none", background: "transparent", color: t.ink, fontSize: 13, fontWeight: 600, fontFamily: FONTS.montserrat.css, outline: "none" }} />
                 ) : (
-                  <div onDoubleClick={(e) => { e.stopPropagation(); setRen(b.id); }}
+                  <div onDoubleClick={(e) => { if (viewOnly) return; e.stopPropagation(); setRen(b.id); }}
                     style={{ fontSize: 13, fontWeight: 600, fontFamily: FONTS.montserrat.css, letterSpacing: "-0.01em", color: t.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {b.name}
                   </div>
                 )}
                 <div style={{ fontSize: 10.5, color: t.ink3, marginTop: 1 }}>
-                  {on ? `${doc.items.length} объектов · ${doc.connectors.length} связей` : "двойной клик — переименовать"}
+                  {on ? `${doc.items.length} объектов · ${doc.connectors.length} связей` : viewOnly ? "Открыть доску" : "двойной клик — переименовать"}
                 </div>
               </div>
-              <button onClick={(e) => { e.stopPropagation(); onDrop(b.id); }} title="Удалить доску"
+              {!viewOnly && <button onClick={(e) => { e.stopPropagation(); onDrop(b.id); }} title="Удалить доску"
                 style={{ width: 26, height: 26, borderRadius: 7, border: "none", background: "transparent", color: t.ink3, cursor: "pointer", display: "grid", placeItems: "center", flex: "0 0 auto" }}
                 onMouseEnter={(e) => { e.currentTarget.style.color = "#D2453C"; e.currentTarget.style.background = t.hov; }}
                 onMouseLeave={(e) => { e.currentTarget.style.color = t.ink3; e.currentTarget.style.background = "transparent"; }}>
                 <Trash2 size={13} />
-              </button>
-              {ico === b.id && (
+              </button>}
+              {!viewOnly && ico === b.id && (
                 <Panel t={t} style={{ position: "absolute", left: 4, top: 42, padding: 8, zIndex: 60, width: 210 }}>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 3 }}>
                     {ICONS.map((s) => (
@@ -2297,13 +2325,13 @@ function BoardMenu({ t, boards, active, max, onOpen, onNew, onDrop, onRename, on
           );
         })}
       </div>
-      <div style={{ height: 1, background: t.line, margin: "6px -8px" }} />
+      {!viewOnly && <><div style={{ height: 1, background: t.line, margin: "6px -8px" }} />
       <button onClick={onNew} disabled={boards.length >= max}
         style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 8px", border: "none", borderRadius: 10, background: "transparent", color: boards.length >= max ? t.ink3 : t.ink, cursor: boards.length >= max ? "default" : "pointer", fontSize: 12.5, fontWeight: 500 }}
         onMouseEnter={(e) => { if (boards.length < max) e.currentTarget.style.background = t.hov; }}
         onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
         <Plus size={15} />{boards.length >= max ? `Достигнут лимит ${max} досок` : "Создать доску"}
-      </button>
+      </button></>}
     </Panel>
   );
 }
