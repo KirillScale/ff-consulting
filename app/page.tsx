@@ -1,5 +1,5 @@
 "use client";
-// v157 — Calls + ViziForm + CRM integration
+// v160 — FF Consulting workspace and ETS connectors
 import React, { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } from "react";
 import dynamic from "next/dynamic";
 import NextImage from "next/image";
@@ -885,7 +885,7 @@ const Placeholder=({title,ic}:{title:string,ic:string})=><div style={{display:"f
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [recovery, setRecovery] = useState(false);
-  const APP_VERSION="v10.7"; // v157 Calls, ViziForm booking and CRM lead integration
+  const APP_VERSION="v11.0"; // v160 FF Consulting workspace and ETS connectors
   const VALID_PAGES=["dashboard","strategy","crm","cashflow","calls","content","boards","forms","offer","consulting","prices","icp","bizstrategy","team","edu","links","profile","files","ai","script","product","stories","posts","slides","pnl","media","ads","calc","tools","mailings","tracker"];
 
   // Clear stale localStorage on version change
@@ -5284,10 +5284,10 @@ ${audit?`<section><h2>Разбор воронки</h2><div class="audit">${esc(a
         <div style={{display:"flex",alignItems:"stretch",gap:isMobile?8:0}}>
           <div style={{flex:1,display:"flex"}}><Node id="ivp" title="IVP" short="Ideal Viewer Profile"/></div>
           <div style={{flex:isMobile?"0 0 26px":"0 0 90px",display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <svg width="100%" height="14" viewBox="0 0 90 14" preserveAspectRatio="none" style={{display:"block"}}>
-              <line x1="0" y1="7" x2="80" y2="7" stroke={hasIvp?lineOn:line} strokeWidth="1.5" strokeDasharray={hasIvp?"0":"4 4"}/>
-              <polygon points="90,7 80,3 80,11" fill={hasIvp?lineOn:line}/>
-            </svg>
+            <div style={{position:"relative",width:"100%",height:14}}>
+              <div style={{position:"absolute",left:0,right:8,top:6,height:1.5,background:hasIvp?lineOn:`repeating-linear-gradient(90deg,${line} 0 4px,transparent 4px 8px)`}}/>
+              <span style={{position:"absolute",right:0,top:3,width:0,height:0,borderTop:"4px solid transparent",borderBottom:"4px solid transparent",borderLeft:`8px solid ${hasIvp?lineOn:line}`}}/>
+            </div>
           </div>
           <div style={{flex:1,display:"flex"}}><Node id="icp" title="ICP" short="Ideal Client Profile"/></div>
         </div>
@@ -5307,13 +5307,15 @@ ${audit?`<section><h2>Разбор воронки</h2><div class="audit">${esc(a
         </div>
 
         {/* Схождение к Positioning */}
-        <svg width="100%" height="42" viewBox="0 0 300 42" preserveAspectRatio="none" style={{display:"block"}}>
-          <path d="M55,0 L55,18 Q55,24 62,24 L138,24 Q145,24 145,30 L145,34"
-            fill="none" stroke={hasReach?lineOn:line} strokeWidth="1.5" strokeDasharray={hasReach?"0":"4 4"} vectorEffect="non-scaling-stroke"/>
-          <path d="M245,0 L245,18 Q245,24 238,24 L162,24 Q155,24 155,30 L155,34"
-            fill="none" stroke={hasValue?lineOn:line} strokeWidth="1.5" strokeDasharray={hasValue?"0":"4 4"} vectorEffect="non-scaling-stroke"/>
-          <polygon points="150,42 145,33 155,33" fill={(hasReach||hasValue)?lineOn:line}/>
-        </svg>
+        <div style={{position:"relative",height:42}}>
+          <svg width="100%" height="42" viewBox="0 0 300 42" preserveAspectRatio="none" style={{display:"block"}}>
+            <path d="M55,0 L55,18 Q55,24 62,24 L138,24 Q145,24 145,30 L145,34"
+              fill="none" stroke={hasReach?lineOn:line} strokeWidth="1.5" strokeDasharray={hasReach?"0":"4 4"} vectorEffect="non-scaling-stroke"/>
+            <path d="M245,0 L245,18 Q245,24 238,24 L162,24 Q155,24 155,30 L155,34"
+              fill="none" stroke={hasValue?lineOn:line} strokeWidth="1.5" strokeDasharray={hasValue?"0":"4 4"} vectorEffect="non-scaling-stroke"/>
+          </svg>
+          <span style={{position:"absolute",left:"50%",bottom:0,transform:"translateX(-50%)",width:0,height:0,borderLeft:"4px solid transparent",borderRight:"4px solid transparent",borderTop:`8px solid ${(hasReach||hasValue)?lineOn:line}`}}/>
+        </div>
 
         {/* Ряд 4: Positioning */}
         <div style={{display:"flex",justifyContent:"center"}}>
@@ -5321,16 +5323,16 @@ ${audit?`<section><h2>Разбор воронки</h2><div class="audit">${esc(a
         </div>
 
         {/* Расхождение на 3 ветки */}
-        <svg width="100%" height="42" viewBox="0 0 300 42" preserveAspectRatio="none" style={{display:"block"}}>
-          <path d="M150,0 L150,14 Q150,20 143,20 L57,20 Q50,20 50,26 L50,34"
-            fill="none" stroke={hasPos?lineOn:line} strokeWidth="1.5" strokeDasharray={hasPos?"0":"4 4"} vectorEffect="non-scaling-stroke"/>
-          <path d="M150,0 L150,34" fill="none" stroke={hasPos?lineOn:line} strokeWidth="1.5" strokeDasharray={hasPos?"0":"4 4"} vectorEffect="non-scaling-stroke"/>
-          <path d="M150,0 L150,14 Q150,20 157,20 L243,20 Q250,20 250,26 L250,34"
-            fill="none" stroke={hasPos?lineOn:line} strokeWidth="1.5" strokeDasharray={hasPos?"0":"4 4"} vectorEffect="non-scaling-stroke"/>
-          <polygon points="50,42 45,33 55,33" fill={hasPos?lineOn:line}/>
-          <polygon points="150,42 145,33 155,33" fill={hasPos?lineOn:line}/>
-          <polygon points="250,42 245,33 255,33" fill={hasPos?lineOn:line}/>
-        </svg>
+        <div style={{position:"relative",height:42}}>
+          <svg width="100%" height="42" viewBox="0 0 300 42" preserveAspectRatio="none" style={{display:"block"}}>
+            <path d="M150,0 L150,14 Q150,20 143,20 L57,20 Q50,20 50,26 L50,34"
+              fill="none" stroke={hasPos?lineOn:line} strokeWidth="1.5" strokeDasharray={hasPos?"0":"4 4"} vectorEffect="non-scaling-stroke"/>
+            <path d="M150,0 L150,34" fill="none" stroke={hasPos?lineOn:line} strokeWidth="1.5" strokeDasharray={hasPos?"0":"4 4"} vectorEffect="non-scaling-stroke"/>
+            <path d="M150,0 L150,14 Q150,20 157,20 L243,20 Q250,20 250,26 L250,34"
+              fill="none" stroke={hasPos?lineOn:line} strokeWidth="1.5" strokeDasharray={hasPos?"0":"4 4"} vectorEffect="non-scaling-stroke"/>
+          </svg>
+          {["16.6667%","50%","83.3333%"].map(left=><span key={left} style={{position:"absolute",left,bottom:0,transform:"translateX(-50%)",width:0,height:0,borderLeft:"4px solid transparent",borderRight:"4px solid transparent",borderTop:`8px solid ${hasPos?lineOn:line}`}}/>)}
+        </div>
 
         {/* Ряд 5: How you look | Mission | Offer */}
         <div style={{display:"flex",gap:isMobile?8:12,alignItems:"stretch",flexWrap:isMobile?"wrap" as const:"nowrap" as const}}>
@@ -14222,10 +14224,15 @@ ${leadContext}`;
   </div>;
 
   return <>
+    <div style={{marginBottom:isMobile?16:22}}>
+      <div style={{fontSize:isMobile?24:28,fontWeight:750,color:C.t1,letterSpacing:"-.03em"}}>Созвоны</div>
+      <div style={{fontSize:13,color:C.t2,marginTop:6,lineHeight:1.5}}>Планируй встречи, привязывай лидов и готовься к каждому разговору с помощью ИИ</div>
+    </div>
+
     {/* Stats bar */}
     <div style={{display:"grid",gridTemplateColumns:isMobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:isMobile?10:12,marginBottom:isMobile?12:20}}>
-      {[{l:"Всего созвонов",v:stats.total,c:BLUE},{l:"Сегодня",v:stats.today,c:BLUE},{l:"Выполнено",v:stats.done,c:"#16A34A"},{l:"Предстоит",v:stats.upcoming,c:dark?"#FFFFFF":C.t1}].map((s,i)=><div key={i} style={{background:C.w,borderRadius:10,padding:"14px 18px",boxShadow:C.sh,border:`1px solid ${C.bd}`,borderTop:`3px solid ${s.c}`}}>
-        <div style={{fontSize:22,fontWeight:700,color:s.c}}>{s.v}</div>
+      {[{l:"Всего созвонов",v:stats.total},{l:"Сегодня",v:stats.today},{l:"Выполнено",v:stats.done},{l:"Предстоит",v:stats.upcoming}].map((s,i)=><div key={i} style={{background:C.w,borderRadius:10,padding:"14px 18px",boxShadow:C.sh,border:`1px solid ${C.bd}`}}>
+        <div style={{fontSize:22,fontWeight:700,color:C.t1}}>{s.v}</div>
         <div style={{fontSize:12,color:C.t2,marginTop:2}}>{s.l}</div>
       </div>)}
     </div>
@@ -14253,7 +14260,7 @@ ${leadContext}`;
         {/* Add button */}
         <button onClick={()=>openCreate(td)} style={{width:"100%",padding:"12px",background:BLUE,color:"#fff",border:"none",borderRadius:10,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          + Новый созвон
+          Новый созвон
         </button>
 
         {/* Upcoming */}
@@ -14330,12 +14337,9 @@ ${leadContext}`;
           {f.goal==="Своя цель"&&<div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Название</label><input value={f.custom_goal} onChange={e=>sF({...f,custom_goal:e.target.value})} placeholder="Введи название..." style={iS()}/></div>}
           <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Ссылка на встречу</label><input value={f.link} onChange={e=>sF({...f,link:e.target.value})} placeholder="zoom.us/j/..." style={iS()}/></div>
           <div><label style={{fontSize:12,color:C.t2,display:"block",marginBottom:6,fontWeight:600}}>Комментарий</label><textarea value={f.description} onChange={e=>sF({...f,description:e.target.value})} rows={2} style={{...iS(),resize:"none"}}/></div>
-          <div style={{padding:14,borderRadius:10,border:`1px solid ${C.bd}`,background:C.bg}}>
-            <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,marginBottom:10}}><div><div style={{fontSize:13,fontWeight:700,color:C.t1}}>Скрипт созвона</div><div style={{fontSize:11.5,color:C.t2,marginTop:3,lineHeight:1.45}}>ИИ использует описание созвона и всю заполненную карточку прикреплённого лида</div></div>{f.lead_id&&<span style={{fontSize:10.5,color:TURQUOISE,whiteSpace:"nowrap"}}>CRM-контекст подключён</span>}</div>
-            <button type="button" onClick={generateCallScript} disabled={scriptBusy} style={{width:"100%",height:42,border:0,borderRadius:8,background:"linear-gradient(135deg,#00AFCB,#00C9B7)",color:"#fff",fontSize:12.5,fontWeight:700,cursor:scriptBusy?"wait":"pointer",opacity:scriptBusy?0.72:1,boxShadow:"none",marginBottom:f.ai_script||scriptError?10:0}}>{scriptBusy?"Создаю персональный скрипт…":"Создать скрипт созвона с ИИ"}</button>
-            {scriptError&&<div style={{fontSize:11.5,color:"#EF4444",marginBottom:f.ai_script?8:0}}>{scriptError}</div>}
-            {f.ai_script&&<textarea value={f.ai_script} onChange={e=>sF({...f,ai_script:e.target.value})} rows={10} style={{...iS(),height:220,padding:"12px 13px",resize:"vertical",lineHeight:1.55,fontSize:12.5}}/>}
-          </div>
+          <button type="button" onClick={generateCallScript} disabled={scriptBusy} style={{width:"100%",height:44,border:"1px solid rgba(123,245,255,.52)",borderRadius:9,background:"linear-gradient(135deg,#09BBD3 0%,#00D0C2 100%)",color:"#fff",fontSize:13,fontWeight:750,cursor:scriptBusy?"wait":"pointer",opacity:scriptBusy?0.72:1,boxShadow:dark?"0 0 22px rgba(0,208,194,.32), inset 0 1px 0 rgba(255,255,255,.18)":"0 8px 22px rgba(0,187,205,.24), inset 0 1px 0 rgba(255,255,255,.24)",transition:"transform .15s ease, box-shadow .15s ease"}}>{scriptBusy?"Создаю персональный скрипт…":"Создать скрипт созвона с AI"}</button>
+          {scriptError&&<div style={{fontSize:11.5,color:"#EF4444",marginTop:2}}>{scriptError}</div>}
+          {f.ai_script&&<div style={{display:"flex",flexDirection:"column",gap:8}}><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}><span style={{fontSize:12,fontWeight:650,color:C.t1}}>Скрипт созвона</span>{f.lead_id&&<span style={{fontSize:10.5,color:TURQUOISE,whiteSpace:"nowrap"}}>CRM-контекст подключён</span>}</div><textarea value={f.ai_script} onChange={e=>sF({...f,ai_script:e.target.value})} rows={10} style={{...iS(),height:220,padding:"12px 13px",resize:"vertical",lineHeight:1.55,fontSize:12.5}}/></div>}
           {editCall&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:C.bg,borderRadius:8}}>
             <button onClick={()=>toggleCallCompleted(editCall)} style={{width:22,height:22,borderRadius:6,border:`2px solid ${callIsDone(editCall)?"#16A34A":C.bd}`,background:callIsDone(editCall)?"#16A34A":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
               {callIsDone(editCall)&&<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
@@ -22317,7 +22321,6 @@ function FormsPage({userId}:{userId:string}){
             </button>
             <div style={{display:"flex",alignItems:"center",justifyContent:isMobile?"space-between":"flex-end",gap:7,width:"100%",flexWrap:"wrap"}}>
               <Btn onClick={()=>loadAnalytics(form)}>Ответы</Btn>
-              {form.booking?.enabled&&<Btn onClick={()=>loadBookings(form)}>Список</Btn>}
               <IconBtn title="Изменить форму" onClick={()=>openBuilder(form)}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L8 18l-4 1 1-4z"/></svg>
               </IconBtn>
